@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -94,7 +95,15 @@ export function TodoList() {
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-8">
       <div>
-        <h1 className="text-4xl font-bold mb-2">Todo App</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-4xl font-bold">Todo App</h1>
+          <Link
+            href="/about"
+            className="text-sm text-primary hover:underline"
+          >
+            About
+          </Link>
+        </div>
         <p className="text-muted-foreground">
           Manage your tasks with Next.js 15 server-side API routes
         </p>
