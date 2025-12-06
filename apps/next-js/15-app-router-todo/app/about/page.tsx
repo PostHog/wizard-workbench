@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AboutPageTracker } from '@/components/about/about-page-tracker';
 
 export const metadata = {
   title: 'About - Todo App',
@@ -9,6 +10,7 @@ export const metadata = {
 export default function AboutPage() {
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-8">
+      <AboutPageTracker />
       <div>
         <h1 className="text-4xl font-bold mb-2">About This App</h1>
         <p className="text-muted-foreground">

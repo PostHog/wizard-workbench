@@ -1,0 +1,52 @@
+[
+  {
+    "eventName": "todo_created",
+    "eventDescription": "User successfully created a new todo item",
+    "filePath": "components/todos/todo-list.tsx"
+  },
+  {
+    "eventName": "todo_completed",
+    "eventDescription": "User marked a todo item as completed",
+    "filePath": "components/todos/todo-list.tsx"
+  },
+  {
+    "eventName": "todo_uncompleted",
+    "eventDescription": "User marked a completed todo item as incomplete",
+    "filePath": "components/todos/todo-list.tsx"
+  },
+  {
+    "eventName": "todo_deleted",
+    "eventDescription": "User deleted a todo item",
+    "filePath": "components/todos/todo-list.tsx"
+  },
+  {
+    "eventName": "todo_create_failed",
+    "eventDescription": "Failed to create a todo due to an error",
+    "filePath": "components/todos/todo-list.tsx"
+  },
+  {
+    "eventName": "todo_update_failed",
+    "eventDescription": "Failed to update a todo due to an error",
+    "filePath": "components/todos/todo-list.tsx"
+  },
+  {
+    "eventName": "todo_delete_failed",
+    "eventDescription": "Failed to delete a todo due to an error",
+    "filePath": "components/todos/todo-list.tsx"
+  },
+  {
+    "eventName": "todo_fetch_failed",
+    "eventDescription": "Failed to fetch todos due to an error",
+    "filePath": "components/todos/todo-list.tsx"
+  },
+  {
+    "eventName": "todo_form_submitted",
+    "eventDescription": "User submitted the todo creation form",
+    "filePath": "components/todos/todo-form.tsx"
+  },
+  {
+    "eventName": "about_page_viewed",
+    "eventDescription": "User viewed the about page (top of awareness funnel)",
+    "filePath": "app/about/page.tsx"
+  }
+]
