@@ -1,0 +1,72 @@
+[
+  {
+    "event_name": "user_signed_up",
+    "event_description": "User successfully completed the sign-up process and created an account",
+    "file_path": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "user_signed_in",
+    "event_description": "User successfully logged into their account",
+    "file_path": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "user_signed_out",
+    "event_description": "User signed out of their account",
+    "file_path": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "password_updated",
+    "event_description": "User successfully changed their password in security settings",
+    "file_path": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "account_deleted",
+    "event_description": "User deleted their account (churn event)",
+    "file_path": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "account_updated",
+    "event_description": "User updated their account information (name or email)",
+    "file_path": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "team_member_invited",
+    "event_description": "User invited a new team member to join their team",
+    "file_path": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "team_member_removed",
+    "event_description": "User removed a team member from the team",
+    "file_path": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "checkout_started",
+    "event_description": "User initiated the checkout process for a subscription plan (conversion funnel)",
+    "file_path": "lib/payments/actions.ts"
+  },
+  {
+    "event_name": "checkout_completed",
+    "event_description": "User successfully completed checkout and subscribed to a plan (conversion event)",
+    "file_path": "app/api/stripe/checkout/route.ts"
+  },
+  {
+    "event_name": "subscription_updated",
+    "event_description": "User's subscription was updated (upgrade, downgrade, or status change)",
+    "file_path": "app/api/stripe/webhook/route.ts"
+  },
+  {
+    "event_name": "subscription_cancelled",
+    "event_description": "User's subscription was cancelled (churn event)",
+    "file_path": "app/api/stripe/webhook/route.ts"
+  },
+  {
+    "event_name": "customer_portal_opened",
+    "event_description": "User clicked to manage their subscription in Stripe Customer Portal",
+    "file_path": "lib/payments/actions.ts"
+  },
+  {
+    "event_name": "invitation_accepted",
+    "event_description": "User accepted a team invitation during sign-up",
+    "file_path": "app/(login)/actions.ts"
+  }
+]
