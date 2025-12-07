@@ -1,0 +1,72 @@
+[
+  {
+    "event_name": "todo_created",
+    "event_description": "User created a new todo item. Key conversion event indicating active engagement with the app.",
+    "file_path": "components/todos/todo-list.tsx"
+  },
+  {
+    "event_name": "todo_completed",
+    "event_description": "User marked a todo as complete. Indicates successful task completion and app value delivery.",
+    "file_path": "components/todos/todo-list.tsx"
+  },
+  {
+    "event_name": "todo_uncompleted",
+    "event_description": "User unmarked a completed todo (set back to active). Could indicate task reconsideration.",
+    "file_path": "components/todos/todo-list.tsx"
+  },
+  {
+    "event_name": "todo_deleted",
+    "event_description": "User deleted a todo item. Could indicate task abandonment or cleanup behavior.",
+    "file_path": "components/todos/todo-list.tsx"
+  },
+  {
+    "event_name": "todo_create_failed",
+    "event_description": "Failed to create a todo due to an error. Error tracking for monitoring app reliability.",
+    "file_path": "components/todos/todo-list.tsx"
+  },
+  {
+    "event_name": "todo_update_failed",
+    "event_description": "Failed to update a todo due to an error. Error tracking for monitoring app reliability.",
+    "file_path": "components/todos/todo-list.tsx"
+  },
+  {
+    "event_name": "todo_delete_failed",
+    "event_description": "Failed to delete a todo due to an error. Error tracking for monitoring app reliability.",
+    "file_path": "components/todos/todo-list.tsx"
+  },
+  {
+    "event_name": "todos_fetch_failed",
+    "event_description": "Failed to fetch todos on page load. Critical error affecting user experience.",
+    "file_path": "components/todos/todo-list.tsx"
+  },
+  {
+    "event_name": "about_page_viewed",
+    "event_description": "User navigated to the about page. Top of funnel event for understanding user interest in the product.",
+    "file_path": "pages/about.tsx"
+  },
+  {
+    "event_name": "api_todo_create_error",
+    "event_description": "Server-side error when creating a todo. Backend error monitoring.",
+    "file_path": "pages/api/todos/index.ts"
+  },
+  {
+    "event_name": "api_todo_validation_error",
+    "event_description": "Validation error when creating or updating a todo. Indicates potential UX issues.",
+    "file_path": "pages/api/todos/index.ts"
+  },
+  {
+    "event_name": "api_todo_update_error",
+    "event_description": "Server-side error when updating a todo. Backend error monitoring.",
+    "file_path": "pages/api/todos/[id].ts"
+  },
+  {
+    "event_name": "api_todo_delete_error",
+    "event_description": "Server-side error when deleting a todo. Backend error monitoring.",
+    "file_path": "pages/api/todos/[id].ts"
+  },
+  {
+    "event_name": "api_todo_not_found",
+    "event_description": "Attempted to access a todo that doesn't exist. Could indicate data sync issues.",
+    "file_path": "pages/api/todos/[id].ts"
+  }
+]

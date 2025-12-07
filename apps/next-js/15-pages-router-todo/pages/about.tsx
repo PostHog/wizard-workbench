@@ -1,8 +1,15 @@
+import { useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function AboutPage() {
+  useEffect(() => {
+    // Track about page view as a funnel entry point
+    posthog.capture('about_page_viewed');
+  }, []);
+
   return (
     <>
       <Head>
