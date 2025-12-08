@@ -101,3 +101,19 @@ Manual processes (press `s` to start):
 |---------|-------------|
 | `wizard-run` | Run the Wizard on a test app |
 | `workbench-evaluate` | Evaluate a PR or branch's Wizard integration |
+
+### Running repo specific commands
+
+With `--include-only` you can run commands in a specific repo:
+
+```bash
+meta exec 'pnpm run dev' --include-only repos/wizard
+```
+
+We have npm shortcuts for these:
+
+```bash
+pnpm wizard [command] # runs 'meta exec --include-only repos/wizard'
+pnpm posthog [command] # runs 'meta exec --include-only repos/posthog'
+pnpm examples [command] # runs 'meta exec --include-only repos/examples'
+```

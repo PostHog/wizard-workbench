@@ -8,6 +8,9 @@
     "pull": "meta git pull",
     "status": "meta git status",
     "install:all": "meta exec 'pnpm install'",
+    "wizard": "f(){ meta exec --include-only repos/wizard -- \"$*\"; }; f",
+    "posthog": "f(){ meta exec --include-only repos/posthog -- \"$*\"; }; f",
+    "examples": "f(){ meta exec --include-only repos/examples -- \"$*\"; }; f",
     "evaluate": "tsx services/pr-evaluator/index.ts"
   },
   "dependencies": {
