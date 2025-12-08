@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "repos/examples": "git@github.com:PostHog/examples.git",
+    "repos/wizard": "git@github.com:PostHog/wizard.git",
+    "repos/posthog": "git@github.com:PostHog/posthog.git"
+  }
+}
+

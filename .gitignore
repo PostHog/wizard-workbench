@@ -1,3 +1,6 @@
+# Meta repos (cloned dependencies)
+repos/
+
 # Dependencies
 node_modules/
 **/node_modules/

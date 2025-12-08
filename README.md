@@ -50,10 +50,17 @@ Install [mprocs](https://github.com/pvolok/mprocs):
 brew install mprocs
 ```
 
-Install dependencies in this repo:
+Install [meta](https://github.com/meta-cli/meta) for managing multiple git repositories:
 
 ```bash
-pnpm install
+npm i -g meta
+```
+
+Pull down repos and install dependencies in this repo:
+
+```bash
+pnpm pull # this will pull down the latest versions of all repos
+pnpm install:all # this will install dependencies in this repo
 ```
 
 Copy and edit `.env` with your repo paths and API key:
@@ -66,12 +73,10 @@ cp .env.example .env
 ANTHROPIC_API_KEY=sk-ant-...   # Required for wizard PR evaluator
 
 # Adjust if your repos are in different locations
-EXAMPLES_PATH=~/development/examples
-MCP_PATH=~/development/posthog/products/mcp
-WIZARD_PATH=~/development/wizard
+EXAMPLES_PATH=repos/examples
+MCP_PATH=repos/posthog/products/mcp
+WIZARD_PATH=repos/wizard
 ```
-
-Make sure you've set up and installed dependencies for all required repos.
 
 ### Running
 
