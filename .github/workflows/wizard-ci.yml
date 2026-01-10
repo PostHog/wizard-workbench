@@ -142,9 +142,13 @@ jobs:
             https://github.com/PostHog/examples.git $HOME/examples
           echo "::endgroup::"
 
-          echo "::group::Building examples MCP resources"
+          echo "::group::Installing examples dependencies"
           cd $HOME/examples
-          node build-examples-mcp-resources.js
+          npm install
+          echo "::endgroup::"
+
+          echo "::group::Building examples MCP resources"
+          npm run build:docs
           echo "::endgroup::"
 
           echo "EXAMPLES_PATH=$HOME/examples" >> $GITHUB_ENV
