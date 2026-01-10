@@ -238,3 +238,47 @@ export function runEvaluator(prNumber: number): Promise<EvaluateResult> {
     });
   });
 }
+
+export interface EvaluateOnBranchOptions {
+  branch: string;
+  baseBranch?: string;
+  testRunName?: string;
+}
+
+/**
+ * Run pr-evaluator on a local branch (--test-run mode)
+ * This is used when --local and --evaluate are combined
+ */
+export function runEvaluatorOnBranch(options: EvaluateOnBranchOptions): Promise<EvaluateResult> {
+  return new Promise((resolve) => {
+    const args = ["run", "evaluate", "--branch", options.branch];
+
+    if (options.baseBranch) {
+      args.push("--base", options.baseBranch);
+    }
+
+    if (options.testRunName) {
+      args.push("--test-run", options.testRunName);
+    }
+
+    const child = spawn("pnpm", args, {
+      cwd: process.cwd(),
+      stdio: "inherit",
+      env: process.env,
+    });
+
+    child.on("close", (code) => {
+      resolve({
+        success: code === 0,
+        error: code !== 0 ? `Exit code: ${code}` : undefined,
+      });
+    });
+
+    child.on("error", (err) => {
+      resolve({
+        success: false,
+        error: err.message,
+      });
+    });
+  });
+}

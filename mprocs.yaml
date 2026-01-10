@@ -52,7 +52,7 @@ procs:
     autostart: false
     env_file: .env
 
-  wizard-ci-local:
+  wizard-ci-local-run:
     # Runs the CI flow code locally
     shell: "pnpm wizard-ci --local --evaluate"
     autostart: false

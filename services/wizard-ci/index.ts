@@ -32,6 +32,8 @@ import {
   shortId,
   extractPRNumber,
   runEvaluator,
+  runEvaluatorOnBranch,
+  createBranch,
   type App,
 } from "./utils.js";
 
@@ -84,19 +86,79 @@ function buildPRBody(meta: PRMetadata): string {
   return lines.join("\n");
 }
 
-async function runEvaluation(prUrl: string): Promise<void> {
+interface EvaluationInfo {
+  success: boolean;
+  prNumber?: number;
+  prUrl?: string;
+}
+
+async function runEvaluation(prUrl: string): Promise<EvaluationInfo> {
   const prNumber = extractPRNumber(prUrl);
   if (!prNumber) {
     console.warn(`      Could not extract PR number from URL: ${prUrl}\n`);
-    return;
+    return { success: false };
   }
   console.log(`      PR #${prNumber}\n`);
   const evalResult = await runEvaluator(prNumber);
   if (!evalResult.success) {
     console.warn(`      Evaluation failed: ${evalResult.error}\n`);
+    return { success: false, prNumber, prUrl };
   } else {
     console.log(`      Evaluation complete\n`);
+    return { success: true, prNumber, prUrl };
   }
+}
+
+interface LocalEvaluationInfo {
+  success: boolean;
+  branch: string;
+  baseBranch: string;
+  testRunDir?: string;
+}
+
+async function runLocalEvaluation(branch: string, baseBranch: string, testRunName?: string): Promise<LocalEvaluationInfo> {
+  console.log(`      Branch: ${branch} (base: ${baseBranch})\n`);
+  const evalResult = await runEvaluatorOnBranch({
+    branch,
+    baseBranch,
+    testRunName,
+  });
+  const testRunDir = testRunName ? `test-evaluations/${testRunName}` : undefined;
+  if (!evalResult.success) {
+    console.warn(`      Evaluation failed: ${evalResult.error}\n`);
+    return { success: false, branch, baseBranch, testRunDir };
+  } else {
+    console.log(`      Evaluation complete\n`);
+    return { success: true, branch, baseBranch, testRunDir };
+  }
+}
+
+function printSummary(info: {
+  prUrl?: string;
+  prNumber?: number;
+  branch?: string;
+  shortId?: string;
+  testRunDir?: string;
+}): void {
+  console.log(`\n${"═".repeat(50)}`);
+  console.log("Summary");
+  console.log(`${"═".repeat(50)}`);
+  if (info.prUrl) {
+    console.log(`  PR:            ${info.prUrl}`);
+  }
+  if (info.prNumber) {
+    console.log(`  PR Number:     #${info.prNumber}`);
+  }
+  if (info.branch) {
+    console.log(`  Branch:        ${info.branch}`);
+  }
+  if (info.shortId) {
+    console.log(`  ID:            ${info.shortId}`);
+  }
+  if (info.testRunDir) {
+    console.log(`  Evaluation:    ${info.testRunDir}`);
+  }
+  console.log(`${"═".repeat(50)}\n`);
 }
 
 // ============================================================================
@@ -160,6 +222,8 @@ Branch Management:
 
 Evaluation:
   pnpm wizard-ci --evaluate, -e      Run pr-evaluator after PR creation
+                                     With --local: runs evaluation on local branch
+                                     (creates branch, commits, runs test-run mode)
 `);
       process.exit(0);
     }
@@ -340,9 +404,10 @@ async function pushOnlyMode(opts: Options): Promise<void> {
   console.log(`      PR: ${result.prUrl}\n`);
 
   // Run evaluation if requested
+  let evalInfo: EvaluationInfo | undefined;
   if (opts.evaluate && result.prUrl) {
     console.log("[3/3] Running PR evaluation...");
-    await runEvaluation(result.prUrl);
+    evalInfo = await runEvaluation(result.prUrl);
   }
 
   if (opts.deleteBranch) {
@@ -352,9 +417,13 @@ async function pushOnlyMode(opts: Options): Promise<void> {
     checkout(repoRoot, originalBranch);
   }
 
-  console.log(`${"═".repeat(50)}`);
-  console.log(`Done`);
-  console.log(`${"═".repeat(50)}\n`);
+  // Print summary
+  printSummary({
+    prUrl: result.prUrl,
+    prNumber: evalInfo?.prNumber,
+    branch: targetBranch,
+    shortId: branchShortId,
+  });
 }
 
 // ============================================================================
@@ -417,9 +486,50 @@ async function runCI(app: App, opts: Options): Promise<boolean> {
   }
   console.log("      Changes detected\n");
 
-  // Stop here if local mode
+  // Stop here if local mode (unless --evaluate is also set)
   if (opts.local) {
-    console.log("[LOCAL] Skipping branch/PR creation\n");
+    if (opts.evaluate) {
+      // Create a branch and commit changes for evaluation
+      console.log("[4/5] Creating branch and committing for local evaluation...");
+      const originalBranch = getCurrentBranch(repoRoot);
+
+      const branchShortId = shortId();
+      const branchName = `wizard-ci/${app.name.replace(/\//g, "-")}/${branchShortId}`;
+
+      try {
+        createBranch(repoRoot, branchName);
+        console.log(`      Branch: ${branchName}`);
+      } catch (e) {
+        console.error(`      Failed to create branch: ${e}`);
+        return false;
+      }
+
+      try {
+        const hash = commitPath(repoRoot, appRelativePath, `wizard-ci: ${app.name}`);
+        console.log(`      Commit: ${hash}\n`);
+      } catch (e) {
+        console.error(`      Failed to commit: ${e}`);
+        checkout(repoRoot, originalBranch);
+        return false;
+      }
+
+      // Run evaluation on the branch
+      console.log("[5/5] Running local evaluation (test-run mode)...");
+      const testRunName = `local-${app.name.replace(/\//g, "-")}-${branchShortId}`;
+      const evalInfo = await runLocalEvaluation(branchName, opts.base, testRunName);
+
+      // Return to original branch
+      checkout(repoRoot, originalBranch);
+
+      // Print summary
+      printSummary({
+        branch: branchName,
+        shortId: branchShortId,
+        testRunDir: evalInfo.testRunDir,
+      });
+    } else {
+      console.log("[LOCAL] Skipping branch/PR creation\n");
+    }
     return true;
   }
 
@@ -495,9 +605,10 @@ async function runCI(app: App, opts: Options): Promise<boolean> {
   console.log(`      PR: ${prResult.prUrl}\n`);
 
   // Run evaluation if requested
+  let evalInfo: EvaluationInfo | undefined;
   if (opts.evaluate && prResult.prUrl) {
     console.log("[6/6] Running PR evaluation...");
-    await runEvaluation(prResult.prUrl);
+    evalInfo = await runEvaluation(prResult.prUrl);
   }
 
   if (opts.deleteBranch) {
@@ -505,6 +616,16 @@ async function runCI(app: App, opts: Options): Promise<boolean> {
   } else {
     // Return to original branch
     checkout(repoRoot, originalBranch);
+  }
+
+  // Print summary if evaluation was run
+  if (opts.evaluate) {
+    printSummary({
+      prUrl: prResult.prUrl,
+      prNumber: evalInfo?.prNumber,
+      branch: branchName,
+      shortId: branchShortId,
+    });
   }
 
   return true;
