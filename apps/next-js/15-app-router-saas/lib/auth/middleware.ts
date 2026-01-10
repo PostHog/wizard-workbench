@@ -3,6 +3,9 @@ import { TeamDataWithMembers, User } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
 
+
+// DUCK DUCK GOOSE
+
 export type ActionState = {
   error?: string;
   success?: string;
