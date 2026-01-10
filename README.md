@@ -28,9 +28,13 @@ The `services/` directory is a toolbox for scripts and utilities to help with Wi
 
 ```
 services/
-└── pr-evaluator/
-└── wizard-run/
+├── pr-evaluator/    # AI-powered code evaluation for PRs and branches
+├── wizard-ci/       # Automated wizard runs with PR creation
+├── wizard-run/      # Interactive wizard runner
+└── github/          # GitHub/git utilities
 ```
+
+---
 
 ## Wizard local dev stack
 
@@ -62,14 +66,16 @@ Copy and edit `.env` with your repo paths and API key:
 cp .env.example .env
 ```
 
-```bash
-EVALUATOR_ANTHROPIC_API_KEY=sk-ant-...   # Required for wizard PR evaluator
+### Environment Variables
 
-# Adjust if your repos are in different locations
-EXAMPLES_PATH=~/development/examples
-MCP_PATH=~/development/posthog/services/mcp
-WIZARD_PATH=~/development/wizard
-```
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `EVALUATOR_ANTHROPIC_API_KEY` | Yes | Anthropic API key for the PR evaluator |
+| `EXAMPLES_PATH` | Yes | Path to your local examples repo (e.g., `~/development/examples`) |
+| `MCP_PATH` | Yes | Path to MCP service (e.g., `~/development/posthog/services/mcp`) |
+| `WIZARD_PATH` | Yes | Path to your local wizard repo (e.g., `~/development/wizard`) |
+| `POSTHOG_REGION` | For CI | PostHog region for wizard CI mode (`us` or `eu`) |
+| `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key for wizard CI mode |
 
 Make sure you've set up and installed dependencies for all required repos.
 
@@ -81,18 +87,59 @@ Enter `mprocs` to run the local dev stack:
 mprocs
 ```
 
-This starts 4 auto-running processes:
+### mprocs Commands
+
+Use keyboard shortcuts in mprocs: `s` to start, `x` to stop, `r` to restart, `q` to quit.
+
+#### Auto-start Processes (run automatically)
+
+| Process | Port | Description |
+|---------|------|-------------|
+| `examples` | 8765 | Examples server with MCP resources ZIP |
+| `mcp` | 8787 | MCP server using local resources |
+| `mcp-inspector` | 6274 | MCP Inspector UI for debugging |
+| `wizard-build` | - | Builds and watches Wizard for changes |
+
+#### Manual Processes (press `s` to start)
 
 | Process | Description |
 |---------|-------------|
-| `examples` | Examples server at `localhost:8765` |
-| `mcp` | MCP server at `localhost:8787` |
-| `mcp-inspector` | MCP inspector at `localhost:6274` |
-| `wizard` | Builds and watches Wizard for changes |
+| `wizard-run` | Interactive app selector - choose which app to run wizard on |
+| `wizard-tail-run` | Tail the wizard's verbose output (`/tmp/posthog-wizard.log`) |
+| `wizard-ci-run` | Full CI flow: run wizard, create PR, evaluate |
+| `wizard-ci-local-run` | CI flow with local evaluation (no PR) |
+| `wizard-ci-create-pr` | Push branch and create PR only (skip wizard run) |
+| `wizard-ci-evaluate-pr` | Evaluate an existing PR or local branch |
 
-Manual processes (press `s` to start):
+---
 
-| Process | Description |
-|---------|-------------|
-| `wizard-run` | Run the Wizard on a test app |
-| `workbench-evaluate` | Evaluate a PR or branch's Wizard integration |
+## Services reference
+
+### wizard-ci
+
+Run wizard on test apps and optionally create PRs with evaluation.
+
+```bash
+pnpm wizard-ci                     # Select test app, run wizard, and create PR
+pnpm wizard-ci --evaluate          # Also run PR evaluator 
+pnpm wizard-ci --local --evaluate  # Run locally (no PR created)
+pnpm wizard-ci --app next-js/15-app-router-saas --local  # Pre-select test app
+pnpm wizard-ci --push-only --branch wizard-ci/my-feature/abc1234 # Create PR from existing branch
+```
+
+### pr-evaluator
+
+AI evaluation of PostHog integration quality in pull requests or local branches.
+
+```bash
+pnpm run evaluate --pr <number>               # Evaluate a GitHub PR and post comment
+pnpm run evaluate --test-run --branch <name>  # Save evaluation output to local dir
+```
+
+When using `--test-run`, the evaluator locally saves these files to `test-evaluations/<name>/`:
+
+| File | Description |
+|------|-------------|
+| `prompt.md` | The full prompt sent to the AI |
+| `output.md` | The AI's evaluation response |
+| `usage.md` | Token usage and cost information |
