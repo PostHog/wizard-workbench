@@ -143,10 +143,13 @@ async function main(): Promise<void> {
   }
 
   // Validate environment
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("Error: ANTHROPIC_API_KEY environment variable is required");
+  // Use EVALUATOR_ANTHROPIC_API_KEY to avoid conflict with wizard's ANTHROPIC_API_KEY
+  if (!process.env.EVALUATOR_ANTHROPIC_API_KEY) {
+    console.error("Error: EVALUATOR_ANTHROPIC_API_KEY environment variable is required");
     process.exit(1);
   }
+  // Set ANTHROPIC_API_KEY for the Claude Agent SDK from our namespaced variable
+  process.env.ANTHROPIC_API_KEY = process.env.EVALUATOR_ANTHROPIC_API_KEY;
 
   // For local branch mode, always use test-run (can't post to GitHub without a PR)
   if (hasBranch && !args.testRun) {

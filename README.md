@@ -63,7 +63,7 @@ cp .env.example .env
 ```
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...   # Required for wizard PR evaluator
+EVALUATOR_ANTHROPIC_API_KEY=sk-ant-...   # Required for wizard PR evaluator
 
 # Adjust if your repos are in different locations
 EXAMPLES_PATH=~/development/examples
