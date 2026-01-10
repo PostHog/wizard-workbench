@@ -1,0 +1,30 @@
+.DS_Store
+/node_modules/
+todo.md
+
+# React Router
+/.react-router/
+/build/
+
+*.env
+
+# TypeScript
+*.tsbuildinfo
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Random
+count-lines.sh
+stripe-events.txt
+
+# Test fixtures
+/tests/fixtures/
+/app/tests/mocks/fixtures/
+
+# Prisma
+/app/generated/

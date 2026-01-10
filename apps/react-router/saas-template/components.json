@@ -1,0 +1,24 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "aliases": {
+    "components": "~/components",
+    "hooks": "~/hooks",
+    "lib": "~/lib",
+    "ui": "~/components/ui",
+    "utils": "~/lib/utils"
+  },
+  "iconLibrary": "tabler",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "registries": {},
+  "rsc": false,
+  "style": "base-vega",
+  "tailwind": {
+    "baseColor": "neutral",
+    "config": "",
+    "css": "app/app.css",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "tsx": true
+}

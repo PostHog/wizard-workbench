@@ -70,6 +70,8 @@ Desktop.ini
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+.cursor/
+**/.cursor/
 .idea/
 *.iml
 *.sublime-*

@@ -1,0 +1,219 @@
+import type { SubmissionResult } from "@conform-to/react/future";
+import { useForm } from "@conform-to/react/future";
+import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { Trans, useTranslation } from "react-i18next";
+import { Form, useNavigation } from "react-router";
+
+import { UPDATE_ORGANIZATION_INTENT } from "./general-settings-constants";
+import { updateOrganizationFormSchema } from "./general-settings-schemas";
+import {
+  AvatarUpload,
+  AvatarUploadDescription,
+  AvatarUploadInput,
+  AvatarUploadPreviewImage,
+} from "~/components/avatar-upload";
+import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { Button } from "~/components/ui/button";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "~/components/ui/field";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "~/components/ui/hover-card";
+import { Input } from "~/components/ui/input";
+import { Spinner } from "~/components/ui/spinner";
+import type { Organization } from "~/generated/browser";
+
+const ONE_MB = 1_000_000;
+
+export type GeneralOrganizationSettingsProps = {
+  lastResult?: SubmissionResult;
+  organization: Pick<Organization, "name" | "imageUrl" | "id">;
+};
+
+function WarningHoverCard({
+  children,
+  content,
+}: {
+  children?: React.ReactNode;
+  content: string;
+}) {
+  return (
+    <HoverCard>
+      <HoverCardTrigger
+        render={<Button className="h-auto p-0" type="button" variant="link" />}
+      >
+        {children}
+      </HoverCardTrigger>
+      <HoverCardContent align="start" className="w-80">
+        <p className="text-sm">{content}</p>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+export function GeneralOrganizationSettings({
+  lastResult,
+  organization,
+}: GeneralOrganizationSettingsProps) {
+  const { t } = useTranslation("organizations", {
+    keyPrefix: "settings.general",
+  });
+
+  const { form, fields } = useForm(
+    coerceFormValue(updateOrganizationFormSchema),
+    {
+      lastResult,
+    },
+  );
+
+  const navigation = useNavigation();
+  const isSubmitting =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === UPDATE_ORGANIZATION_INTENT;
+
+  return (
+    <Form
+      encType="multipart/form-data"
+      method="POST"
+      {...form.props}
+      aria-describedby={
+        form.errors && form.errors.length > 0
+          ? `${form.descriptionId} ${form.errorId}`
+          : form.descriptionId
+      }
+      aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+    >
+      <FieldSet disabled={isSubmitting}>
+        <FieldLegend>
+          <h1>{t("pageTitle")}</h1>
+        </FieldLegend>
+        <FieldDescription>{t("description")}</FieldDescription>
+
+        <FieldGroup className="**:data-[slot=field-error]:mt-1 @md/field-group:[&_[data-slot=field][data-orientation=responsive]]:grid @md/field-group:[&_[data-slot=field][data-orientation=responsive]]:grid-cols-2 @md/field-group:[&_[data-slot=field][data-orientation=responsive]]:gap-x-8">
+          {/* Organization Name */}
+          <Field
+            data-invalid={fields.name.ariaInvalid}
+            orientation="responsive"
+          >
+            <FieldContent>
+              <FieldLabel htmlFor={fields.name.id}>
+                {t("form.nameLabel")}
+              </FieldLabel>
+
+              <FieldDescription id={fields.name.descriptionId}>
+                <Trans
+                  components={{
+                    bold: <span className="font-semibold text-foreground" />,
+                    warning: (
+                      <WarningHoverCard
+                        content={t("form.nameWarningContent")}
+                      />
+                    ),
+                  }}
+                  i18nKey="form.nameDescription"
+                  parent={null}
+                  t={t}
+                />
+              </FieldDescription>
+            </FieldContent>
+
+            <div>
+              <Input
+                {...fields.name.inputProps}
+                autoComplete="organization"
+                defaultValue={organization.name}
+                placeholder={t("form.namePlaceholder")}
+              />
+
+              <FieldError
+                errors={fields.name.errors}
+                id={fields.name.errorId}
+              />
+            </div>
+          </Field>
+
+          {/* Logo Upload */}
+          <AvatarUpload maxFileSize={ONE_MB}>
+            {({ error }) => (
+              <Field
+                data-invalid={
+                  fields.logo.ariaInvalid || error ? "true" : undefined
+                }
+                orientation="responsive"
+              >
+                <FieldContent>
+                  <FieldLabel htmlFor={fields.logo.id}>
+                    {t("form.logoLabel")}
+                  </FieldLabel>
+                  <FieldDescription id={fields.logo.descriptionId}>
+                    {t("form.logoDescription")}
+                  </FieldDescription>
+                </FieldContent>
+                <div>
+                  <div className="flex items-center gap-x-4 md:gap-x-8">
+                    <Avatar className="size-16 rounded-lg after:rounded-lg md:size-24">
+                      <AvatarUploadPreviewImage
+                        alt={t("form.logoPreviewAlt")}
+                        className="size-16 rounded-lg object-cover md:size-24"
+                        src={organization.imageUrl ?? ""}
+                      />
+
+                      <AvatarFallback className="size-16 rounded-lg border border-border text-lg md:size-24 md:text-2xl dark:bg-input/30">
+                        {organization.name.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col gap-2">
+                      <AvatarUploadInput
+                        {...fields.logo.inputProps}
+                        accept="image/*"
+                      />
+
+                      <AvatarUploadDescription>
+                        {t("form.logoFormats")}
+                      </AvatarUploadDescription>
+                    </div>
+                  </div>
+
+                  <FieldError
+                    errors={[
+                      ...(fields.logo.errors ?? []),
+                      ...(error ? [error] : []),
+                    ]}
+                    id={fields.logo.errorId}
+                  />
+                </div>
+              </Field>
+            )}
+          </AvatarUpload>
+
+          <div className="max-w-min">
+            <Button
+              name="intent"
+              type="submit"
+              value={UPDATE_ORGANIZATION_INTENT}
+            >
+              {isSubmitting ? (
+                <>
+                  <Spinner />
+                  {t("form.saving")}
+                </>
+              ) : (
+                t("form.save")
+              )}
+            </Button>
+          </div>
+        </FieldGroup>
+      </FieldSet>
+    </Form>
+  );
+}
