@@ -188,13 +188,21 @@ jobs:
           EXAMPLES_PATH: ${{ env.EXAMPLES_PATH }}
           MCP_PATH: ${{ env.MCP_PATH }}
 
+      - name: Prepare artifact name
+        if: always()
+        id: artifact-name
+        run: |
+          # Replace slashes with dashes for valid artifact name
+          SAFE_NAME="${{ inputs.app }}"
+          SAFE_NAME="${SAFE_NAME//\//-}"
+          echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
+
       - name: Upload logs
         # Skip in act (local runner) - artifact upload requires GitHub infrastructure
         if: always() && !env.ACT
         uses: actions/upload-artifact@v4
         with:
-          # Use app name with slashes replaced by dashes for valid artifact name
-          name: wizard-ci-logs-${{ github.run_id }}-${{ inputs.app && replace(inputs.app, '/', '-') || 'unknown' }}
+          name: wizard-ci-logs-${{ github.run_id }}-${{ steps.artifact-name.outputs.safe_name }}
           path: wizard-output.log
 
       - name: Summary
