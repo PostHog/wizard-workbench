@@ -4,8 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'Test app path (e.g., next-js/15-app-router-saas) or "all"'
+        description: 'Test app path (e.g., next-js/15-app-router-saas)'
         required: true
+        type: string
+      trigger_id:
+        description: 'Trigger ID (inherited from orchestrator, auto-generated if empty)'
+        required: false
         type: string
         default: ''
       evaluate:
@@ -34,66 +38,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  # First job: discover available apps and validate input
-  discover-apps:
-    runs-on: ubuntu-latest
-    outputs:
-      apps: ${{ steps.find-apps.outputs.apps }}
-      app_list: ${{ steps.find-apps.outputs.app_list }}
-      selected_apps: ${{ steps.select-apps.outputs.selected_apps }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Find available apps
-        id: find-apps
-        run: |
-          # Find all directories with package.json in apps/
-          APPS=$(find apps -name "package.json" -not -path "*/node_modules/*" \
-            | sed 's|apps/||' | sed 's|/package.json||' | sort)
-
-          # Convert to JSON array
-          APPS_JSON=$(echo "$APPS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          echo "apps=$APPS_JSON" >> $GITHUB_OUTPUT
-
-          # Also output as readable list
-          echo "app_list<<EOF" >> $GITHUB_OUTPUT
-          echo "$APPS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          echo "Available apps:"
-          echo "$APPS"
-
-      - name: Select apps to run
-        id: select-apps
-        run: |
-          INPUT_APP="${{ inputs.app }}"
-          AVAILABLE='${{ steps.find-apps.outputs.apps }}'
-
-          if [ -z "$INPUT_APP" ] || [ "$INPUT_APP" = "all" ]; then
-            # Run all apps
-            echo "selected_apps=$AVAILABLE" >> $GITHUB_OUTPUT
-            echo "Running all apps"
-          else
-            # Validate the specified app exists
-            if echo "$AVAILABLE" | jq -e --arg app "$INPUT_APP" 'index($app) != null' > /dev/null; then
-              echo "selected_apps=[\"$INPUT_APP\"]" >> $GITHUB_OUTPUT
-              echo "Running single app: $INPUT_APP"
-            else
-              echo "::error::App '$INPUT_APP' not found. Available apps:"
-              echo '${{ steps.find-apps.outputs.app_list }}'
-              exit 1
-            fi
-          fi
-
-  # Second job: run wizard-ci on selected app(s)
   wizard-ci:
-    needs: discover-apps
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        app: ${{ fromJson(needs.discover-apps.outputs.selected_apps) }}
     outputs:
       pr_url: ${{ steps.run-wizard.outputs.pr_url }}
       pr_number: ${{ steps.run-wizard.outputs.pr_number }}
@@ -107,7 +53,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -116,6 +62,13 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install GitHub CLI
+        run: |
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y gh
 
       - name: Clone and build Wizard CLI
         run: |
@@ -153,22 +106,20 @@ jobs:
 
           echo "EXAMPLES_PATH=$HOME/examples" >> $GITHUB_ENV
 
-      - name: Clone MCP from PostHog monorepo (sparse checkout)
+      - name: Clone PostHog monorepo and install MCP
         run: |
-          echo "::group::Sparse cloning PostHog monorepo for MCP"
-          mkdir -p $HOME/posthog
+          echo "::group::Cloning PostHog monorepo (sparse checkout)"
+          git clone --depth 1 --branch ${{ inputs.posthog_ref }} \
+            --filter=blob:none --sparse \
+            https://github.com/PostHog/posthog.git $HOME/posthog
           cd $HOME/posthog
-          git init
-          git remote add origin https://github.com/PostHog/posthog.git
-          git config core.sparseCheckout true
-          echo "services/mcp" >> .git/info/sparse-checkout
-          git fetch --depth 1 origin ${{ inputs.posthog_ref }}
-          git checkout FETCH_HEAD
+          git sparse-checkout set services/mcp
           echo "::endgroup::"
 
           echo "::group::Installing MCP dependencies"
-          cd $HOME/posthog/services/mcp
-          pnpm install --frozen-lockfile
+          cd $HOME/posthog/services/mcp/typescript
+          # Use --ignore-workspace to avoid resolving all 45 workspace packages
+          pnpm install --ignore-workspace --no-frozen-lockfile
           echo "::endgroup::"
 
           echo "MCP_PATH=$HOME/posthog/services/mcp" >> $GITHUB_ENV
@@ -177,25 +128,44 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Start MCP server
-        run: |
-          cd $MCP_PATH
-          # Start MCP server in background
-          pnpm start &
-          MCP_PID=$!
-          echo "MCP_PID=$MCP_PID" >> $GITHUB_ENV
-          # Wait for server to be ready
-          sleep 5
+          # Switch remote to HTTPS for token-based auth (works in CI without SSH keys)
+          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
       - name: Run Wizard CI
         id: run-wizard
         run: |
-          CMD="pnpm wizard-ci --app ${{ matrix.app }} --base ${{ inputs.base_branch }}"
+          # Start MCP server in background
+          cd $MCP_PATH/typescript
+          pnpm dev &
+          MCP_PID=$!
+
+          # Wait for MCP server to be ready
+          echo "Waiting for MCP server to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8787/mcp > /dev/null 2>&1; then
+              echo "MCP server is ready"
+              break
+            fi
+            sleep 1
+          done
+
+          # Debug: check env vars are set
+          echo "EVALUATOR_ANTHROPIC_API_KEY set: $([ -n \"$EVALUATOR_ANTHROPIC_API_KEY\" ] && echo 'yes' || echo 'no')"
+
+          # Run wizard
+          cd $GITHUB_WORKSPACE
+          CMD="pnpm wizard-ci --app ${{ inputs.app }} --base ${{ inputs.base_branch }}"
+          if [ -n "${{ inputs.trigger_id }}" ]; then
+            CMD="$CMD --trigger-id ${{ inputs.trigger_id }}"
+          fi
           if [ "${{ inputs.evaluate }}" = "true" ]; then
             CMD="$CMD --evaluate"
           fi
           $CMD 2>&1 | tee wizard-output.log
+          WIZARD_EXIT=$?
+
+          # Stop MCP server
+          kill $MCP_PID 2>/dev/null || true
 
           # Extract PR URL
           PR_URL=$(grep -oP 'PR: \K(https://github.com/[^\s]+)' wizard-output.log || true)
@@ -204,6 +174,8 @@ jobs:
             PR_NUM=$(echo $PR_URL | grep -oP '/pull/\K\d+')
             echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
           fi
+
+          exit $WIZARD_EXIT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # PR evaluator uses EVALUATOR_ANTHROPIC_API_KEY to avoid conflict with wizard
@@ -216,26 +188,24 @@ jobs:
           EXAMPLES_PATH: ${{ env.EXAMPLES_PATH }}
           MCP_PATH: ${{ env.MCP_PATH }}
 
-      - name: Stop MCP server
-        if: always()
-        run: |
-          if [ -n "$MCP_PID" ]; then
-            kill $MCP_PID || true
-          fi
-
       - name: Upload logs
-        if: always()
+        # Skip in act (local runner) - artifact upload requires GitHub infrastructure
+        if: always() && !env.ACT
         uses: actions/upload-artifact@v4
         with:
-          name: wizard-ci-logs-${{ matrix.app }}
+          # Use app name with slashes replaced by dashes for valid artifact name
+          name: wizard-ci-logs-${{ github.run_id }}-${{ inputs.app }}
           path: wizard-output.log
 
       - name: Summary
         if: always()
         run: |
-          echo "## Wizard CI Results: ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Wizard CI Results: ${{ inputs.app }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**App:** ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
+          echo "**App:** ${{ inputs.app }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ inputs.trigger_id }}" ]; then
+            echo "**Trigger ID:** ${{ inputs.trigger_id }}" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "**Evaluate:** ${{ inputs.evaluate }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Dependency Versions" >> $GITHUB_STEP_SUMMARY

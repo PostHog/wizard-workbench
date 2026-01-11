@@ -1,0 +1,169 @@
+name: Wizard Trigger
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Test app path (e.g., next-js/15-app-router-saas) or "all"'
+        required: true
+        type: string
+        default: ''
+      evaluate:
+        description: 'Run PR evaluator'
+        type: boolean
+        default: true
+      base_branch:
+        description: 'Base branch for PR'
+        type: string
+        default: 'main'
+      wizard_ref:
+        description: 'Wizard repo branch/tag/sha'
+        type: string
+        default: 'main'
+      examples_ref:
+        description: 'Examples repo branch/tag/sha'
+        type: string
+        default: 'main'
+      posthog_ref:
+        description: 'PostHog repo branch/tag/sha (for MCP)'
+        type: string
+        default: 'master'
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  # Discover available apps and determine which ones to run
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.select-apps.outputs.apps }}
+      app_count: ${{ steps.select-apps.outputs.app_count }}
+      trigger_id: ${{ steps.generate-id.outputs.trigger_id }}
+    steps:
+      - name: Generate trigger ID
+        id: generate-id
+        run: |
+          # Generate a 7-character hex ID (similar to git short sha)
+          TRIGGER_ID=$(openssl rand -hex 4 | cut -c1-7)
+          echo "trigger_id=$TRIGGER_ID" >> $GITHUB_OUTPUT
+          echo "Generated trigger ID: $TRIGGER_ID"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find available apps
+        id: find-apps
+        run: |
+          # Find all directories with package.json in apps/
+          APPS=$(find apps -name "package.json" -not -path "*/node_modules/*" \
+            | sed 's|apps/||' | sed 's|/package.json||' | sort)
+
+          # Convert to JSON array
+          APPS_JSON=$(echo "$APPS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "apps=$APPS_JSON" >> $GITHUB_OUTPUT
+
+          echo "Available apps:"
+          echo "$APPS"
+
+      - name: Select apps to run
+        id: select-apps
+        run: |
+          INPUT_APP="${{ inputs.app }}"
+          AVAILABLE='${{ steps.find-apps.outputs.apps }}'
+
+          if [ -z "$INPUT_APP" ] || [ "$INPUT_APP" = "all" ]; then
+            # Run all apps
+            SELECTED="$AVAILABLE"
+            echo "Running all apps"
+          else
+            # Validate the specified app exists
+            if echo "$AVAILABLE" | jq -e --arg app "$INPUT_APP" 'index($app) != null' > /dev/null; then
+              SELECTED="[\"$INPUT_APP\"]"
+              echo "Running single app: $INPUT_APP"
+            else
+              echo "::error::App '$INPUT_APP' not found."
+              echo "Available apps:"
+              echo "$AVAILABLE" | jq -r '.[]'
+              exit 1
+            fi
+          fi
+
+          echo "apps=$SELECTED" >> $GITHUB_OUTPUT
+          APP_COUNT=$(echo "$SELECTED" | jq 'length')
+          echo "app_count=$APP_COUNT" >> $GITHUB_OUTPUT
+          echo "Selected $APP_COUNT app(s) to run"
+
+  # Trigger wizard-ci for each selected app
+  trigger:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        app: ${{ fromJson(needs.discover.outputs.apps) }}
+    steps:
+      - name: Trigger wizard-ci for ${{ matrix.app }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'wizard-ci.yml',
+              ref: '${{ github.ref }}',
+              inputs: {
+                app: '${{ matrix.app }}',
+                trigger_id: '${{ needs.discover.outputs.trigger_id }}',
+                evaluate: '${{ inputs.evaluate }}',
+                base_branch: '${{ inputs.base_branch }}',
+                wizard_ref: '${{ inputs.wizard_ref }}',
+                examples_ref: '${{ inputs.examples_ref }}',
+                posthog_ref: '${{ inputs.posthog_ref }}'
+              }
+            });
+            console.log('Triggered wizard-ci for: ${{ matrix.app }} (trigger: ${{ needs.discover.outputs.trigger_id }})');
+
+      - name: Summary
+        run: |
+          echo "## Triggered Wizard CI" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger ID:** ${{ needs.discover.outputs.trigger_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**App:** ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Evaluate:** ${{ inputs.evaluate }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Dependency Versions" >> $GITHUB_STEP_SUMMARY
+          echo "- **wizard:** ${{ inputs.wizard_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **examples:** ${{ inputs.examples_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **mcp (posthog):** ${{ inputs.posthog_ref }}" >> $GITHUB_STEP_SUMMARY
+
+  # Summary job to report all triggered workflows
+  summary:
+    needs: [discover, trigger]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Final Summary
+        run: |
+          echo "## Wizard Trigger Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger ID:** \`${{ needs.discover.outputs.trigger_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Total apps triggered:** ${{ needs.discover.outputs.app_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Apps" >> $GITHUB_STEP_SUMMARY
+          echo '${{ needs.discover.outputs.apps }}' | jq -r '.[] | "- " + .' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger ID | \`${{ needs.discover.outputs.trigger_id }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Evaluate | ${{ inputs.evaluate }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Base Branch | ${{ inputs.base_branch }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Wizard Ref | ${{ inputs.wizard_ref }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Examples Ref | ${{ inputs.examples_ref }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PostHog Ref | ${{ inputs.posthog_ref }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> **Note:** Each app runs as a separate wizard-ci workflow. Search for trigger ID \`${{ needs.discover.outputs.trigger_id }}\` to find all related PRs." >> $GITHUB_STEP_SUMMARY
