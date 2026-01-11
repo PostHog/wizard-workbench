@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'Test app path (e.g., next-js/15-app-router-saas) or "all"'
+        description: 'Test app path (e.g., "next-js/15-app-router-saas"), app category (e.g., "next-js"), or "all"'
         required: true
         type: string
         default: ''
@@ -83,20 +83,40 @@ jobs:
           INPUT_APP="${{ inputs.app }}"
           AVAILABLE='${{ steps.find-apps.outputs.apps }}'
 
-          if [ -z "$INPUT_APP" ] || [ "$INPUT_APP" = "all" ]; then
+          if [ -z "$INPUT_APP" ]; then
+            echo "::error::App input is required. Use 'all', a category (e.g., 'next-js'), or a specific app path."
+            echo "Available apps:"
+            echo "$AVAILABLE" | jq -r '.[]'
+            echo ""
+            echo "Available categories:"
+            echo "$AVAILABLE" | jq -r '.[]' | cut -d'/' -f1 | sort -u
+            exit 1
+          elif [ "$INPUT_APP" = "all" ]; then
             # Run all apps
             SELECTED="$AVAILABLE"
             echo "Running all apps"
           else
-            # Validate the specified app exists
+            # Check if it's an exact app match
             if echo "$AVAILABLE" | jq -e --arg app "$INPUT_APP" 'index($app) != null' > /dev/null; then
               SELECTED="[\"$INPUT_APP\"]"
               echo "Running single app: $INPUT_APP"
             else
-              echo "::error::App '$INPUT_APP' not found."
-              echo "Available apps:"
-              echo "$AVAILABLE" | jq -r '.[]'
-              exit 1
+              # Check if it's a category/prefix (e.g., "next-js" matches "next-js/15-app-router-todo")
+              MATCHED=$(echo "$AVAILABLE" | jq -c --arg prefix "$INPUT_APP/" '[.[] | select(startswith($prefix))]')
+              MATCH_COUNT=$(echo "$MATCHED" | jq 'length')
+
+              if [ "$MATCH_COUNT" -gt 0 ]; then
+                SELECTED="$MATCHED"
+                echo "Running $MATCH_COUNT app(s) matching prefix: $INPUT_APP"
+              else
+                echo "::error::App or category '$INPUT_APP' not found."
+                echo "Available apps:"
+                echo "$AVAILABLE" | jq -r '.[]'
+                echo ""
+                echo "Available categories:"
+                echo "$AVAILABLE" | jq -r '.[]' | cut -d'/' -f1 | sort -u
+                exit 1
+              fi
             fi
           fi
 
