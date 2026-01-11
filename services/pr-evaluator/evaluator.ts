@@ -27,6 +27,9 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
     await fs.writeFile(join(testRunDir, "prompt.md"), fullPrompt, "utf-8");
   }
 
+  // Debug mode: set EVALUATOR_DEBUG=1 to enable extra stderr logging
+  const debug = process.env.EVALUATOR_DEBUG === "1";
+
   console.log("\nRunning evaluation agent...");
 
   let resultText = "";
@@ -36,14 +39,26 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
     totalCostUsd?: number;
   } = {};
 
+  // Collect stderr output for error reporting
+  const stderrOutput: string[] = [];
+
+  try {
   for await (const message of query({
     prompt: userPrompt,
     options: {
       model: "claude-opus-4-5-20251101",
       allowedTools: ["Read", "Grep", "Glob", "Bash"],
       cwd: process.cwd(),
-      permissionMode: "bypassPermissions",
+      // Use acceptEdits instead of bypassPermissions - the latter doesn't work as root in Docker
+      permissionMode: "acceptEdits",
       systemPrompt,
+      // Capture stderr from the Claude Code subprocess for error diagnostics
+      stderr: (data: string) => {
+        stderrOutput.push(data);
+        if (debug) {
+          console.error("[SDK stderr]:", data);
+        }
+      },
     },
   })) {
     if (message.type === "assistant") {
@@ -78,6 +93,15 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
         throw new Error(`Evaluation failed: ${message.subtype}`);
       }
     }
+  }
+  } catch (error) {
+    console.error("Agent query error:", error);
+    if (stderrOutput.length > 0) {
+      console.error("\n--- Collected stderr output ---");
+      console.error(stderrOutput.join(""));
+      console.error("--- End stderr ---\n");
+    }
+    throw error;
   }
 
   if (!resultText) {
