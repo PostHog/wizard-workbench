@@ -390,6 +390,7 @@ async function pushOnlyMode(opts: Options): Promise<void> {
     base: opts.base,
     title: buildPRTitle(prMeta),
     body: buildPRBody(prMeta),
+    draft: true,
     deleteBranchAfter: opts.deleteBranch,
     returnToBranch: originalBranch,
   });
@@ -591,6 +592,7 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
     base: opts.base,
     title: buildPRTitle(prMeta),
     body: buildPRBody(prMeta),
+    draft: true,
     deleteBranchAfter: opts.deleteBranch,
     returnToBranch: originalBranch,
   });

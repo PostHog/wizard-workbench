@@ -205,6 +205,17 @@ jobs:
           name: wizard-ci-logs-${{ github.run_id }}-${{ steps.artifact-name.outputs.safe_name }}
           path: wizard-output.log
 
+      - name: Label and close PR
+        if: steps.run-wizard.outputs.pr_number
+        run: |
+          # Add CI/CD label to the PR
+          gh pr edit ${{ steps.run-wizard.outputs.pr_number }} --add-label "CI/CD"
+
+          # Close the PR (keeps it for reference but not in open PRs)
+          gh pr close ${{ steps.run-wizard.outputs.pr_number }} --comment "Automated CI run complete. Closing PR to keep open PRs clean. This PR is preserved for reference and evaluation results."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Summary
         if: always()
         run: |
@@ -222,5 +233,5 @@ jobs:
           echo "- **mcp (posthog):** ${{ inputs.posthog_ref }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -n "${{ steps.run-wizard.outputs.pr_url }}" ]; then
-            echo "**PR:** ${{ steps.run-wizard.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
+            echo "**PR:** ${{ steps.run-wizard.outputs.pr_url }} (closed)" >> $GITHUB_STEP_SUMMARY
           fi
