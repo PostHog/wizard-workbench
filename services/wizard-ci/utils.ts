@@ -139,17 +139,10 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
   const args = [wizardBin, "--local-mcp"];
 
   if (options.ci) {
-    // Validate CI mode requirements - read from env vars (loaded from .env)
-    const region = process.env.POSTHOG_REGION as "us" | "eu" | undefined;
-    const apiKey = process.env.POSTHOG_PERSONAL_API_KEY;
+    // Region can be passed via options, env var, or defaults to "us"
+    const region = options.region || (process.env.POSTHOG_REGION as "us" | "eu") || "us";
+    const apiKey = options.apiKey || process.env.POSTHOG_PERSONAL_API_KEY;
 
-    if (!region) {
-      return Promise.resolve({
-        success: false,
-        duration: 0,
-        error: "CI mode requires POSTHOG_REGION to be defined in .env file (us or eu)",
-      });
-    }
     if (!apiKey) {
       return Promise.resolve({
         success: false,

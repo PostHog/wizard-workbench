@@ -23,24 +23,41 @@ const APPS_DIR = join(WORKBENCH, "apps");
 
 interface Options {
   ci: boolean;
+  region: "us" | "eu";
 }
 
 function parseArgs(): Options {
   const args = process.argv.slice(2);
   const opts: Options = {
     ci: false,
+    region: "us",
   };
 
-  for (const arg of args) {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
     if (arg === "--ci") opts.ci = true;
-    else if (arg === "--help" || arg === "-h") {
+    else if (arg === "--region") {
+      const value = args[++i];
+      if (value === "us" || value === "eu") {
+        opts.region = value;
+      } else {
+        console.error(`Invalid region: ${value}. Must be "us" or "eu".`);
+        process.exit(1);
+      }
+    } else if (arg === "--help" || arg === "-h") {
       console.log(`
 wizard-run: Interactive app selector for running the PostHog wizard
 
 Usage:
-  pnpm wizard-run              Interactive mode (default)
-  pnpm wizard-run --ci         Run in CI mode (non-interactive)
-                               Requires POSTHOG_REGION and POSTHOG_PERSONAL_API_KEY in .env
+  pnpm wizard-run                    Interactive mode (default)
+  pnpm wizard-run --ci               Run in CI mode (non-interactive)
+  pnpm wizard-run --region <us|eu>   Specify PostHog region (default: us)
+
+Options:
+  --ci              Run in CI mode (non-interactive)
+                    Requires POSTHOG_PERSONAL_API_KEY in .env
+  --region <value>  PostHog region: "us" or "eu" (default: us)
+  --help, -h        Show this help message
 `);
       process.exit(0);
     }
@@ -94,7 +111,7 @@ async function main(): Promise<void> {
   }
   console.log();
 
-  const result = await runWizard(selectedApp.path, { ci: opts.ci });
+  const result = await runWizard(selectedApp.path, { ci: opts.ci, region: opts.region });
 
   if (!result.success) {
     console.error(`Wizard failed: ${result.error}`);
