@@ -10,7 +10,7 @@ procs:
     stop_signal: SIGTERM
 
   mcp:
-    # Use dev:local-resources to read from local examples server 
+    # Use dev:local-resources to read from local examples server
     # Runs at http://localhost:8787
     shell: "source .env && cd $MCP_PATH && pnpm run dev:local-resources"
     autostart: true
