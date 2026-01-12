@@ -67,6 +67,17 @@ interface PRMetadata {
   shortId: string;
   branch: string;
   duration?: number;
+  wizardRef?: string;
+  examplesRef?: string;
+  posthogRef?: string;
+}
+
+function getDependencyRefs(): Pick<PRMetadata, "wizardRef" | "examplesRef" | "posthogRef"> {
+  return {
+    wizardRef: process.env.WIZARD_REF,
+    examplesRef: process.env.EXAMPLES_REF,
+    posthogRef: process.env.POSTHOG_REF,
+  };
 }
 
 function buildPRTitle(meta: PRMetadata): string {
@@ -75,11 +86,15 @@ function buildPRTitle(meta: PRMetadata): string {
 
 function buildPRBody(meta: PRMetadata): string {
   const lines = [
-    `Automated wizard CI run. Trigger ID: ${meta.shortId}`,
+    `Automated wizard CI run`,
     "",
+    `Trigger ID: \`${meta.shortId}\``,
     `App: \`${meta.appName}\``,
     `App directory: \`apps/${meta.appName}\``,
-    `Branch: \`${meta.branch}\``,
+    `Workbench branch: \`${meta.branch}\``,
+    `Wizard branch: \`${meta.wizardRef || "main"}\``,
+    `Examples branch: \`${meta.examplesRef || "main"}\``,
+    `PostHog (MCP) branch: \`${meta.posthogRef || "master"}\``,
     `Timestamp: ${new Date().toISOString()}`,
   ];
   if (meta.duration !== undefined) {
@@ -381,6 +396,7 @@ async function pushOnlyMode(opts: Options): Promise<void> {
     appName,
     shortId: branchShortId,
     branch: targetBranch,
+    ...getDependencyRefs(),
   };
 
   const result = pushAndCreatePR({
@@ -583,6 +599,7 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
     shortId: triggerId,
     branch: branchName,
     duration: result.duration,
+    ...getDependencyRefs(),
   };
 
   const prResult = pushAndCreatePR({
