@@ -192,9 +192,11 @@ jobs:
             echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
           fi
 
-          # Extract confidence score from evaluator output (e.g., "Confidence score: 4/5")
-          CONFIDENCE=$(grep -oP 'Confidence score: \K\d+/\d+' wizard-output.log || echo "")
+          # Extract confidence score from evaluator output (e.g., "### Confidence score: 4/5 👍")
+          # Use grep + sed since grep -P (Perl regex) may not be available
+          CONFIDENCE=$(grep -o 'Confidence score: [0-9]/[0-9]' wizard-output.log | head -1 | sed 's/Confidence score: //' || echo "")
           echo "confidence_score=$CONFIDENCE" >> $GITHUB_OUTPUT
+          echo "Extracted confidence score: '$CONFIDENCE'"
 
           exit $WIZARD_EXIT
         env:
@@ -261,14 +263,18 @@ jobs:
           if [ -n "${{ steps.run-wizard.outputs.pr_url }}" ]; then
             STATUS="✅"
             CONFIDENCE="${{ steps.run-wizard.outputs.confidence_score }}"
-            if [ -n "$CONFIDENCE" ]; then
-              TEXT="<${{ steps.run-wizard.outputs.pr_url }}|PR #${{ steps.run-wizard.outputs.pr_number }}> · Confidence: $CONFIDENCE"
-            else
-              TEXT="<${{ steps.run-wizard.outputs.pr_url }}|PR #${{ steps.run-wizard.outputs.pr_number }}>"
-            fi
+            PR_FIELD="<${{ steps.run-wizard.outputs.pr_url }}|#${{ steps.run-wizard.outputs.pr_number }}>"
           else
             STATUS="❌"
-            TEXT="Failed - <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|view logs>"
+            CONFIDENCE=""
+            PR_FIELD="<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View logs>"
+          fi
+
+          # Build confidence field - show N/A if not available
+          if [ -n "$CONFIDENCE" ]; then
+            CONFIDENCE_TEXT="$CONFIDENCE"
+          else
+            CONFIDENCE_TEXT="N/A"
           fi
 
           curl -s -X POST https://slack.com/api/chat.postMessage \
@@ -277,5 +283,16 @@ jobs:
             -d "{
               \"channel\": \"${{ secrets.SLACK_CHANNEL_ID }}\",
               \"thread_ts\": \"${{ inputs.slack_thread_ts }}\",
-              \"text\": \"$STATUS *${{ inputs.app }}*: $TEXT\"
+              \"text\": \"$STATUS ${{ inputs.app }}\",
+              \"blocks\": [
+                {
+                  \"type\": \"section\",
+                  \"fields\": [
+                    {\"type\": \"mrkdwn\", \"text\": \"*Status:* $STATUS\"},
+                    {\"type\": \"mrkdwn\", \"text\": \"*App:* ${{ inputs.app }}\"},
+                    {\"type\": \"mrkdwn\", \"text\": \"*Confidence score:* $CONFIDENCE_TEXT\"},
+                    {\"type\": \"mrkdwn\", \"text\": \"*PR:* $PR_FIELD\"}
+                  ]
+                }
+              ]
             }"

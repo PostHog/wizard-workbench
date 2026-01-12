@@ -194,16 +194,12 @@ jobs:
               "text": "Wizard CI Started - Trigger ID: ${{ needs.discover.outputs.trigger_id }}",
               "blocks": [
                 {
-                  "type": "header",
-                  "text": {"type": "plain_text", "text": "Wizard CI Started", "emoji": true}
-                },
-                {
                   "type": "section",
                   "fields": [
-                    {"type": "mrkdwn", "text": "*Trigger ID:*\n`${{ needs.discover.outputs.trigger_id }}`"},
-                    {"type": "mrkdwn", "text": "*Apps:*\n${{ needs.discover.outputs.app_count }}"},
-                    {"type": "mrkdwn", "text": "*Source:*\n${{ needs.discover.outputs.input_source }}"},
-                    {"type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"}
+                    {"type": "mrkdwn", "text": "*Trigger ID:* `${{ needs.discover.outputs.trigger_id }}`"},
+                    {"type": "mrkdwn", "text": "*Apps:* ${{ needs.discover.outputs.app_count }}"},
+                    {"type": "mrkdwn", "text": "*Source:* ${{ needs.discover.outputs.input_source }}"},
+                    {"type": "mrkdwn", "text": "*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"}
                   ]
                 }
               ]
