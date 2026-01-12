@@ -32,6 +32,14 @@ on:
         description: 'PostHog repo branch/tag/sha (for MCP)'
         type: string
         default: 'master'
+      posthog_region:
+        description: 'PostHog region (us or eu)'
+        required: false
+        type: choice
+        options:
+          - us
+          - eu
+        default: 'us'
 
 jobs:
   wizard-ci:
@@ -183,7 +191,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           # PostHog credentials - used for both Wizard CI and PR evaluator (via LLM gateway)
-          POSTHOG_REGION: ${{ secrets.POSTHOG_REGION }}
+          POSTHOG_REGION: ${{ inputs.posthog_region }}
           POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
           # Dependency paths
           WIZARD_PATH: ${{ env.WIZARD_PATH }}

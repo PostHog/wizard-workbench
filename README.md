@@ -73,8 +73,8 @@ cp .env.example .env
 | `EXAMPLES_PATH` | Yes | Path to your local examples repo (e.g., `~/development/examples`) |
 | `MCP_PATH` | Yes | Path to MCP service (e.g., `~/development/posthog/services/mcp`) |
 | `WIZARD_PATH` | Yes | Path to your local wizard repo (e.g., `~/development/wizard`) |
-| `POSTHOG_REGION` | For CI | PostHog region for wizard CI mode (`us` or `eu`) |
-| `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key for wizard CI mode and PR evaluator|
+| `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key for wizard CI mode and PR evaluator |
+| `POSTHOG_REGION` | No | PostHog region (`us` or `eu`). Defaults to `us`. Can also be set via `--region` flag or workflow input. |
 
 Make sure you've set up and installed dependencies for all required repos.
 
@@ -145,6 +145,7 @@ The `wizard-ci-trigger.yml` is the main entry point for CI/CD and accepts severa
 | `wizard_ref` | `main` | Wizard repo branch/tag/sha |
 | `examples_ref` | `main` | Examples repo branch/tag/sha |
 | `posthog_ref` | `master` | PostHog repo branch/tag/sha (for MCP) |
+| `posthog_region` | `us` | PostHog region (`us` or `eu`) |
 | `trigger_id` | auto-gen | Seven character ID |
 
 Each trigger is assigned a unique short ID that tracks the group of wizard CI runs it created. 
