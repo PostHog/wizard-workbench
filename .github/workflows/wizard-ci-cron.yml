@@ -37,6 +37,7 @@ jobs:
               inputs: {
                 app: app,
                 evaluate: 'true',
+                notify_slack: 'true',
                 base_branch: 'main',
                 wizard_ref: 'main',
                 examples_ref: 'main',
@@ -54,6 +55,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- Evaluate: true" >> $GITHUB_STEP_SUMMARY
+          echo "- Notify Slack: true" >> $GITHUB_STEP_SUMMARY
           echo "- Base branch: main" >> $GITHUB_STEP_SUMMARY
           echo "- Wizard ref: main" >> $GITHUB_STEP_SUMMARY
           echo "- Examples ref: main" >> $GITHUB_STEP_SUMMARY

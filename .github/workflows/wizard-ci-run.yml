@@ -40,6 +40,11 @@ on:
           - us
           - eu
         default: 'us'
+      slack_thread_ts:
+        description: 'Slack thread timestamp for replies'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   wizard-ci:
@@ -187,6 +192,10 @@ jobs:
             echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
           fi
 
+          # Extract confidence score from evaluator output (e.g., "Confidence score: 4/5")
+          CONFIDENCE=$(grep -oP 'Confidence score: \K\d+/\d+' wizard-output.log || echo "")
+          echo "confidence_score=$CONFIDENCE" >> $GITHUB_OUTPUT
+
           exit $WIZARD_EXIT
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -245,3 +254,28 @@ jobs:
           if [ -n "${{ steps.run-wizard.outputs.pr_url }}" ]; then
             echo "**PR:** ${{ steps.run-wizard.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Notify Slack
+        if: always() && inputs.slack_thread_ts != ''
+        run: |
+          if [ -n "${{ steps.run-wizard.outputs.pr_url }}" ]; then
+            STATUS="✅"
+            CONFIDENCE="${{ steps.run-wizard.outputs.confidence_score }}"
+            if [ -n "$CONFIDENCE" ]; then
+              TEXT="<${{ steps.run-wizard.outputs.pr_url }}|PR #${{ steps.run-wizard.outputs.pr_number }}> · Confidence: $CONFIDENCE"
+            else
+              TEXT="<${{ steps.run-wizard.outputs.pr_url }}|PR #${{ steps.run-wizard.outputs.pr_number }}>"
+            fi
+          else
+            STATUS="❌"
+            TEXT="Failed - <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|view logs>"
+          fi
+
+          curl -s -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"channel\": \"${{ secrets.SLACK_CHANNEL_ID }}\",
+              \"thread_ts\": \"${{ inputs.slack_thread_ts }}\",
+              \"text\": \"$STATUS *${{ inputs.app }}*: $TEXT\"
+            }"
