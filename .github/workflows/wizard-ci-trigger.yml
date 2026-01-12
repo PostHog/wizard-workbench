@@ -201,6 +201,12 @@ jobs:
                     {"type": "mrkdwn", "text": "*Source:* ${{ needs.discover.outputs.input_source }}"},
                     {"type": "mrkdwn", "text": "*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"}
                   ]
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {"type": "mrkdwn", "text": "_AlakaBLAM 🪄!_ <${{ github.server_url }}/${{ github.repository }}/pulls?q=sort%3Aupdated-desc+is%3Apr+${{ needs.discover.outputs.trigger_id }}|View all created wizard runs>"}
+                  ]
                 }
               ]
             }')
