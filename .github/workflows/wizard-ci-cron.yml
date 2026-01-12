@@ -1,4 +1,4 @@
-name: Wizard CI - Scheduled
+name: Wizard CI scheduled
 
 on:
   schedule:
