@@ -1,0 +1,59 @@
+name: Wizard CI - Scheduled
+
+on:
+  schedule:
+    # Run Monday at 2 PM EST (7 PM UTC)
+    - cron: '0 19 * * 1'
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Override: specific app, category, or leave empty for all'
+        type: string
+        default: 'all'
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  scheduled-trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger wizard-ci for all apps
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const app = '${{ inputs.app }}' || 'all';
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'wizard-ci-trigger.yml',
+              ref: 'main',
+              inputs: {
+                app: app,
+                evaluate: 'true',
+                base_branch: 'main',
+                wizard_ref: 'main',
+                examples_ref: 'main',
+                posthog_ref: 'master'
+              }
+            });
+            console.log(`Triggered wizard-ci-trigger for: ${app}`);
+
+      - name: Summary
+        run: |
+          echo "## Scheduled Wizard CI Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**App:** ${{ inputs.app || 'all' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Schedule:** Mondays at 2 PM EST (7 PM UTC)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Evaluate: true" >> $GITHUB_STEP_SUMMARY
+          echo "- Base branch: main" >> $GITHUB_STEP_SUMMARY
+          echo "- Wizard ref: main" >> $GITHUB_STEP_SUMMARY
+          echo "- Examples ref: main" >> $GITHUB_STEP_SUMMARY
+          echo "- PostHog ref: master" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> See the triggered wizard-ci-trigger workflow for individual app runs." >> $GITHUB_STEP_SUMMARY
