@@ -260,21 +260,15 @@ jobs:
       - name: Notify Slack
         if: always() && inputs.slack_thread_ts != ''
         run: |
-          if [ -n "${{ steps.run-wizard.outputs.pr_url }}" ]; then
-            STATUS="✅"
-            CONFIDENCE="${{ steps.run-wizard.outputs.confidence_score }}"
-            PR_FIELD="<${{ steps.run-wizard.outputs.pr_url }}|#${{ steps.run-wizard.outputs.pr_number }}>"
-          else
-            STATUS="❌"
-            CONFIDENCE=""
-            PR_FIELD="<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View logs>"
+          CONFIDENCE="${{ steps.run-wizard.outputs.confidence_score }}"
+          if [ -z "$CONFIDENCE" ]; then
+            CONFIDENCE="N/A"
           fi
 
-          # Build confidence field - show N/A if not available
-          if [ -n "$CONFIDENCE" ]; then
-            CONFIDENCE_TEXT="$CONFIDENCE"
+          if [ -n "${{ steps.run-wizard.outputs.pr_url }}" ]; then
+            PR_FIELD="<${{ steps.run-wizard.outputs.pr_url }}|#${{ steps.run-wizard.outputs.pr_number }}>"
           else
-            CONFIDENCE_TEXT="N/A"
+            PR_FIELD="❌ (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|logs>)"
           fi
 
           curl -s -X POST https://slack.com/api/chat.postMessage \
@@ -283,14 +277,13 @@ jobs:
             -d "{
               \"channel\": \"${{ secrets.SLACK_CHANNEL_ID }}\",
               \"thread_ts\": \"${{ inputs.slack_thread_ts }}\",
-              \"text\": \"$STATUS ${{ inputs.app }}\",
+              \"text\": \"${{ inputs.app }}\",
               \"blocks\": [
                 {
                   \"type\": \"section\",
                   \"fields\": [
-                    {\"type\": \"mrkdwn\", \"text\": \"*Status:* $STATUS\"},
                     {\"type\": \"mrkdwn\", \"text\": \"*App:* ${{ inputs.app }}\"},
-                    {\"type\": \"mrkdwn\", \"text\": \"*Confidence score:* $CONFIDENCE_TEXT\"},
+                    {\"type\": \"mrkdwn\", \"text\": \"*Confidence:* $CONFIDENCE\"},
                     {\"type\": \"mrkdwn\", \"text\": \"*PR:* $PR_FIELD\"}
                   ]
                 }
