@@ -133,6 +133,12 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
   // The agent outputs markdown directly - use it as the review comment
   const reviewComment = resultText.trim();
 
+  // Extract and print confidence score for CI parsing
+  const confidenceMatch = reviewComment.match(/Confidence score: (\d\/\d)/);
+  if (confidenceMatch) {
+    console.log(`\nConfidence score: ${confidenceMatch[1]}`);
+  }
+
   // Save output and usage if test run
   if (testRunDir) {
     const fs = await import("fs/promises");
