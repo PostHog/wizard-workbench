@@ -33,6 +33,12 @@ on:
         type: string
         default: ''
 
+  # Webhook trigger from external repos (wizard, examples, posthog)
+  # POST https://api.github.com/repos/{owner}/{repo}/dispatches
+  # Body: {"event_type": "wizard-ci-trigger", "client_payload": {"app": "all", "source": "wizard"}}
+  repository_dispatch:
+    types: [wizard-ci-trigger]
+
 jobs:
   # Discover available apps and determine which ones to run
   discover:
@@ -41,13 +47,54 @@ jobs:
       apps: ${{ steps.select-apps.outputs.apps }}
       app_count: ${{ steps.select-apps.outputs.app_count }}
       trigger_id: ${{ steps.generate-id.outputs.trigger_id }}
+      # Resolved inputs (from workflow_dispatch or repository_dispatch)
+      input_app: ${{ steps.resolve-inputs.outputs.app }}
+      input_evaluate: ${{ steps.resolve-inputs.outputs.evaluate }}
+      input_base_branch: ${{ steps.resolve-inputs.outputs.base_branch }}
+      input_wizard_ref: ${{ steps.resolve-inputs.outputs.wizard_ref }}
+      input_examples_ref: ${{ steps.resolve-inputs.outputs.examples_ref }}
+      input_posthog_ref: ${{ steps.resolve-inputs.outputs.posthog_ref }}
+      input_source: ${{ steps.resolve-inputs.outputs.source }}
     steps:
+      # Resolve inputs from either workflow_dispatch or repository_dispatch
+      - name: Resolve inputs
+        id: resolve-inputs
+        run: |
+          # workflow_dispatch uses inputs.*, repository_dispatch uses github.event.client_payload.*
+          # Provide defaults for repository_dispatch
+          APP="${{ inputs.app || github.event.client_payload.app || 'all' }}"
+          EVALUATE="${{ inputs.evaluate || github.event.client_payload.evaluate || 'true' }}"
+          BASE_BRANCH="${{ inputs.base_branch || github.event.client_payload.base_branch || 'main' }}"
+          WIZARD_REF="${{ inputs.wizard_ref || github.event.client_payload.wizard_ref || 'main' }}"
+          EXAMPLES_REF="${{ inputs.examples_ref || github.event.client_payload.examples_ref || 'main' }}"
+          POSTHOG_REF="${{ inputs.posthog_ref || github.event.client_payload.posthog_ref || 'master' }}"
+          TRIGGER_ID="${{ inputs.trigger_id || github.event.client_payload.trigger_id || '' }}"
+          SOURCE="${{ github.event.client_payload.source || 'manual' }}"
+
+          echo "app=$APP" >> $GITHUB_OUTPUT
+          echo "evaluate=$EVALUATE" >> $GITHUB_OUTPUT
+          echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
+          echo "wizard_ref=$WIZARD_REF" >> $GITHUB_OUTPUT
+          echo "examples_ref=$EXAMPLES_REF" >> $GITHUB_OUTPUT
+          echo "posthog_ref=$POSTHOG_REF" >> $GITHUB_OUTPUT
+          echo "trigger_id=$TRIGGER_ID" >> $GITHUB_OUTPUT
+          echo "source=$SOURCE" >> $GITHUB_OUTPUT
+
+          echo "Resolved inputs:"
+          echo "  app: $APP"
+          echo "  evaluate: $EVALUATE"
+          echo "  base_branch: $BASE_BRANCH"
+          echo "  wizard_ref: $WIZARD_REF"
+          echo "  examples_ref: $EXAMPLES_REF"
+          echo "  posthog_ref: $POSTHOG_REF"
+          echo "  source: $SOURCE"
+
       - name: Generate trigger ID
         id: generate-id
         run: |
           # Use provided trigger ID or generate a 7-character hex ID
-          if [ -n "${{ inputs.trigger_id }}" ]; then
-            TRIGGER_ID="${{ inputs.trigger_id }}"
+          TRIGGER_ID="${{ steps.resolve-inputs.outputs.trigger_id }}"
+          if [ -n "$TRIGGER_ID" ]; then
             echo "Using provided trigger ID: $TRIGGER_ID"
           else
             TRIGGER_ID=$(openssl rand -hex 4 | cut -c1-7)
@@ -75,7 +122,7 @@ jobs:
       - name: Select apps to run
         id: select-apps
         run: |
-          INPUT_APP="${{ inputs.app }}"
+          INPUT_APP="${{ steps.resolve-inputs.outputs.app }}"
           AVAILABLE='${{ steps.find-apps.outputs.apps }}'
 
           if [ -z "$INPUT_APP" ]; then
@@ -150,11 +197,11 @@ jobs:
               inputs: {
                 app: '${{ matrix.app }}',
                 trigger_id: '${{ needs.discover.outputs.trigger_id }}',
-                evaluate: '${{ inputs.evaluate }}',
-                base_branch: '${{ inputs.base_branch }}',
-                wizard_ref: '${{ inputs.wizard_ref }}',
-                examples_ref: '${{ inputs.examples_ref }}',
-                posthog_ref: '${{ inputs.posthog_ref }}'
+                evaluate: '${{ needs.discover.outputs.input_evaluate }}',
+                base_branch: '${{ needs.discover.outputs.input_base_branch }}',
+                wizard_ref: '${{ needs.discover.outputs.input_wizard_ref }}',
+                examples_ref: '${{ needs.discover.outputs.input_examples_ref }}',
+                posthog_ref: '${{ needs.discover.outputs.input_posthog_ref }}'
               }
             });
             console.log('Triggered wizard-ci for: ${{ matrix.app }} (trigger: ${{ needs.discover.outputs.trigger_id }})');
@@ -164,13 +211,14 @@ jobs:
           echo "## Triggered Wizard CI" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Trigger ID:** ${{ needs.discover.outputs.trigger_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Source:** ${{ needs.discover.outputs.input_source }}" >> $GITHUB_STEP_SUMMARY
           echo "**App:** ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Evaluate:** ${{ inputs.evaluate }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Evaluate:** ${{ needs.discover.outputs.input_evaluate }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Dependency Versions" >> $GITHUB_STEP_SUMMARY
-          echo "- **wizard:** ${{ inputs.wizard_ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **examples:** ${{ inputs.examples_ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **mcp (posthog):** ${{ inputs.posthog_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **wizard:** ${{ needs.discover.outputs.input_wizard_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **examples:** ${{ needs.discover.outputs.input_examples_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **mcp (posthog):** ${{ needs.discover.outputs.input_posthog_ref }}" >> $GITHUB_STEP_SUMMARY
 
   # Summary job to report all triggered workflows
   summary:
@@ -183,6 +231,7 @@ jobs:
           echo "## Wizard Trigger Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Trigger ID:** \`${{ needs.discover.outputs.trigger_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Source:** ${{ needs.discover.outputs.input_source }}" >> $GITHUB_STEP_SUMMARY
           echo "**Total apps triggered:** ${{ needs.discover.outputs.app_count }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Apps" >> $GITHUB_STEP_SUMMARY
@@ -192,10 +241,11 @@ jobs:
           echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| Trigger ID | \`${{ needs.discover.outputs.trigger_id }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Evaluate | ${{ inputs.evaluate }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Base Branch | ${{ inputs.base_branch }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Wizard Ref | ${{ inputs.wizard_ref }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Examples Ref | ${{ inputs.examples_ref }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| PostHog Ref | ${{ inputs.posthog_ref }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source | ${{ needs.discover.outputs.input_source }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Evaluate | ${{ needs.discover.outputs.input_evaluate }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Base Branch | ${{ needs.discover.outputs.input_base_branch }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Wizard Ref | ${{ needs.discover.outputs.input_wizard_ref }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Examples Ref | ${{ needs.discover.outputs.input_examples_ref }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PostHog Ref | ${{ needs.discover.outputs.input_posthog_ref }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> **Note:** Each app runs as a separate wizard-ci workflow. Search for trigger ID \`${{ needs.discover.outputs.trigger_id }}\` to find all related PRs." >> $GITHUB_STEP_SUMMARY
