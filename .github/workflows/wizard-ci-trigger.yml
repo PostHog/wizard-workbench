@@ -32,6 +32,10 @@ on:
         description: 'Trigger ID (auto-generated if empty)'
         type: string
         default: ''
+      notify_slack:
+        description: 'Post notifications to Slack'
+        type: boolean
+        default: false
 
   # Webhook trigger from external repos (wizard, examples, posthog)
   # POST https://api.github.com/repos/{owner}/{repo}/dispatches
@@ -55,6 +59,7 @@ jobs:
       input_examples_ref: ${{ steps.resolve-inputs.outputs.examples_ref }}
       input_posthog_ref: ${{ steps.resolve-inputs.outputs.posthog_ref }}
       input_source: ${{ steps.resolve-inputs.outputs.source }}
+      input_notify_slack: ${{ steps.resolve-inputs.outputs.notify_slack }}
     steps:
       # Resolve inputs from either workflow_dispatch or repository_dispatch
       - name: Resolve inputs
@@ -70,6 +75,7 @@ jobs:
           POSTHOG_REF="${{ inputs.posthog_ref || github.event.client_payload.posthog_ref || 'master' }}"
           TRIGGER_ID="${{ inputs.trigger_id || github.event.client_payload.trigger_id || '' }}"
           SOURCE="${{ github.event.client_payload.source || 'manual' }}"
+          NOTIFY_SLACK="${{ inputs.notify_slack || github.event.client_payload.notify_slack || 'false' }}"
 
           echo "app=$APP" >> $GITHUB_OUTPUT
           echo "evaluate=$EVALUATE" >> $GITHUB_OUTPUT
@@ -79,6 +85,7 @@ jobs:
           echo "posthog_ref=$POSTHOG_REF" >> $GITHUB_OUTPUT
           echo "trigger_id=$TRIGGER_ID" >> $GITHUB_OUTPUT
           echo "source=$SOURCE" >> $GITHUB_OUTPUT
+          echo "notify_slack=$NOTIFY_SLACK" >> $GITHUB_OUTPUT
 
           echo "Resolved inputs:"
           echo "  app: $APP"
@@ -88,6 +95,7 @@ jobs:
           echo "  examples_ref: $EXAMPLES_REF"
           echo "  posthog_ref: $POSTHOG_REF"
           echo "  source: $SOURCE"
+          echo "  notify_slack: $NOTIFY_SLACK"
 
       - name: Generate trigger ID
         id: generate-id
@@ -167,9 +175,53 @@ jobs:
           echo "app_count=$APP_COUNT" >> $GITHUB_OUTPUT
           echo "Selected $APP_COUNT app(s) to run"
 
+  # Post initial Slack notification (if enabled)
+  notify-start:
+    needs: discover
+    runs-on: ubuntu-latest
+    if: needs.discover.outputs.input_notify_slack == 'true'
+    outputs:
+      thread_ts: ${{ steps.slack.outputs.thread_ts }}
+    steps:
+      - name: Post to Slack
+        id: slack
+        run: |
+          RESPONSE=$(curl -s -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "channel": "${{ secrets.SLACK_CHANNEL_ID }}",
+              "text": "Wizard CI Started - Trigger ID: ${{ needs.discover.outputs.trigger_id }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {"type": "plain_text", "text": "Wizard CI Started", "emoji": true}
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {"type": "mrkdwn", "text": "*Trigger ID:*\n`${{ needs.discover.outputs.trigger_id }}`"},
+                    {"type": "mrkdwn", "text": "*Apps:*\n${{ needs.discover.outputs.app_count }}"},
+                    {"type": "mrkdwn", "text": "*Source:*\n${{ needs.discover.outputs.input_source }}"},
+                    {"type": "mrkdwn", "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"}
+                  ]
+                }
+              ]
+            }')
+
+          echo "Slack API response: $RESPONSE"
+          THREAD_TS=$(echo "$RESPONSE" | jq -r '.ts')
+          if [ "$THREAD_TS" = "null" ] || [ -z "$THREAD_TS" ]; then
+            echo "::warning::Failed to get Slack thread_ts. Response: $RESPONSE"
+            echo "thread_ts=" >> $GITHUB_OUTPUT
+          else
+            echo "thread_ts=$THREAD_TS" >> $GITHUB_OUTPUT
+          fi
+
   # Trigger wizard-ci for each selected app
   trigger:
-    needs: discover
+    needs: [discover, notify-start]
+    if: always() && needs.discover.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -201,7 +253,8 @@ jobs:
                 base_branch: '${{ needs.discover.outputs.input_base_branch }}',
                 wizard_ref: '${{ needs.discover.outputs.input_wizard_ref }}',
                 examples_ref: '${{ needs.discover.outputs.input_examples_ref }}',
-                posthog_ref: '${{ needs.discover.outputs.input_posthog_ref }}'
+                posthog_ref: '${{ needs.discover.outputs.input_posthog_ref }}',
+                slack_thread_ts: '${{ needs.notify-start.outputs.thread_ts || '' }}'
               }
             });
             console.log('Triggered wizard-ci for: ${{ matrix.app }} (trigger: ${{ needs.discover.outputs.trigger_id }})');
@@ -222,7 +275,7 @@ jobs:
 
   # Summary job to report all triggered workflows
   summary:
-    needs: [discover, trigger]
+    needs: [discover, notify-start, trigger]
     runs-on: ubuntu-latest
     if: always()
     steps:
