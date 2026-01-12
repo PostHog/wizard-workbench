@@ -112,33 +112,47 @@ Use keyboard shortcuts in mprocs: `s` to start, `x` to stop, `r` to restart, `q`
 
 ---
 
-## Services reference
+## Wizard CI/CD
 
-### wizard-ci
+The Wizard CI automates running the PostHog Wizard on test apps, creating PRs with the changes, and evaluating the quality of the integration.
 
-Run wizard on test apps and optionally create PRs with evaluation.
+### Services
 
-```bash
-pnpm wizard-ci                     # Select test app, run wizard, and create PR
-pnpm wizard-ci --evaluate          # Also run PR evaluator 
-pnpm wizard-ci --local --evaluate  # Run locally (no PR created)
-pnpm wizard-ci --app next-js/15-app-router-saas --local  # Pre-select test app
-pnpm wizard-ci --push-only --branch wizard-ci/my-feature/abc1234 # Create PR from existing branch
-```
-
-### pr-evaluator
-
-AI evaluation of PostHog integration quality in pull requests or local branches.
+The `wizard-ci` service runs the Wizard on a test app and handles the full CI flow. It also uses the `github` service to checkout branches and open PRs in the remote repo for code diffs.
 
 ```bash
-pnpm run evaluate --pr <number>               # Evaluate a GitHub PR and post comment
-pnpm run evaluate --test-run --branch <name>  # Save evaluation output to local dir
+# Run on a specific app
+pnpm wizard-ci --app next-js/15-app-router-saas --evaluate
 ```
 
-When using `--test-run`, the evaluator locally saves these files to `test-evaluations/<name>/`:
+What it does: 
 
-| File | Description |
-|------|-------------|
-| `prompt.md` | The full prompt sent to the AI |
-| `output.md` | The AI's evaluation response |
-| `usage.md` | Token usage and cost information |
+1. Resets the test app to a clean state
+2. Runs the Wizard to add PostHog integration
+3. Commits changes to a branch and creates a PR
+4. Optionally runs the PR evaluator to assess integration quality
+
+### GitHub workflows
+
+![wizard CI github workflows](https://res.cloudinary.com/dmukukwp6/image/upload/q_auto,f_auto/pasted_image_2026_01_12_T18_57_17_075_Z_a1e3b9f146.png)
+
+The `wizard-ci-trigger.yml` is the main entry point for CI/CD and accepts several inputs to customize and create Wizard runs.
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `app` | - | `all`, directory (`next-js`), or app path (`next-js/15-app-router-todo`) |
+| `evaluate` | `true` | Run PR evaluator after wizard completes |
+| `wizard_ref` | `main` | Wizard repo branch/tag/sha |
+| `examples_ref` | `main` | Examples repo branch/tag/sha |
+| `posthog_ref` | `master` | PostHog repo branch/tag/sha (for MCP) |
+| `trigger_id` | auto-gen | Seven character ID |
+
+Each trigger is assigned a unique short ID that tracks the group of wizard CI runs it created. 
+
+![wizard CI trigger ID](https://res.cloudinary.com/dmukukwp6/image/upload/q_auto,f_auto/pasted_image_2026_01_12_T19_21_18_324_Z_3a92099297.png)
+
+You can activate `wizard-ci-trigger.yml` in a few ways.
+
+1. **Manual** - Run from GitHub Actions UI
+2. **Cron** - Scheduled via `wizard-ci-cron.yml`
+3. **Dispatch** - Webhook call via `repository_dispatch` 
