@@ -70,12 +70,11 @@ cp .env.example .env
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `EVALUATOR_ANTHROPIC_API_KEY` | Yes | Anthropic API key for the PR evaluator |
 | `EXAMPLES_PATH` | Yes | Path to your local examples repo (e.g., `~/development/examples`) |
 | `MCP_PATH` | Yes | Path to MCP service (e.g., `~/development/posthog/services/mcp`) |
 | `WIZARD_PATH` | Yes | Path to your local wizard repo (e.g., `~/development/wizard`) |
 | `POSTHOG_REGION` | For CI | PostHog region for wizard CI mode (`us` or `eu`) |
-| `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key for wizard CI mode |
+| `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key for wizard CI mode and PR evaluator|
 
 Make sure you've set up and installed dependencies for all required repos.
 
