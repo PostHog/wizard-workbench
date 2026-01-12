@@ -33,10 +33,6 @@ on:
         type: string
         default: 'master'
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   wizard-ci:
     runs-on: ubuntu-latest
@@ -45,9 +41,17 @@ jobs:
       pr_number: ${{ steps.run-wizard.outputs.pr_number }}
 
     steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_WIZARD_CI_APP_ID }}
+          private-key: ${{ secrets.GH_APP_WIZARD_CI_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -126,10 +130,10 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Switch remote to HTTPS for token-based auth (works in CI without SSH keys)
-          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git config user.name "wizard-ci[bot]"
+          git config user.email "wizard-ci[bot]@users.noreply.github.com"
+          # Switch remote to HTTPS for token-based auth
+          git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
 
       - name: Run Wizard CI
         id: run-wizard
@@ -177,7 +181,7 @@ jobs:
 
           exit $WIZARD_EXIT
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           # PR evaluator uses EVALUATOR_ANTHROPIC_API_KEY to avoid conflict with wizard
           EVALUATOR_ANTHROPIC_API_KEY: ${{ secrets.EVALUATOR_ANTHROPIC_API_KEY }}
           # Wizard CI mode requires PostHog credentials
@@ -214,7 +218,7 @@ jobs:
         run: |
           gh pr edit ${{ steps.run-wizard.outputs.pr_number }} --add-label "CI/CD"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Summary
         if: always()
