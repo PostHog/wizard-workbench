@@ -13,6 +13,28 @@ export interface EvaluateResult {
   commentUrl?: string;
 }
 
+/**
+ * Get LLM gateway URL based on PostHog region
+ */
+function getLlmGatewayUrl(region: string): string {
+  if (region === "eu") {
+    return "https://gateway.eu.posthog.com/wizard";
+  }
+  return "https://gateway.us.posthog.com/wizard";
+}
+
+/**
+ * Configure the Claude Agent SDK to use PostHog's LLM gateway
+ */
+export function configureGateway(apiKey: string, region: string): void {
+  const gatewayUrl = getLlmGatewayUrl(region);
+  process.env.ANTHROPIC_BASE_URL = gatewayUrl;
+  process.env.ANTHROPIC_AUTH_TOKEN = apiKey;
+  // Disable experimental betas that the LLM gateway doesn't support
+  process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "true";
+  console.log(`Configured LLM gateway: ${gatewayUrl}`);
+}
+
 export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResult> {
   const { prData, testRun = false, testRunDir } = options;
 

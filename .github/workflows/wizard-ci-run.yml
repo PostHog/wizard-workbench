@@ -154,7 +154,7 @@ jobs:
           done
 
           # Debug: check env vars are set
-          echo "EVALUATOR_ANTHROPIC_API_KEY set: $([ -n \"$EVALUATOR_ANTHROPIC_API_KEY\" ] && echo 'yes' || echo 'no')"
+          echo "POSTHOG_PERSONAL_API_KEY set: $([ -n \"$POSTHOG_PERSONAL_API_KEY\" ] && echo 'yes' || echo 'no')"
 
           # Run wizard
           cd $GITHUB_WORKSPACE
@@ -182,9 +182,7 @@ jobs:
           exit $WIZARD_EXIT
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          # PR evaluator uses EVALUATOR_ANTHROPIC_API_KEY to avoid conflict with wizard
-          EVALUATOR_ANTHROPIC_API_KEY: ${{ secrets.EVALUATOR_ANTHROPIC_API_KEY }}
-          # Wizard CI mode requires PostHog credentials
+          # PostHog credentials - used for both Wizard CI and PR evaluator (via LLM gateway)
           POSTHOG_REGION: ${{ secrets.POSTHOG_REGION }}
           POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
           # Dependency paths
