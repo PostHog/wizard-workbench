@@ -1,5 +1,8 @@
 name: Wizard CI
 
+permissions:
+  contents: read
+
 on:
   # Scheduled runs (Wed at 11 AM EST / 4 PM UTC)
   schedule:

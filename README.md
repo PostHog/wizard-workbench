@@ -155,5 +155,5 @@ Each trigger is assigned a unique short ID that tracks the group of wizard CI ru
 You can activate `wizard-ci.yml` in a few ways:
 
 1. **Manual** - Run from GitHub Actions UI
-2. **Schedule** - Runs automatically on Mondays at 2 PM EST
+2. **Schedule** - Runs on cron
 3. **Dispatch** - Webhook call via `repository_dispatch` with event type `wizard-ci-trigger` 
