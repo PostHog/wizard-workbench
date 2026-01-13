@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -58,12 +59,49 @@ export function Login({
         }
 
         if (result.success && result.redirectTo) {
+          // Identify user in PostHog using email as distinct ID
+          posthog.identify(data.email, {
+            email: data.email,
+          });
+
+          // Capture sign-in or sign-up event
+          if (mode === 'signin') {
+            posthog.capture('user_signed_in', {
+              email: data.email,
+            });
+          } else {
+            posthog.capture('user_signed_up', {
+              email: data.email,
+              hasInvite: !!data.inviteId,
+            });
+          }
+
           router.push(result.redirectTo);
         } else if (result.url) {
+          // Identify user in PostHog before Stripe redirect
+          posthog.identify(data.email, {
+            email: data.email,
+          });
+
+          // Capture sign-up with checkout redirect
+          if (mode === 'signup') {
+            posthog.capture('user_signed_up', {
+              email: data.email,
+              hasInvite: !!data.inviteId,
+              redirectedToCheckout: true,
+            });
+          } else {
+            posthog.capture('user_signed_in', {
+              email: data.email,
+              redirectedToCheckout: true,
+            });
+          }
+
           // Stripe checkout redirect
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred. Please try again.');
       }
     });

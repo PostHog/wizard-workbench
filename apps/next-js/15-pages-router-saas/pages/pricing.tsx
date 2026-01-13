@@ -7,6 +7,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -74,6 +75,14 @@ function PricingCard({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    // Capture checkout started event
+    posthog.capture('checkout_started', {
+      planName: name,
+      price: price / 100,
+      interval: interval,
+      priceId: priceId,
+    });
+
     startTransition(async () => {
       try {
         const response = await fetch('/api/stripe/create-checkout', {
@@ -92,6 +101,7 @@ function PricingCard({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         console.error('Checkout error:', err);
       }
     });
@@ -180,6 +190,20 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   ]);
 
   const team = user ? await getTeamForUser(sessionCookie) : null;
+
+  // Track pricing page view on server side
+  const { getPostHogClient } = await import('@/lib/posthog-server');
+  const posthogServer = getPostHogClient();
+  const distinctId = user?.email || context.req.cookies['ph_distinct_id'] || 'anonymous';
+  posthogServer.capture({
+    distinctId: distinctId,
+    event: 'pricing_page_viewed',
+    properties: {
+      isLoggedIn: !!user,
+      hasTeam: !!team,
+      currentPlan: team?.planName || null,
+    }
+  });
 
   return {
     props: {

@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -94,6 +95,30 @@ export default async function handler(
       setSession(foundUser, res),
       logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
     ]);
+
+    // Server-side PostHog tracking
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: email,
+      event: 'server_user_signed_in',
+      properties: {
+        email: email,
+        userId: foundUser.id,
+        teamId: foundTeam?.id,
+        teamName: foundTeam?.name,
+        source: 'api'
+      }
+    });
+
+    // Identify user on server side
+    posthog.identify({
+      distinctId: email,
+      properties: {
+        email: email,
+        name: foundUser.name,
+        role: foundUser.role
+      }
+    });
 
     if (redirect === 'checkout' && foundTeam) {
       const checkoutResult = await createCheckoutSession({
