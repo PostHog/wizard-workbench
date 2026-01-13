@@ -576,10 +576,11 @@ jobs:
           path: examples-mcp-resources.zip
           if-no-files-found: warn
 
-      - name: Label PR
+      - name: Label and close PR
         if: steps.run-wizard.outputs.pr_number
         run: |
           gh pr edit ${{ steps.run-wizard.outputs.pr_number }} --add-label "CI/CD"
+          gh pr close ${{ steps.run-wizard.outputs.pr_number }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
