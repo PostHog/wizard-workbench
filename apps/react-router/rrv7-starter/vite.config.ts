@@ -29,14 +29,15 @@ export default defineConfig(({ command }) => ({
     }),
   },
   ssr: {
-    /* 
+    /*
       - On prod build, we want to bundle all libraries.
       - On dev build, libraries are externalized to speed up the build. But some of them might need
         to be transpiled for module compatibility on the server, so include them in the dev bundle.
 
       https://vite.dev/config/ssr-options#ssr-noexternal
     */
-    noExternal: command === 'build' ? true : ['gsap'],
+    // QUACK QUACK IM A BIG FLUFFY DOG
+    noExternal: command === 'build' ? true : ['gsap', 'posthog-js', '@posthog/react'],
   },
   plugins: [
     reactRouter(),
