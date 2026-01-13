@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import { GetServerSideProps } from 'next';
 import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
@@ -7,6 +8,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -74,6 +76,15 @@ function PricingCard({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    // Capture pricing CTA click event
+    posthog.capture('pricing_page_cta_clicked', {
+      plan_name: name,
+      price_id: priceId,
+      price_amount: price,
+      interval: interval,
+      source: 'client'
+    });
+
     startTransition(async () => {
       try {
         const response = await fetch('/api/stripe/create-checkout', {
@@ -93,6 +104,8 @@ function PricingCard({
         }
       } catch (err) {
         console.error('Checkout error:', err);
+        // Capture exception in PostHog
+        posthog.captureException(err);
       }
     });
   }

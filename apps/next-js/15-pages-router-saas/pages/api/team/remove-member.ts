@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
@@ -9,6 +10,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -76,6 +78,20 @@ export default async function handler(
       user.id,
       ActivityType.REMOVE_TEAM_MEMBER
     );
+
+    // PostHog server-side tracking for team member removed
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.email,
+      event: 'team_member_removed',
+      properties: {
+        email: user.email,
+        user_id: user.id,
+        team_id: userWithTeam.teamId,
+        removed_member_id: memberId,
+        source: 'api'
+      }
+    });
 
     return res.status(200).json({ success: 'Team member removed successfully' });
   } catch (error) {

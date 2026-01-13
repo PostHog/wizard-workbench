@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 'use client';
 
 import Link from 'next/link';
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -54,8 +56,21 @@ export function Login({
           setError(result.error || 'An error occurred');
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
+          // Capture error in PostHog
+          posthog.captureException(new Error(result.error || 'Authentication failed'));
           return;
         }
+
+        // Identify user in PostHog on successful login/signup
+        posthog.identify(data.email, {
+          email: data.email,
+        });
+
+        // Capture client-side auth event
+        posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up', {
+          email: data.email,
+          source: 'client'
+        });
 
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
@@ -65,6 +80,8 @@ export function Login({
         }
       } catch (err) {
         setError('An unexpected error occurred. Please try again.');
+        // Capture exception in PostHog
+        posthog.captureException(err);
       }
     });
   }

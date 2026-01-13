@@ -1,4 +1,7 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { getUser } from '@/lib/db/queries';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,6 +12,24 @@ export default async function handler(
   }
 
   try {
+    // Get user before clearing session for tracking
+    const sessionCookie = req.cookies.session;
+    const user = await getUser(sessionCookie);
+
+    // PostHog server-side tracking for user sign-out
+    if (user) {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: user.email,
+        event: 'user_signed_out',
+        properties: {
+          email: user.email,
+          user_id: user.id,
+          source: 'api'
+        }
+      });
+    }
+
     // Delete the session cookie by setting it with an expired date
     res.setHeader(
       'Set-Cookie',

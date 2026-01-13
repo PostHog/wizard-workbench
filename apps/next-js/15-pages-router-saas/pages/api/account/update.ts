@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
@@ -9,6 +10,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -63,6 +65,32 @@ export default async function handler(
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
+
+    // PostHog server-side tracking for account updated
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.email,
+      event: 'account_updated',
+      properties: {
+        email: user.email,
+        user_id: user.id,
+        team_id: userWithTeam?.teamId,
+        new_name: name,
+        new_email: email,
+        source: 'api'
+      }
+    });
+
+    // Update identify with new properties
+    posthog.identify({
+      distinctId: email,
+      properties: {
+        email: email,
+        name: name,
+        user_id: user.id,
+        team_id: userWithTeam?.teamId
+      }
+    });
 
     return res.status(200).json({ name, success: 'Account updated successfully.' });
   } catch (error) {

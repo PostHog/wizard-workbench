@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
@@ -5,6 +6,7 @@ import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -93,6 +95,22 @@ export default async function handler(
         updatedAt: new Date()
       })
       .where(eq(teams.id, userTeam[0].teamId));
+
+    // PostHog server-side tracking for checkout completed
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user[0].email,
+      event: 'checkout_completed',
+      properties: {
+        email: user[0].email,
+        user_id: user[0].id,
+        team_id: userTeam[0].teamId,
+        plan_name: (plan.product as Stripe.Product).name,
+        subscription_id: subscriptionId,
+        subscription_status: subscription.status,
+        source: 'api'
+      }
+    });
 
     await setSession(user[0]);
     return res.redirect('/dashboard');

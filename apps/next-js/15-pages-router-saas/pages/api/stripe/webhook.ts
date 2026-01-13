@@ -1,7 +1,12 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { eq } from 'drizzle-orm';
+import { db } from '@/lib/db/drizzle';
+import { teams, teamMembers, users } from '@/lib/db/schema';
 
 // Disable body parsing, need raw body for Stripe webhook signature verification
 export const config = {
@@ -41,6 +46,47 @@ export default async function handler(
     case 'customer.subscription.deleted':
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+
+      // PostHog server-side tracking for subscription events
+      const customerId = typeof subscription.customer === 'string'
+        ? subscription.customer
+        : subscription.customer.id;
+
+      // Find the team and user by stripe customer ID
+      const team = await db
+        .select()
+        .from(teams)
+        .where(eq(teams.stripeCustomerId, customerId))
+        .limit(1);
+
+      if (team.length > 0) {
+        const teamMember = await db
+          .select({ user: users })
+          .from(teamMembers)
+          .leftJoin(users, eq(teamMembers.userId, users.id))
+          .where(eq(teamMembers.teamId, team[0].id))
+          .limit(1);
+
+        if (teamMember.length > 0 && teamMember[0].user) {
+          const posthog = getPostHogClient();
+          const eventName = event.type === 'customer.subscription.deleted'
+            ? 'subscription_cancelled'
+            : 'subscription_updated';
+
+          posthog.capture({
+            distinctId: teamMember[0].user.email,
+            event: eventName,
+            properties: {
+              email: teamMember[0].user.email,
+              user_id: teamMember[0].user.id,
+              team_id: team[0].id,
+              subscription_status: subscription.status,
+              subscription_id: subscription.id,
+              source: 'webhook'
+            }
+          });
+        }
+      }
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);
