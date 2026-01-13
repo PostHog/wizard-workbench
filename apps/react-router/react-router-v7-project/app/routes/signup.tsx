@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
@@ -13,6 +13,13 @@ export default function Signup() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const hasCapturedRef = useRef(false)
+
+  // Capture signup page viewed event once per page load (top of conversion funnel)
+  if (!hasCapturedRef.current) {
+    posthog?.capture('signup_page_viewed')
+    hasCapturedRef.current = true
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

@@ -12,18 +12,21 @@ The wizard has completed a deep integration of your Country Explorer React Route
 
 | Event Name | Description | File Location |
 |------------|-------------|---------------|
-| `user_signed_up` | User successfully created a new account | `app/routes/signup.tsx` |
+| `user_signed_up` | User successfully created a new account (conversion event) | `app/routes/signup.tsx` |
 | `user_logged_in` | User successfully logged in to their account | `app/routes/login.tsx` |
 | `login_failed` | User failed to log in (invalid credentials) | `app/routes/login.tsx` |
-| `user_logged_out` | User logged out of their account | `app/context/AuthContext.tsx` |
+| `user_logged_out` | User logged out of their account (churn indicator) | `app/context/AuthContext.tsx` |
 | `country_claimed` | User claimed ownership of a country (100 points) | `app/lib/utils/auth.ts` |
 | `country_liked` | User liked a country (10 points) | `app/lib/utils/auth.ts` |
 | `country_visited` | User marked a country as visited (50 points) | `app/lib/utils/auth.ts` |
 | `achievement_unlocked` | User unlocked a new achievement | `app/lib/utils/auth.ts` |
 | `countries_searched` | User searched for countries using the search filter | `app/routes/countries.tsx` |
 | `region_filtered` | User filtered countries by region | `app/routes/countries.tsx` |
-| `explore_cta_clicked` | User clicked 'Explore Now' CTA on home page | `app/routes/home.tsx` |
+| `explore_cta_clicked` | User clicked 'Explore Now' CTA on home page (funnel start) | `app/routes/home.tsx` |
 | `country_details_viewed` | User viewed details page for a specific country | `app/routes/country.tsx` |
+| `leaderboard_viewed` | User viewed the leaderboard/stats page (engagement metric) | `app/routes/stats.tsx` |
+| `profile_viewed` | User viewed their own profile page | `app/routes/profile.tsx` |
+| `signup_page_viewed` | User viewed the signup page (top of conversion funnel) | `app/routes/signup.tsx` |
 
 ## Files Modified/Created
 
