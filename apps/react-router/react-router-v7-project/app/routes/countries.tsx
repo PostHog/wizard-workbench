@@ -1,7 +1,6 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
-import { usePostHog } from "@posthog/react";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
 
@@ -35,35 +34,20 @@ export async function clientLoader() {
 }
 
 export default function Countries({ loaderData }: Route.ComponentProps) {
-  const posthog = usePostHog();
   const { user } = useAuth();
   const [search, setSearch] = useState<string>("");
   const [region, setRegion] = useState<string>("");
 
-  // Handler for search input with debounced analytics
+  // Handler for search input
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSearch = e.target.value;
     setSearch(newSearch);
-
-    // Capture search event when user types a meaningful search (3+ chars)
-    if (newSearch.length >= 3) {
-      posthog?.capture('countries_searched', {
-        search_term: newSearch,
-      });
-    }
   };
 
   // Handler for region filter
   const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRegion = e.target.value;
     setRegion(newRegion);
-
-    // Capture region filter event
-    if (newRegion) {
-      posthog?.capture('region_filtered', {
-        region: newRegion,
-      });
-    }
   };
 
   // Ensure loaderData is an array, fallback to empty array

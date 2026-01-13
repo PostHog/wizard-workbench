@@ -1,53 +1,15 @@
 import { Link } from "react-router";
 import { useCart, type CartItem } from "../context/CartContext";
-import { usePostHog } from "../providers/PostHogProvider";
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
-  const posthog = usePostHog();
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
-    posthog.capture("product_removed_from_cart", {
-      product_id: item.id,
-      product_name: item.name,
-      product_price: item.price,
-      product_category: item.category,
-      quantity_removed: item.quantity,
-    });
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
-    const oldQuantity = item.quantity;
     updateQuantity(item.id, newQuantity);
-    posthog.capture("cart_quantity_updated", {
-      product_id: item.id,
-      product_name: item.name,
-      product_price: item.price,
-      old_quantity: oldQuantity,
-      new_quantity: newQuantity,
-      change: newQuantity - oldQuantity,
-    });
-  };
-
-  const handleProceedToCheckout = () => {
-    posthog.capture("proceed_to_checkout_clicked", {
-      cart_total: getCartTotal(),
-      cart_items_count: cart.length,
-      cart_items: cart.map((item) => ({
-        product_id: item.id,
-        product_name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-      })),
-    });
-  };
-
-  const handleContinueShopping = () => {
-    posthog.capture("continue_shopping_clicked", {
-      cart_total: getCartTotal(),
-      cart_items_count: cart.length,
-    });
   };
 
   if (cart.length === 0) {
@@ -192,7 +154,6 @@ export default function Cart() {
 
             <Link
               to="/checkout"
-              onClick={handleProceedToCheckout}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout
@@ -200,7 +161,6 @@ export default function Cart() {
 
             <Link
               to="/products"
-              onClick={handleContinueShopping}
               className="block w-full mt-3 bg-gray-200 text-gray-900 py-3 rounded-lg text-center font-semibold hover:bg-gray-300 transition"
             >
               Continue Shopping

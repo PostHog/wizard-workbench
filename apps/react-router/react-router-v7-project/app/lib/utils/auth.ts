@@ -1,6 +1,5 @@
 // Fake authentication utilities using localStorage
 import { nanoid } from 'nanoid'
-import posthog from 'posthog-js'
 
 export interface FakeUser {
   id: string
@@ -105,24 +104,6 @@ export function claimCountry(countryName: string): void {
     checkAchievements(user)
     saveUser(user)
     setCurrentUser(user)
-
-    // Capture country claimed event
-    posthog.capture('country_claimed', {
-      country_name: countryName,
-      total_claimed: user.claimedCountries.length,
-      points_earned: 100,
-    })
-
-    // Check if any new achievements were unlocked
-    if (user.achievements.length > previousAchievementsCount) {
-      const newAchievements = user.achievements.slice(previousAchievementsCount)
-      newAchievements.forEach(achievement => {
-        posthog.capture('achievement_unlocked', {
-          achievement_name: achievement,
-          total_achievements: user.achievements.length,
-        })
-      })
-    }
   }
 }
 
@@ -137,24 +118,6 @@ export function likeCountry(countryName: string): void {
     checkAchievements(user)
     saveUser(user)
     setCurrentUser(user)
-
-    // Capture country liked event
-    posthog.capture('country_liked', {
-      country_name: countryName,
-      total_liked: user.likedCountries.length,
-      points_earned: 10,
-    })
-
-    // Check if any new achievements were unlocked
-    if (user.achievements.length > previousAchievementsCount) {
-      const newAchievements = user.achievements.slice(previousAchievementsCount)
-      newAchievements.forEach(achievement => {
-        posthog.capture('achievement_unlocked', {
-          achievement_name: achievement,
-          total_achievements: user.achievements.length,
-        })
-      })
-    }
   }
 }
 
@@ -169,24 +132,6 @@ export function visitCountry(countryName: string): void {
     checkAchievements(user)
     saveUser(user)
     setCurrentUser(user)
-
-    // Capture country visited event
-    posthog.capture('country_visited', {
-      country_name: countryName,
-      total_visited: user.visitedCountries.length,
-      points_earned: 50,
-    })
-
-    // Check if any new achievements were unlocked
-    if (user.achievements.length > previousAchievementsCount) {
-      const newAchievements = user.achievements.slice(previousAchievementsCount)
-      newAchievements.forEach(achievement => {
-        posthog.capture('achievement_unlocked', {
-          achievement_name: achievement,
-          total_achievements: user.achievements.length,
-        })
-      })
-    }
   }
 }
 
