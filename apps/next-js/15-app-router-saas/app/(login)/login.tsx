@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import posthog from 'posthog-js';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
@@ -34,7 +35,33 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
+        <form
+          className="space-y-6"
+          action={formAction}
+          onSubmit={(e) => {
+            const formData = new FormData(e.currentTarget);
+            const email = formData.get('email') as string;
+
+            if (mode === 'signin') {
+              // Identify user and capture sign-in event
+              posthog.identify(email, { email });
+              posthog.capture('sign_in_submitted', {
+                email,
+                has_redirect: !!redirect,
+                has_price_id: !!priceId,
+              });
+            } else {
+              // Identify user and capture sign-up event
+              posthog.identify(email, { email });
+              posthog.capture('sign_up_submitted', {
+                email,
+                has_invite: !!inviteId,
+                has_redirect: !!redirect,
+                has_price_id: !!priceId,
+              });
+            }
+          }}
+        >
           <input type="hidden" name="redirect" value={redirect || ''} />
           <input type="hidden" name="priceId" value={priceId || ''} />
           <input type="hidden" name="inviteId" value={inviteId || ''} />
