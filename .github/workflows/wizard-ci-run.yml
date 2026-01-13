@@ -150,21 +150,28 @@ jobs:
 
       - name: Debug - Test push permissions
         run: |
-          # Create a test branch and try to push it
-          TEST_BRANCH="test-push-$(date +%s)"
-          git checkout -b $TEST_BRANCH
-          git commit --allow-empty -m "Test push permissions"
+          # Test with a branch name format matching wizard-ci (with slashes)
+          TEST_BRANCH="wizard-ci/test-$(date +%s)/test-app"
+          git checkout -b "$TEST_BRANCH"
+
+          # Create an actual file change (not just empty commit)
+          echo "test" > /tmp/test-file.txt
+          cp /tmp/test-file.txt test-push-file.txt
+          git add test-push-file.txt
+          git commit -m "Test push permissions with file change"
 
           echo "Testing push to $TEST_BRANCH..."
-          if git push origin $TEST_BRANCH; then
+          if git push origin "$TEST_BRANCH"; then
             echo "Push succeeded! Cleaning up..."
-            git push origin --delete $TEST_BRANCH
+            git push origin --delete "$TEST_BRANCH"
             git checkout main
-            git branch -D $TEST_BRANCH
+            git branch -D "$TEST_BRANCH"
+            rm -f test-push-file.txt
           else
             echo "Push failed!"
             git checkout main
-            git branch -D $TEST_BRANCH
+            git branch -D "$TEST_BRANCH"
+            rm -f test-push-file.txt
             exit 1
           fi
 
