@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 'use client';
 
 import { useActionState } from 'react';
@@ -10,6 +11,7 @@ import { updateAccount } from '@/app/(login)/actions';
 import { User } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -89,7 +91,11 @@ export default function GeneralPage() {
           <CardTitle>Account Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" action={formAction}>
+          <form className="space-y-4" action={formAction} onSubmit={() => {
+            posthog.capture('account_settings_updated', {
+              action: 'account_info_update',
+            });
+          }}>
             <Suspense fallback={<AccountForm state={state} />}>
               <AccountFormWithData state={state} />
             </Suspense>

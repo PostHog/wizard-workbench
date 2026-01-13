@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -60,7 +62,12 @@ function ManageSubscription() {
                   : 'No active subscription'}
               </p>
             </div>
-            <form action={customerPortalAction}>
+            <form action={customerPortalAction} onSubmit={() => {
+              posthog.capture('manage_subscription_clicked', {
+                current_plan: teamData?.planName || 'Free',
+                subscription_status: teamData?.subscriptionStatus || 'none',
+              });
+            }}>
               <Button type="submit" variant="outline">
                 Manage Subscription
               </Button>
@@ -154,7 +161,12 @@ function TeamMembers() {
                 </div>
               </div>
               {index > 1 ? (
-                <form action={removeAction}>
+                <form action={removeAction} onSubmit={() => {
+                  posthog.capture('team_member_removed', {
+                    member_id: member.id,
+                    member_role: member.role,
+                  });
+                }}>
                   <input type="hidden" name="memberId" value={member.id} />
                   <Button
                     type="submit"
@@ -201,7 +213,15 @@ function InviteTeamMember() {
         <CardTitle>Invite Team Member</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={inviteAction} className="space-y-4">
+        <form action={inviteAction} className="space-y-4" onSubmit={(e) => {
+          const formData = new FormData(e.currentTarget);
+          const email = formData.get('email') as string;
+          const role = formData.get('role') as string;
+          posthog.capture('team_member_invited', {
+            invited_email: email,
+            invited_role: role,
+          });
+        }}>
           <div>
             <Label htmlFor="email" className="mb-2">
               Email

@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 'use client';
 
 import Link from 'next/link';
@@ -9,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import posthog from 'posthog-js';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
@@ -34,7 +36,25 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
+        <form className="space-y-6" action={formAction} onSubmit={(e) => {
+          const formData = new FormData(e.currentTarget);
+          const email = formData.get('email') as string;
+
+          // Capture form submission event
+          posthog.capture(mode === 'signin' ? 'sign_in_form_submitted' : 'sign_up_form_submitted', {
+            email: email,
+            has_redirect: !!redirect,
+            has_price_id: !!priceId,
+            has_invite_id: !!inviteId,
+          });
+
+          // Identify user on form submit
+          if (email) {
+            posthog.identify(email, {
+              email: email,
+            });
+          }
+        }}>
           <input type="hidden" name="redirect" value={redirect || ''} />
           <input type="hidden" name="priceId" value={priceId || ''} />
           <input type="hidden" name="inviteId" value={inviteId || ''} />
