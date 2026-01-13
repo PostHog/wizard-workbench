@@ -246,7 +246,7 @@ jobs:
                 {
                   "type": "context",
                   "elements": [
-                    {"type": "mrkdwn", "text": "_AlaakuhhZAAM!_ :magic_wand: <${{ github.server_url }}/${{ github.repository }}/pulls?q=sort%3Aupdated-desc+is%3Apr+${{ needs.discover.outputs.trigger_id }}|See all created wizard runs>"}
+                    {"type": "mrkdwn", "text": "_AlaakuhhZAAM!_ :magic_wand: Creating wizard runs..."}
                   ]
                 }
               ]
@@ -270,7 +270,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 5
+      max-parallel: 10
       matrix:
         app: ${{ fromJson(needs.discover.outputs.apps) }}
     outputs:
@@ -543,3 +543,32 @@ jobs:
           echo "| PostHog Ref | ${{ needs.discover.outputs.input_posthog_ref }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> Search for trigger ID \`${{ needs.discover.outputs.trigger_id }}\` to find all related PRs." >> $GITHUB_STEP_SUMMARY
+
+      - name: Update Slack message
+        if: needs.notify-start.outputs.thread_ts != ''
+        run: |
+          curl -s -X POST https://slack.com/api/chat.update \
+            -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"channel\": \"${{ secrets.SLACK_CHANNEL_ID }}\",
+              \"ts\": \"${{ needs.notify-start.outputs.thread_ts }}\",
+              \"text\": \"Wizard CI Completed - Trigger ID: ${{ needs.discover.outputs.trigger_id }}\",
+              \"blocks\": [
+                {
+                  \"type\": \"section\",
+                  \"fields\": [
+                    {\"type\": \"mrkdwn\", \"text\": \"*Trigger ID:* \`${{ needs.discover.outputs.trigger_id }}\`\"},
+                    {\"type\": \"mrkdwn\", \"text\": \"*Apps:* ${{ needs.discover.outputs.app_count }}\"},
+                    {\"type\": \"mrkdwn\", \"text\": \"*Source:* ${{ needs.discover.outputs.input_source }}\"},
+                    {\"type\": \"mrkdwn\", \"text\": \"*Workflow:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>\"}
+                  ]
+                },
+                {
+                  \"type\": \"context\",
+                  \"elements\": [
+                    {\"type\": \"mrkdwn\", \"text\": \"_AlaakuhhZAAM!_ :magic_wand: <${{ github.server_url }}/${{ github.repository }}/pulls?q=sort%3Aupdated-desc+is%3Apr+${{ needs.discover.outputs.trigger_id }}|See all created wizard runs>\"}
+                  ]
+                }
+              ]
+            }"
