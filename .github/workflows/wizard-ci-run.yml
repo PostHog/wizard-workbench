@@ -58,8 +58,8 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.GH_APP_WIZARD_CI_APP_ID }}
-          private-key: ${{ secrets.GH_APP_WIZARD_CI_PRIVATE_KEY }}
+          app-id: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_APP_ID }}
+          private-key: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_PRIVATE_KEY }}
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -203,7 +203,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           # PostHog credentials - used for both Wizard CI and PR evaluator (via LLM gateway)
           POSTHOG_REGION: ${{ inputs.posthog_region }}
-          POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
           # Dependency paths
           WIZARD_PATH: ${{ env.WIZARD_PATH }}
           EXAMPLES_PATH: ${{ env.EXAMPLES_PATH }}
