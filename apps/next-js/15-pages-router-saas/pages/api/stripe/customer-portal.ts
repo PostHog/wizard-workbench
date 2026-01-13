@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCustomerPortalSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,6 +24,21 @@ export default async function handler(
     if (!team) {
       return res.status(400).json({ error: 'Team not found' });
     }
+
+    // PostHog: Capture customer portal opened event
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'customer_portal_opened',
+      properties: {
+        email: user.email,
+        teamId: team.id,
+        teamName: team.name,
+        currentPlan: team.planName,
+        subscriptionStatus: team.subscriptionStatus,
+        source: 'api'
+      }
+    });
 
     const portalSession = await createCustomerPortalSession(team);
     return res.status(200).json({ url: portalSession.url });

@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -46,9 +47,18 @@ export default async function handler(
 
   try {
     const { email, password, redirect, priceId } = req.body;
+    const posthog = getPostHogClient();
 
     const validation = signInSchema.safeParse({ email, password });
     if (!validation.success) {
+      posthog.capture({
+        distinctId: email || 'anonymous',
+        event: 'sign_in_failed',
+        properties: {
+          reason: 'validation_error',
+          source: 'api'
+        }
+      });
       return res.status(400).json({
         error: 'Invalid email or password format.',
         email,
@@ -68,6 +78,14 @@ export default async function handler(
       .limit(1);
 
     if (userWithTeam.length === 0) {
+      posthog.capture({
+        distinctId: email,
+        event: 'sign_in_failed',
+        properties: {
+          reason: 'user_not_found',
+          source: 'api'
+        }
+      });
       return res.status(401).json({
         error: 'Invalid email or password. Please try again.',
         email,
@@ -83,6 +101,14 @@ export default async function handler(
     );
 
     if (!isPasswordValid) {
+      posthog.capture({
+        distinctId: String(foundUser.id),
+        event: 'sign_in_failed',
+        properties: {
+          reason: 'invalid_password',
+          source: 'api'
+        }
+      });
       return res.status(401).json({
         error: 'Invalid email or password. Please try again.',
         email,
@@ -94,6 +120,27 @@ export default async function handler(
       setSession(foundUser, res),
       logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
     ]);
+
+    // PostHog: Capture sign in event and identify user
+    posthog.capture({
+      distinctId: String(foundUser.id),
+      event: 'user_signed_in',
+      properties: {
+        email: foundUser.email,
+        teamId: foundTeam?.id,
+        hasTeam: !!foundTeam,
+        source: 'api'
+      }
+    });
+
+    posthog.identify({
+      distinctId: String(foundUser.id),
+      properties: {
+        email: foundUser.email,
+        teamId: foundTeam?.id,
+        lastLogin: new Date().toISOString()
+      }
+    });
 
     if (redirect === 'checkout' && foundTeam) {
       const checkoutResult = await createCheckoutSession({

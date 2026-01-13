@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -52,8 +53,18 @@ export default async function handler(
   try {
     const { email, password, inviteId, redirect, priceId } = req.body;
 
+    const posthog = getPostHogClient();
+
     const validation = signUpSchema.safeParse({ email, password, inviteId });
     if (!validation.success) {
+      posthog.capture({
+        distinctId: email || 'anonymous',
+        event: 'sign_up_failed',
+        properties: {
+          reason: 'validation_error',
+          source: 'api'
+        }
+      });
       return res.status(400).json({
         error: 'Invalid input. Please check your email and password.',
         email,
@@ -68,6 +79,14 @@ export default async function handler(
       .limit(1);
 
     if (existingUser.length > 0) {
+      posthog.capture({
+        distinctId: email,
+        event: 'sign_up_failed',
+        properties: {
+          reason: 'user_already_exists',
+          source: 'api'
+        }
+      });
       return res.status(400).json({
         error: 'Failed to create user. Please try again.',
         email,
@@ -165,6 +184,29 @@ export default async function handler(
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
       setSession(createdUser, res)
     ]);
+
+    // PostHog: Capture user sign up event and identify user
+    posthog.capture({
+      distinctId: String(createdUser.id),
+      event: 'user_signed_up',
+      properties: {
+        email: createdUser.email,
+        teamId: teamId,
+        userRole: userRole,
+        hasInvite: !!inviteId,
+        source: 'api'
+      }
+    });
+
+    posthog.identify({
+      distinctId: String(createdUser.id),
+      properties: {
+        email: createdUser.email,
+        role: userRole,
+        teamId: teamId,
+        createdAt: new Date().toISOString()
+      }
+    });
 
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({
