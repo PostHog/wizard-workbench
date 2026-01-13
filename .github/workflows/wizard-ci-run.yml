@@ -150,8 +150,8 @@ jobs:
 
       - name: Debug - Test push permissions
         run: |
-          # Test with a branch name format matching wizard-ci (with slashes)
-          TEST_BRANCH="wizard-ci/test-$(date +%s)/test-app"
+          # Test with new branch name format (dashes instead of slashes)
+          TEST_BRANCH="wizard-ci-test-$(date +%s)-test-app"
           git checkout -b "$TEST_BRANCH"
 
           # Create an actual file change (not just empty commit)

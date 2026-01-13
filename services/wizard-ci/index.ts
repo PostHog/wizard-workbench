@@ -277,7 +277,7 @@ async function selectApp(apps: App[]): Promise<App> {
 
 async function cleanBranches(): Promise<void> {
   const repoRoot = getRepoRoot(WORKBENCH);
-  const branches = listBranches(repoRoot, "wizard-ci/*");
+  const branches = listBranches(repoRoot, "wizard-ci-*");
 
   if (branches.length === 0) {
     console.log("No wizard-ci branches found.\n");
@@ -513,7 +513,7 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
       console.log("[4/5] Creating branch and committing for local evaluation...");
       const originalBranch = getCurrentBranch(repoRoot);
 
-      const branchName = `wizard-ci/${triggerId}/${app.name.replace(/\//g, "-")}`;
+      const branchName = `wizard-ci-${triggerId}-${app.name.replace(/\//g, "-")}`;
 
       try {
         createBranch(repoRoot, branchName);
@@ -558,7 +558,7 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
 
   // Switch to existing or create new branch
   // If --branch was specified with a value, use it; if empty string, it was already prompted in push-only mode
-  const generateBranchName = () => `wizard-ci/${triggerId}/${app.name.replace(/\//g, "-")}`;
+  const generateBranchName = () => `wizard-ci-${triggerId}-${app.name.replace(/\//g, "-")}`;
   const specifiedBranch = opts.branch && opts.branch !== "" ? opts.branch : undefined;
   let branchResult;
   try {
