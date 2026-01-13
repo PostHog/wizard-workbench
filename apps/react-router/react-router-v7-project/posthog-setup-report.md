@@ -29,9 +29,11 @@ The wizard has completed a deep integration of your Country Explorer React Route
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `.env` | Verified | PostHog API key and host environment variables |
-| `app/entry.client.tsx` | Created | PostHog client initialization with PostHogProvider |
-| `app/root.tsx` | Modified | Added error tracking in ErrorBoundary |
+| `.env` | Created | PostHog API key and host environment variables |
+| `app/entry.client.tsx` | Modified | PostHog client initialization with PostHogProvider |
+| `app/root.tsx` | Modified | Added error tracking in ErrorBoundary and server-side middleware |
+| `app/lib/posthog-middleware.ts` | Created | Server-side PostHog middleware for session correlation |
+| `react-router.config.ts` | Modified | Enabled v8_middleware future flag for server-side middleware |
 | `vite.config.ts` | Modified | Added SSR noExternal for PostHog packages and proxy configuration |
 | `app/routes/signup.tsx` | Modified | Added user_signed_up event and identify() call |
 | `app/routes/login.tsx` | Modified | Added user_logged_in, login_failed events and identify() call |
