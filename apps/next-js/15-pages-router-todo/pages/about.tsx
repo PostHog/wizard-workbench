@@ -1,8 +1,17 @@
+import { useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function AboutPage() {
+  // Track about page view once per component mount using ref to avoid useEffect
+  const hasTracked = useRef(false);
+  if (typeof window !== 'undefined' && !hasTracked.current) {
+    hasTracked.current = true;
+    posthog.capture('about_page_viewed');
+  }
+
   return (
     <>
       <Head>
