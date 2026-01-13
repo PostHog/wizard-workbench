@@ -148,33 +148,6 @@ jobs:
           # Switch remote to HTTPS for token-based auth
           git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
 
-      - name: Debug - Test push permissions
-        run: |
-          # Test with new branch name format (dashes instead of slashes)
-          TEST_BRANCH="wizard-ci-test-$(date +%s)-test-app"
-          git checkout -b "$TEST_BRANCH"
-
-          # Create an actual file change (not just empty commit)
-          echo "test" > /tmp/test-file.txt
-          cp /tmp/test-file.txt test-push-file.txt
-          git add test-push-file.txt
-          git commit -m "Test push permissions with file change"
-
-          echo "Testing push to $TEST_BRANCH..."
-          if git push origin "$TEST_BRANCH"; then
-            echo "Push succeeded! Cleaning up..."
-            git push origin --delete "$TEST_BRANCH"
-            git checkout main
-            git branch -D "$TEST_BRANCH"
-            rm -f test-push-file.txt
-          else
-            echo "Push failed!"
-            git checkout main
-            git branch -D "$TEST_BRANCH"
-            rm -f test-push-file.txt
-            exit 1
-          fi
-
       - name: Run Wizard CI
         id: run-wizard
         run: |
