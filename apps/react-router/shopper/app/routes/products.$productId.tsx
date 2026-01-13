@@ -2,8 +2,8 @@ import { Link, data } from "react-router";
 import type { Route } from "./+types/products.$productId";
 import { getProductById } from "../data/products";
 import { useCart } from "../context/CartContext";
-import { useState } from "react";
-import { usePostHog } from "../providers/PostHogProvider";
+import { useState, useRef } from "react";
+import { usePostHog } from "posthog-js/react";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const productId = parseInt(params.productId);
@@ -21,6 +21,39 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
   const { addToCart } = useCart();
   const posthog = usePostHog();
   const [quantity, setQuantity] = useState(1);
+  const productViewedTracked = useRef(false);
+
+  // Track product_viewed event (once per page visit)
+  if (!productViewedTracked.current) {
+    productViewedTracked.current = true;
+    posthog?.capture("product_viewed", {
+      product_id: product.id,
+      product_name: product.name,
+      product_price: product.price,
+      product_category: product.category,
+      product_stock: product.stock,
+    });
+  }
+
+  const handleBackToProducts = () => {
+    posthog?.capture("back_to_products_clicked", {
+      from_product_id: product.id,
+      from_product_name: product.name,
+    });
+  };
+
+  const handleQuantityChange = (newQuantity: number) => {
+    const oldQuantity = quantity;
+    setQuantity(newQuantity);
+    if (newQuantity !== oldQuantity) {
+      posthog?.capture("product_quantity_changed_before_add", {
+        product_id: product.id,
+        product_name: product.name,
+        old_quantity: oldQuantity,
+        new_quantity: newQuantity,
+      });
+    }
+  };
 
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
@@ -41,6 +74,7 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
     <div className="container mx-auto px-4 py-8">
       <Link
         to="/products"
+        onClick={handleBackToProducts}
         className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6"
       >
         <svg
@@ -103,7 +137,7 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
             <label className="text-gray-700 font-medium">Quantity:</label>
             <div className="flex items-center border border-gray-300 rounded-lg">
               <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                onClick={() => handleQuantityChange(Math.max(1, quantity - 1))}
                 className="px-4 py-2 hover:bg-gray-100 transition"
               >
                 -
@@ -112,7 +146,7 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
                 type="number"
                 value={quantity}
                 onChange={(e) =>
-                  setQuantity(
+                  handleQuantityChange(
                     Math.max(1, Math.min(product.stock, parseInt(e.target.value) || 1))
                   )
                 }
@@ -122,7 +156,7 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
               />
               <button
                 onClick={() =>
-                  setQuantity(Math.min(product.stock, quantity + 1))
+                  handleQuantityChange(Math.min(product.stock, quantity + 1))
                 }
                 className="px-4 py-2 hover:bg-gray-100 transition"
               >

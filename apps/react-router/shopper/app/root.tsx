@@ -1,3 +1,4 @@
+import { usePostHog } from "posthog-js/react";
 import {
   isRouteErrorResponse,
   Links,
@@ -11,7 +12,9 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { CartProvider } from "./context/CartContext";
 import Navbar from "./components/Navbar";
-import { PostHogProvider } from "./providers/PostHogProvider";
+import { posthogMiddleware } from "./lib/posthog-middleware";
+
+export const middleware: Route.MiddlewareFunction[] = [posthogMiddleware];
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -46,14 +49,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <PostHogProvider>
-      <CartProvider>
-        <div className="min-h-screen bg-gray-50">
-          <Navbar />
-          <Outlet />
-        </div>
-      </CartProvider>
-    </PostHogProvider>
+    <CartProvider>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <Outlet />
+      </div>
+    </CartProvider>
   );
 }
 
@@ -61,6 +62,19 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
+
+  const posthog = usePostHog();
+
+  // Track error in PostHog
+  posthog.captureException(error);
+
+  // Track error_page_viewed event
+  posthog.capture("error_page_viewed", {
+    error_type: isRouteErrorResponse(error) ? "route_error" : "exception",
+    error_status: isRouteErrorResponse(error) ? error.status : undefined,
+    error_message:
+      error instanceof Error ? error.message : "Unknown error",
+  });
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "404" : "Error";

@@ -1,13 +1,14 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useCart } from "../context/CartContext";
-import { usePostHog } from "../providers/PostHogProvider";
+import { usePostHog } from "posthog-js/react";
 
 export default function Checkout() {
   const { cart, getCartTotal, clearCart } = useCart();
   const navigate = useNavigate();
   const posthog = usePostHog();
   const checkoutStartedTracked = useRef(false);
+  const emptyCheckoutTracked = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -35,7 +36,18 @@ export default function Checkout() {
     });
   }
 
+  const handleBrowseProductsFromEmptyCheckout = () => {
+    posthog?.capture("browse_products_from_empty_checkout");
+    navigate("/products");
+  };
+
   if (cart.length === 0) {
+    // Track empty checkout viewed (once per page visit)
+    if (!emptyCheckoutTracked.current) {
+      emptyCheckoutTracked.current = true;
+      posthog?.capture("empty_checkout_viewed");
+    }
+
     return (
       <div className="container mx-auto px-4 py-16">
         <div className="text-center">
@@ -46,7 +58,7 @@ export default function Checkout() {
             Add some products to proceed with checkout.
           </p>
           <button
-            onClick={() => navigate("/products")}
+            onClick={handleBrowseProductsFromEmptyCheckout}
             className="inline-block bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 transition font-semibold"
           >
             Browse Products

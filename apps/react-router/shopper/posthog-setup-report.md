@@ -1,21 +1,34 @@
 # PostHog post-wizard report
 
-The wizard has completed a deep integration of PostHog into your React Router 7 e-commerce application. The integration includes automatic pageview tracking, custom event tracking for key user actions throughout the shopping funnel, and user identification at checkout. Environment variables have been configured for secure API key management using Vite's environment variable system (`VITE_PUBLIC_POSTHOG_KEY` and `VITE_PUBLIC_POSTHOG_HOST`).
+The wizard has completed a comprehensive PostHog integration for this React Router 7 e-commerce application. The integration includes:
+
+- **Client-side initialization** via `entry.client.tsx` with the `PostHogProvider` wrapping the app at the hydration level
+- **Server-side middleware** for correlating client and server events using `posthog-node`
+- **Automatic pageview tracking** enabled in PostHog initialization
+- **Error tracking** with `captureException()` in the ErrorBoundary
+- **User identification** at checkout using email address
+- **Environment variables** for secure API key management using Vite's `VITE_PUBLIC_POSTHOG_KEY` and `VITE_PUBLIC_POSTHOG_HOST`
 
 ## Files Created/Modified
 
 | File | Change |
 |------|--------|
 | `.env` | Created with PostHog API key and host environment variables |
-| `app/providers/PostHogProvider.tsx` | Created PostHog provider with automatic pageview tracking |
-| `app/root.tsx` | Added PostHogProvider wrapper to app root |
-| `app/routes/home.tsx` | Added start_shopping_clicked event tracking |
-| `app/routes/products.tsx` | Added product_added_to_cart, product_searched, product_category_filtered events |
-| `app/routes/products.$productId.tsx` | Added product_added_to_cart_from_detail event with quantity tracking |
-| `app/routes/cart.tsx` | Added product_removed_from_cart, cart_quantity_updated, proceed_to_checkout_clicked, continue_shopping_clicked events |
-| `app/routes/checkout.tsx` | Added checkout_started, order_placed events and user identification |
+| `app/entry.client.tsx` | Created client-side PostHog initialization with PostHogProvider |
+| `app/lib/posthog-middleware.ts` | Created server-side PostHog middleware for request context |
+| `react-router.config.ts` | Enabled v8_middleware future flag |
+| `vite.config.ts` | Added SSR noExternal config and proxy for PostHog |
+| `app/root.tsx` | Added middleware, error tracking with captureException, and error_page_viewed event |
+| `app/routes/home.tsx` | Updated import to use posthog-js/react |
+| `app/routes/products.tsx` | Updated import to use posthog-js/react |
+| `app/routes/products.$productId.tsx` | Added product_viewed, back_to_products_clicked, product_quantity_changed_before_add events |
+| `app/routes/cart.tsx` | Added empty_cart_viewed, browse_products_from_empty_cart events |
+| `app/routes/checkout.tsx` | Added empty_checkout_viewed, browse_products_from_empty_checkout events |
+| `app/components/Navbar.tsx` | Added navbar_cart_clicked, navbar_products_clicked events |
 
 ## Events Instrumented
+
+### Existing Events (Pre-configured)
 
 | Event Name | Description | File |
 |------------|-------------|------|
@@ -31,6 +44,21 @@ The wizard has completed a deep integration of PostHog into your React Router 7 
 | `checkout_started` | User views the checkout page with items in cart (top of checkout funnel) | `app/routes/checkout.tsx` |
 | `order_placed` | User successfully completes an order (conversion event) | `app/routes/checkout.tsx` |
 
+### New Events Added
+
+| Event Name | Description | File |
+|------------|-------------|------|
+| `product_viewed` | User views a specific product detail page - tracks interest and view-to-cart conversion | `app/routes/products.$productId.tsx` |
+| `back_to_products_clicked` | User clicks 'Back to Products' on product detail page | `app/routes/products.$productId.tsx` |
+| `product_quantity_changed_before_add` | User changes quantity before adding to cart - measures purchase intent | `app/routes/products.$productId.tsx` |
+| `empty_cart_viewed` | User views an empty cart page - tracks drop-off and re-engagement opportunity | `app/routes/cart.tsx` |
+| `browse_products_from_empty_cart` | User clicks 'Browse Products' from empty cart page | `app/routes/cart.tsx` |
+| `empty_checkout_viewed` | User navigates to checkout with empty cart - tracks user flow confusion | `app/routes/checkout.tsx` |
+| `browse_products_from_empty_checkout` | User clicks 'Browse Products' from empty checkout page | `app/routes/checkout.tsx` |
+| `navbar_cart_clicked` | User clicks on the cart icon in the navigation bar | `app/components/Navbar.tsx` |
+| `navbar_products_clicked` | User clicks on Products link in navbar | `app/components/Navbar.tsx` |
+| `error_page_viewed` | User encounters an error page (404 or other) - includes error tracking | `app/root.tsx` |
+
 ## User Identification
 
 Users are automatically identified when they complete checkout using their email address. The following properties are captured:
@@ -39,9 +67,16 @@ Users are automatically identified when they complete checkout using their email
 - City
 - ZIP code
 
+## Error Tracking
+
+Errors are automatically captured using `posthog.captureException()` in the ErrorBoundary component, along with an `error_page_viewed` event that includes:
+- Error type (route_error or exception)
+- Error status code (for route errors)
+- Error message
+
 ## Next steps
 
-We've built some insights and a dashboard for you to keep an eye on user behavior, based on the events we just instrumented:
+We've configured PostHog with comprehensive e-commerce event tracking. Your dashboard and insights are available:
 
 ### Dashboard
 - [Analytics basics](https://us.posthog.com/project/228144/dashboard/994317) - Overview dashboard with key e-commerce metrics
@@ -55,6 +90,14 @@ We've built some insights and a dashboard for you to keep an eye on user behavio
 
 ## Getting Started
 
-1. Run the development server: `npm run dev`
-2. Navigate through the app to generate events
-3. View your data in the [PostHog dashboard](https://us.posthog.com/project/228144/dashboard/994317)
+1. Ensure your `.env` file has the correct PostHog credentials:
+   ```
+   VITE_PUBLIC_POSTHOG_KEY=sTMFPsFhdP1Ssg
+   VITE_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+   ```
+
+2. Run the development server: `npm run dev`
+
+3. Navigate through the app to generate events
+
+4. View your data in the [PostHog dashboard](https://us.posthog.com/project/228144/dashboard/994317)
