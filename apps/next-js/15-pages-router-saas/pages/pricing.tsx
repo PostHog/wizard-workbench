@@ -3,10 +3,11 @@ import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -74,6 +75,15 @@ function PricingCard({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    // Track checkout started event
+    posthog.capture('checkout_started', {
+      plan_name: name,
+      price_id: priceId,
+      price_amount: price,
+      interval: interval,
+      trial_days: trialDays,
+    });
+
     startTransition(async () => {
       try {
         const response = await fetch('/api/stripe/create-checkout', {
@@ -93,6 +103,7 @@ function PricingCard({
         }
       } catch (err) {
         console.error('Checkout error:', err);
+        posthog.captureException(err);
       }
     });
   }
@@ -135,6 +146,15 @@ export default function PricingPage({
 
   const basePrice = prices.find((price) => price.productId === basePlan?.id);
   const plusPrice = prices.find((price) => price.productId === plusPlan?.id);
+
+  // Track pricing page viewed - use ref to prevent duplicate tracking
+  const hasTrackedRef = useRef(false);
+  if (!hasTrackedRef.current && typeof window !== 'undefined') {
+    hasTrackedRef.current = true;
+    posthog.capture('pricing_page_viewed', {
+      available_plans: products.map((p) => p.name),
+    });
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
