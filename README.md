@@ -132,28 +132,28 @@ What it does:
 3. Commits changes to a branch and creates a PR
 4. Optionally runs the PR evaluator to assess integration quality
 
-### GitHub workflows
+### GitHub workflow
 
-![wizard CI github workflows](https://res.cloudinary.com/dmukukwp6/image/upload/q_auto,f_auto/pasted_image_2026_01_12_T18_57_17_075_Z_a1e3b9f146.png)
-
-The `wizard-ci-trigger.yml` is the main entry point for CI/CD and accepts several inputs to customize and create Wizard runs.
+The `wizard-ci.yml` workflow is a unified CI/CD pipeline that handles app discovery, parallel execution, PR creation, evaluation, and Slack notifications.
 
 | Input | Default | Description |
 |-------|---------|-------------|
-| `app` | - | `all`, directory (`next-js`), or app path (`next-js/15-app-router-todo`) |
+| `app` | `all` | `all`, directory (`next-js`), or app path (`next-js/15-app-router-todo`) |
 | `evaluate` | `true` | Run PR evaluator after wizard completes |
+| `base_branch` | `main` | Base branch for PR |
 | `wizard_ref` | `main` | Wizard repo branch/tag/sha |
 | `examples_ref` | `main` | Examples repo branch/tag/sha |
 | `posthog_ref` | `master` | PostHog repo branch/tag/sha (for MCP) |
 | `posthog_region` | `us` | PostHog region (`us` or `eu`) |
 | `trigger_id` | auto-gen | Seven character ID |
+| `notify_slack` | `false` | Post notifications to Slack |
 
-Each trigger is assigned a unique short ID that tracks the group of wizard CI runs it created. 
+Each trigger is assigned a unique short ID that tracks the group of wizard CI runs it created.
 
 ![wizard CI trigger ID](https://res.cloudinary.com/dmukukwp6/image/upload/q_auto,f_auto/pasted_image_2026_01_12_T19_21_18_324_Z_3a92099297.png)
 
-You can activate `wizard-ci-trigger.yml` in a few ways.
+You can activate `wizard-ci.yml` in a few ways:
 
 1. **Manual** - Run from GitHub Actions UI
-2. **Cron** - Scheduled via `wizard-ci-cron.yml`
-3. **Dispatch** - Webhook call via `repository_dispatch` 
+2. **Schedule** - Runs on cron
+3. **Dispatch** - Webhook call via `repository_dispatch` with event type `wizard-ci-trigger` 
