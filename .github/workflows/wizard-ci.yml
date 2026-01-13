@@ -372,17 +372,6 @@ jobs:
           # Switch remote to HTTPS for token-based auth
           git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
 
-      - name: Debug - App directory before wizard
-        run: |
-          echo "::group::App directory before wizard"
-          echo "App: ${{ matrix.app }}"
-          echo "Full path: $GITHUB_WORKSPACE/apps/${{ matrix.app }}"
-          ls -la "apps/${{ matrix.app }}/"
-          echo ""
-          echo "Git status before wizard:"
-          git status --porcelain -- "apps/${{ matrix.app }}"
-          echo "::endgroup::"
-
       - name: Run Wizard CI
         id: run-wizard
         run: |
@@ -401,16 +390,6 @@ jobs:
             sleep 1
           done
 
-          # Debug: environment and paths
-          echo "::group::Debug Info"
-          echo "POSTHOG_PERSONAL_API_KEY set: $([ -n \"$POSTHOG_PERSONAL_API_KEY\" ] && echo 'yes' || echo 'no')"
-          echo "POSTHOG_REGION: $POSTHOG_REGION"
-          echo "WIZARD_PATH: $WIZARD_PATH"
-          echo "EXAMPLES_PATH: $EXAMPLES_PATH"
-          echo "MCP_PATH: $MCP_PATH"
-          echo "App path: $GITHUB_WORKSPACE/apps/${{ matrix.app }}"
-          echo "::endgroup::"
-
           # Run wizard-ci (always runs in CI mode internally)
           cd $GITHUB_WORKSPACE
           CMD="pnpm wizard-ci --app ${{ matrix.app }} --base ${{ needs.discover.outputs.input_base_branch }}"
@@ -421,24 +400,8 @@ jobs:
             CMD="$CMD --evaluate"
           fi
 
-          echo "::group::Running wizard-ci"
-          echo "Command: $CMD"
-          echo "::endgroup::"
-
           $CMD 2>&1 | tee wizard-output.log
           WIZARD_EXIT=$?
-
-          # Debug: check what files changed after wizard run
-          echo "::group::Git status after wizard"
-          git status --porcelain -- "apps/${{ matrix.app }}"
-          echo "Changed files in app directory:"
-          git status --porcelain -- "apps/${{ matrix.app }}" | wc -l
-          echo "::endgroup::"
-
-          # Debug: list files in app directory
-          echo "::group::App directory contents"
-          ls -la "apps/${{ matrix.app }}/"
-          echo "::endgroup::"
 
           # Stop MCP server
           kill $MCP_PID 2>/dev/null || true
