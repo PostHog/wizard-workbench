@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { TrackedLink } from '@/components/ui/tracked-link';
 
 export const metadata = {
   title: 'About - Todo App',
@@ -89,12 +89,13 @@ export default function AboutPage() {
       </Card>
 
       <div className="flex justify-center">
-        <Link
+        <TrackedLink
           href="/"
+          eventName="back_to_todos_clicked"
           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
         >
           Back to Todos
-        </Link>
+        </TrackedLink>
       </div>
     </div>
   );
