@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { fakeUser } from '@/lib/data/fake-data'
 import { getFollowers } from '@/lib/utils/localStorage'
 
 export const Header = () => {
+  const posthog = usePostHog()
   const [followers, setFollowers] = useState(fakeUser.followers)
 
   useEffect(() => {
@@ -32,16 +34,42 @@ export const Header = () => {
         <nav className="flex items-center justify-center md:justify-self-center">
           <ul className="flex items-center gap-3 md:gap-6 font-mono uppercase text-sm">
             <li>
-              <Link to="/" className="hover:text-accent transition">Home</Link>
+              <Link
+                to="/"
+                className="hover:text-accent transition"
+                onClick={() => posthog?.capture('navigation_clicked', { destination: '/', label: 'Home' })}
+              >
+                Home
+              </Link>
             </li>
             <li>
-              <Link to="/feed" className="hover:text-accent transition">Feed</Link>
+              <Link
+                to="/feed"
+                className="hover:text-accent transition"
+                onClick={() => posthog?.capture('navigation_clicked', { destination: '/feed', label: 'Feed' })}
+              >
+                Feed
+              </Link>
             </li>
             <li>
-              <Link to="/profile" className="hover:text-accent transition">Profile</Link>
+              <Link
+                to="/profile"
+                className="hover:text-accent transition"
+                onClick={() => posthog?.capture('navigation_clicked', { destination: '/profile', label: 'Profile' })}
+              >
+                Profile
+              </Link>
             </li>
             <li>
-              <Link to="/analytics" className="hover:text-accent transition">Analytics</Link>
+              <Link
+                to="/analytics"
+                className="hover:text-accent transition"
+                onClick={() =>
+                  posthog?.capture('navigation_clicked', { destination: '/analytics', label: 'Analytics' })
+                }
+              >
+                Analytics
+              </Link>
             </li>
           </ul>
         </nav>
@@ -55,15 +83,16 @@ export const Header = () => {
         <Link
           to="/buy-followers"
           className="bg-accent text-primary font-bold px-4 py-2 rounded-lg text-sm hover:opacity-80 transition"
+          onClick={() => posthog?.capture('buy_followers_cta_clicked', { location: 'header' })}
         >
           Buy Followers
         </Link>
-        <Link to="/profile" className="flex items-center gap-2">
-          <img
-            src={fakeUser.avatar}
-            alt={fakeUser.username}
-            className="w-8 h-8 rounded-full border-2 border-accent"
-          />
+        <Link
+          to="/profile"
+          className="flex items-center gap-2"
+          onClick={() => posthog?.capture('profile_avatar_clicked', { location: 'header' })}
+        >
+          <img src={fakeUser.avatar} alt={fakeUser.username} className="w-8 h-8 rounded-full border-2 border-accent" />
         </Link>
       </div>
     </header>
