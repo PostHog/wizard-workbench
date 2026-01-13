@@ -19,6 +19,7 @@ import {
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/organizations_+/$organizationSlug+/settings+/+types/general";
 import { updateStripeCustomer } from "~/features/billing/stripe-helpers.server";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
 import { OrganizationMembershipRole } from "~/generated/client";
 import { combineHeaders } from "~/utils/combine-headers.server";
@@ -128,6 +129,17 @@ export async function generalOrganizationSettingsAction({
     }
 
     case DELETE_ORGANIZATION_INTENT: {
+      // Capture PostHog event for organization deletion (churn indicator)
+      const { user } = context.get(organizationMembershipContext);
+      const posthog = (context as PostHogContext).posthog;
+      posthog?.capture({
+        distinctId: user.id,
+        event: "organization_deleted",
+        properties: {
+          organization_id: organization.id,
+        },
+      });
+
       await deleteOrganization(organization.id);
       return redirectWithToast(
         href("/organizations"),

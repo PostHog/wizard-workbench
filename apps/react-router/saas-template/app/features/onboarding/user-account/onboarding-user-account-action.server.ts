@@ -5,6 +5,7 @@ import { requireUserNeedsOnboarding } from "../onboarding-helpers.server";
 import { onboardingUserAccountSchema } from "./onboarding-user-account-schemas";
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/onboarding+/+types/user-account";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { destroyEmailInviteInfoSession } from "~/features/organizations/accept-email-invite/accept-email-invite-session.server";
 import { destroyInviteLinkInfoSession } from "~/features/organizations/accept-invite-link/accept-invite-link-session.server";
 import { updateEmailInviteLinkInDatabaseById } from "~/features/organizations/organizations-email-invite-link-model.server";
@@ -48,6 +49,16 @@ export async function onboardingUserAccountAction({
   await updateUserAccountInDatabaseById({
     id: user.id,
     user: { imageUrl, name: result.data.name },
+  });
+
+  // Capture PostHog event for user account onboarding completion
+  const posthog = (context as PostHogContext).posthog;
+  posthog?.capture({
+    distinctId: user.id,
+    event: "onboarding_user_account_completed",
+    properties: {
+      has_profile_image: !!result.data.image,
+    },
   });
 
   const { inviteLinkInfo, headers: inviteLinkHeaders } =

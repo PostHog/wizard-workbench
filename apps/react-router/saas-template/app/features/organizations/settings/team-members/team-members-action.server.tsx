@@ -31,6 +31,7 @@ import {
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/organizations_+/$organizationSlug+/settings+/+types/members";
 import { adjustSeats } from "~/features/billing/stripe-helpers.server";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import type { Prisma } from "~/generated/client";
 import { OrganizationMembershipRole } from "~/generated/client";
 import { combineHeaders } from "~/utils/combine-headers.server";
@@ -361,6 +362,17 @@ export async function teamMembersAction({
             }),
           });
         }
+
+        // Capture PostHog event for team member invitation
+        const posthog = (context as PostHogContext).posthog;
+        posthog?.capture({
+          distinctId: user.id,
+          event: "team_member_invited",
+          properties: {
+            organization_id: organization.id,
+            invited_role: body.role,
+          },
+        });
 
         const toastHeaders = await createToastHeaders({
           title: i18n.t(

@@ -2,6 +2,7 @@ import { href, redirect } from "react-router";
 
 import type { Route } from "./+types/auth.callback";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { getValidEmailInviteInfo } from "~/features/organizations/accept-email-invite/accept-email-invite-helpers.server";
 import { destroyEmailInviteInfoSession } from "~/features/organizations/accept-email-invite/accept-email-invite-session.server";
 import { getValidInviteLinkInfo } from "~/features/organizations/accept-invite-link/accept-invite-link-helpers.server";
@@ -56,7 +57,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const maybeUser =
       await retrieveUserAccountWithActiveMembershipsFromDatabaseByEmail(email);
 
+    // Capture PostHog event for existing user login
+    const posthog = (context as PostHogContext).posthog;
     if (maybeUser) {
+      posthog?.capture({
+        distinctId: maybeUser.id,
+        event: "user_logged_in",
+        properties: {
+          auth_method: "magic_link",
+          has_invite: !!(inviteLinkInfo || emailInviteInfo),
+        },
+      });
       if (inviteLinkInfo || emailInviteInfo) {
         const organizationId =
           // biome-ignore lint/style/noNonNullAssertion: The is checked above
@@ -181,6 +192,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const userProfile = await saveUserAccountToDatabase({
       email,
       supabaseUserId: user.id,
+    });
+
+    // Capture PostHog event for new user registration
+    posthog?.capture({
+      distinctId: userProfile.id,
+      event: "user_registered",
+      properties: {
+        auth_method: "magic_link",
+        has_invite: !!(inviteLinkInfo || emailInviteInfo),
+      },
     });
 
     if (emailInviteInfo) {

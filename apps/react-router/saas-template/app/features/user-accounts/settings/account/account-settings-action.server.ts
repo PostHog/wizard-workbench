@@ -15,6 +15,7 @@ import {
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/settings+/+types/account";
 import { adjustSeats } from "~/features/billing/stripe-helpers.server";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { deleteOrganization } from "~/features/organizations/organizations-helpers.server";
 import { requireAuthenticatedUserWithMembershipsAndSubscriptionsExists } from "~/features/user-accounts/user-accounts-helpers.server";
 import {
@@ -91,6 +92,16 @@ export async function accountSettingsAction({
     }
 
     case DELETE_USER_ACCOUNT_INTENT: {
+      // Capture PostHog event for user account deletion (churn indicator)
+      const posthog = (context as PostHogContext).posthog;
+      posthog?.capture({
+        distinctId: user.id,
+        event: "user_account_deleted",
+        properties: {
+          organizations_count: user.memberships.length,
+        },
+      });
+
       // Check if user is an owner of any organizations with other members
       const orgsBlockingDeletion = user.memberships.filter(
         (membership) =>

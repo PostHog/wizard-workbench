@@ -4,6 +4,7 @@ import { redirect } from "react-router";
 
 import { createOrganizationFormSchema } from "./create-organization-schemas";
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/organizations_+/+types/new";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { uploadOrganizationLogo } from "~/features/organizations/organizations-helpers.server";
 import { saveOrganizationWithOwnerToDatabase } from "~/features/organizations/organizations-model.server";
 import { requireAuthenticatedUserExists } from "~/features/user-accounts/user-accounts-helpers.server";
@@ -49,6 +50,17 @@ export async function createOrganizationAction({
       slug: slugify(result.data.name),
     },
     userId: user.id,
+  });
+
+  // Capture PostHog event for organization creation
+  const posthog = (context as PostHogContext).posthog;
+  posthog?.capture({
+    distinctId: user.id,
+    event: "organization_created",
+    properties: {
+      organization_id: organization.id,
+      has_logo: !!result.data.logo,
+    },
   });
 
   return redirect(`/organizations/${organization.slug}`, { headers });
