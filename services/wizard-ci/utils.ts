@@ -154,6 +154,11 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
     args.push("--ci", "--region", region, "--api-key", apiKey, "--install-dir", appPath);
   }
 
+  // Debug: log wizard invocation details
+  console.log(`[runWizard] Wizard binary: ${wizardBin}`);
+  console.log(`[runWizard] Working directory: ${appPath}`);
+  console.log(`[runWizard] Args: node ${args.map((a) => (a.includes("phx_") ? "[API_KEY]" : a)).join(" ")}`);
+
   return new Promise((resolve) => {
     // Spawn exactly like wizard-run does - full stdio inherit for interactivity
     const child = spawn("node", args, {
