@@ -5,6 +5,7 @@ import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -94,10 +95,50 @@ export default async function handler(
       })
       .where(eq(teams.id, userTeam[0].teamId));
 
+    // PostHog: Capture subscription completed event
+    const posthog = getPostHogClient();
+    const planName = (plan.product as Stripe.Product).name;
+    posthog.capture({
+      distinctId: userId,
+      event: 'subscription_completed',
+      properties: {
+        email: user[0].email,
+        planName: planName,
+        productId: productId,
+        subscriptionId: subscriptionId,
+        subscriptionStatus: subscription.status,
+        teamId: userTeam[0].teamId,
+        priceAmount: plan.unit_amount,
+        priceCurrency: plan.currency,
+        priceInterval: plan.recurring?.interval,
+        source: 'api'
+      }
+    });
+
+    // Update user properties with subscription info
+    posthog.identify({
+      distinctId: userId,
+      properties: {
+        planName: planName,
+        subscriptionStatus: subscription.status,
+        teamId: userTeam[0].teamId
+      }
+    });
+
     await setSession(user[0]);
     return res.redirect('/dashboard');
   } catch (error) {
     console.error('Error handling successful checkout:', error);
+    // PostHog: Capture checkout completion error
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: 'anonymous',
+      event: 'subscription_completion_error',
+      properties: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        source: 'api'
+      }
+    });
     return res.redirect('/error');
   }
 }

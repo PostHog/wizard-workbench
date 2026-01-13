@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -166,6 +167,48 @@ export default async function handler(
       setSession(createdUser, res)
     ]);
 
+    // PostHog: Track signup and identify user server-side
+    const posthog = getPostHogClient();
+    const distinctId = String(createdUser.id);
+
+    // Identify user on server side
+    posthog.identify({
+      distinctId,
+      properties: {
+        email: createdUser.email,
+        role: userRole,
+        teamId: teamId,
+        createdAt: new Date().toISOString()
+      }
+    });
+
+    // Capture signup event
+    posthog.capture({
+      distinctId,
+      event: 'user_signed_up',
+      properties: {
+        email: createdUser.email,
+        hasInvitation: !!inviteId,
+        teamId: teamId,
+        role: userRole,
+        source: 'api'
+      }
+    });
+
+    // Track invitation acceptance if applicable
+    if (inviteId) {
+      posthog.capture({
+        distinctId,
+        event: 'invitation_accepted',
+        properties: {
+          email: createdUser.email,
+          teamId: teamId,
+          inviteId: inviteId,
+          source: 'api'
+        }
+      });
+    }
+
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({
         team: createdTeam,
@@ -178,6 +221,16 @@ export default async function handler(
     return res.status(200).json({ success: true, redirectTo: '/dashboard' });
   } catch (error) {
     console.error('Sign up error:', error);
+    // PostHog: Capture signup error
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: 'anonymous',
+      event: 'signup_error',
+      properties: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        source: 'api'
+      }
+    });
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });
   }
 }

@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -95,6 +96,33 @@ export default async function handler(
       logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
     ]);
 
+    // PostHog: Track signin and identify user server-side
+    const posthog = getPostHogClient();
+    const distinctId = String(foundUser.id);
+
+    // Identify user on server side
+    posthog.identify({
+      distinctId,
+      properties: {
+        email: foundUser.email,
+        name: foundUser.name,
+        role: foundUser.role,
+        teamId: foundTeam?.id
+      }
+    });
+
+    // Capture signin event
+    posthog.capture({
+      distinctId,
+      event: 'user_signed_in',
+      properties: {
+        email: foundUser.email,
+        teamId: foundTeam?.id,
+        teamName: foundTeam?.name,
+        source: 'api'
+      }
+    });
+
     if (redirect === 'checkout' && foundTeam) {
       const checkoutResult = await createCheckoutSession({
         team: foundTeam,
@@ -107,6 +135,16 @@ export default async function handler(
     return res.status(200).json({ success: true, redirectTo: '/dashboard' });
   } catch (error) {
     console.error('Sign in error:', error);
+    // PostHog: Capture signin error
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: 'anonymous',
+      event: 'signin_error',
+      properties: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        source: 'api'
+      }
+    });
     return res.status(500).json({ error: 'Failed to sign in. Please try again.' });
   }
 }
