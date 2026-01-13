@@ -476,6 +476,17 @@ jobs:
             echo "**PR:** ${{ steps.run-wizard.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Get job ID
+        if: always() && needs.notify-start.outputs.thread_ts != ''
+        id: job-id
+        run: |
+          # Fetch the current job ID from the GitHub API
+          JOB_ID=$(curl -s -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" \
+            | jq -r '.jobs[] | select(.name | contains("${{ matrix.app }}")) | .id' | head -1)
+          echo "job_id=$JOB_ID" >> $GITHUB_OUTPUT
+          echo "Job ID: $JOB_ID"
+
       - name: Notify Slack
         if: always() && needs.notify-start.outputs.thread_ts != ''
         run: |
@@ -484,10 +495,13 @@ jobs:
             CONFIDENCE="N/A"
           fi
 
+          # Build job-specific logs URL
+          JOB_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ steps.job-id.outputs.job_id }}"
+
           if [ -n "${{ steps.run-wizard.outputs.pr_url }}" ]; then
-            PR_FIELD="<${{ steps.run-wizard.outputs.pr_url }}|#${{ steps.run-wizard.outputs.pr_number }}>"
+            PR_FIELD="<${{ steps.run-wizard.outputs.pr_url }}|#${{ steps.run-wizard.outputs.pr_number }}> (<$JOB_URL|logs>)"
           else
-            PR_FIELD="Failed (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|logs>)"
+            PR_FIELD="Failed (<$JOB_URL|logs>)"
           fi
 
           curl -s -X POST https://slack.com/api/chat.postMessage \
