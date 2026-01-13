@@ -1,3 +1,5 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
@@ -54,6 +56,7 @@ export function CancelOrModifySubscriptionModalContent({
     keyPrefix: "billingPage.pricingModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
 
   const isSubmitting =
     isSwitchingToLow || isSwitchingToMid || isSwitchingToHigh;
@@ -117,9 +120,41 @@ export function CancelOrModifySubscriptionModalContent({
       : { children: tModal("downgradeButton"), variant: "outline" };
   };
 
+  // Handle PostHog tracking on form submit
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const lookupKey = formData.get("lookupKey") as string;
+    const interval = billingPeriod as Interval;
+
+    // Extract target tier from lookup key
+    let targetTier: Tier | undefined;
+    for (const t of ["low", "mid", "high"] as Tier[]) {
+      if (
+        lookupKey === priceLookupKeysByTierAndInterval[t].monthly ||
+        lookupKey === priceLookupKeysByTierAndInterval[t].annual
+      ) {
+        targetTier = t;
+        break;
+      }
+    }
+
+    const isUpgrade =
+      (currentTier === "low" && (targetTier === "mid" || targetTier === "high")) ||
+      (currentTier === "mid" && targetTier === "high");
+
+    posthog?.capture("subscription_plan_switch_initiated", {
+      current_tier: currentTier,
+      target_tier: targetTier,
+      current_interval: currentTierInterval,
+      target_interval: interval,
+      is_upgrade: isUpgrade,
+      lookup_key: lookupKey,
+    });
+  };
+
   return (
     <>
-      <Form method="post" replace>
+      <Form method="post" replace onSubmit={handleSubmit}>
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"

@@ -1,3 +1,5 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
+import { usePostHog } from "@posthog/react";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconBuilding } from "@tabler/icons-react";
@@ -80,6 +82,7 @@ export default function OrganizationOnboardingRoute({
   actionData,
 }: Route.ComponentProps) {
   const { t } = useTranslation("onboarding", { keyPrefix: "organization" });
+  const posthog = usePostHog();
   const { form, fields } = useForm(
     coerceFormValue(onboardingOrganizationSchema),
     {
@@ -89,11 +92,29 @@ export default function OrganizationOnboardingRoute({
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
+  // Handle PostHog tracking on form submit
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const companySize = formData.get("companySize") as string;
+    const hasLogo = (formData.get("logo") as File)?.size > 0;
+    const referralSources = formData.getAll("referralSources") as string[];
+    const companyTypes = formData.getAll("companyTypes") as string[];
+
+    posthog?.capture("onboarding_organization_completed", {
+      company_size: companySize,
+      has_logo: hasLogo,
+      referral_sources: referralSources,
+      company_types: companyTypes,
+      early_access_opt_in: formData.get("earlyAccessOptIn") === "on",
+    });
+  };
+
   return (
     <Form
       encType="multipart/form-data"
       method="POST"
       {...form.props}
+      onSubmit={handleSubmit}
       aria-describedby={
         form.errors && form.errors.length > 0
           ? `${form.descriptionId} ${form.errorId}`

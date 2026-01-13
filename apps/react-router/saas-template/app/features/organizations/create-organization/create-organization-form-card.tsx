@@ -1,3 +1,5 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
+import { usePostHog } from "@posthog/react";
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
@@ -45,12 +47,25 @@ export function CreateOrganizationFormCard({
   lastResult,
 }: CreateOrganizationFormCardProps) {
   const { t } = useTranslation("organizations", { keyPrefix: "new.form" });
+  const posthog = usePostHog();
   const { form, fields } = useForm(
     coerceFormValue(createOrganizationFormSchema),
     {
       lastResult,
     },
   );
+
+  // Handle PostHog tracking on form submit
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const hasLogo = (formData.get("logo") as File)?.size > 0;
+
+    posthog?.capture("organization_created", {
+      organization_name: name,
+      has_logo: hasLogo,
+    });
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -61,7 +76,7 @@ export function CreateOrganizationFormCard({
         </CardHeader>
 
         <CardContent>
-          <Form encType="multipart/form-data" method="POST" {...form.props}>
+          <Form encType="multipart/form-data" method="POST" {...form.props} onSubmit={handleSubmit}>
             <FieldSet
               className="flex flex-col gap-6"
               disabled={isCreatingOrganization}

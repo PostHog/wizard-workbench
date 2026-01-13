@@ -1,5 +1,7 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import "./app.css";
 
+import { usePostHog } from "@posthog/react";
 import { FormOptionsProvider } from "@conform-to/react/future";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -32,6 +34,7 @@ import {
   localeCookie,
 } from "./features/localization/i18next-middleware.server";
 import { useToast } from "./hooks/use-toast";
+import { posthogMiddleware } from "./lib/posthog-middleware.server";
 import { cn } from "./lib/utils";
 import { ClientHintCheck, getHints } from "./utils/client-hints";
 import { combineHeaders } from "./utils/combine-headers.server";
@@ -63,7 +66,11 @@ export const shouldRevalidate = ({
   return defaultShouldRevalidate;
 };
 
-export const middleware = [securityMiddleware, i18nextMiddleware];
+export const middleware = [
+  securityMiddleware,
+  i18nextMiddleware,
+  posthogMiddleware,
+];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { colorScheme, honeypotInputProps, toastData } = await promiseHash({
@@ -219,6 +226,10 @@ function BaseErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 }
 
 export function ErrorBoundary({ error, ...props }: Route.ErrorBoundaryProps) {
+  // Capture errors with PostHog
+  const posthog = usePostHog();
+  posthog.captureException(error);
+
   if (isRouteErrorResponse(error) && error.status === 404) {
     return <NotFound className="min-h-svh" />;
   }

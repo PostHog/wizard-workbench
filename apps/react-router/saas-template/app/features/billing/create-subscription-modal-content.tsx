@@ -1,4 +1,6 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
@@ -47,6 +49,7 @@ export function CreateSubscriptionModalContent({
     keyPrefix: "noCurrentPlanModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
 
   const navigation = useNavigation();
   const isSubmitting =
@@ -101,13 +104,36 @@ export function CreateSubscriptionModalContent({
     };
   };
 
-  // figure out which tiers can’t cover your seats:
+  // figure out which tiers can't cover your seats:
   const unavailable = (["low", "mid", "high"] as Tier[]).filter(
     (tier) => planLimits[tier] < currentSeats,
   );
 
+  // Handle PostHog tracking on form submit
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const lookupKey = formData.get("lookupKey") as string;
+    const interval = billingPeriod as Interval;
+
+    // Extract tier from lookup key
+    let tier: Tier | undefined;
+    for (const t of ["low", "mid", "high"] as Tier[]) {
+      if (lookupKey === priceLookupKeysByTierAndInterval[t][interval]) {
+        tier = t;
+        break;
+      }
+    }
+
+    posthog?.capture("subscription_checkout_started", {
+      tier,
+      interval,
+      lookup_key: lookupKey,
+      current_seats: currentSeats,
+    });
+  };
+
   return (
-    <Form method="post" replace>
+    <Form method="post" replace onSubmit={handleSubmit}>
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>

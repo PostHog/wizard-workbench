@@ -1,3 +1,5 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
+import { usePostHog } from "@posthog/react";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconUser } from "@tabler/icons-react";
@@ -65,6 +67,7 @@ export default function UserAccountOnboardingRoute({
   loaderData,
 }: Route.ComponentProps) {
   const { t } = useTranslation("onboarding", { keyPrefix: "userAccount" });
+  const posthog = usePostHog();
   const { form, fields } = useForm(
     coerceFormValue(onboardingUserAccountSchema),
     {
@@ -74,8 +77,20 @@ export default function UserAccountOnboardingRoute({
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
+  // Handle PostHog tracking on form submit
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const hasImage = (formData.get("image") as File)?.size > 0;
+
+    posthog?.capture("onboarding_user_account_completed", {
+      has_name: !!name,
+      has_profile_image: hasImage,
+    });
+  };
+
   return (
-    <Form encType="multipart/form-data" method="POST" {...form.props}>
+    <Form encType="multipart/form-data" method="POST" {...form.props} onSubmit={handleSubmit}>
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>
           <div className="flex flex-col gap-1">
