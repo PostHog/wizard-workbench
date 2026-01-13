@@ -205,7 +205,7 @@ jobs:
                 {
                   "type": "context",
                   "elements": [
-                    {"type": "mrkdwn", "text": "_AlakaBLAM 🪄!_ <${{ github.server_url }}/${{ github.repository }}/pulls?q=sort%3Aupdated-desc+is%3Apr+${{ needs.discover.outputs.trigger_id }}|View all created wizard runs>"}
+                    {"type": "mrkdwn", "text": "_AlaakuhhZAAM!_ 🪄 <${{ github.server_url }}/${{ github.repository }}/pulls?q=sort%3Aupdated-desc+is%3Apr+${{ needs.discover.outputs.trigger_id }}|See all created wizard runs>"}
                   ]
                 }
               ]
