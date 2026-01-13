@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -24,6 +25,10 @@ export function TodoList() {
       }
     } catch (error) {
       console.error('Failed to fetch todos:', error);
+      posthog.capture('fetch_todos_failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      posthog.captureException(error);
     } finally {
       setLoading(false);
     }
@@ -42,9 +47,18 @@ export function TodoList() {
       if (response.ok) {
         const newTodo = await response.json();
         setTodos([...todos, newTodo]);
+        posthog.capture('todo_created', {
+          todo_id: newTodo.id,
+          has_description: !!description,
+          title_length: title.length,
+        });
       }
     } catch (error) {
       console.error('Failed to add todo:', error);
+      posthog.capture('create_todo_failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      posthog.captureException(error);
     }
   };
 
@@ -61,9 +75,23 @@ export function TodoList() {
       if (response.ok) {
         const updatedTodo = await response.json();
         setTodos(todos.map((todo) => (todo.id === id ? updatedTodo : todo)));
+        if (completed) {
+          posthog.capture('todo_completed', {
+            todo_id: id,
+          });
+        } else {
+          posthog.capture('todo_uncompleted', {
+            todo_id: id,
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to update todo:', error);
+      posthog.capture('update_todo_failed', {
+        todo_id: id,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      posthog.captureException(error);
     }
   };
 
@@ -75,9 +103,17 @@ export function TodoList() {
 
       if (response.ok) {
         setTodos(todos.filter((todo) => todo.id !== id));
+        posthog.capture('todo_deleted', {
+          todo_id: id,
+        });
       }
     } catch (error) {
       console.error('Failed to delete todo:', error);
+      posthog.capture('delete_todo_failed', {
+        todo_id: id,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      posthog.captureException(error);
     }
   };
 
@@ -100,6 +136,7 @@ export function TodoList() {
           <Link
             href="/about"
             className="text-sm text-primary hover:underline"
+            onClick={() => posthog.capture('about_page_link_clicked')}
           >
             About
           </Link>
