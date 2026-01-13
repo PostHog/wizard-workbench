@@ -154,10 +154,15 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
     args.push("--ci", "--region", region, "--api-key", apiKey, "--install-dir", appPath);
   }
 
-  // Debug: log wizard invocation details
+  // Debug: log wizard invocation details (mask API key by position, not content)
+  const safeArgs = args.map((arg, i) => {
+    // Mask the argument that follows --api-key
+    if (i > 0 && args[i - 1] === "--api-key") return "[REDACTED]";
+    return arg;
+  });
   console.log(`[runWizard] Wizard binary: ${wizardBin}`);
   console.log(`[runWizard] Working directory: ${appPath}`);
-  console.log(`[runWizard] Args: node ${args.map((a) => (a.includes("phx_") ? "[API_KEY]" : a)).join(" ")}`);
+  console.log(`[runWizard] Args: node ${safeArgs.join(" ")}`);
 
   return new Promise((resolve) => {
     // Spawn exactly like wizard-run does - full stdio inherit for interactivity
