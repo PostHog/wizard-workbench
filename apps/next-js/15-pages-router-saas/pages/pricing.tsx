@@ -3,10 +3,11 @@ import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -74,6 +75,15 @@ function PricingCard({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    // Capture checkout initiation event
+    posthog.capture('checkout_initiated', {
+      plan_name: name,
+      price_amount: price,
+      price_interval: interval,
+      trial_days: trialDays,
+      price_id: priceId,
+    });
+
     startTransition(async () => {
       try {
         const response = await fetch('/api/stripe/create-checkout', {
@@ -92,6 +102,7 @@ function PricingCard({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         console.error('Checkout error:', err);
       }
     });
@@ -130,11 +141,20 @@ export default function PricingPage({
   products,
   fallback
 }: PricingPageProps) {
+  const hasCapturedPageView = useRef(false);
   const basePlan = products.find((product) => product.name === 'Base');
   const plusPlan = products.find((product) => product.name === 'Plus');
 
   const basePrice = prices.find((price) => price.productId === basePlan?.id);
   const plusPrice = prices.find((price) => price.productId === plusPlan?.id);
+
+  // Capture pricing page view (top of conversion funnel) - only once per mount
+  if (!hasCapturedPageView.current) {
+    hasCapturedPageView.current = true;
+    posthog.capture('pricing_page_viewed', {
+      available_plans: [basePlan?.name, plusPlan?.name].filter(Boolean),
+    });
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
