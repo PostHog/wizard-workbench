@@ -66,6 +66,21 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
     }
   };
 
+  // Handler for country card click
+  const handleCountryCardClick = (countryName: string, countryRegion: string) => {
+    posthog?.capture('country_card_clicked', {
+      country_name: countryName,
+      country_region: countryRegion,
+    });
+  };
+
+  // Handler for login prompt click
+  const handleLoginPromptClick = () => {
+    posthog?.capture('login_prompt_clicked', {
+      source: 'countries_list',
+    });
+  };
+
   // Ensure loaderData is an array, fallback to empty array
   const countries = Array.isArray(loaderData) ? loaderData : [];
 
@@ -137,6 +152,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 <div className="flex items-start justify-between mb-2">
                   <Link
                     to={`/countries/${countryName}`}
+                    onClick={() => handleCountryCardClick(countryName, country.region)}
                     className="text-indigo-600 hover:underline text-lg font-semibold flex-1"
                   >
                     {countryName}
@@ -189,7 +205,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   </div>
                 ) : (
                   <div className="mt-3 text-xs text-gray-500 text-center">
-                    <Link to="/login" className="text-indigo-600 hover:underline">
+                    <Link to="/login" onClick={handleLoginPromptClick} className="text-indigo-600 hover:underline">
                       Login to claim countries!
                     </Link>
                   </div>

@@ -1,16 +1,41 @@
+import { useRef } from 'react'
 import { Link, Navigate } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
 import { getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
 import type { Route } from './+types/profile'
 
 export default function Profile() {
+  const posthog = usePostHog()
   const { user, logout } = useAuth()
+  const hasCapturedRef = useRef(false)
 
   if (!user) {
     return <Navigate to="/login" replace />
   }
 
   const currentUser = getCurrentUser() || user
+
+  // Capture profile viewed event once per page load
+  if (!hasCapturedRef.current) {
+    posthog?.capture('profile_viewed', {
+      username: currentUser.username,
+      claimed_count: currentUser.claimedCountries.length,
+      liked_count: currentUser.likedCountries.length,
+      visited_count: currentUser.visitedCountries.length,
+      total_points: currentUser.totalPoints,
+      achievements_count: currentUser.achievements.length,
+    })
+    hasCapturedRef.current = true
+  }
+
+  const handleLogoutClick = () => {
+    posthog?.capture('logout_clicked', {
+      username: currentUser.username,
+      total_points: currentUser.totalPoints,
+    })
+    logout()
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
@@ -64,7 +89,7 @@ export default function Profile() {
                   View Stats
                 </Link>
                 <button
-                  onClick={logout}
+                  onClick={handleLogoutClick}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
                 >
                   Logout

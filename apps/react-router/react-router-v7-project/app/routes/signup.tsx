@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
@@ -13,6 +13,14 @@ export default function Signup() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const formStartedRef = useRef(false)
+
+  const handleFormFocus = () => {
+    if (!formStartedRef.current) {
+      posthog?.capture('signup_form_started')
+      formStartedRef.current = true
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,7 +65,7 @@ export default function Signup() {
           <p className="text-gray-600">Create your fake account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} onFocus={handleFormFocus} className="space-y-6">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
               {error}

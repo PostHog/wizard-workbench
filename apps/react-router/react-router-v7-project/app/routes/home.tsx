@@ -18,6 +18,13 @@ export default function Home() {
       cta_text: 'Explore Now',
     });
   };
+
+  const handleLearnMoreClick = () => {
+    posthog?.capture('learn_more_clicked', {
+      cta_location: 'home_hero',
+      cta_text: 'Learn More',
+    });
+  };
   return (
     <div className="px-2 py-32 bg-white md:px-0">
       <div className="container items-center max-w-6xl mx-auto xl:px-5">
@@ -58,6 +65,7 @@ export default function Home() {
                 </Link>
                 <Link
                   to="/about"
+                  onClick={handleLearnMoreClick}
                   className="flex items-center px-6 py-3 text-gray-500 bg-gray-100 rounded-md hover:bg-gray-200 hover:text-gray-600"
                 >
                   Learn More

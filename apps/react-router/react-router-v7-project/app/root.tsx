@@ -12,6 +12,11 @@ import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
 import Navbar from "./components/navbar";
 import { AuthProvider } from "./context/AuthContext";
+import { posthogMiddleware } from "./lib/posthog-middleware";
+
+export const middleware: Route.MiddlewareFunction[] = [
+  posthogMiddleware,
+];
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },

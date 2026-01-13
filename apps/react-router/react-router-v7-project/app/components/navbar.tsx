@@ -1,9 +1,19 @@
 import { NavLink, Link } from "react-router";
+import { usePostHog } from "@posthog/react";
 import { useAuth } from "~/context/AuthContext";
 import { getAvatarUrl } from "~/lib/utils/auth";
 
 export default function Navbar() {
+  const posthog = usePostHog();
   const { user, isAuthenticated } = useAuth();
+
+  const handleNavbarLoginClick = () => {
+    posthog?.capture('navbar_login_clicked');
+  };
+
+  const handleNavbarSignupClick = () => {
+    posthog?.capture('navbar_signup_clicked');
+  };
 
   return (
     <header className="w-full px-8 text-gray-700 bg-white shadow-sm sticky top-0 z-50">
@@ -70,12 +80,14 @@ export default function Navbar() {
             <div className="flex gap-3">
               <Link
                 to="/login"
+                onClick={handleNavbarLoginClick}
                 className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
               >
                 Login
               </Link>
               <Link
                 to="/signup"
+                onClick={handleNavbarSignupClick}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition"
               >
                 Sign Up
