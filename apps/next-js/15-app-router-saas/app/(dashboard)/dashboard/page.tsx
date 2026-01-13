@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -61,7 +62,16 @@ function ManageSubscription() {
               </p>
             </div>
             <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={() => {
+                  posthog.capture('subscription_managed', {
+                    current_plan: teamData?.planName || 'Free',
+                    subscription_status: teamData?.subscriptionStatus || 'none',
+                  });
+                }}
+              >
                 Manage Subscription
               </Button>
             </form>
@@ -95,10 +105,24 @@ function TeamMembersSkeleton() {
 
 function TeamMembers() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
+
+  const wrappedRemoveAction = async (prevState: ActionState, formData: FormData): Promise<ActionState> => {
+    const memberId = formData.get('memberId') as string;
+    const result = await removeTeamMember(prevState, formData);
+
+    if ('success' in result && result.success) {
+      posthog.capture('team_member_removed', {
+        member_id: memberId,
+      });
+    }
+
+    return result;
+  };
+
   const [removeState, removeAction, isRemovePending] = useActionState<
     ActionState,
     FormData
-  >(removeTeamMember, {});
+  >(wrappedRemoveAction, {});
 
   const getUserDisplayName = (user: Pick<User, 'id' | 'name' | 'email'>) => {
     return user.name || user.email || 'Unknown User';
@@ -190,10 +214,26 @@ function InviteTeamMemberSkeleton() {
 function InviteTeamMember() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const isOwner = user?.role === 'owner';
+
+  const wrappedInviteAction = async (prevState: ActionState, formData: FormData): Promise<ActionState> => {
+    const email = formData.get('email') as string;
+    const role = formData.get('role') as string;
+    const result = await inviteTeamMember(prevState, formData);
+
+    if ('success' in result && result.success) {
+      posthog.capture('team_member_invited', {
+        invited_email: email,
+        invited_role: role,
+      });
+    }
+
+    return result;
+  };
+
   const [inviteState, inviteAction, isInvitePending] = useActionState<
     ActionState,
     FormData
-  >(inviteTeamMember, {});
+  >(wrappedInviteAction, {});
 
   return (
     <Card>

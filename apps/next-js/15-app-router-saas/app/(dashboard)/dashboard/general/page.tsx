@@ -10,6 +10,7 @@ import { updateAccount } from '@/app/(login)/actions';
 import { User } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -73,8 +74,28 @@ function AccountFormWithData({ state }: { state: ActionState }) {
 }
 
 export default function GeneralPage() {
+  const wrappedUpdateAccount = async (prevState: ActionState, formData: FormData): Promise<ActionState> => {
+    const name = formData.get('name') as string;
+    const email = formData.get('email') as string;
+    const result = await updateAccount(prevState, formData);
+
+    if ('success' in result && result.success) {
+      // Update PostHog person properties when account is updated
+      posthog.identify(email, {
+        name: name,
+        email: email,
+      });
+
+      posthog.capture('account_updated', {
+        updated_fields: ['name', 'email'],
+      });
+    }
+
+    return result;
+  };
+
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
-    updateAccount,
+    wrappedUpdateAccount,
     {}
   );
 

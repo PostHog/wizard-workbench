@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,14 +9,47 @@ import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import posthog from 'posthog-js';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
   const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const wrappedAction = async (prevState: ActionState, formData: FormData): Promise<ActionState> => {
+    const email = formData.get('email') as string;
+    const action = mode === 'signin' ? signIn : signUp;
+    const result = await action(prevState, formData);
+
+    // If result is void (redirect happened) or has no error, the action was successful
+    // Identify user and capture event before any potential redirect
+    if (!result || !('error' in result) || !result.error) {
+      // Identify user in PostHog
+      posthog.identify(email, {
+        email: email,
+      });
+
+      // Capture the appropriate event
+      if (mode === 'signin') {
+        posthog.capture('user_signed_in', {
+          email: email,
+        });
+      } else {
+        posthog.capture('user_signed_up', {
+          email: email,
+          has_invite: !!inviteId,
+          redirect_to_checkout: redirect === 'checkout',
+        });
+      }
+    }
+
+    return result || { error: '' };
+  };
+
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
-    mode === 'signin' ? signIn : signUp,
+    wrappedAction,
     { error: '' }
   );
 
