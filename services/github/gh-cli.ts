@@ -24,6 +24,7 @@ export interface CreatePROptions {
   title: string;
   body: string;
   base: string;
+  draft?: boolean;
 }
 
 /**
@@ -31,9 +32,10 @@ export interface CreatePROptions {
  * Returns the PR URL.
  */
 export function createPR(opts: CreatePROptions): string {
-  const { cwd, title, body, base } = opts;
+  const { cwd, title, body, base, draft } = opts;
+  const draftFlag = draft ? " --draft" : "";
   const result = execSync(
-    `gh pr create --title "${escapeForShell(title)}" --body "${escapeForShell(body)}" --base "${base}"`,
+    `gh pr create --title "${escapeForShell(title)}" --body "${escapeForShell(body)}" --base "${base}"${draftFlag}`,
     { cwd, encoding: "utf-8", stdio: "pipe" }
   );
   return result.trim();

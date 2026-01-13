@@ -3,7 +3,7 @@ import "dotenv/config";
 import { mkdir } from "fs/promises";
 import { join } from "path";
 import * as readline from "readline";
-import { evaluatePR } from "./evaluator.js";
+import { evaluatePR, configureGateway } from "./evaluator.js";
 import { fetchLocalBranch } from "./git-local.js";
 import { fetchPR } from "../github/index.js";
 
@@ -142,14 +142,14 @@ async function main(): Promise<void> {
     }
   }
 
-  // Validate environment
-  // Use EVALUATOR_ANTHROPIC_API_KEY to avoid conflict with wizard's ANTHROPIC_API_KEY
-  if (!process.env.EVALUATOR_ANTHROPIC_API_KEY) {
-    console.error("Error: EVALUATOR_ANTHROPIC_API_KEY environment variable is required");
+  // Validate environment - uses PostHog LLM gateway with POSTHOG_PERSONAL_API_KEY
+  if (!process.env.POSTHOG_PERSONAL_API_KEY) {
+    console.error("Error: POSTHOG_PERSONAL_API_KEY environment variable is required");
     process.exit(1);
   }
-  // Set ANTHROPIC_API_KEY for the Claude Agent SDK from our namespaced variable
-  process.env.ANTHROPIC_API_KEY = process.env.EVALUATOR_ANTHROPIC_API_KEY;
+  const region = process.env.POSTHOG_REGION || "us";
+  // Configure the Claude Agent SDK to use PostHog's LLM gateway
+  configureGateway(process.env.POSTHOG_PERSONAL_API_KEY, region);
 
   // For local branch mode, always use test-run (can't post to GitHub without a PR)
   if (hasBranch && !args.testRun) {

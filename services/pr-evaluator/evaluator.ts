@@ -13,6 +13,28 @@ export interface EvaluateResult {
   commentUrl?: string;
 }
 
+/**
+ * Get LLM gateway URL based on PostHog region
+ */
+function getLlmGatewayUrl(region: string): string {
+  if (region === "eu") {
+    return "https://gateway.eu.posthog.com/wizard";
+  }
+  return "https://gateway.us.posthog.com/wizard";
+}
+
+/**
+ * Configure the Claude Agent SDK to use PostHog's LLM gateway
+ */
+export function configureGateway(apiKey: string, region: string): void {
+  const gatewayUrl = getLlmGatewayUrl(region);
+  process.env.ANTHROPIC_BASE_URL = gatewayUrl;
+  process.env.ANTHROPIC_AUTH_TOKEN = apiKey;
+  // Disable experimental betas that the LLM gateway doesn't support
+  process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "true";
+  console.log(`Configured LLM gateway: ${gatewayUrl}`);
+}
+
 export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResult> {
   const { prData, testRun = false, testRunDir } = options;
 
@@ -27,6 +49,9 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
     await fs.writeFile(join(testRunDir, "prompt.md"), fullPrompt, "utf-8");
   }
 
+  // Debug mode: set EVALUATOR_DEBUG=1 to enable extra stderr logging
+  const debug = process.env.EVALUATOR_DEBUG === "1";
+
   console.log("\nRunning evaluation agent...");
 
   let resultText = "";
@@ -36,14 +61,26 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
     totalCostUsd?: number;
   } = {};
 
+  // Collect stderr output for error reporting
+  const stderrOutput: string[] = [];
+
+  try {
   for await (const message of query({
     prompt: userPrompt,
     options: {
       model: "claude-opus-4-5-20251101",
       allowedTools: ["Read", "Grep", "Glob", "Bash"],
       cwd: process.cwd(),
-      permissionMode: "bypassPermissions",
+      // Use acceptEdits instead of bypassPermissions - the latter doesn't work as root in Docker
+      permissionMode: "acceptEdits",
       systemPrompt,
+      // Capture stderr from the Claude Code subprocess for error diagnostics
+      stderr: (data: string) => {
+        stderrOutput.push(data);
+        if (debug) {
+          console.error("[SDK stderr]:", data);
+        }
+      },
     },
   })) {
     if (message.type === "assistant") {
@@ -79,6 +116,15 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
       }
     }
   }
+  } catch (error) {
+    console.error("Agent query error:", error);
+    if (stderrOutput.length > 0) {
+      console.error("\n--- Collected stderr output ---");
+      console.error(stderrOutput.join(""));
+      console.error("--- End stderr ---\n");
+    }
+    throw error;
+  }
 
   if (!resultText) {
     throw new Error("No result received from agent");
@@ -86,6 +132,12 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
 
   // The agent outputs markdown directly - use it as the review comment
   const reviewComment = resultText.trim();
+
+  // Extract and print confidence score for CI parsing
+  const confidenceMatch = reviewComment.match(/Confidence score: (\d\/\d)/);
+  if (confidenceMatch) {
+    console.log(`\nConfidence score: ${confidenceMatch[1]}`);
+  }
 
   // Save output and usage if test run
   if (testRunDir) {

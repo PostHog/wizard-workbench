@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
- * wizard-ci: Run wizard on test apps and optionally create PRs
+ * wizard-ci: Run wizard on a single test app and optionally create a PR
  *
  * Usage:
  *   pnpm wizard-ci                              # Interactive selection
  *   pnpm wizard-ci --app next-js/15-app-router-saas
  *   pnpm wizard-ci --app next-js/15-app-router-saas --local
- *   pnpm wizard-ci --all --local
+ *
+ * For running all apps, use the wizard-trigger GitHub workflow.
  */
 import "dotenv/config";
 import { createInterface } from "readline";
@@ -46,7 +47,7 @@ const APPS_DIR = join(WORKBENCH, "apps");
 
 interface Options {
   app?: string;
-  all: boolean;
+  triggerId?: string;
   local: boolean;
   base: string;
   remote: string;
@@ -66,6 +67,17 @@ interface PRMetadata {
   shortId: string;
   branch: string;
   duration?: number;
+  wizardRef?: string;
+  examplesRef?: string;
+  posthogRef?: string;
+}
+
+function getDependencyRefs(): Pick<PRMetadata, "wizardRef" | "examplesRef" | "posthogRef"> {
+  return {
+    wizardRef: process.env.WIZARD_REF,
+    examplesRef: process.env.EXAMPLES_REF,
+    posthogRef: process.env.POSTHOG_REF,
+  };
 }
 
 function buildPRTitle(meta: PRMetadata): string {
@@ -74,11 +86,16 @@ function buildPRTitle(meta: PRMetadata): string {
 
 function buildPRBody(meta: PRMetadata): string {
   const lines = [
-    `Automated wizard test on \`${meta.appName}\``,
+    `Automated wizard CI run`,
     "",
-    `Timestamp: ${new Date().toISOString()}`,
+    `Trigger ID: \`${meta.shortId}\``,
+    `App: \`${meta.appName}\``,
     `App directory: \`apps/${meta.appName}\``,
-    `Branch: \`${meta.branch}\``,
+    `Workbench branch: \`${meta.branch}\``,
+    `Wizard branch: \`${meta.wizardRef || "main"}\``,
+    `Examples branch: \`${meta.examplesRef || "main"}\``,
+    `PostHog (MCP) branch: \`${meta.posthogRef || "master"}\``,
+    `Timestamp: ${new Date().toISOString()}`,
   ];
   if (meta.duration !== undefined) {
     lines.push(`Duration: ${formatMs(meta.duration)}`);
@@ -168,7 +185,6 @@ function printSummary(info: {
 function parseArgs(): Options {
   const args = process.argv.slice(2);
   const opts: Options = {
-    all: false,
     local: false,
     base: "main",
     remote: "origin",
@@ -181,7 +197,7 @@ function parseArgs(): Options {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === "--app" || arg === "-a") opts.app = args[++i];
-    else if (arg === "--all") opts.all = true;
+    else if (arg === "--trigger-id" || arg === "-t") opts.triggerId = args[++i];
     else if (arg === "--local" || arg === "-l") opts.local = true;
     else if (arg === "--base") opts.base = args[++i];
     else if (arg === "--remote" || arg === "-r") opts.remote = args[++i];
@@ -199,15 +215,17 @@ function parseArgs(): Options {
     } else if (arg === "--evaluate" || arg === "-e") opts.evaluate = true;
     else if (arg === "--help" || arg === "-h") {
       console.log(`
-wizard-ci: Run wizard on test apps and create PRs
+wizard-ci: Run wizard on a single test app and create a PR
 
 Runs wizard in CI mode (non-interactive). Requires POSTHOG_REGION and
 POSTHOG_PERSONAL_API_KEY to be defined in .env file.
 
+For running all apps, use the wizard-trigger GitHub workflow.
+
 Usage:
   pnpm wizard-ci                     Interactive app selection
   pnpm wizard-ci --app <name>        Test specific app
-  pnpm wizard-ci --all               Test all apps
+  pnpm wizard-ci --trigger-id <id>   Trigger ID (inherited from orchestrator)
   pnpm wizard-ci --local             Skip PR creation
   pnpm wizard-ci --base <branch>     Base branch for PR (default: main)
   pnpm wizard-ci --remote <name>     Git remote to push to (default: origin)
@@ -378,6 +396,7 @@ async function pushOnlyMode(opts: Options): Promise<void> {
     appName,
     shortId: branchShortId,
     branch: targetBranch,
+    ...getDependencyRefs(),
   };
 
   const result = pushAndCreatePR({
@@ -387,6 +406,7 @@ async function pushOnlyMode(opts: Options): Promise<void> {
     base: opts.base,
     title: buildPRTitle(prMeta),
     body: buildPRBody(prMeta),
+    draft: true,
     deleteBranchAfter: opts.deleteBranch,
     returnToBranch: originalBranch,
   });
@@ -430,7 +450,7 @@ async function pushOnlyMode(opts: Options): Promise<void> {
 // Run Wizard CI flow
 // ============================================================================
 
-async function runCI(app: App, opts: Options): Promise<boolean> {
+async function runCI(app: App, opts: Options, triggerId: string): Promise<boolean> {
   const repoRoot = getRepoRoot(WORKBENCH);
   const appRelativePath = relative(repoRoot, app.path);
 
@@ -493,8 +513,7 @@ async function runCI(app: App, opts: Options): Promise<boolean> {
       console.log("[4/5] Creating branch and committing for local evaluation...");
       const originalBranch = getCurrentBranch(repoRoot);
 
-      const branchShortId = shortId();
-      const branchName = `wizard-ci/${app.name.replace(/\//g, "-")}/${branchShortId}`;
+      const branchName = `wizard-ci/${triggerId}/${app.name.replace(/\//g, "-")}`;
 
       try {
         createBranch(repoRoot, branchName);
@@ -515,7 +534,7 @@ async function runCI(app: App, opts: Options): Promise<boolean> {
 
       // Run evaluation on the branch
       console.log("[5/5] Running local evaluation (test-run mode)...");
-      const testRunName = `local-${app.name.replace(/\//g, "-")}-${branchShortId}`;
+      const testRunName = `local-${triggerId}-${app.name.replace(/\//g, "-")}`;
       const evalInfo = await runLocalEvaluation(branchName, opts.base, testRunName);
 
       // Return to original branch
@@ -524,7 +543,7 @@ async function runCI(app: App, opts: Options): Promise<boolean> {
       // Print summary
       printSummary({
         branch: branchName,
-        shortId: branchShortId,
+        shortId: triggerId,
         testRunDir: evalInfo.testRunDir,
       });
     } else {
@@ -539,7 +558,7 @@ async function runCI(app: App, opts: Options): Promise<boolean> {
 
   // Switch to existing or create new branch
   // If --branch was specified with a value, use it; if empty string, it was already prompted in push-only mode
-  const generateBranchName = () => `wizard-ci/${app.name.replace(/\//g, "-")}/${shortId()}`;
+  const generateBranchName = () => `wizard-ci/${triggerId}/${app.name.replace(/\//g, "-")}`;
   const specifiedBranch = opts.branch && opts.branch !== "" ? opts.branch : undefined;
   let branchResult;
   try {
@@ -559,9 +578,6 @@ async function runCI(app: App, opts: Options): Promise<boolean> {
 
   const branchName = branchResult.branch;
 
-  // Extract shortId from branch name (last segment after final /)
-  const branchShortId = branchName.split("/").pop() || shortId();
-
   try {
     // Only commit files within the app directory
     const hash = commitPath(repoRoot, appRelativePath, `wizard-ci: ${app.name}`);
@@ -580,9 +596,10 @@ async function runCI(app: App, opts: Options): Promise<boolean> {
 
   const prMeta: PRMetadata = {
     appName: app.name,
-    shortId: branchShortId,
+    shortId: triggerId,
     branch: branchName,
     duration: result.duration,
+    ...getDependencyRefs(),
   };
 
   const prResult = pushAndCreatePR({
@@ -592,6 +609,7 @@ async function runCI(app: App, opts: Options): Promise<boolean> {
     base: opts.base,
     title: buildPRTitle(prMeta),
     body: buildPRBody(prMeta),
+    draft: true,
     deleteBranchAfter: opts.deleteBranch,
     returnToBranch: originalBranch,
   });
@@ -624,7 +642,7 @@ async function runCI(app: App, opts: Options): Promise<boolean> {
       prUrl: prResult.prUrl,
       prNumber: evalInfo?.prNumber,
       branch: branchName,
-      shortId: branchShortId,
+      shortId: triggerId,
     });
   }
 
@@ -657,39 +675,33 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Determine which apps to test
-  let targets: App[];
+  // Determine which app to test
+  let target: App;
 
-  if (opts.all) {
-    targets = apps;
-  } else if (opts.app) {
+  if (opts.app) {
     const app = apps.find((a) => a.name === opts.app || a.name.endsWith(opts.app!));
     if (!app) {
       console.error(`App not found: ${opts.app}`);
       console.log("Available:", apps.map((a) => a.name).join(", "));
       process.exit(1);
     }
-    targets = [app];
+    target = app;
   } else {
-    targets = [await selectApp(apps)];
+    target = await selectApp(apps);
   }
 
-  // Run tests
-  console.log(`\nWizard Test`);
-  console.log(`Apps: ${targets.length}`);
+  // Generate or use provided trigger ID
+  const triggerId = opts.triggerId || shortId();
+
+  // Run test
+  console.log(`\nWizard CI`);
+  console.log(`App: ${target.name}`);
+  console.log(`Trigger ID: ${triggerId}`);
   console.log(`Mode: ${opts.local ? "local" : "create PR"}`);
 
-  let passed = 0;
-  for (const app of targets) {
-    if (await runCI(app, opts)) passed++;
-  }
+  const success = await runCI(target, opts, triggerId);
 
-  // Summary
-  console.log(`\n${"═".repeat(50)}`);
-  console.log(`Results: ${passed}/${targets.length} passed`);
-  console.log(`${"═".repeat(50)}\n`);
-
-  process.exit(passed === targets.length ? 0 : 1);
+  process.exit(success ? 0 : 1);
 }
 
 main().catch((e) => {

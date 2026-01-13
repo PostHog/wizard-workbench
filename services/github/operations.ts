@@ -18,6 +18,7 @@ export interface PushAndPROptions {
   base: string;
   title: string;
   body: string;
+  draft?: boolean;
   deleteBranchAfter?: boolean;
   returnToBranch?: string;
 }
@@ -39,6 +40,7 @@ export function pushAndCreatePR(opts: PushAndPROptions): PushAndPRResult {
     base,
     title,
     body,
+    draft = false,
     deleteBranchAfter = false,
     returnToBranch,
   } = opts;
@@ -51,7 +53,7 @@ export function pushAndCreatePR(opts: PushAndPROptions): PushAndPRResult {
 
   let prUrl: string;
   try {
-    prUrl = createPR({ cwd: repoRoot, title, body, base });
+    prUrl = createPR({ cwd: repoRoot, title, body, base, draft });
   } catch (e) {
     return { success: false, error: `Failed to create PR: ${e}` };
   }

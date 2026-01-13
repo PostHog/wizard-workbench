@@ -37,6 +37,9 @@ dist-ssr/
 **/.env.local
 !.env.example
 
+# GitHub Actions local testing  with act library
+.secrets
+
 # Database
 *.db
 *.db-journal
