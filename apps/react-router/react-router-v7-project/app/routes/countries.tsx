@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
 import { usePostHog } from "@posthog/react";
+import posthog from "posthog-js";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
 
@@ -13,22 +14,40 @@ export async function clientLoader() {
       "https://restcountries.com/v3.1/all?fields=name,region,population,cca3,flags"
     );
     if (!res.ok) {
-      throw new Error(`Failed to fetch countries: ${res.status} ${res.statusText}`);
+      const apiError = new Error(`Failed to fetch countries: ${res.status} ${res.statusText}`);
+      // Capture API error for monitoring
+      posthog.capture('countries_api_error', {
+        error_message: apiError.message,
+        status_code: res.status,
+        status_text: res.statusText,
+      });
+      posthog.captureException(apiError);
+      throw apiError;
     }
     const data = await res.json();
-    
+
     // Check if API returned an error object
     if (data.status === 404 || (data.message && !Array.isArray(data))) {
       console.error("API Error:", data.message || data.status);
+      posthog.capture('countries_api_error', {
+        error_message: data.message || 'Unknown API error',
+        status_code: data.status || 'unknown',
+      });
       return [];
     }
-    
+
     // Ensure we return an array
     const countries = Array.isArray(data) ? data : [];
     console.log(`Loaded ${countries.length} countries from API`);
     return countries;
   } catch (error) {
     console.error("Error loading countries:", error);
+    // Capture the error in PostHog
+    posthog.capture('countries_api_error', {
+      error_message: error instanceof Error ? error.message : 'Unknown error',
+      error_type: error instanceof Error ? error.name : 'Unknown',
+    });
+    posthog.captureException(error);
     // Return empty array on error to prevent crashes
     return [];
   }

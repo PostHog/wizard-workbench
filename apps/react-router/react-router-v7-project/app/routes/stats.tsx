@@ -1,10 +1,14 @@
+import { useRef } from 'react'
 import { Navigate } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
 import { getAllUsers, getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
 import type { Route } from './+types/stats'
 
 export default function Stats() {
   const { user } = useAuth()
+  const posthog = usePostHog()
+  const hasCapturedRef = useRef(false)
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -12,6 +16,15 @@ export default function Stats() {
 
   const currentUser = getCurrentUser() || user
   const allUsers = getAllUsers()
+
+  // Capture leaderboard viewed event once per page load
+  if (!hasCapturedRef.current) {
+    posthog?.capture('leaderboard_viewed', {
+      user_rank: allUsers.sort((a, b) => b.totalPoints - a.totalPoints).findIndex(u => u.id === currentUser.id) + 1,
+      total_users: allUsers.length,
+    })
+    hasCapturedRef.current = true
+  }
   
   // Sort users by points for leaderboard
   const leaderboard = [...allUsers]
