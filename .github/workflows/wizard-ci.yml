@@ -473,9 +473,24 @@ jobs:
       - name: Run Wizard CI
         id: run-wizard
         run: |
-          # Start MCP server in background
+          # Start examples dev server in background (serves resources at localhost:8765)
+          cd $EXAMPLES_PATH
+          npm run dev &
+          EXAMPLES_PID=$!
+
+          # Wait for examples server to be ready
+          echo "Waiting for examples server to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8765/examples-mcp-resources.zip > /dev/null 2>&1; then
+              echo "Examples server is ready"
+              break
+            fi
+            sleep 1
+          done
+
+          # Start MCP server in background (consumes from local examples server)
           cd $MCP_PATH/typescript
-          pnpm dev &
+          pnpm dev:local-resources &
           MCP_PID=$!
 
           # Wait for MCP server to be ready
@@ -501,8 +516,12 @@ jobs:
           $CMD 2>&1 | tee wizard-output.log
           WIZARD_EXIT=$?
 
-          # Stop MCP server
+          # Save examples resources zip from running server (for artifact upload)
+          curl -s http://localhost:8765/examples-mcp-resources.zip -o examples-mcp-resources.zip || true
+
+          # Stop servers
           kill $MCP_PID 2>/dev/null || true
+          kill $EXAMPLES_PID 2>/dev/null || true
 
           # Extract PR URL
           PR_URL=$(grep -oP 'PR: \K(https://github.com/[^\s]+)' wizard-output.log || true)
@@ -549,10 +568,19 @@ jobs:
           name: wizard-ci-logs-${{ github.run_id }}-${{ steps.artifact-name.outputs.safe_name }}
           path: wizard-output.log
 
-      - name: Label PR
+      - name: Upload examples resources
+        if: always() && !env.ACT
+        uses: actions/upload-artifact@v4
+        with:
+          name: examples-resources-${{ github.run_id }}-${{ steps.artifact-name.outputs.safe_name }}
+          path: examples-mcp-resources.zip
+          if-no-files-found: warn
+
+      - name: Label and close PR
         if: steps.run-wizard.outputs.pr_number
         run: |
           gh pr edit ${{ steps.run-wizard.outputs.pr_number }} --add-label "CI/CD"
+          gh pr close ${{ steps.run-wizard.outputs.pr_number }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
