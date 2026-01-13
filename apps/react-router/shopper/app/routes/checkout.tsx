@@ -35,6 +35,13 @@ export default function Checkout() {
     });
   }
 
+  const handleBrowseProductsFromEmptyCheckout = () => {
+    posthog.capture("checkout_abandoned", {
+      reason: "empty_cart",
+    });
+    navigate("/products");
+  };
+
   if (cart.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16">
@@ -46,7 +53,7 @@ export default function Checkout() {
             Add some products to proceed with checkout.
           </p>
           <button
-            onClick={() => navigate("/products")}
+            onClick={handleBrowseProductsFromEmptyCheckout}
             className="inline-block bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 transition font-semibold"
           >
             Browse Products

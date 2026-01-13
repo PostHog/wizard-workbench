@@ -2,7 +2,7 @@ import { Link, data } from "react-router";
 import type { Route } from "./+types/products.$productId";
 import { getProductById } from "../data/products";
 import { useCart } from "../context/CartContext";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { usePostHog } from "../providers/PostHogProvider";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
@@ -21,6 +21,30 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
   const { addToCart } = useCart();
   const posthog = usePostHog();
   const [quantity, setQuantity] = useState(1);
+  const productViewTracked = useRef(false);
+
+  // Track product detail view (only once per page load)
+  if (!productViewTracked.current) {
+    productViewTracked.current = true;
+    posthog.capture("product_detail_viewed", {
+      product_id: product.id,
+      product_name: product.name,
+      product_price: product.price,
+      product_category: product.category,
+      in_stock: product.stock > 0,
+      stock_level: product.stock,
+    });
+
+    // Track out of stock view separately for better funnel analysis
+    if (product.stock === 0) {
+      posthog.capture("out_of_stock_product_viewed", {
+        product_id: product.id,
+        product_name: product.name,
+        product_price: product.price,
+        product_category: product.category,
+      });
+    }
+  }
 
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
