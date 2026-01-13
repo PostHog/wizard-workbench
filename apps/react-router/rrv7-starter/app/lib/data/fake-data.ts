@@ -88,7 +88,7 @@ export const fakePosts: FakePost[] = [
     id: '4',
     username: 'travel_fake',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=travel',
-    content: 'Living my best life in Bali! (Stock photo, I\'m actually at home) 🌴 #travel #wanderlust #fake',
+    content: "Living my best life in Bali! (Stock photo, I'm actually at home) 🌴 #travel #wanderlust #fake",
     image: 'https://picsum.photos/800/600?random=4',
     likes: 156000,
     comments: 5600,
@@ -145,4 +145,3 @@ export const followerPackages = [
   { amount: 50000, price: 299.99, bonus: 15000 },
   { amount: 100000, price: 499.99, bonus: 50000 },
 ]
-
