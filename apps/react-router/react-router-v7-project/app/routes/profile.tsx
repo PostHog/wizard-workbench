@@ -1,16 +1,34 @@
+import { useRef } from 'react'
 import { Link, Navigate } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
 import { getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
 import type { Route } from './+types/profile'
 
+// QUACK QUACK IM A BIG FLUFFY DOG
+
 export default function Profile() {
   const { user, logout } = useAuth()
+  const posthog = usePostHog()
+  const hasCapturedRef = useRef(false)
 
   if (!user) {
     return <Navigate to="/login" replace />
   }
 
   const currentUser = getCurrentUser() || user
+
+  // Capture profile page viewed event once per page load
+  if (!hasCapturedRef.current) {
+    posthog?.capture('profile_page_viewed', {
+      total_points: currentUser.totalPoints,
+      countries_claimed: currentUser.claimedCountries.length,
+      countries_liked: currentUser.likedCountries.length,
+      countries_visited: currentUser.visitedCountries.length,
+      achievements_count: currentUser.achievements.length,
+    })
+    hasCapturedRef.current = true
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-6">

@@ -1,10 +1,16 @@
+import { useRef } from 'react'
 import { Navigate } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
 import { getAllUsers, getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
 import type { Route } from './+types/stats'
 
+// QUACK QUACK IM A BIG FLUFFY DOG
+
 export default function Stats() {
   const { user } = useAuth()
+  const posthog = usePostHog()
+  const hasCapturedRef = useRef(false)
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -19,6 +25,17 @@ export default function Stats() {
     .slice(0, 10)
 
   const userRank = leaderboard.findIndex((u) => u.id === currentUser.id) + 1
+
+  // Capture stats page viewed event once per page load
+  if (!hasCapturedRef.current) {
+    posthog?.capture('stats_page_viewed', {
+      user_rank: userRank || null,
+      total_points: currentUser.totalPoints,
+      countries_claimed: currentUser.claimedCountries.length,
+      leaderboard_size: leaderboard.length,
+    })
+    hasCapturedRef.current = true
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-6">

@@ -24,6 +24,9 @@ The wizard has completed a deep integration of your Country Explorer React Route
 | `region_filtered` | User filtered countries by region | `app/routes/countries.tsx` |
 | `explore_cta_clicked` | User clicked 'Explore Now' CTA on home page | `app/routes/home.tsx` |
 | `country_details_viewed` | User viewed details page for a specific country | `app/routes/country.tsx` |
+| `profile_page_viewed` | User viewed their profile page | `app/routes/profile.tsx` |
+| `stats_page_viewed` | User viewed the stats/leaderboard page | `app/routes/stats.tsx` |
+| `learn_more_cta_clicked` | User clicked 'Learn More' CTA on home page | `app/routes/home.tsx` |
 
 ## Files Modified/Created
 
@@ -38,7 +41,9 @@ The wizard has completed a deep integration of your Country Explorer React Route
 | `app/context/AuthContext.tsx` | Modified | Added user_logged_out event and posthog.reset() |
 | `app/lib/utils/auth.ts` | Modified | Added country_claimed, country_liked, country_visited, achievement_unlocked events |
 | `app/routes/countries.tsx` | Modified | Added countries_searched, region_filtered events |
-| `app/routes/home.tsx` | Modified | Added explore_cta_clicked event |
+| `app/routes/home.tsx` | Modified | Added explore_cta_clicked and learn_more_cta_clicked events |
+| `app/routes/profile.tsx` | Modified | Added profile_page_viewed event |
+| `app/routes/stats.tsx` | Modified | Added stats_page_viewed event |
 | `app/routes/country.tsx` | Modified | Added country_details_viewed event |
 
 ## Next steps
