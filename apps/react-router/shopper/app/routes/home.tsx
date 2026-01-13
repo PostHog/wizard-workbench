@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/home";
-import { usePostHog } from "../providers/PostHogProvider";
+import { usePostHog } from "@posthog/react";
 
 export function meta({}: Route.MetaArgs) {
   return [

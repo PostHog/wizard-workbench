@@ -1,13 +1,14 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useCart } from "../context/CartContext";
-import { usePostHog } from "../providers/PostHogProvider";
+import { usePostHog } from "@posthog/react";
 
 export default function Checkout() {
   const { cart, getCartTotal, clearCart } = useCart();
   const navigate = useNavigate();
   const posthog = usePostHog();
   const checkoutStartedTracked = useRef(false);
+  const checkoutFormStartedTracked = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -35,6 +36,11 @@ export default function Checkout() {
     });
   }
 
+  const handleEmptyCheckoutBrowse = () => {
+    posthog.capture("checkout_empty_browse_clicked");
+    navigate("/products");
+  };
+
   if (cart.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16">
@@ -46,7 +52,7 @@ export default function Checkout() {
             Add some products to proceed with checkout.
           </p>
           <button
-            onClick={() => navigate("/products")}
+            onClick={handleEmptyCheckoutBrowse}
             className="inline-block bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 transition font-semibold"
           >
             Browse Products
@@ -99,6 +105,16 @@ export default function Checkout() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Track when user starts filling the form (first field interaction)
+    if (!checkoutFormStartedTracked.current) {
+      checkoutFormStartedTracked.current = true;
+      posthog.capture("checkout_form_started", {
+        first_field: e.target.name,
+        cart_total: getCartTotal(),
+        cart_items_count: cart.length,
+      });
+    }
+
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,

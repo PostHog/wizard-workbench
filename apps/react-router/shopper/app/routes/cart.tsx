@@ -1,10 +1,12 @@
 import { Link } from "react-router";
 import { useCart, type CartItem } from "../context/CartContext";
-import { usePostHog } from "../providers/PostHogProvider";
+import { usePostHog } from "@posthog/react";
+import { useRef } from "react";
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
   const posthog = usePostHog();
+  const emptyCartViewedTracked = useRef(false);
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
@@ -50,7 +52,17 @@ export default function Cart() {
     });
   };
 
+  const handleEmptyCartBrowse = () => {
+    posthog.capture("empty_cart_browse_clicked");
+  };
+
   if (cart.length === 0) {
+    // Track empty cart viewed (only once per page view)
+    if (!emptyCartViewedTracked.current) {
+      emptyCartViewedTracked.current = true;
+      posthog.capture("empty_cart_viewed");
+    }
+
     return (
       <div className="container mx-auto px-4 py-16">
         <div className="text-center">
@@ -75,6 +87,7 @@ export default function Cart() {
           </p>
           <Link
             to="/products"
+            onClick={handleEmptyCartBrowse}
             className="inline-block bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 transition font-semibold"
           >
             Browse Products

@@ -6,6 +6,7 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import { usePostHog } from "@posthog/react";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -61,6 +62,15 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
+
+  // Track error with PostHog
+  const posthog = usePostHog();
+  posthog.captureException(error);
+  posthog.capture("error_page_viewed", {
+    error_type: isRouteErrorResponse(error) ? "route_error" : "exception",
+    error_status: isRouteErrorResponse(error) ? error.status : undefined,
+    error_message: error instanceof Error ? error.message : String(error),
+  });
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "404" : "Error";

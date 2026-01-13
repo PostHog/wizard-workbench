@@ -3,7 +3,7 @@ import type { Route } from "./+types/products";
 import { getProducts, getCategories, type Product } from "../data/products";
 import { useState } from "react";
 import { useCart } from "../context/CartContext";
-import { usePostHog } from "../providers/PostHogProvider";
+import { usePostHog } from "@posthog/react";
 
 export async function clientLoader() {
   return {

@@ -1,7 +1,7 @@
 import { useLocation } from "react-router";
 import { useRef } from "react";
 import posthog from "posthog-js";
-import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
+import { PostHogProvider as PHProvider, usePostHog } from "@posthog/react";
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const posthogKey = import.meta.env.VITE_PUBLIC_POSTHOG_KEY;
@@ -16,6 +16,8 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       api_host: posthogHost,
       capture_pageview: false, // We capture pageviews manually
       capture_pageleave: true,
+      defaults: "2025-11-30",
+      __add_tracing_headers: [window.location.host, "localhost"],
     });
   }
 
