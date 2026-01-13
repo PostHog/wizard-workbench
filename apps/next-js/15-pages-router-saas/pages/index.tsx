@@ -5,6 +5,7 @@ import { Header } from '@/components/header';
 import { GetServerSideProps } from 'next';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface HomePageProps {
   fallback: {
@@ -35,6 +36,13 @@ export default function HomePage({ fallback }: HomePageProps) {
                   <a
                     href="https://vercel.com/templates/next.js/next-js-saas-starter"
                     target="_blank"
+                    onClick={() => {
+                      posthog.capture('cta_clicked', {
+                        cta_text: 'Deploy your own',
+                        cta_location: 'hero_section',
+                        destination_url: 'https://vercel.com/templates/next.js/next-js-saas-starter',
+                      });
+                    }}
                   >
                     <Button
                       size="lg"

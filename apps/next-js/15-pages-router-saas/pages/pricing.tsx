@@ -3,10 +3,11 @@ import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -74,6 +75,14 @@ function PricingCard({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    // Capture checkout initiated event
+    posthog.capture('checkout_initiated', {
+      plan_name: name,
+      price_id: priceId,
+      price_amount: price,
+      billing_interval: interval,
+    });
+
     startTransition(async () => {
       try {
         const response = await fetch('/api/stripe/create-checkout', {
@@ -92,6 +101,7 @@ function PricingCard({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         console.error('Checkout error:', err);
       }
     });
@@ -135,6 +145,16 @@ export default function PricingPage({
 
   const basePrice = prices.find((price) => price.productId === basePlan?.id);
   const plusPrice = prices.find((price) => price.productId === plusPlan?.id);
+
+  // Track pricing page view using ref to ensure single capture per mount
+  const hasTrackedView = useRef(false);
+  if (!hasTrackedView.current && typeof window !== 'undefined') {
+    hasTrackedView.current = true;
+    posthog.capture('pricing_page_viewed', {
+      base_plan_price: basePrice?.unitAmount,
+      plus_plan_price: plusPrice?.unitAmount,
+    });
+  }
 
   return (
     <div className="flex flex-col min-h-screen">

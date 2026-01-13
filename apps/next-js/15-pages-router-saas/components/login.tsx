@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -57,6 +58,23 @@ export function Login({
           return;
         }
 
+        // Identify user in PostHog using email as distinct ID
+        posthog.identify(data.email, {
+          email: data.email,
+        });
+
+        // Capture sign up or sign in event
+        if (mode === 'signup') {
+          posthog.capture('user_signed_up', {
+            email: data.email,
+            has_invite: !!data.inviteId,
+          });
+        } else {
+          posthog.capture('user_signed_in', {
+            email: data.email,
+          });
+        }
+
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
@@ -64,6 +82,7 @@ export function Login({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred. Please try again.');
       }
     });
