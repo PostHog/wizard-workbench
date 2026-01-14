@@ -14,6 +14,7 @@ import { Loader2 } from 'lucide-react';
 import useSWR from 'swr';
 import { User } from '@/lib/db/schema';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -52,10 +53,23 @@ export default function GeneralPage() {
           return;
         }
 
+        // Capture account updated event and update person properties
+        posthog.capture('account_updated', {
+          name: data.name,
+          email: data.email,
+        });
+
+        // Update person properties with new info
+        posthog.identify(data.email, {
+          name: data.name,
+          email: data.email,
+        });
+
         setSuccess(result.success);
         setName(result.name);
       } catch (err) {
         setError('An unexpected error occurred. Please try again.');
+        posthog.captureException(err);
       }
     });
   }
