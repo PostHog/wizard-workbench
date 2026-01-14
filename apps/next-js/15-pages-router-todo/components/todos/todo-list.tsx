@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -42,6 +43,14 @@ export function TodoList() {
       if (response.ok) {
         const newTodo = await response.json();
         setTodos([...todos, newTodo]);
+
+        // Capture todo_created event
+        posthog.capture('todo_created', {
+          todo_id: newTodo.id,
+          todo_title: newTodo.title,
+          has_description: !!newTodo.description,
+          total_todos: todos.length + 1,
+        });
       }
     } catch (error) {
       console.error('Failed to add todo:', error);
@@ -61,6 +70,19 @@ export function TodoList() {
       if (response.ok) {
         const updatedTodo = await response.json();
         setTodos(todos.map((todo) => (todo.id === id ? updatedTodo : todo)));
+
+        // Capture todo_completed or todo_uncompleted event based on the new state
+        if (completed) {
+          posthog.capture('todo_completed', {
+            todo_id: id,
+            todo_title: updatedTodo.title,
+          });
+        } else {
+          posthog.capture('todo_uncompleted', {
+            todo_id: id,
+            todo_title: updatedTodo.title,
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to update todo:', error);
@@ -68,6 +90,9 @@ export function TodoList() {
   };
 
   const handleDeleteTodo = async (id: number) => {
+    // Find the todo before deleting to capture its details
+    const todoToDelete = todos.find((todo) => todo.id === id);
+
     try {
       const response = await fetch(`/api/todos/${id}`, {
         method: 'DELETE',
@@ -75,6 +100,14 @@ export function TodoList() {
 
       if (response.ok) {
         setTodos(todos.filter((todo) => todo.id !== id));
+
+        // Capture todo_deleted event
+        posthog.capture('todo_deleted', {
+          todo_id: id,
+          todo_title: todoToDelete?.title,
+          was_completed: todoToDelete?.completed,
+          remaining_todos: todos.length - 1,
+        });
       }
     } catch (error) {
       console.error('Failed to delete todo:', error);
