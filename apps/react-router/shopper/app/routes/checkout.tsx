@@ -1,13 +1,10 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useCart } from "../context/CartContext";
-import { usePostHog } from "../providers/PostHogProvider";
 
 export default function Checkout() {
   const { cart, getCartTotal, clearCart } = useCart();
   const navigate = useNavigate();
-  const posthog = usePostHog();
-  const checkoutStartedTracked = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -19,21 +16,6 @@ export default function Checkout() {
     cardExpiry: "",
     cardCVV: "",
   });
-
-  // Track checkout started (only once per page view)
-  if (cart.length > 0 && !checkoutStartedTracked.current) {
-    checkoutStartedTracked.current = true;
-    posthog.capture("checkout_started", {
-      cart_total: getCartTotal(),
-      cart_items_count: cart.length,
-      cart_items: cart.map((item) => ({
-        product_id: item.id,
-        product_name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-      })),
-    });
-  }
 
   if (cart.length === 0) {
     return (
@@ -59,36 +41,6 @@ export default function Checkout() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
-
-    // Identify user by email at checkout
-    posthog.identify(formData.email, {
-      email: formData.email,
-      name: formData.fullName,
-      city: formData.city,
-      zip_code: formData.zipCode,
-    });
-
-    // Capture order placed event with full details
-    const orderTotal = getCartTotal() * 1.1; // Including 10% tax
-    posthog.capture("order_placed", {
-      order_total: orderTotal,
-      subtotal: getCartTotal(),
-      tax: getCartTotal() * 0.1,
-      shipping: 0,
-      cart_items_count: cart.length,
-      cart_items: cart.map((item) => ({
-        product_id: item.id,
-        product_name: item.name,
-        product_category: item.category,
-        quantity: item.quantity,
-        price: item.price,
-        line_total: item.price * item.quantity,
-      })),
-      customer_email: formData.email,
-      customer_name: formData.fullName,
-      shipping_city: formData.city,
-      shipping_zip: formData.zipCode,
-    });
 
     setTimeout(() => {
       clearCart();
