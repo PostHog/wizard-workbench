@@ -1,8 +1,16 @@
 import Head from 'next/head';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
+// QUACK QUACK IM A BIG FLUFFY DOG
+
 export default function AboutPage() {
+  // Track about page view on mount using router event
+  if (typeof window !== 'undefined') {
+    posthog.capture('about_page_viewed');
+  }
+
   return (
     <>
       <Head>
