@@ -5,6 +5,7 @@ import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -88,10 +89,49 @@ export async function GET(request: NextRequest) {
       })
       .where(eq(teams.id, userTeam[0].teamId));
 
+    // PostHog: Capture checkout completed event
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user[0].email,
+      event: 'checkout completed',
+      properties: {
+        user_id: user[0].id,
+        team_id: userTeam[0].teamId,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        plan_name: (plan.product as Stripe.Product).name,
+        subscription_status: subscription.status
+      }
+    });
+
+    // Identify user with subscription info
+    posthog.identify({
+      distinctId: user[0].email,
+      properties: {
+        email: user[0].email,
+        plan_name: (plan.product as Stripe.Product).name,
+        subscription_status: subscription.status,
+        is_paying_customer: true
+      }
+    });
+
     await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
+
+    // PostHog: Capture checkout failed event
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: sessionId || 'unknown',
+      event: 'checkout failed',
+      properties: {
+        session_id: sessionId,
+        error_message: error instanceof Error ? error.message : 'Unknown error'
+      }
+    });
+    posthog.captureException(error);
+
     return NextResponse.redirect(new URL('/error', request.url));
   }
 }
