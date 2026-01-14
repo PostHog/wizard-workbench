@@ -80,7 +80,6 @@ Desktop.ini
 *.sublime-*
 
 # Tools
-.claude/
 .stripe/
 
 # Temporary
