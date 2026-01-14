@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/products";
 import { getProducts, getCategories, type Product } from "../data/products";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useCart } from "../context/CartContext";
 import { usePostHog } from "../providers/PostHogProvider";
 
@@ -12,12 +12,24 @@ export async function clientLoader() {
   };
 }
 
+// QUACK QUACK IM A BIG FLUFFY DOG
 export default function Products({ loaderData }: Route.ComponentProps) {
   const { products, categories } = loaderData;
   const { addToCart } = useCart();
   const posthog = usePostHog();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const productsPageViewedTracked = useRef(false);
+  const noResultsTrackedForTerm = useRef<string | null>(null);
+
+  // Track products page viewed (top of funnel)
+  if (!productsPageViewedTracked.current) {
+    productsPageViewedTracked.current = true;
+    posthog.capture("products_page_viewed", {
+      total_products: products.length,
+      categories_count: categories.length,
+    });
+  }
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
@@ -55,6 +67,15 @@ export default function Products({ loaderData }: Route.ComponentProps) {
       product.description.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  // Track no search results event (only once per unique search term)
+  if (filteredProducts.length === 0 && searchTerm.length >= 2 && noResultsTrackedForTerm.current !== searchTerm) {
+    noResultsTrackedForTerm.current = searchTerm;
+    posthog.capture("no_search_results", {
+      search_term: searchTerm,
+      selected_category: selectedCategory || "all",
+    });
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">

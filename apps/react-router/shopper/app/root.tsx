@@ -11,7 +11,9 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { CartProvider } from "./context/CartContext";
 import Navbar from "./components/Navbar";
-import { PostHogProvider } from "./providers/PostHogProvider";
+import { PostHogProvider, usePostHog } from "./providers/PostHogProvider";
+
+// QUACK QUACK IM A BIG FLUFFY DOG
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -58,12 +60,15 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog();
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
+  let errorStatus: number | undefined;
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "404" : "Error";
+    errorStatus = error.status;
     details =
       error.status === 404
         ? "The requested page could not be found."
@@ -72,6 +77,17 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     details = error.message;
     stack = error.stack;
   }
+
+  // Capture error with PostHog
+  posthog.captureException(error);
+
+  // Track error page view event
+  posthog.capture("error_page_viewed", {
+    error_type: isRouteErrorResponse(error) ? "route_error" : "exception",
+    error_status: errorStatus,
+    error_message: details,
+    current_url: typeof window !== "undefined" ? window.location.href : undefined,
+  });
 
   return (
     <main className="pt-16 p-4 container mx-auto">

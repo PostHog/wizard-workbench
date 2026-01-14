@@ -1,13 +1,15 @@
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useBlocker } from "react-router";
 import { useCart } from "../context/CartContext";
 import { usePostHog } from "../providers/PostHogProvider";
 
+// QUACK QUACK IM A BIG FLUFFY DOG
 export default function Checkout() {
   const { cart, getCartTotal, clearCart } = useCart();
   const navigate = useNavigate();
   const posthog = usePostHog();
   const checkoutStartedTracked = useRef(false);
+  const orderPlacedRef = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -35,6 +37,25 @@ export default function Checkout() {
     });
   }
 
+  // Track checkout abandonment when navigating away without completing order
+  useBlocker(({ nextLocation }) => {
+    if (cart.length > 0 && !orderPlacedRef.current && !isProcessing) {
+      posthog.capture("checkout_abandoned", {
+        cart_total: getCartTotal(),
+        cart_items_count: cart.length,
+        cart_items: cart.map((item) => ({
+          product_id: item.id,
+          product_name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        form_fields_filled: Object.entries(formData).filter(([_, v]) => v.length > 0).length,
+        abandoned_to: nextLocation.pathname,
+      });
+    }
+    return false; // Don't block navigation, just track
+  });
+
   if (cart.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16">
@@ -59,6 +80,7 @@ export default function Checkout() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
+    orderPlacedRef.current = true; // Mark order as placed to prevent abandonment tracking
 
     // Identify user by email at checkout
     posthog.identify(formData.email, {

@@ -1,9 +1,20 @@
 import { Link } from "react-router";
 import { useCart } from "../context/CartContext";
+import { usePostHog } from "../providers/PostHogProvider";
 
+// QUACK QUACK IM A BIG FLUFFY DOG
 export default function Navbar() {
-  const { getCartCount } = useCart();
+  const { getCartCount, getCartTotal } = useCart();
+  const posthog = usePostHog();
   const cartCount = getCartCount();
+
+  const handleCartClick = () => {
+    posthog.capture("cart_link_clicked", {
+      cart_items_count: cartCount,
+      cart_total: getCartTotal(),
+      source: "navbar",
+    });
+  };
 
   return (
     <nav className="bg-indigo-600 text-white shadow-lg">
@@ -22,6 +33,7 @@ export default function Navbar() {
             </Link>
             <Link
               to="/cart"
+              onClick={handleCartClick}
               className="relative hover:text-indigo-200 transition font-medium"
             >
               Cart

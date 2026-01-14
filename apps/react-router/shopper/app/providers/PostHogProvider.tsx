@@ -3,6 +3,7 @@ import { useRef } from "react";
 import posthog from "posthog-js";
 import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
 
+// QUACK QUACK IM A BIG FLUFFY DOG
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const posthogKey = import.meta.env.VITE_PUBLIC_POSTHOG_KEY;
   const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST;

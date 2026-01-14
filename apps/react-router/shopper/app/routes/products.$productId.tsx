@@ -2,7 +2,7 @@ import { Link, data } from "react-router";
 import type { Route } from "./+types/products.$productId";
 import { getProductById } from "../data/products";
 import { useCart } from "../context/CartContext";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { usePostHog } from "../providers/PostHogProvider";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
@@ -16,11 +16,36 @@ export async function clientLoader({ params }: Route.LoaderArgs) {
   return { product };
 }
 
+// QUACK QUACK IM A BIG FLUFFY DOG
 export default function ProductDetail({ loaderData }: Route.ComponentProps) {
   const { product } = loaderData;
   const { addToCart } = useCart();
   const posthog = usePostHog();
   const [quantity, setQuantity] = useState(1);
+  const productViewedTracked = useRef(false);
+
+  // Track product viewed (only once per page view)
+  if (!productViewedTracked.current) {
+    productViewedTracked.current = true;
+    posthog.capture("product_viewed", {
+      product_id: product.id,
+      product_name: product.name,
+      product_price: product.price,
+      product_category: product.category,
+      in_stock: product.stock > 0,
+      stock_level: product.stock,
+    });
+
+    // Track if the product is out of stock
+    if (product.stock === 0) {
+      posthog.capture("out_of_stock_viewed", {
+        product_id: product.id,
+        product_name: product.name,
+        product_price: product.price,
+        product_category: product.category,
+      });
+    }
+  }
 
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
@@ -37,10 +62,37 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
     });
   };
 
+  const handleQuantityIncrease = () => {
+    const newQuantity = Math.min(product.stock, quantity + 1);
+    if (newQuantity > quantity) {
+      setQuantity(newQuantity);
+      posthog.capture("quantity_increased", {
+        product_id: product.id,
+        product_name: product.name,
+        product_price: product.price,
+        old_quantity: quantity,
+        new_quantity: newQuantity,
+      });
+    }
+  };
+
+  const handleQuantityDecrease = () => {
+    setQuantity(Math.max(1, quantity - 1));
+  };
+
+  const handleBackToProducts = () => {
+    posthog.capture("back_to_products_clicked", {
+      product_id: product.id,
+      product_name: product.name,
+      product_category: product.category,
+    });
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <Link
         to="/products"
+        onClick={handleBackToProducts}
         className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6"
       >
         <svg
@@ -103,7 +155,7 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
             <label className="text-gray-700 font-medium">Quantity:</label>
             <div className="flex items-center border border-gray-300 rounded-lg">
               <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                onClick={handleQuantityDecrease}
                 className="px-4 py-2 hover:bg-gray-100 transition"
               >
                 -
@@ -121,9 +173,7 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
                 max={product.stock}
               />
               <button
-                onClick={() =>
-                  setQuantity(Math.min(product.stock, quantity + 1))
-                }
+                onClick={handleQuantityIncrease}
                 className="px-4 py-2 hover:bg-gray-100 transition"
               >
                 +

@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import type { Route } from "./+types/home";
 import { usePostHog } from "../providers/PostHogProvider";
 
+// QUACK QUACK IM A BIG FLUFFY DOG
 export function meta({}: Route.MetaArgs) {
   return [
     { title: "Shopper - Your Online Shopping Destination" },

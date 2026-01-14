@@ -1,10 +1,21 @@
 import { Link } from "react-router";
+import { useRef } from "react";
 import { useCart, type CartItem } from "../context/CartContext";
 import { usePostHog } from "../providers/PostHogProvider";
 
+// QUACK QUACK IM A BIG FLUFFY DOG
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
   const posthog = usePostHog();
+  const emptyCartTracked = useRef(false);
+
+  // Track when user views an empty cart (potential churn indicator)
+  if (cart.length === 0 && !emptyCartTracked.current) {
+    emptyCartTracked.current = true;
+    posthog.capture("empty_cart_viewed", {
+      source: "cart_page",
+    });
+  }
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);

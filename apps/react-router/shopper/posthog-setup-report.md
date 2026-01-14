@@ -1,60 +1,79 @@
 # PostHog post-wizard report
 
-The wizard has completed a deep integration of PostHog into your React Router 7 e-commerce application. The integration includes automatic pageview tracking, custom event tracking for key user actions throughout the shopping funnel, and user identification at checkout. Environment variables have been configured for secure API key management using Vite's environment variable system (`VITE_PUBLIC_POSTHOG_KEY` and `VITE_PUBLIC_POSTHOG_HOST`).
+The wizard has completed a deep integration of your Shopper e-commerce application with PostHog analytics. The integration includes comprehensive event tracking across the entire customer journey, from browsing products to completing checkout. Key features implemented include:
 
-## Files Created/Modified
+- **Product analytics**: Track product views, searches, category filtering, and add-to-cart actions
+- **Conversion funnel tracking**: Monitor the complete purchase funnel from product view to checkout completion
+- **Churn detection**: Track checkout abandonment, empty cart views, and no-search-results events
+- **User identification**: Automatic user identification at checkout via email
+- **Error tracking**: Capture and track errors via the ErrorBoundary with `captureException`
 
-| File | Change |
-|------|--------|
-| `.env` | Created with PostHog API key and host environment variables |
-| `app/providers/PostHogProvider.tsx` | Created PostHog provider with automatic pageview tracking |
-| `app/root.tsx` | Added PostHogProvider wrapper to app root |
-| `app/routes/home.tsx` | Added start_shopping_clicked event tracking |
-| `app/routes/products.tsx` | Added product_added_to_cart, product_searched, product_category_filtered events |
-| `app/routes/products.$productId.tsx` | Added product_added_to_cart_from_detail event with quantity tracking |
-| `app/routes/cart.tsx` | Added product_removed_from_cart, cart_quantity_updated, proceed_to_checkout_clicked, continue_shopping_clicked events |
-| `app/routes/checkout.tsx` | Added checkout_started, order_placed events and user identification |
-
-## Events Instrumented
+## Events Summary
 
 | Event Name | Description | File |
 |------------|-------------|------|
-| `start_shopping_clicked` | User clicks the 'Start Shopping' CTA on the home page | `app/routes/home.tsx` |
-| `product_added_to_cart` | User adds a product to their shopping cart from the products list page | `app/routes/products.tsx` |
-| `product_searched` | User searches for products using the search input | `app/routes/products.tsx` |
-| `product_category_filtered` | User filters products by category | `app/routes/products.tsx` |
-| `product_added_to_cart_from_detail` | User adds a product to their cart from the product detail page (includes quantity) | `app/routes/products.$productId.tsx` |
-| `product_removed_from_cart` | User removes a product from their shopping cart | `app/routes/cart.tsx` |
-| `cart_quantity_updated` | User updates the quantity of an item in their cart | `app/routes/cart.tsx` |
-| `proceed_to_checkout_clicked` | User clicks 'Proceed to Checkout' from the cart page | `app/routes/cart.tsx` |
-| `continue_shopping_clicked` | User clicks 'Continue Shopping' from the cart page | `app/routes/cart.tsx` |
-| `checkout_started` | User views the checkout page with items in cart (top of checkout funnel) | `app/routes/checkout.tsx` |
-| `order_placed` | User successfully completes an order (conversion event) | `app/routes/checkout.tsx` |
+| `product_viewed` | User viewed a product detail page - top of product conversion funnel | `app/routes/products.$productId.tsx` |
+| `out_of_stock_viewed` | User viewed a product that is out of stock - potential lost revenue | `app/routes/products.$productId.tsx` |
+| `quantity_increased` | User increased quantity on product detail page - upsell opportunity indicator | `app/routes/products.$productId.tsx` |
+| `back_to_products_clicked` | User clicked back to products from product detail - browsing behavior | `app/routes/products.$productId.tsx` |
+| `product_added_to_cart_from_detail` | User added product to cart from detail page | `app/routes/products.$productId.tsx` |
+| `products_page_viewed` | User viewed the products listing page - top of funnel for browse-to-buy conversion | `app/routes/products.tsx` |
+| `product_added_to_cart` | User added product to cart from products list | `app/routes/products.tsx` |
+| `product_searched` | User searched for products | `app/routes/products.tsx` |
+| `product_category_filtered` | User filtered products by category | `app/routes/products.tsx` |
+| `no_search_results` | User search returned no results - product gap or search UX issue indicator | `app/routes/products.tsx` |
+| `empty_cart_viewed` | User viewed the cart page when it was empty - potential churn indicator | `app/routes/cart.tsx` |
+| `product_removed_from_cart` | User removed a product from cart | `app/routes/cart.tsx` |
+| `cart_quantity_updated` | User updated quantity in cart | `app/routes/cart.tsx` |
+| `proceed_to_checkout_clicked` | User clicked proceed to checkout | `app/routes/cart.tsx` |
+| `continue_shopping_clicked` | User clicked continue shopping from cart | `app/routes/cart.tsx` |
+| `cart_link_clicked` | User clicked on the cart link in the navbar - intent to purchase signal | `app/components/Navbar.tsx` |
+| `checkout_started` | User started checkout process | `app/routes/checkout.tsx` |
+| `checkout_abandoned` | User navigated away from checkout page without completing - churn event | `app/routes/checkout.tsx` |
+| `order_placed` | User completed purchase - conversion event | `app/routes/checkout.tsx` |
+| `start_shopping_clicked` | User clicked start shopping on home page | `app/routes/home.tsx` |
+| `error_page_viewed` | User encountered an error page (404 or other errors) - error tracking | `app/root.tsx` |
 
-## User Identification
+## Environment Configuration
 
-Users are automatically identified when they complete checkout using their email address. The following properties are captured:
-- Email
-- Full name
-- City
-- ZIP code
+Environment variables have been configured in `.env`:
+- `VITE_PUBLIC_POSTHOG_KEY` - Your PostHog API key
+- `VITE_PUBLIC_POSTHOG_HOST` - PostHog host URL (https://us.i.posthog.com)
 
 ## Next steps
 
-We've built some insights and a dashboard for you to keep an eye on user behavior, based on the events we just instrumented:
+We recommend creating the following insights and dashboard in your PostHog project to monitor user behavior:
 
-### Dashboard
-- [Analytics basics](https://us.posthog.com/project/228144/dashboard/994317) - Overview dashboard with key e-commerce metrics
+### Suggested Dashboard: "Shopper Analytics"
 
-### Insights
-- [E-commerce Conversion Funnel](https://us.posthog.com/project/228144/insights/EeAHYA8X) - Full funnel from "Start Shopping" to "Order Placed"
-- [Cart Abandonment Rate](https://us.posthog.com/project/228144/insights/u1ZCKcEE) - Track users who add to cart but don't complete purchase
-- [Orders Over Time](https://us.posthog.com/project/228144/insights/AE6jNyeV) - Daily trend of completed orders
-- [Product Search Activity](https://us.posthog.com/project/228144/insights/0eXZWXz7) - Search and category filter usage
-- [Add to Cart Activity](https://us.posthog.com/project/228144/insights/PFspFaHM) - Compare add-to-cart from product list vs detail pages
+1. **Purchase Funnel** (Funnel insight)
+   - Steps: `products_page_viewed` → `product_viewed` → `product_added_to_cart` or `product_added_to_cart_from_detail` → `checkout_started` → `order_placed`
+   - This tracks the complete conversion funnel from browsing to purchase
 
-## Getting Started
+2. **Checkout Abandonment Rate** (Trends insight)
+   - Compare `checkout_started` vs `checkout_abandoned` vs `order_placed`
+   - Monitor cart abandonment to identify friction points
 
-1. Run the development server: `npm run dev`
-2. Navigate through the app to generate events
-3. View your data in the [PostHog dashboard](https://us.posthog.com/project/228144/dashboard/994317)
+3. **Product Engagement** (Trends insight)
+   - Track `product_viewed`, `product_added_to_cart`, `out_of_stock_viewed`
+   - Understand product interest and inventory issues
+
+4. **Search Effectiveness** (Trends insight)
+   - Track `product_searched` vs `no_search_results`
+   - Identify product gaps and search UX issues
+
+5. **Error Monitoring** (Trends insight)
+   - Track `error_page_viewed` by `error_type` and `error_status`
+   - Monitor application health and user experience issues
+
+### Create Your Dashboard
+
+Visit your PostHog dashboard to create these insights:
+- [PostHog Dashboard](https://us.i.posthog.com/project/dashboards)
+
+### Recommended Actions
+
+1. **Set up conversion goals**: Use the purchase funnel to track your conversion rate
+2. **Create alerts**: Set up alerts for spikes in `checkout_abandoned` or `error_page_viewed`
+3. **Analyze user paths**: Use session recordings to understand why users abandon checkout
+4. **Monitor search terms**: Review `no_search_results` events to identify product gaps
