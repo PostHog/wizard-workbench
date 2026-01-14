@@ -68,6 +68,7 @@ jobs:
     outputs:
       apps: ${{ steps.select-apps.outputs.apps }}
       app_count: ${{ steps.select-apps.outputs.app_count }}
+      first_app: ${{ steps.select-apps.outputs.first_app }}
       trigger_id: ${{ steps.generate-id.outputs.trigger_id }}
       # Resolved inputs (from workflow_dispatch, repository_dispatch, or schedule)
       input_app: ${{ steps.resolve-inputs.outputs.app }}
@@ -240,6 +241,8 @@ jobs:
           echo "apps=$SELECTED" >> $GITHUB_OUTPUT
           APP_COUNT=$(echo "$SELECTED" | jq 'length')
           echo "app_count=$APP_COUNT" >> $GITHUB_OUTPUT
+          FIRST_APP=$(echo "$SELECTED" | jq -r '.[0]')
+          echo "first_app=$FIRST_APP" >> $GITHUB_OUTPUT
           echo "Selected $APP_COUNT app(s) to run"
 
   # ============================================================================
@@ -569,10 +572,11 @@ jobs:
           path: wizard-output.log
 
       - name: Upload examples resources
-        if: always() && !env.ACT
+        # Only upload once (from the first matrix job) since the zip is identical across all jobs
+        if: always() && !env.ACT && matrix.app == needs.discover.outputs.first_app
         uses: actions/upload-artifact@v4
         with:
-          name: examples-resources-${{ github.run_id }}-${{ steps.artifact-name.outputs.safe_name }}
+          name: examples-resources-${{ github.run_id }}
           path: examples-mcp-resources.zip
           if-no-files-found: warn
 
