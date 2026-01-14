@@ -1,3 +1,5 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
+import { usePostHog } from "@posthog/react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form } from "react-router";
 
@@ -57,6 +59,17 @@ function DeleteAccountDialogComponent({
   const { t } = useTranslation("settings", {
     keyPrefix: "userAccount.dangerZone",
   });
+  const posthog = usePostHog();
+
+  // Handle account deletion form submission for PostHog tracking
+  const handleDeleteAccountSubmit = () => {
+    posthog?.capture("user_account_deleted", {
+      implicitly_deleted_organizations: imlicitlyDeletedOrganizations,
+      implicitly_deleted_org_count: imlicitlyDeletedOrganizations.length,
+    });
+    // Reset PostHog session after account deletion
+    posthog?.reset();
+  };
 
   const hasImplicitDeletions = imlicitlyDeletedOrganizations.length > 0;
 
@@ -105,7 +118,7 @@ function DeleteAccountDialogComponent({
             {t("cancel")}
           </DialogClose>
 
-          <Form method="POST" replace>
+          <Form method="POST" replace onSubmit={handleDeleteAccountSubmit}>
             <Button
               disabled={isDeletingAccount}
               name="intent"

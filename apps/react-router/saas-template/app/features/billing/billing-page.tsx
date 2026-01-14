@@ -1,4 +1,6 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import type { SubmissionResult } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import { IconCircleX } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
@@ -167,6 +169,25 @@ export function BillingPage({
     useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const hydrated = useHydrated();
+  const posthog = usePostHog();
+
+  // PostHog event handlers for subscription actions
+  const handleCancelSubscriptionSubmit = () => {
+    posthog?.capture("subscription_cancelled", {
+      current_tier: currentTier,
+      current_interval: currentInterval,
+      current_seats: currentSeats,
+      organization_slug: organizationSlug,
+    });
+  };
+
+  const handleResumeSubscriptionSubmit = () => {
+    posthog?.capture("subscription_resumed", {
+      current_tier: currentTier,
+      current_interval: currentInterval,
+      organization_slug: organizationSlug,
+    });
+  };
 
   const formattedDate = useMemo(() => {
     return new Intl.DateTimeFormat(i18n.language || "en-GB", {
@@ -275,7 +296,7 @@ export function BillingPage({
             </DialogContent>
           </Dialog>
         ) : cancelAtPeriodEnd ? (
-          <Form className="@container/alert" method="POST" replace>
+          <Form className="@container/alert" method="POST" replace onSubmit={handleResumeSubscriptionSubmit}>
             <Alert
               className="@xl/alert:block flex flex-col gap-2"
               variant="destructive"
@@ -627,7 +648,7 @@ export function BillingPage({
                 {t("cancelSubscriptionModal.changePlan")}
               </Button>
 
-              <Form method="POST" replace>
+              <Form method="POST" replace onSubmit={handleCancelSubscriptionSubmit}>
                 <Button
                   disabled={isSubmitting}
                   name="intent"

@@ -1,4 +1,6 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
@@ -47,6 +49,32 @@ export function CreateSubscriptionModalContent({
     keyPrefix: "noCurrentPlanModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
+
+  // Handle subscription form submission for PostHog tracking
+  const handleSubscriptionSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const lookupKey = formData.get("lookupKey") as string;
+    // Extract tier and interval from lookup key
+    let tier: string | undefined;
+    let interval: string | undefined;
+    for (const [t, intervals] of Object.entries(priceLookupKeysByTierAndInterval)) {
+      for (const [i, key] of Object.entries(intervals as Record<string, string>)) {
+        if (key === lookupKey) {
+          tier = t;
+          interval = i;
+          break;
+        }
+      }
+      if (tier) break;
+    }
+    posthog?.capture("subscription_created", {
+      tier,
+      interval,
+      lookup_key: lookupKey,
+      current_seats: currentSeats,
+    });
+  };
 
   const navigation = useNavigation();
   const isSubmitting =
@@ -107,7 +135,7 @@ export function CreateSubscriptionModalContent({
   );
 
   return (
-    <Form method="post" replace>
+    <Form method="post" replace onSubmit={handleSubscriptionSubmit}>
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>

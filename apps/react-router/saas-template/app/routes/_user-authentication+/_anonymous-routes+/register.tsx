@@ -1,4 +1,6 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { IconMail } from "@tabler/icons-react";
 import { Trans, useTranslation } from "react-i18next";
 import { data, Form, href, Link, useNavigation } from "react-router";
@@ -70,6 +72,7 @@ export default function RegisterRoute({
     keyPrefix: "register",
   });
   const { inviteLinkInfo } = loaderData;
+  const posthog = usePostHog();
 
   const isAwaitingEmailConfirmation =
     getIsAwaitingEmailConfirmation(actionData);
@@ -84,6 +87,28 @@ export default function RegisterRoute({
   const isRegisteringWithGoogle =
     navigation.formData?.get("intent") === REGISTER_WITH_GOOGLE_INTENT;
   const isSubmitting = isRegisteringWithEmail || isRegisteringWithGoogle;
+
+  // Handle registration form submission for PostHog tracking
+  const handleEmailRegistrationSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    if (email) {
+      // Identify user on registration attempt
+      posthog?.identify(email, { email });
+      posthog?.capture("user_registered", {
+        method: "email",
+        email,
+        has_invite: !!inviteLinkInfo,
+      });
+    }
+  };
+
+  const handleGoogleRegistrationSubmit = () => {
+    posthog?.capture("user_registered", {
+      method: "google",
+      has_invite: !!inviteLinkInfo,
+    });
+  };
 
   if (isAwaitingEmailConfirmation) {
     return (
@@ -117,7 +142,7 @@ export default function RegisterRoute({
         </div>
 
         {/* Email Registration Form */}
-        <Form method="POST" {...form.props}>
+        <Form method="POST" {...form.props} onSubmit={handleEmailRegistrationSubmit}>
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -161,7 +186,7 @@ export default function RegisterRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Registration Form */}
-        <Form method="POST">
+        <Form method="POST" onSubmit={handleGoogleRegistrationSubmit}>
           <Field>
             <Button
               name="intent"
