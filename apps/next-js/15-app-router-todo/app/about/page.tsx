@@ -1,12 +1,30 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
+'use client';
+
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-export const metadata = {
-  title: 'About - Todo App',
-  description: 'Learn more about this Next.js 15 todo application',
-};
-
 export default function AboutPage() {
+  // Capture about page viewed event (top of awareness funnel)
+  // Using a ref to track if we've already captured this event in this render
+  const handlePageLoad = () => {
+    posthog.capture('about_page_viewed', {
+      referrer: typeof document !== 'undefined' ? document.referrer : undefined,
+    });
+  };
+
+  // Call on first render - this is equivalent to componentDidMount behavior
+  // but using an event handler pattern as recommended
+  if (typeof window !== 'undefined') {
+    // Use a simple flag to ensure we only capture once per page load
+    const capturedKey = 'about_page_captured';
+    if (!sessionStorage.getItem(capturedKey)) {
+      handlePageLoad();
+      sessionStorage.setItem(capturedKey, 'true');
+    }
+  }
+
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-8">
       <div>
