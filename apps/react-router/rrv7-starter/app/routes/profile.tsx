@@ -1,4 +1,6 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import { useState, useEffect } from 'react'
+import { usePostHog } from '@posthog/react'
 import { fakeUser } from '@/lib/data/fake-data'
 import { fakeFollowers } from '@/lib/data/fake-data'
 import type { Route } from './+types/profile'
@@ -7,13 +9,13 @@ import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
 
-function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
+function FollowButton({ username, onFollow }: { username: string; onFollow: (username: string) => void }) {
   const [isFollowing, setIsFollowing] = useState(false)
 
   const handleClick = () => {
     setIsFollowing(!isFollowing)
     if (!isFollowing) {
-      onFollow()
+      onFollow(username)
     }
   }
 
@@ -22,9 +24,7 @@ function FollowButton({ username, onFollow }: { username: string; onFollow: () =
       onClick={handleClick}
       className={cn(
         'px-4 py-2 rounded-lg font-bold transition',
-        isFollowing
-          ? 'bg-primary/10 text-primary border border-primary/20'
-          : 'bg-accent text-primary hover:opacity-80'
+        isFollowing ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-accent text-primary hover:opacity-80'
       )}
     >
       {isFollowing ? 'Following' : 'Follow back'}
@@ -44,15 +44,28 @@ export const meta: Route.MetaFunction = () => {
 }
 
 export default function Profile() {
+  const posthog = usePostHog()
   const [followers, setFollowers] = useState(fakeUser.followers)
-  const [following, setFollowing] = useState(fakeUser.following)
+  const [following, setFollowingState] = useState(fakeUser.following)
   const [posts, setPosts] = useState(fakeUser.posts)
 
   useEffect(() => {
     setFollowers(getFollowers())
-    setFollowing(getFollowing())
+    setFollowingState(getFollowing())
     setPosts(getPosts())
   }, [])
+
+  const handleFollow = (followedUsername: string) => {
+    const newFollowing = getFollowing() + 1
+    setFollowing(newFollowing)
+    setFollowingState(newFollowing)
+
+    // Track user follow event
+    posthog?.capture('user_followed', {
+      followed_username: followedUsername,
+      new_following_count: newFollowing,
+    })
+  }
 
   return (
     <div className="min-h-screen bg-background pt-header pb-8">
@@ -78,21 +91,15 @@ export default function Profile() {
 
               <div className="flex gap-6 justify-center md:justify-start mb-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">
-                    {posts.toLocaleString()}
-                  </div>
+                  <div className="text-2xl font-bold text-primary">{posts.toLocaleString()}</div>
                   <div className="text-sm text-primary/50">posts</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">
-                    {followers.toLocaleString()}
-                  </div>
+                  <div className="text-2xl font-bold text-primary">{followers.toLocaleString()}</div>
                   <div className="text-sm text-primary/50">followers (fake)</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">
-                    {following.toLocaleString()}
-                  </div>
+                  <div className="text-2xl font-bold text-primary">{following.toLocaleString()}</div>
                   <div className="text-sm text-primary/50">following</div>
                 </div>
               </div>
@@ -125,11 +132,7 @@ export default function Profile() {
                 key={index}
                 className="flex items-center gap-3 bg-background border border-primary/10 rounded-lg p-3"
               >
-                <img
-                  src={follower.avatar}
-                  alt={follower.username}
-                  className="w-12 h-12 rounded-full"
-                />
+                <img src={follower.avatar} alt={follower.username} className="w-12 h-12 rounded-full" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-primary">{follower.username}</span>
@@ -141,13 +144,7 @@ export default function Profile() {
                   </div>
                   <span className="text-sm text-primary/50">Followed you 2 minutes ago</span>
                 </div>
-                <FollowButton 
-                  username={follower.username}
-                  onFollow={() => {
-                    const newFollowing = getFollowing() + 1
-                    setFollowing(newFollowing)
-                  }}
-                />
+                <FollowButton username={follower.username} onFollow={handleFollow} />
               </div>
             ))}
           </div>
@@ -159,4 +156,3 @@ export default function Profile() {
     </div>
   )
 }
-
