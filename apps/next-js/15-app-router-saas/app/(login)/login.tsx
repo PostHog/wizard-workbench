@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,16 +9,49 @@ import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import posthog from 'posthog-js';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
   const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
+  const formRef = useRef<HTMLFormElement>(null);
+  const lastEmailRef = useRef<string>('');
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
+
+  // Track successful sign in/up and identify user
+  useEffect(() => {
+    // If we had a pending submission and now there's no error, the auth succeeded
+    // The page will redirect, but we capture the event first
+    if (lastEmailRef.current && !state.error && !pending) {
+      const email = lastEmailRef.current;
+      if (mode === 'signin') {
+        posthog.identify(email, { email });
+        posthog.capture('sign_in_submitted', { email, success: true });
+      } else {
+        posthog.identify(email, { email });
+        posthog.capture('sign_up_submitted', { email, success: true, has_invite: !!inviteId });
+      }
+    }
+  }, [state.error, pending, mode, inviteId]);
+
+  const handleSubmit = useCallback((formData: FormData) => {
+    const email = formData.get('email') as string;
+    lastEmailRef.current = email;
+
+    // Capture form submission attempt
+    if (mode === 'signin') {
+      posthog.capture('sign_in_submitted', { email });
+    } else {
+      posthog.capture('sign_up_submitted', { email, has_invite: !!inviteId });
+    }
+
+    return formAction(formData);
+  }, [mode, inviteId, formAction]);
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -34,7 +67,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
+        <form className="space-y-6" action={handleSubmit} ref={formRef}>
           <input type="hidden" name="redirect" value={redirect || ''} />
           <input type="hidden" name="priceId" value={priceId || ''} />
           <input type="hidden" name="inviteId" value={inviteId || ''} />

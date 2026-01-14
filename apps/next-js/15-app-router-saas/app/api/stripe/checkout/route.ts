@@ -5,6 +5,7 @@ import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -89,9 +90,35 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+
+    // Track successful checkout on server-side
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user[0].email,
+      event: 'stripe_checkout_completed',
+      properties: {
+        user_id: userId,
+        plan_name: (plan.product as Stripe.Product).name,
+        subscription_id: subscriptionId,
+        customer_id: customerId,
+      },
+    });
+
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
+
+    // Track failed checkout on server-side
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: 'anonymous',
+      event: 'stripe_checkout_failed',
+      properties: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        session_id: searchParams.get('session_id'),
+      },
+    });
+
     return NextResponse.redirect(new URL('/error', request.url));
   }
 }
