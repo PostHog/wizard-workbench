@@ -1,3 +1,4 @@
+// MEEEEOWWW IM A DOG
 'use client';
 
 import Link from 'next/link';
@@ -15,6 +16,7 @@ import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -24,6 +26,10 @@ function UserMenu() {
   const router = useRouter();
 
   async function handleSignOut() {
+    // Track sign out event before resetting PostHog
+    posthog.capture('sign_out_clicked');
+    posthog.reset();
+
     await signOut();
     mutate('/api/user');
     router.push('/');
