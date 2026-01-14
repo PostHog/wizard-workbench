@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, PlusCircle } from 'lucide-react';
 import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -25,6 +26,12 @@ function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
 
   async function handleManageSubscription() {
+    // Capture subscription managed event
+    posthog.capture('subscription_managed', {
+      current_plan: teamData?.planName || 'Free',
+      subscription_status: teamData?.subscriptionStatus || 'none',
+    });
+
     try {
       const response = await fetch('/api/stripe/customer-portal', {
         method: 'POST',
@@ -101,6 +108,12 @@ function TeamMembers() {
           setError(result.error || 'Failed to remove member');
           return;
         }
+
+        // Capture team member removed event
+        posthog.capture('team_member_removed', {
+          member_id: memberId,
+          team_member_count: (teamData?.teamMembers?.length || 1) - 1,
+        });
 
         // Refresh team data
         mutate('/api/team');
@@ -206,6 +219,12 @@ function InviteTeamMember() {
           setError(result.error || 'Failed to send invitation');
           return;
         }
+
+        // Capture team member invited event
+        posthog.capture('team_member_invited', {
+          invited_email: data.email,
+          invited_role: data.role,
+        });
 
         setSuccess(result.success);
         // Reset form
