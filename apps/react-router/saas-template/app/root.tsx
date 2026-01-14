@@ -23,6 +23,7 @@ import sonnerStyles from "sonner/dist/styles.css?url";
 import type { Route } from "./+types/root";
 import { NotFound } from "./components/not-found";
 import { Toaster } from "./components/ui/sonner";
+import { PostHogProvider } from "./features/analytics/posthog-provider";
 import { getColorScheme } from "./features/color-scheme/color-scheme.server";
 import { useColorScheme } from "./features/color-scheme/use-color-scheme";
 import {
@@ -186,7 +187,11 @@ export default function App({ loaderData: { locale } }: Route.ComponentProps) {
     }
   }, [i18n, locale]);
 
-  return <Outlet />;
+  return (
+    <PostHogProvider>
+      <Outlet />
+    </PostHogProvider>
+  );
 }
 
 function BaseErrorBoundary({ error }: Route.ErrorBoundaryProps) {
