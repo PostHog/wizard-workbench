@@ -18,6 +18,34 @@ import {
   getCommitMessages,
 } from "../github/index.js";
 
+// Files to exclude from PR evaluation (skill instructions, not code changes)
+const EXCLUDED_PATH_PATTERNS = [/^.*\/\.claude\//, /^\.claude\//];
+
+function isExcludedPath(filepath: string): boolean {
+  return EXCLUDED_PATH_PATTERNS.some((pattern) => pattern.test(filepath));
+}
+
+function filterDiff(diff: string): string {
+  const lines = diff.split("\n");
+  const filteredLines: string[] = [];
+  let skipCurrentFile = false;
+
+  for (const line of lines) {
+    if (line.startsWith("diff --git ")) {
+      const match = line.match(/diff --git a\/(.+) b\/(.+)/);
+      if (match) {
+        skipCurrentFile = isExcludedPath(match[2]);
+      }
+    }
+
+    if (!skipCurrentFile) {
+      filteredLines.push(line);
+    }
+  }
+
+  return filteredLines.join("\n");
+}
+
 export interface LocalBranchOptions {
   branch: string;
   baseBranch?: string; // defaults to 'main'
@@ -60,8 +88,9 @@ export async function fetchLocalBranch(options: LocalBranchOptions): Promise<PRD
     );
   }
 
-  // Get diff
-  const diff = getDiff(cwd, mergeBase, actualBranch);
+  // Get diff and filter out excluded paths (e.g., .claude/ skill files)
+  const rawDiff = getDiff(cwd, mergeBase, actualBranch);
+  const diff = filterDiff(rawDiff);
 
   // Get file stats using diff --stat
   const diffStat = getDiffNumstat(cwd, mergeBase, actualBranch);
@@ -69,8 +98,9 @@ export async function fetchLocalBranch(options: LocalBranchOptions): Promise<PRD
   // Get file statuses
   const diffNameStatus = getDiffNameStatus(cwd, mergeBase, actualBranch);
 
-  // Parse file information
-  const files = parseGitFiles(diffStat, diffNameStatus, mergeBase, actualBranch, cwd);
+  // Parse file information and filter out excluded paths
+  const allFiles = parseGitFiles(diffStat, diffNameStatus, mergeBase, actualBranch, cwd);
+  const files = allFiles.filter((f) => !isExcludedPath(f.filename));
 
   // Try to get author from the most recent commit on the branch
   const author = getCommitAuthor(cwd, actualBranch) || "local";
