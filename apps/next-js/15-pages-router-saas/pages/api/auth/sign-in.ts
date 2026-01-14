@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
@@ -12,6 +13,7 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -94,6 +96,30 @@ export default async function handler(
       setSession(foundUser, res),
       logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
     ]);
+
+    // Track server-side sign-in event with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: email,
+      event: 'user_signed_in',
+      properties: {
+        email,
+        user_id: foundUser.id,
+        team_id: foundTeam?.id,
+        has_redirect: !!redirect,
+        source: 'api'
+      }
+    });
+
+    // Identify user on server side
+    posthog.identify({
+      distinctId: email,
+      properties: {
+        email,
+        user_id: foundUser.id,
+        team_id: foundTeam?.id
+      }
+    });
 
     if (redirect === 'checkout' && foundTeam) {
       const checkoutResult = await createCheckoutSession({
