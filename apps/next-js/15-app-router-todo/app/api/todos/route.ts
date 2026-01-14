@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodos, createTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -34,6 +35,19 @@ export async function POST(request: NextRequest) {
       completed: validatedData.completed,
     });
 
+    // Capture server-side todo created event
+    const posthog = getPostHogClient();
+    const distinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') || 'anonymous';
+    posthog.capture({
+      distinctId,
+      event: 'server_todo_created',
+      properties: {
+        todo_id: newTodo.id,
+        has_description: !!newTodo.description,
+        source: 'api'
+      }
+    });
+
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -43,6 +57,21 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error('Error creating todo:', error);
+
+    // Capture API error event
+    const posthog = getPostHogClient();
+    const distinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') || 'anonymous';
+    posthog.capture({
+      distinctId,
+      event: 'api_error',
+      properties: {
+        endpoint: '/api/todos',
+        method: 'POST',
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        source: 'api'
+      }
+    });
+
     return NextResponse.json(
       { error: 'Failed to create todo' },
       { status: 500 }
