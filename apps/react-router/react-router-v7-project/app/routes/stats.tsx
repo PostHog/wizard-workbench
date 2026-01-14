@@ -1,10 +1,14 @@
 import { Navigate } from 'react-router'
 import { useAuth } from '~/context/AuthContext'
 import { getAllUsers, getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
+import { usePostHog } from '@posthog/react'
+import { useEffect, useRef } from 'react'
 import type { Route } from './+types/stats'
 
 export default function Stats() {
   const { user } = useAuth()
+  const posthog = usePostHog()
+  const hasTrackedRef = useRef(false)
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -12,13 +16,27 @@ export default function Stats() {
 
   const currentUser = getCurrentUser() || user
   const allUsers = getAllUsers()
-  
+
   // Sort users by points for leaderboard
   const leaderboard = [...allUsers]
     .sort((a, b) => b.totalPoints - a.totalPoints)
     .slice(0, 10)
 
   const userRank = leaderboard.findIndex((u) => u.id === currentUser.id) + 1
+
+  // Track stats page view - using ref to prevent duplicate tracking
+  useEffect(() => {
+    if (!hasTrackedRef.current && currentUser) {
+      posthog?.capture('stats_viewed', {
+        total_points: currentUser.totalPoints,
+        countries_claimed: currentUser.claimedCountries.length,
+        countries_liked: currentUser.likedCountries.length,
+        countries_visited: currentUser.visitedCountries.length,
+        user_rank: userRank || 0,
+      })
+      hasTrackedRef.current = true
+    }
+  }, [posthog, currentUser, userRank])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-6">
