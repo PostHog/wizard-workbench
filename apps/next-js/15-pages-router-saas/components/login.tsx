@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -54,8 +55,26 @@ export function Login({
           setError(result.error || 'An error occurred');
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
+
+          // Capture failed auth event
+          posthog.capture(mode === 'signin' ? 'sign_in_failed' : 'sign_up_failed', {
+            email: data.email,
+            error: result.error || 'An error occurred',
+          });
           return;
         }
+
+        // Identify user in PostHog using email as distinct ID
+        posthog.identify(data.email, {
+          email: data.email,
+        });
+
+        // Capture successful auth event
+        posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up', {
+          email: data.email,
+          has_invite: !!data.inviteId,
+          redirect_to_checkout: data.redirect === 'checkout',
+        });
 
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
@@ -65,6 +84,7 @@ export function Login({
         }
       } catch (err) {
         setError('An unexpected error occurred. Please try again.');
+        posthog.captureException(err);
       }
     });
   }
