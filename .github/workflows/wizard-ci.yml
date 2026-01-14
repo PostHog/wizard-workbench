@@ -519,8 +519,9 @@ jobs:
           $CMD 2>&1 | tee wizard-output.log
           WIZARD_EXIT=$?
 
-          # Save examples resources zip from running server (for artifact upload)
+          # Save resources zips from running server (for artifact upload)
           curl -s http://localhost:8765/examples-mcp-resources.zip -o examples-mcp-resources.zip || true
+          curl -s http://localhost:8765/skills-mcp-resources.zip -o skills-mcp-resources.zip || true
 
           # Stop servers
           kill $MCP_PID 2>/dev/null || true
@@ -574,10 +575,21 @@ jobs:
       - name: Upload examples resources
         # Only upload once (from the first matrix job) since the zip is identical across all jobs
         if: always() && !env.ACT && matrix.app == needs.discover.outputs.first_app
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: examples-resources-${{ github.run_id }}
           path: examples-mcp-resources.zip
+          if-no-files-found: warn
+
+      - name: Upload skills resources
+        # Only upload once (from the first matrix job) since the zip is identical across all jobs
+        if: always() && !env.ACT && matrix.app == needs.discover.outputs.first_app
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: skills-resources-${{ github.run_id }}
+          path: skills-mcp-resources.zip
           if-no-files-found: warn
 
       - name: Label and close PR
