@@ -1,5 +1,7 @@
+import { usePostHog } from "@posthog/react";
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
+import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
 import { HoneypotInputs } from "remix-utils/honeypot/react";
@@ -30,10 +32,19 @@ export function ContactSalesTeam({
   lastResult,
 }: ContactSalesTeamProps) {
   const { t } = useTranslation("billing", { keyPrefix: "contactSales" });
+  const posthog = usePostHog();
 
   const { form, fields } = useForm(contactSalesFormSchema, {
     lastResult,
   });
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(event.currentTarget);
+    posthog?.capture("contact_sales_form_submitted", {
+      company_name: formData.get("companyName") as string,
+      has_message: !!(formData.get("message") as string),
+    });
+  };
 
   return (
     <Card>
@@ -47,7 +58,7 @@ export function ContactSalesTeam({
         </CardDescription>
       </CardHeader>
 
-      <Form method="POST" {...form.props}>
+      <Form method="POST" {...form.props} onSubmit={handleSubmit}>
         <FieldSet className="space-y-6" disabled={isContactingSales}>
           <CardContent className="space-y-6">
             <Field data-invalid={fields.firstName.ariaInvalid}>

@@ -1,6 +1,7 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, FormEvent } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, href, Link, useNavigation } from "react-router";
@@ -46,6 +47,7 @@ export function CreateSubscriptionModalContent({
   const { t: tModal } = useTranslation("billing", {
     keyPrefix: "noCurrentPlanModal",
   });
+  const posthog = usePostHog();
   const [billingPeriod, setBillingPeriod] = useState("annual");
 
   const navigation = useNavigation();
@@ -101,13 +103,27 @@ export function CreateSubscriptionModalContent({
     };
   };
 
-  // figure out which tiers can’t cover your seats:
+  // figure out which tiers can't cover your seats:
   const unavailable = (["low", "mid", "high"] as Tier[]).filter(
     (tier) => planLimits[tier] < currentSeats,
   );
 
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(event.currentTarget);
+    const lookupKey = formData.get("lookupKey") as string;
+    // Parse the lookup key to get tier and interval
+    const tier = lookupKey?.split("_")[0] as Tier;
+    const interval = lookupKey?.includes("_monthly") ? "monthly" : "annual";
+    posthog?.capture("subscription_checkout_started", {
+      tier,
+      interval,
+      billing_period: billingPeriod,
+      current_seats: currentSeats,
+    });
+  };
+
   return (
-    <Form method="post" replace>
+    <Form method="post" replace onSubmit={handleSubmit}>
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>

@@ -1,6 +1,8 @@
+import { usePostHog } from "@posthog/react";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconBuilding } from "@tabler/icons-react";
+import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { data, Form, useNavigation } from "react-router";
 
@@ -80,6 +82,7 @@ export default function OrganizationOnboardingRoute({
   actionData,
 }: Route.ComponentProps) {
   const { t } = useTranslation("onboarding", { keyPrefix: "organization" });
+  const posthog = usePostHog();
   const { form, fields } = useForm(
     coerceFormValue(onboardingOrganizationSchema),
     {
@@ -88,6 +91,17 @@ export default function OrganizationOnboardingRoute({
   );
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(event.currentTarget);
+    posthog?.capture("onboarding_organization_completed", {
+      company_size: formData.get("companySize") as string,
+      company_types: formData.getAll("companyTypes"),
+      referral_sources: formData.getAll("referralSources"),
+      has_website: !!formData.get("website"),
+      early_access_opt_in: formData.get("earlyAccessOptIn") === "on",
+    });
+  };
 
   return (
     <Form
@@ -100,6 +114,7 @@ export default function OrganizationOnboardingRoute({
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      onSubmit={handleSubmit}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>
