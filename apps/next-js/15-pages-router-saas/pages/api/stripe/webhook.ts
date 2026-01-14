@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 // Disable body parsing, need raw body for Stripe webhook signature verification
 export const config = {
@@ -36,12 +37,64 @@ export default async function handler(
     return res.status(400).json({ error: 'Webhook signature verification failed.' });
   }
 
+  const posthog = getPostHogClient();
+
   switch (event.type) {
-    case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
-      const subscription = event.data.object as Stripe.Subscription;
-      await handleSubscriptionChange(subscription);
+    case 'customer.subscription.created':
+      const createdSubscription = event.data.object as Stripe.Subscription;
+      const createdCustomerId = typeof createdSubscription.customer === 'string'
+        ? createdSubscription.customer
+        : createdSubscription.customer.id;
+
+      posthog.capture({
+        distinctId: createdCustomerId,
+        event: 'subscription_created',
+        properties: {
+          subscription_id: createdSubscription.id,
+          status: createdSubscription.status,
+          customer_id: createdCustomerId,
+        },
+      });
       break;
+
+    case 'customer.subscription.updated':
+      const updatedSubscription = event.data.object as Stripe.Subscription;
+      const updatedCustomerId = typeof updatedSubscription.customer === 'string'
+        ? updatedSubscription.customer
+        : updatedSubscription.customer.id;
+
+      posthog.capture({
+        distinctId: updatedCustomerId,
+        event: 'subscription_updated',
+        properties: {
+          subscription_id: updatedSubscription.id,
+          status: updatedSubscription.status,
+          customer_id: updatedCustomerId,
+        },
+      });
+
+      await handleSubscriptionChange(updatedSubscription);
+      break;
+
+    case 'customer.subscription.deleted':
+      const deletedSubscription = event.data.object as Stripe.Subscription;
+      const deletedCustomerId = typeof deletedSubscription.customer === 'string'
+        ? deletedSubscription.customer
+        : deletedSubscription.customer.id;
+
+      posthog.capture({
+        distinctId: deletedCustomerId,
+        event: 'subscription_canceled',
+        properties: {
+          subscription_id: deletedSubscription.id,
+          status: deletedSubscription.status,
+          customer_id: deletedCustomerId,
+        },
+      });
+
+      await handleSubscriptionChange(deletedSubscription);
+      break;
+
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
