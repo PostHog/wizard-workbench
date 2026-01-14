@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -21,9 +22,22 @@ export function TodoList() {
       if (response.ok) {
         const data = await response.json();
         setTodos(data);
+
+        // Capture successful todos load event
+        posthog.capture('todos_loaded', {
+          todo_count: data.length,
+          active_count: data.filter((t: Todo) => !t.completed).length,
+          completed_count: data.filter((t: Todo) => t.completed).length,
+        });
       }
     } catch (error) {
       console.error('Failed to fetch todos:', error);
+
+      // Capture fetch error
+      posthog.capture('todos_fetch_failed', {
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      });
+      posthog.captureException(error);
     } finally {
       setLoading(false);
     }
@@ -42,9 +56,22 @@ export function TodoList() {
       if (response.ok) {
         const newTodo = await response.json();
         setTodos([...todos, newTodo]);
+
+        // Capture todo created event
+        posthog.capture('todo_created', {
+          todo_id: newTodo.id,
+          has_description: !!description,
+          title_length: title.length,
+        });
       }
     } catch (error) {
       console.error('Failed to add todo:', error);
+
+      // Capture create error
+      posthog.capture('todo_create_failed', {
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      });
+      posthog.captureException(error);
     }
   };
 
@@ -61,9 +88,27 @@ export function TodoList() {
       if (response.ok) {
         const updatedTodo = await response.json();
         setTodos(todos.map((todo) => (todo.id === id ? updatedTodo : todo)));
+
+        // Capture completed or uncompleted event
+        if (completed) {
+          posthog.capture('todo_completed', {
+            todo_id: id,
+          });
+        } else {
+          posthog.capture('todo_uncompleted', {
+            todo_id: id,
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to update todo:', error);
+
+      // Capture update error
+      posthog.capture('todo_update_failed', {
+        todo_id: id,
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      });
+      posthog.captureException(error);
     }
   };
 
@@ -75,9 +120,21 @@ export function TodoList() {
 
       if (response.ok) {
         setTodos(todos.filter((todo) => todo.id !== id));
+
+        // Capture todo deleted event
+        posthog.capture('todo_deleted', {
+          todo_id: id,
+        });
       }
     } catch (error) {
       console.error('Failed to delete todo:', error);
+
+      // Capture delete error
+      posthog.capture('todo_delete_failed', {
+        todo_id: id,
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      });
+      posthog.captureException(error);
     }
   };
 
@@ -100,6 +157,7 @@ export function TodoList() {
           <Link
             href="/about"
             className="text-sm text-primary hover:underline"
+            onClick={() => posthog.capture('about_page_link_clicked')}
           >
             About
           </Link>
