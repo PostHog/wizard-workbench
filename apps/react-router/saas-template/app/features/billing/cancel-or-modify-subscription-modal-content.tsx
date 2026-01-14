@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
@@ -54,6 +55,7 @@ export function CancelOrModifySubscriptionModalContent({
     keyPrefix: "billingPage.pricingModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
 
   const isSubmitting =
     isSwitchingToLow || isSwitchingToMid || isSwitchingToHigh;
@@ -117,9 +119,43 @@ export function CancelOrModifySubscriptionModalContent({
       : { children: tModal("downgradeButton"), variant: "outline" };
   };
 
+  const handlePlanChange = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const lookupKey = formData.get("lookupKey") as string;
+    if (lookupKey) {
+      // Parse tier and interval from the lookup key
+      const newTier = lookupKey.includes("low")
+        ? "low"
+        : lookupKey.includes("mid")
+          ? "mid"
+          : "high";
+      const newInterval = lookupKey.includes("monthly") ? "monthly" : "annual";
+
+      const isUpgrade =
+        (currentTier === "low" && (newTier === "mid" || newTier === "high")) ||
+        (currentTier === "mid" && newTier === "high");
+
+      posthog?.capture("subscription_plan_changed", {
+        from_tier: currentTier,
+        to_tier: newTier,
+        from_interval: currentTierInterval,
+        to_interval: newInterval,
+        change_type: isUpgrade ? "upgrade" : "downgrade",
+      });
+    }
+  };
+
+  const handleCancelClick: MouseEventHandler<HTMLButtonElement> = (e) => {
+    posthog?.capture("subscription_cancelled", {
+      tier: currentTier,
+      interval: currentTierInterval,
+    });
+    onCancelSubscriptionClick?.(e);
+  };
+
   return (
     <>
-      <Form method="post" replace>
+      <Form method="post" replace onSubmit={handlePlanChange}>
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"
@@ -515,7 +551,7 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={handleCancelClick}
                 type="button"
                 variant="outline"
               >

@@ -7,6 +7,7 @@ import { data, href, Link } from "react-router";
 import type { Route } from "./+types/billing_.success";
 import { Button } from "~/components/ui/button";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { organizationMembershipContext } from "~/features/organizations/organizations-middleware.server";
 import { OrganizationMembershipRole } from "~/generated/browser";
 import { getPageTitle } from "~/utils/get-page-title.server";
@@ -19,6 +20,10 @@ export function loader({ context }: Route.LoaderArgs) {
   if (role === OrganizationMembershipRole.member) {
     throw notFound();
   }
+
+  // Track successful subscription payment
+  const posthog = (context as unknown as PostHogContext).posthog;
+  posthog?.capture({ event: "subscription_payment_successful" });
 
   return data(
     {

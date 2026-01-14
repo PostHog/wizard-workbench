@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { useEffect } from "react";
@@ -46,10 +47,20 @@ export function EmailInviteCard({
   const { t } = useTranslation("organizations", {
     keyPrefix: "settings.teamMembers.inviteByEmail",
   });
+  const posthog = usePostHog();
 
   const { form, fields, intent } = useForm(inviteByEmailSchema, {
     lastResult,
   });
+
+  const handleInviteSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const role = formData.get("role") as string;
+
+    posthog?.capture("team_member_invited", {
+      role,
+    });
+  };
 
   // If the invite was successful, clear the email input
   useEffect(() => {
@@ -70,7 +81,7 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form method="POST" {...form.props} onSubmit={handleInviteSubmit}>
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

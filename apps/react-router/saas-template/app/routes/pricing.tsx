@@ -5,6 +5,7 @@ import { href, Link } from "react-router";
 
 import type { Route } from "./+types/pricing";
 import { Badge } from "~/components/ui/badge";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -28,6 +29,11 @@ import { getInstance } from "~/features/localization/i18next-middleware.server";
 
 export function loader({ context }: Route.LoaderArgs) {
   const i18n = getInstance(context);
+
+  // Track pricing page view (top of conversion funnel)
+  const posthog = (context as PostHogContext).posthog;
+  posthog?.capture({ event: "pricing_page_viewed" });
+
   return { pageTitle: i18n.t("billing:pricingPage.pageTitle") };
 }
 
