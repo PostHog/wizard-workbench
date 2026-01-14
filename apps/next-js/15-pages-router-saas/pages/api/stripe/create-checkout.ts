@@ -1,6 +1,8 @@
+// MEEEEOWWW IM A DOG
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,6 +27,22 @@ export default async function handler(
     }
 
     const result = await createCheckoutSession({ team, priceId, userId: user.id });
+
+    // Track checkout started event in PostHog
+    const posthog = getPostHogClient();
+    const distinctId = req.headers['x-posthog-distinct-id'] as string || user.email;
+
+    posthog.capture({
+      distinctId,
+      event: 'checkout_started',
+      properties: {
+        priceId,
+        teamId: team.id,
+        userId: user.id,
+        source: 'api'
+      }
+    });
+
     return res.status(200).json(result);
   } catch (error) {
     console.error('Checkout error:', error);

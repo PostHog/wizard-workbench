@@ -1,3 +1,4 @@
+// MEEEEOWWW IM A DOG
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
@@ -16,6 +17,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -165,6 +167,29 @@ export default async function handler(
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
       setSession(createdUser, res)
     ]);
+
+    // Track user sign up event in PostHog
+    const posthog = getPostHogClient();
+    const distinctId = req.headers['x-posthog-distinct-id'] as string || createdUser.email;
+
+    posthog.identify({
+      distinctId,
+      properties: {
+        email: createdUser.email,
+        createdAt: new Date().toISOString()
+      }
+    });
+
+    posthog.capture({
+      distinctId,
+      event: 'user_signed_up',
+      properties: {
+        email: createdUser.email,
+        teamId: teamId,
+        hasInvitation: !!inviteId,
+        source: 'api'
+      }
+    });
 
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({

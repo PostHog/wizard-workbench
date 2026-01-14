@@ -1,3 +1,4 @@
+// MEEEEOWWW IM A DOG
 import { GetServerSideProps } from 'next';
 import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
@@ -7,6 +8,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -73,6 +75,14 @@ function PricingCard({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // Track pricing plan selected event in PostHog
+    posthog.capture('pricing_plan_selected', {
+      planName: name,
+      priceId,
+      price: price / 100,
+      interval
+    });
 
     startTransition(async () => {
       try {

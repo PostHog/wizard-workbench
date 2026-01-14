@@ -1,3 +1,4 @@
+// MEEEEOWWW IM A DOG
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
@@ -11,6 +12,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -107,6 +109,21 @@ export default async function handler(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+
+    // Track team member invited event in PostHog
+    const posthog = getPostHogClient();
+    const distinctId = req.headers['x-posthog-distinct-id'] as string || user.email;
+
+    posthog.capture({
+      distinctId,
+      event: 'team_member_invited',
+      properties: {
+        invitedEmail: email,
+        invitedRole: role,
+        teamId: userWithTeam.teamId,
+        source: 'api'
+      }
+    });
 
     return res.status(200).json({ success: 'Invitation sent successfully' });
   } catch (error) {
