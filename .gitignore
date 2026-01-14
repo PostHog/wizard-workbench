@@ -80,7 +80,7 @@ Desktop.ini
 *.sublime-*
 
 # Tools
-.claude/
+.claude/*.local.*
 .stripe/
 
 # Temporary
