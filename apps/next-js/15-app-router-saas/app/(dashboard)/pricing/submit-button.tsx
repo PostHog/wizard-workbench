@@ -3,9 +3,18 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
+import posthog from 'posthog-js';
 
 export function SubmitButton() {
   const { pending } = useFormStatus();
+
+  const handleClick = () => {
+    // PostHog: Track pricing plan selection on client side
+    // Note: priceId is captured from the form's hidden input by the server action
+    posthog.capture('pricing_plan_selected', {
+      source: 'client'
+    });
+  };
 
   return (
     <Button
@@ -13,6 +22,7 @@ export function SubmitButton() {
       disabled={pending}
       variant="outline"
       className="w-full rounded-full"
+      onClick={handleClick}
     >
       {pending ? (
         <>
