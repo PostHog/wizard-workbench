@@ -1,9 +1,13 @@
+import { useRef } from 'react'
 import { Navigate } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
 import { getAllUsers, getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
 import type { Route } from './+types/stats'
 
 export default function Stats() {
+  const posthog = usePostHog()
+  const hasTracked = useRef(false)
   const { user } = useAuth()
 
   if (!user) {
@@ -12,13 +16,26 @@ export default function Stats() {
 
   const currentUser = getCurrentUser() || user
   const allUsers = getAllUsers()
-  
+
   // Sort users by points for leaderboard
   const leaderboard = [...allUsers]
     .sort((a, b) => b.totalPoints - a.totalPoints)
     .slice(0, 10)
 
   const userRank = leaderboard.findIndex((u) => u.id === currentUser.id) + 1
+
+  // Track stats view (only once per component mount)
+  if (!hasTracked.current) {
+    posthog?.capture('stats_viewed', {
+      username: currentUser.username,
+      total_points: currentUser.totalPoints,
+      countries_claimed: currentUser.claimedCountries.length,
+      countries_liked: currentUser.likedCountries.length,
+      countries_visited: currentUser.visitedCountries.length,
+      user_rank: userRank || 0,
+    })
+    hasTracked.current = true
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-6">
