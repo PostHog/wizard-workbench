@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
-import { usePostHog } from '@posthog/react'
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
 
@@ -14,7 +13,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const posthog = usePostHog()
   const [user, setUser] = useState<FakeUser | null>(null)
 
   useEffect(() => {
@@ -43,11 +41,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    // Capture logout event before resetting
-    posthog?.capture('user_logged_out')
-    // Reset PostHog state to unlink future events from this user
-    posthog?.reset()
-
     fakeLogout()
     setUser(null)
   }
