@@ -2,6 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { db } from '@/lib/db/drizzle';
+import { teams, teamMembers, users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 // Disable body parsing, need raw body for Stripe webhook signature verification
 export const config = {
@@ -41,6 +45,46 @@ export default async function handler(
     case 'customer.subscription.deleted':
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+
+      // PostHog: Capture subscription events
+      const posthog = getPostHogClient();
+      const customerId = typeof subscription.customer === 'string'
+        ? subscription.customer
+        : subscription.customer.id;
+
+      // Find the team and user associated with this subscription
+      const team = await db
+        .select()
+        .from(teams)
+        .where(eq(teams.stripeCustomerId, customerId))
+        .limit(1);
+
+      if (team.length > 0) {
+        const teamMember = await db
+          .select({ user: users })
+          .from(teamMembers)
+          .leftJoin(users, eq(teamMembers.userId, users.id))
+          .where(eq(teamMembers.teamId, team[0].id))
+          .limit(1);
+
+        const distinctId = teamMember[0]?.user?.email || customerId;
+        const eventName = event.type === 'customer.subscription.deleted'
+          ? 'subscription_cancelled'
+          : 'subscription_updated';
+
+        posthog.capture({
+          distinctId,
+          event: eventName,
+          properties: {
+            team_id: team[0].id,
+            team_name: team[0].name,
+            subscription_id: subscription.id,
+            subscription_status: subscription.status,
+            customer_id: customerId,
+            source: 'webhook'
+          }
+        });
+      }
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);

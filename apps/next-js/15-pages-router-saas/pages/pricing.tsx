@@ -7,6 +7,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 interface Price {
   id: string;
@@ -180,6 +181,23 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   ]);
 
   const team = user ? await getTeamForUser(sessionCookie) : null;
+
+  // PostHog: Capture pricing page viewed event (top of conversion funnel)
+  const posthog = getPostHogClient();
+  const distinctId = user?.email || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'pricing_page_viewed',
+    properties: {
+      user_id: user?.id,
+      email: user?.email,
+      team_id: team?.id,
+      team_name: team?.name,
+      current_plan: team?.planName,
+      is_authenticated: !!user,
+      source: 'server'
+    }
+  });
 
   return {
     props: {
