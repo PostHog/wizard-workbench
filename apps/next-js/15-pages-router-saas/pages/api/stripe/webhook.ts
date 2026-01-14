@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 // Disable body parsing, need raw body for Stripe webhook signature verification
 export const config = {
@@ -36,11 +37,38 @@ export default async function handler(
     return res.status(400).json({ error: 'Webhook signature verification failed.' });
   }
 
+  const posthog = getPostHogClient();
+
   switch (event.type) {
     case 'customer.subscription.updated':
+      const updatedSubscription = event.data.object as Stripe.Subscription;
+      await handleSubscriptionChange(updatedSubscription);
+      // PostHog: Capture subscription_updated event
+      posthog.capture({
+        distinctId: updatedSubscription.metadata?.userId || updatedSubscription.customer as string,
+        event: 'subscription_updated',
+        properties: {
+          subscription_id: updatedSubscription.id,
+          customer_id: updatedSubscription.customer,
+          status: updatedSubscription.status,
+          source: 'webhook'
+        }
+      });
+      break;
     case 'customer.subscription.deleted':
-      const subscription = event.data.object as Stripe.Subscription;
-      await handleSubscriptionChange(subscription);
+      const deletedSubscription = event.data.object as Stripe.Subscription;
+      await handleSubscriptionChange(deletedSubscription);
+      // PostHog: Capture subscription_cancelled event
+      posthog.capture({
+        distinctId: deletedSubscription.metadata?.userId || deletedSubscription.customer as string,
+        event: 'subscription_cancelled',
+        properties: {
+          subscription_id: deletedSubscription.id,
+          customer_id: deletedSubscription.customer,
+          status: deletedSubscription.status,
+          source: 'webhook'
+        }
+      });
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);

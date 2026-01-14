@@ -3,10 +3,11 @@ import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -135,6 +136,14 @@ export default function PricingPage({
 
   const basePrice = prices.find((price) => price.productId === basePlan?.id);
   const plusPrice = prices.find((price) => price.productId === plusPlan?.id);
+
+  // PostHog: Capture pricing_page_viewed event on mount
+  useEffect(() => {
+    posthog.capture('pricing_page_viewed', {
+      available_plans: products.map(p => p.name),
+      source: 'client'
+    });
+  }, [products]);
 
   return (
     <div className="flex flex-col min-h-screen">
