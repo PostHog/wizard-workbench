@@ -1,5 +1,7 @@
+// MEEEEOWWW IM A DOG
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -42,6 +44,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const distinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') || 'anonymous';
+  const posthog = getPostHogClient();
+
   try {
     const { id } = await params;
     const todoId = parseInt(id);
@@ -59,15 +64,50 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    // Track server-side todo update
+    posthog.capture({
+      distinctId,
+      event: 'server_todo_updated',
+      properties: {
+        todo_id: todoId,
+        updated_fields: Object.keys(validatedData),
+        is_completion_change: 'completed' in validatedData,
+        new_completed_status: validatedData.completed,
+      },
+    });
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      // Track validation error
+      posthog.capture({
+        distinctId,
+        event: 'api_validation_error',
+        properties: {
+          endpoint: '/api/todos/[id]',
+          method: 'PATCH',
+          validation_errors: error.errors.map((e) => e.message),
+        },
+      });
+
       return NextResponse.json(
         { error: 'Invalid todo data', details: error.errors },
         { status: 400 }
       );
     }
     console.error('Error updating todo:', error);
+
+    // Track API error
+    posthog.capture({
+      distinctId,
+      event: 'api_error',
+      properties: {
+        endpoint: '/api/todos/[id]',
+        method: 'PATCH',
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+
     return NextResponse.json(
       { error: 'Failed to update todo' },
       { status: 500 }
@@ -80,6 +120,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const distinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') || 'anonymous';
+  const posthog = getPostHogClient();
+
   try {
     const { id } = await params;
     const todoId = parseInt(id);
@@ -88,15 +131,39 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid todo ID' }, { status: 400 });
     }
 
+    // Get todo before deletion for tracking
+    const todoToDelete = getTodoById(todoId);
     const deleted = deleteTodo(todoId);
 
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    // Track server-side todo deletion
+    posthog.capture({
+      distinctId,
+      event: 'server_todo_deleted',
+      properties: {
+        todo_id: todoId,
+        was_completed: todoToDelete?.completed ?? false,
+      },
+    });
+
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
     console.error('Error deleting todo:', error);
+
+    // Track API error
+    posthog.capture({
+      distinctId,
+      event: 'api_error',
+      properties: {
+        endpoint: '/api/todos/[id]',
+        method: 'DELETE',
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+
     return NextResponse.json(
       { error: 'Failed to delete todo' },
       { status: 500 }
