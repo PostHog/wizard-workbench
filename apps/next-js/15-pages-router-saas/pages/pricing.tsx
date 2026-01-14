@@ -1,12 +1,14 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import { GetServerSideProps } from 'next';
 import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -135,6 +137,17 @@ export default function PricingPage({
 
   const basePrice = prices.find((price) => price.productId === basePlan?.id);
   const plusPrice = prices.find((price) => price.productId === plusPlan?.id);
+
+  // Track pricing page view only once per mount
+  const hasTracked = useRef(false);
+  if (!hasTracked.current && typeof window !== 'undefined') {
+    posthog.capture('pricing_page_viewed', {
+      base_plan_price: basePrice?.unitAmount,
+      plus_plan_price: plusPrice?.unitAmount,
+      source: 'client'
+    });
+    hasTracked.current = true;
+  }
 
   return (
     <div className="flex flex-col min-h-screen">

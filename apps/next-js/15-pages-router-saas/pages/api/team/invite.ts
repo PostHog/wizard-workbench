@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
@@ -11,6 +12,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -107,6 +109,21 @@ export default async function handler(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+
+    // Capture team member invited event with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.email,
+      event: 'team_member_invited',
+      properties: {
+        inviter_email: user.email,
+        inviter_user_id: user.id,
+        invitee_email: email,
+        invitee_role: role,
+        team_id: userWithTeam.teamId,
+        source: 'api'
+      }
+    });
 
     return res.status(200).json({ success: 'Invitation sent successfully' });
   } catch (error) {

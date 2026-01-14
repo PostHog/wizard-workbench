@@ -1,6 +1,8 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCustomerPortalSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,6 +27,20 @@ export default async function handler(
     }
 
     const portalSession = await createCustomerPortalSession(team);
+
+    // Capture customer portal opened event with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.email,
+      event: 'customer_portal_opened',
+      properties: {
+        email: user.email,
+        user_id: user.id,
+        team_id: team.id,
+        source: 'api'
+      }
+    });
+
     return res.status(200).json({ url: portalSession.url });
   } catch (error) {
     console.error('Customer portal error:', error);
