@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 'use server';
 
 import { z } from 'zod';
@@ -25,6 +26,7 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -90,6 +92,27 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
+
+  // PostHog server-side tracking for sign in
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: email,
+    event: 'user_signed_in',
+    properties: {
+      email: email,
+      user_id: foundUser.id,
+      team_id: foundTeam?.id,
+      source: 'server'
+    }
+  });
+  posthog.identify({
+    distinctId: email,
+    properties: {
+      email: email,
+      user_id: foundUser.id,
+      team_id: foundTeam?.id
+    }
+  });
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -212,6 +235,41 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     setSession(createdUser)
   ]);
 
+  // PostHog server-side tracking for sign up
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: email,
+    event: 'user_signed_up',
+    properties: {
+      email: email,
+      user_id: createdUser.id,
+      team_id: teamId,
+      has_invitation: !!inviteId,
+      source: 'server'
+    }
+  });
+  posthog.identify({
+    distinctId: email,
+    properties: {
+      email: email,
+      user_id: createdUser.id,
+      team_id: teamId,
+      created_at: new Date().toISOString()
+    }
+  });
+  // Track invitation accepted if applicable
+  if (inviteId) {
+    posthog.capture({
+      distinctId: email,
+      event: 'invitation_accepted',
+      properties: {
+        email: email,
+        team_id: teamId,
+        source: 'server'
+      }
+    });
+  }
+
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
     const priceId = formData.get('priceId') as string;
@@ -225,6 +283,20 @@ export async function signOut() {
   const user = (await getUser()) as User;
   const userWithTeam = await getUserWithTeam(user.id);
   await logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT);
+
+  // PostHog server-side tracking for sign out
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: user.email,
+    event: 'user_signed_out',
+    properties: {
+      email: user.email,
+      user_id: user.id,
+      team_id: userWithTeam?.teamId,
+      source: 'server'
+    }
+  });
+
   (await cookies()).delete('session');
 }
 
@@ -282,6 +354,19 @@ export const updatePassword = validatedActionWithUser(
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PASSWORD)
     ]);
 
+    // PostHog server-side tracking for password update
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.email,
+      event: 'password_updated',
+      properties: {
+        email: user.email,
+        user_id: user.id,
+        team_id: userWithTeam?.teamId,
+        source: 'server'
+      }
+    });
+
     return {
       success: 'Password updated successfully.'
     };
@@ -333,6 +418,19 @@ export const deleteAccount = validatedActionWithUser(
         );
     }
 
+    // PostHog server-side tracking for account deletion
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.email,
+      event: 'account_deleted',
+      properties: {
+        email: user.email,
+        user_id: user.id,
+        team_id: userWithTeam?.teamId,
+        source: 'server'
+      }
+    });
+
     (await cookies()).delete('session');
     redirect('/sign-in');
   }
@@ -353,6 +451,20 @@ export const updateAccount = validatedActionWithUser(
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
+
+    // PostHog server-side tracking for account update
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: email,
+      event: 'account_updated',
+      properties: {
+        email: email,
+        name: name,
+        user_id: user.id,
+        team_id: userWithTeam?.teamId,
+        source: 'server'
+      }
+    });
 
     return { name, success: 'Account updated successfully.' };
   }
@@ -386,6 +498,20 @@ export const removeTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.REMOVE_TEAM_MEMBER
     );
+
+    // PostHog server-side tracking for team member removal
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.email,
+      event: 'team_member_removed',
+      properties: {
+        email: user.email,
+        user_id: user.id,
+        team_id: userWithTeam.teamId,
+        removed_member_id: memberId,
+        source: 'server'
+      }
+    });
 
     return { success: 'Team member removed successfully' };
   }
@@ -450,6 +576,21 @@ export const inviteTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+
+    // PostHog server-side tracking for team member invitation
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.email,
+      event: 'team_member_invited',
+      properties: {
+        inviter_email: user.email,
+        invitee_email: email,
+        user_id: user.id,
+        team_id: userWithTeam.teamId,
+        role: role,
+        source: 'server'
+      }
+    });
 
     // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
     // await sendInvitationEmail(email, userWithTeam.team.name, role)
