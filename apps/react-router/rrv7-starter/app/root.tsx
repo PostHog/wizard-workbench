@@ -20,6 +20,7 @@ import Footer from '@/components/footer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+import { PostHogProvider } from '@/lib/posthog'
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -88,8 +89,12 @@ export default function App() {
 
   const location = useLocation()
 
+  const posthogKey = import.meta.env.VITE_POSTHOG_KEY || ''
+  const posthogHost = import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com'
+
   return (
-    <RouteTransitionManager
+    <PostHogProvider apiKey={posthogKey} host={posthogHost}>
+      <RouteTransitionManager
       appear
       routes={routes}
       pathname={location.pathname}
@@ -128,6 +133,7 @@ export default function App() {
         </main>
       )}
     </RouteTransitionManager>
+    </PostHogProvider>
   )
 }
 
