@@ -1,10 +1,27 @@
 import { Navigate } from 'react-router'
 import { useAuth } from '~/context/AuthContext'
 import { getAllUsers, getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
+import { usePostHog } from '@posthog/react'
+import { useEffect, useRef } from 'react'
 import type { Route } from './+types/stats'
 
 export default function Stats() {
   const { user } = useAuth()
+  const posthog = usePostHog()
+  const hasTrackedView = useRef(false)
+
+  // Track stats page view (only once per mount)
+  useEffect(() => {
+    if (user && !hasTrackedView.current) {
+      posthog?.capture('stats_viewed', {
+        total_points: user.totalPoints,
+        countries_claimed: user.claimedCountries?.length || 0,
+        countries_liked: user.likedCountries?.length || 0,
+        countries_visited: user.visitedCountries?.length || 0,
+      })
+      hasTrackedView.current = true
+    }
+  }, [user, posthog])
 
   if (!user) {
     return <Navigate to="/login" replace />
