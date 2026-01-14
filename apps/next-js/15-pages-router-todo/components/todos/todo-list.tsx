@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -42,6 +43,12 @@ export function TodoList() {
       if (response.ok) {
         const newTodo = await response.json();
         setTodos([...todos, newTodo]);
+
+        // Track todo creation event
+        posthog.capture('todo created', {
+          todo_id: newTodo.id,
+          has_description: !!description,
+        });
       }
     } catch (error) {
       console.error('Failed to add todo:', error);
@@ -61,6 +68,17 @@ export function TodoList() {
       if (response.ok) {
         const updatedTodo = await response.json();
         setTodos(todos.map((todo) => (todo.id === id ? updatedTodo : todo)));
+
+        // Track todo completion/uncompletion event
+        if (completed) {
+          posthog.capture('todo completed', {
+            todo_id: id,
+          });
+        } else {
+          posthog.capture('todo uncompleted', {
+            todo_id: id,
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to update todo:', error);
@@ -75,6 +93,11 @@ export function TodoList() {
 
       if (response.ok) {
         setTodos(todos.filter((todo) => todo.id !== id));
+
+        // Track todo deletion event
+        posthog.capture('todo deleted', {
+          todo_id: id,
+        });
       }
     } catch (error) {
       console.error('Failed to delete todo:', error);
