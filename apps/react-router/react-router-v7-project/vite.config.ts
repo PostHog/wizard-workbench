@@ -12,5 +12,9 @@ export default defineConfig(() => {
       },
     },
     plugins: [reactRouter(), tsconfigPaths()],
+    ssr: {
+      // Required to avoid SSR errors with PostHog
+      noExternal: ["posthog-js", "@posthog/react"],
+    },
   };
 });
