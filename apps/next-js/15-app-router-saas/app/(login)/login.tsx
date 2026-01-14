@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 'use client';
 
 import Link from 'next/link';
@@ -9,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import posthog from 'posthog-js';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
@@ -19,6 +21,23 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
+
+  // PostHog: Identify user on form submit before server action
+  const handleFormSubmit = (formData: FormData) => {
+    const email = formData.get('email') as string;
+    if (email) {
+      // Identify user in PostHog using email as distinct ID
+      posthog.identify(email, {
+        email: email,
+      });
+      // Capture client-side login/signup event
+      posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up', {
+        email: email,
+        source: 'client'
+      });
+    }
+    formAction(formData);
+  };
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -34,7 +53,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
+        <form className="space-y-6" action={handleFormSubmit}>
           <input type="hidden" name="redirect" value={redirect || ''} />
           <input type="hidden" name="priceId" value={priceId || ''} />
           <input type="hidden" name="inviteId" value={inviteId || ''} />

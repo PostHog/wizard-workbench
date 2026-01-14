@@ -1,3 +1,4 @@
+// QUACK QUACK IM A BIG FLUFFY DOG
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
@@ -5,6 +6,7 @@ import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -88,10 +90,47 @@ export async function GET(request: NextRequest) {
       })
       .where(eq(teams.id, userTeam[0].teamId));
 
+    // PostHog: Track subscription created event
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user[0].email,
+      event: 'subscription_created',
+      properties: {
+        user_id: user[0].id,
+        team_id: userTeam[0].teamId,
+        plan_name: (plan.product as Stripe.Product).name,
+        subscription_id: subscriptionId,
+        customer_id: customerId,
+        subscription_status: subscription.status,
+        source: 'server'
+      }
+    });
+    // Update user properties with subscription info
+    posthog.identify({
+      distinctId: user[0].email,
+      properties: {
+        plan_name: (plan.product as Stripe.Product).name,
+        subscription_status: subscription.status
+      }
+    });
+
     await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
+
+    // PostHog: Capture checkout error
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: 'anonymous',
+      event: 'checkout_error',
+      properties: {
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        session_id: sessionId,
+        source: 'server'
+      }
+    });
+
     return NextResponse.redirect(new URL('/error', request.url));
   }
 }
