@@ -443,7 +443,7 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Building examples MCP resources"
-          npm run build:docs
+          npm run build
           echo "::endgroup::"
 
           echo "EXAMPLES_PATH=$HOME/examples" >> $GITHUB_ENV
