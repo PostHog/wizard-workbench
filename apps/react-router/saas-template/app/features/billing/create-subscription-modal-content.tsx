@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
@@ -47,6 +48,15 @@ export function CreateSubscriptionModalContent({
     keyPrefix: "noCurrentPlanModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
+
+  const handleCheckoutSubmit = (tier: Tier, interval: Interval) => {
+    posthog?.capture("subscription_checkout_started", {
+      interval,
+      lookup_key: priceLookupKeysByTierAndInterval[tier][interval],
+      tier,
+    });
+  };
 
   const navigation = useNavigation();
   const isSubmitting =
@@ -97,6 +107,7 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () => handleCheckoutSubmit(tier, interval),
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };

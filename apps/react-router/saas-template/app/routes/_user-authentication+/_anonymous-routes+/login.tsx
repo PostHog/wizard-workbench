@@ -1,4 +1,5 @@
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { IconMail } from "@tabler/icons-react";
 import { Trans, useTranslation } from "react-i18next";
 import { data, Form, href, Link, useNavigation } from "react-router";
@@ -68,6 +69,27 @@ export default function LoginRoute({
 }: Route.ComponentProps) {
   const { t } = useTranslation("userAuthentication", { keyPrefix: "login" });
   const { inviteLinkInfo } = loaderData;
+  const posthog = usePostHog();
+
+  const handleLoginFormSubmit = (method: "email" | "google") => {
+    const email =
+      method === "email"
+        ? (
+            document.querySelector(
+              'input[name="email"]',
+            ) as HTMLInputElement | null
+          )?.value
+        : undefined;
+
+    if (method === "email" && email) {
+      posthog?.identify(email, { email });
+    }
+
+    posthog?.capture("login_form_submitted", {
+      has_invite: !!inviteLinkInfo,
+      method,
+    });
+  };
 
   const isAwaitingEmailConfirmation =
     getIsAwaitingEmailConfirmation(actionData);
@@ -116,7 +138,11 @@ export default function LoginRoute({
         </div>
 
         {/* Email Login Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={() => handleLoginFormSubmit("email")}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -160,7 +186,7 @@ export default function LoginRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Login Form */}
-        <Form method="POST">
+        <Form method="POST" onSubmit={() => handleLoginFormSubmit("google")}>
           <Field>
             <Button
               name="intent"

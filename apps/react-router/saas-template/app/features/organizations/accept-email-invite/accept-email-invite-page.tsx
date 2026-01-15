@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
 
@@ -20,9 +21,16 @@ export function AcceptEmailInvitePage({
     keyPrefix: "acceptEmailInvite",
   });
   const { t: tCommon } = useTranslation("translation");
+  const posthog = usePostHog();
   const navigation = useNavigation();
   const isAcceptingInvite =
     navigation.formData?.get("intent") === ACCEPT_EMAIL_INVITE_INTENT;
+
+  const handleFormSubmit = () => {
+    posthog?.capture("email_invite_accepted", {
+      organization_name: organizationName,
+    });
+  };
 
   return (
     <main className="relative isolate px-6 lg:px-8">
@@ -58,6 +66,7 @@ export function AcceptEmailInvitePage({
           <Form
             className="mt-10 flex items-center justify-center gap-x-6"
             method="POST"
+            onSubmit={handleFormSubmit}
           >
             <Button
               disabled={isAcceptingInvite}

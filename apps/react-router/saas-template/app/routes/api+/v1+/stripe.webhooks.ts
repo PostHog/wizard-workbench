@@ -1,3 +1,5 @@
+import { PostHog } from "posthog-node";
+
 import type { Route } from "./+types/stripe.webhooks";
 import { stripeAdmin } from "~/features/billing/stripe-admin.server";
 import {
@@ -18,6 +20,14 @@ import {
   handleStripeSubscriptionScheduleUpdatedEvent,
 } from "~/features/billing/stripe-event-handlers.server";
 import { getErrorMessage } from "~/utils/get-error-message";
+
+function getPostHogClient() {
+  return new PostHog(process.env.VITE_PUBLIC_POSTHOG_KEY ?? "", {
+    flushAt: 1,
+    flushInterval: 0,
+    host: process.env.VITE_PUBLIC_POSTHOG_HOST ?? "",
+  });
+}
 
 const json = (payload: unknown, init?: ResponseInit) =>
   Response.json(payload, {
@@ -60,12 +70,42 @@ export async function action({ request }: Route.ActionArgs) {
         return handleStripeChargeDisputeClosedEvent(event);
       }
       case "checkout.session.completed": {
+        const posthog = getPostHogClient();
+        const session = event.data.object;
+        posthog.capture({
+          distinctId:
+            session.customer_email ||
+            session.customer?.toString() ||
+            "anonymous",
+          event: "stripe_checkout_completed",
+          properties: {
+            amount_total: session.amount_total,
+            checkout_session_id: session.id,
+            currency: session.currency,
+            customer_email: session.customer_email,
+            payment_status: session.payment_status,
+          },
+        });
+        await posthog.shutdown().catch(() => {});
         return handleStripeCheckoutSessionCompletedEvent(event);
       }
       case "customer.deleted": {
         return handleStripeCustomerDeletedEvent(event);
       }
       case "customer.subscription.created": {
+        const posthog = getPostHogClient();
+        const subscription = event.data.object;
+        posthog.capture({
+          distinctId: subscription.customer?.toString() || "anonymous",
+          event: "stripe_subscription_created",
+          properties: {
+            current_period_end: subscription.current_period_end,
+            current_period_start: subscription.current_period_start,
+            status: subscription.status,
+            subscription_id: subscription.id,
+          },
+        });
+        await posthog.shutdown().catch(() => {});
         return handleStripeCustomerSubscriptionCreatedEvent(event);
       }
       case "customer.subscription.deleted": {

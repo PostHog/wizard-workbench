@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
@@ -54,9 +55,32 @@ export function CancelOrModifySubscriptionModalContent({
     keyPrefix: "billingPage.pricingModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
 
   const isSubmitting =
     isSwitchingToLow || isSwitchingToMid || isSwitchingToHigh;
+
+  const handlePlanChange = (newTier: Tier, newInterval: Interval) => {
+    const isUpgrade =
+      (currentTier === "low" && (newTier === "mid" || newTier === "high")) ||
+      (currentTier === "mid" && newTier === "high");
+
+    posthog?.capture("subscription_plan_changed", {
+      change_type: isUpgrade ? "upgrade" : "downgrade",
+      current_interval: currentTierInterval,
+      current_tier: currentTier,
+      new_interval: newInterval,
+      new_tier: newTier,
+    });
+  };
+
+  const handleCancelClick: MouseEventHandler<HTMLButtonElement> = (e) => {
+    posthog?.capture("subscription_cancellation_initiated", {
+      current_interval: currentTierInterval,
+      current_tier: currentTier,
+    });
+    onCancelSubscriptionClick?.(e);
+  };
 
   // TODO: change to "Tier" - high, low, mid, enterprise
   const getFeatures = (key: string): string[] =>
@@ -113,8 +137,16 @@ export function CancelOrModifySubscriptionModalContent({
 
     // 3. Default static buttons for upgrade vs downgrade
     return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+      ? {
+          children: tModal("upgradeButton"),
+          disabled: isSubmitting,
+          onClick: () => handlePlanChange(tier, interval),
+        }
+      : {
+          children: tModal("downgradeButton"),
+          onClick: () => handlePlanChange(tier, interval),
+          variant: "outline",
+        };
   };
 
   return (
@@ -515,7 +547,7 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={handleCancelClick}
                 type="button"
                 variant="outline"
               >
