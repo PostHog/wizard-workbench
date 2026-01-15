@@ -9,6 +9,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -64,9 +65,39 @@ export default async function handler(
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
 
+    // Track account updated event with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'account_updated',
+      properties: {
+        teamId: userWithTeam?.teamId,
+        source: 'api',
+      },
+    });
+
+    // Update user properties in PostHog
+    posthog.identify({
+      distinctId: user.id.toString(),
+      properties: {
+        email,
+        name,
+      },
+    });
+
     return res.status(200).json({ name, success: 'Account updated successfully.' });
   } catch (error) {
     console.error('Update account error:', error);
+    // Track error with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: 'anonymous',
+      event: 'account_update_error',
+      properties: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        source: 'api',
+      },
+    });
     return res.status(500).json({ error: 'Failed to update account' });
   }
 }

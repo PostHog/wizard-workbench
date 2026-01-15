@@ -5,6 +5,7 @@ import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -94,10 +95,35 @@ export default async function handler(
       })
       .where(eq(teams.id, userTeam[0].teamId));
 
+    // Track checkout completed event with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: userId,
+      event: 'checkout_completed',
+      properties: {
+        subscriptionId,
+        customerId,
+        planName: (plan.product as Stripe.Product).name,
+        productId,
+        teamId: userTeam[0].teamId,
+        source: 'api',
+      },
+    });
+
     await setSession(user[0]);
     return res.redirect('/dashboard');
   } catch (error) {
     console.error('Error handling successful checkout:', error);
+    // Track checkout error with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: 'anonymous',
+      event: 'checkout_completion_error',
+      properties: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        source: 'api',
+      },
+    });
     return res.redirect('/error');
   }
 }

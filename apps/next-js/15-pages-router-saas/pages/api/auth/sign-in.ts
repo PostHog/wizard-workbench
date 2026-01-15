@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -95,6 +96,28 @@ export default async function handler(
       logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
     ]);
 
+    // Track sign-in event with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: foundUser.id.toString(),
+      event: 'user_signed_in',
+      properties: {
+        email: foundUser.email,
+        teamId: foundTeam?.id,
+        source: 'api',
+      },
+    });
+
+    // Identify user in PostHog
+    posthog.identify({
+      distinctId: foundUser.id.toString(),
+      properties: {
+        email: foundUser.email,
+        name: foundUser.name,
+        teamId: foundTeam?.id,
+      },
+    });
+
     if (redirect === 'checkout' && foundTeam) {
       const checkoutResult = await createCheckoutSession({
         team: foundTeam,
@@ -107,6 +130,16 @@ export default async function handler(
     return res.status(200).json({ success: true, redirectTo: '/dashboard' });
   } catch (error) {
     console.error('Sign in error:', error);
+    // Track sign-in error with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: 'anonymous',
+      event: 'sign_in_error',
+      properties: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        source: 'api',
+      },
+    });
     return res.status(500).json({ error: 'Failed to sign in. Please try again.' });
   }
 }
