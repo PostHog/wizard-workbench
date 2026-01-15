@@ -10,6 +10,7 @@ import { updateAccount } from '@/app/(login)/actions';
 import { User } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -103,6 +104,7 @@ export default function GeneralPage() {
               type="submit"
               className="bg-orange-500 hover:bg-orange-600 text-white"
               disabled={isPending}
+              onClick={() => posthog.capture('account_updated')}
             >
               {isPending ? (
                 <>

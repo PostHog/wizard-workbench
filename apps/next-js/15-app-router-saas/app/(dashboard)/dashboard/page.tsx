@@ -10,7 +10,7 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { customerPortalAction } from '@/lib/payments/actions';
-import { useActionState } from 'react';
+import { useActionState, useRef } from 'react';
 import { TeamDataWithMembers, User } from '@/lib/db/schema';
 import { removeTeamMember, inviteTeamMember } from '@/app/(login)/actions';
 import useSWR from 'swr';
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -61,7 +62,11 @@ function ManageSubscription() {
               </p>
             </div>
             <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={() => posthog.capture('manage_subscription_clicked')}
+              >
                 Manage Subscription
               </Button>
             </form>
@@ -161,6 +166,12 @@ function TeamMembers() {
                     variant="outline"
                     size="sm"
                     disabled={isRemovePending}
+                    onClick={() =>
+                      posthog.capture('team_member_removed', {
+                        member_id: member.id,
+                        member_role: member.role,
+                      })
+                    }
                   >
                     {isRemovePending ? 'Removing...' : 'Remove'}
                   </Button>
@@ -190,10 +201,23 @@ function InviteTeamMemberSkeleton() {
 function InviteTeamMember() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const isOwner = user?.role === 'owner';
+  const formRef = useRef<HTMLFormElement>(null);
   const [inviteState, inviteAction, isInvitePending] = useActionState<
     ActionState,
     FormData
   >(inviteTeamMember, {});
+
+  const handleInviteSubmit = () => {
+    const email = formRef.current?.email?.value;
+    const roleInput = formRef.current?.querySelector<HTMLInputElement>('input[name="role"]:checked');
+    const role = roleInput?.value;
+    if (email) {
+      posthog.capture('team_member_invited', {
+        invited_email: email,
+        invited_role: role,
+      });
+    }
+  };
 
   return (
     <Card>
@@ -201,7 +225,7 @@ function InviteTeamMember() {
         <CardTitle>Invite Team Member</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={inviteAction} className="space-y-4">
+        <form action={inviteAction} className="space-y-4" ref={formRef}>
           <div>
             <Label htmlFor="email" className="mb-2">
               Email
@@ -243,6 +267,7 @@ function InviteTeamMember() {
             type="submit"
             className="bg-orange-500 hover:bg-orange-600 text-white"
             disabled={isInvitePending || !isOwner}
+            onClick={handleInviteSubmit}
           >
             {isInvitePending ? (
               <>

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Lock, Trash2, Loader2 } from 'lucide-react';
 import { useActionState } from 'react';
 import { updatePassword, deleteAccount } from '@/app/(login)/actions';
+import posthog from 'posthog-js';
 
 type PasswordState = {
   currentPassword?: string;
@@ -98,6 +99,7 @@ export default function SecurityPage() {
               type="submit"
               className="bg-orange-500 hover:bg-orange-600 text-white"
               disabled={isPasswordPending}
+              onClick={() => posthog.capture('password_updated')}
             >
               {isPasswordPending ? (
                 <>
@@ -146,6 +148,10 @@ export default function SecurityPage() {
               variant="destructive"
               className="bg-red-600 hover:bg-red-700"
               disabled={isDeletePending}
+              onClick={() => {
+                posthog.capture('account_deleted');
+                posthog.reset();
+              }}
             >
               {isDeletePending ? (
                 <>
