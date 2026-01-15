@@ -35,7 +35,6 @@ import {
   runEvaluator,
   runEvaluatorOnBranch,
   createBranch,
-  saveWizardLogs,
   type App,
 } from "./utils.js";
 
@@ -517,7 +516,6 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
 
   // 2. Run wizard (always in CI mode)
   console.log("[2/5] Running wizard...\n");
-  const wizardStartTime = new Date();
   const result = await runWizard(app.path, { ci: true });
   console.log();
 
@@ -526,12 +524,6 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
     return false;
   }
   console.log(`      Completed in ${formatMs(result.duration)}\n`);
-
-  // Save wizard logs to app directory for inclusion in commit
-  const logFilePath = saveWizardLogs(app.path, wizardStartTime);
-  if (logFilePath) {
-    console.log(`      Saved logs: wizard-run.log\n`);
-  }
 
   // 3. Check changes in app directory only
   console.log("[3/5] Checking changes...");

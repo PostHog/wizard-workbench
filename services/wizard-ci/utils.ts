@@ -5,7 +5,7 @@
  * This file contains only wizard-ci specific utilities.
  */
 import { spawn } from "child_process";
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 
 // Re-export git operations from shared service
@@ -276,87 +276,3 @@ export function runEvaluatorOnBranch(options: EvaluateOnBranchOptions): Promise<
   });
 }
 
-// ============================================================================
-// Wizard Log Extraction
-// ============================================================================
-
-const WIZARD_LOG_PATH = "/tmp/posthog-wizard.log";
-
-/**
- * Extract logs from a specific wizard run based on start time.
- * Parses the log file and returns only entries from the run that started
- * at or after the given timestamp.
- */
-export function extractWizardLogs(runStartTime: Date): string | null {
-  if (!existsSync(WIZARD_LOG_PATH)) {
-    return null;
-  }
-
-  try {
-    const logContent = readFileSync(WIZARD_LOG_PATH, "utf-8");
-    const lines = logContent.split("\n");
-
-    // Add 1 second buffer to account for timing differences between
-    // when we capture the start time and when the wizard writes its header
-    const bufferMs = 1000;
-    const adjustedStartTime = new Date(runStartTime.getTime() - bufferMs);
-
-    // Find the run header that matches our start time (or is closest after it)
-    let captureStart = -1;
-    let captureEnd = lines.length;
-
-    for (let i = 0; i < lines.length; i++) {
-      // Check for run header pattern (3 lines: separator, timestamp, separator)
-      if (
-        lines[i]?.startsWith("=".repeat(60)) &&
-        lines[i + 1]?.startsWith("PostHog Wizard Run:") &&
-        lines[i + 2]?.startsWith("=".repeat(60))
-      ) {
-        const timestampStr = lines[i + 1].replace("PostHog Wizard Run: ", "").trim();
-        const headerTime = new Date(timestampStr);
-
-        // If this header is at or after our adjusted start time, this could be our run
-        if (headerTime >= adjustedStartTime) {
-          if (captureStart === -1) {
-            // First matching header - start capturing from here
-            captureStart = i;
-          } else {
-            // Found another header after ours - stop capturing before this
-            captureEnd = i;
-            break;
-          }
-        }
-      }
-    }
-
-    if (captureStart === -1) {
-      return null;
-    }
-
-    // Extract the lines for this run
-    const runLines = lines.slice(captureStart, captureEnd);
-    return runLines.join("\n").trim();
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Save wizard logs for a run to a file in the app directory.
- */
-export function saveWizardLogs(appPath: string, runStartTime: Date): string | null {
-  const logs = extractWizardLogs(runStartTime);
-  if (!logs) {
-    return null;
-  }
-
-  const logFileName = "wizard-run.log";
-  const logFilePath = join(appPath, logFileName);
-
-  try {
-    writeFileSync(logFilePath, logs);
-    return logFilePath;
-  } catch {
-    return null;
-  }
-}
