@@ -564,6 +564,7 @@ jobs:
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
 
       - name: Prepare artifact name
+        # Not used for anything rn
         if: always()
         id: artifact-name
         run: |
@@ -571,14 +572,6 @@ jobs:
           SAFE_NAME="${{ matrix.app }}"
           SAFE_NAME="${SAFE_NAME//\//-}"
           echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
-
-      - name: Upload logs
-        # Skip in act (local runner) - artifact upload requires GitHub infrastructure
-        if: always() && !env.ACT
-        uses: actions/upload-artifact@v4
-        with:
-          name: wizard-ci-logs-${{ github.run_id }}-${{ steps.artifact-name.outputs.safe_name }}
-          path: wizard-output.log
 
       - name: Upload examples resources
         # Only upload once (from the first matrix job) since the zip is identical across all jobs

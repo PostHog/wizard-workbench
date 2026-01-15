@@ -24,7 +24,6 @@ import {
   checkout,
   getCurrentBranch,
   getRepoRoot,
-  getRemoteUrl,
   listBranches,
   pushAndCreatePR,
   switchOrCreateBranch,
@@ -410,8 +409,7 @@ async function pushOnlyMode(opts: Options): Promise<void> {
 
   // Push and create PR
   console.log("\n[1/2] Pushing to remote...");
-  const remoteUrl = getRemoteUrl(repoRoot, opts.remote);
-  console.log(`      Remote: ${opts.remote} (${remoteUrl})`);
+  console.log(`      Remote: ${opts.remote}`);
 
   // Extract app name and shortId from branch name if it follows wizard-ci pattern
   const branchMatch = targetBranch.match(/^wizard-ci\/(.+)\/([a-f0-9]{7})$/);
@@ -618,8 +616,7 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
 
   // 5. Push and create PR
   console.log("[5/5] Pushing and creating PR...");
-  const remoteUrl = getRemoteUrl(repoRoot, opts.remote);
-  console.log(`      Remote: ${opts.remote} (${remoteUrl})`);
+  console.log(`      Remote: ${opts.remote}`);
 
   const prMeta: PRMetadata = {
     appName: app.name,
