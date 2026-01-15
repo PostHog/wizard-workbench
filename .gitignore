@@ -58,6 +58,7 @@ playwright/.cache/
 
 # Logs
 *.log
+!apps/**/*.log
 logs/
 *.tsbuildinfo
 
@@ -80,6 +81,7 @@ Desktop.ini
 *.sublime-*
 
 # Tools
+.claude/*.local.*
 .stripe/
 
 # Temporary

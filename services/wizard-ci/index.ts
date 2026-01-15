@@ -35,6 +35,7 @@ import {
   runEvaluator,
   runEvaluatorOnBranch,
   createBranch,
+  saveWizardLogs,
   type App,
 } from "./utils.js";
 
@@ -70,6 +71,8 @@ interface PRMetadata {
   wizardRef?: string;
   examplesRef?: string;
   posthogRef?: string;
+  source?: string;
+  sourceUrl?: string;
 }
 
 function getDependencyRefs(): Pick<PRMetadata, "wizardRef" | "examplesRef" | "posthogRef"> {
@@ -80,14 +83,38 @@ function getDependencyRefs(): Pick<PRMetadata, "wizardRef" | "examplesRef" | "po
   };
 }
 
+function getSourceInfo(): Pick<PRMetadata, "source" | "sourceUrl"> {
+  // Check if running in GitHub Actions
+  const githubRunId = process.env.GITHUB_RUN_ID;
+  const githubRepository = process.env.GITHUB_REPOSITORY;
+  const githubServerUrl = process.env.GITHUB_SERVER_URL || "https://github.com";
+
+  if (githubRunId && githubRepository) {
+    // Running in GitHub Actions - build the workflow run URL
+    const sourceUrl = `${githubServerUrl}/${githubRepository}/actions/runs/${githubRunId}`;
+    // Use CI_SOURCE env var if set (e.g., "scheduled", "manual", "dispatch"), otherwise default to "github-actions"
+    const source = process.env.CI_SOURCE || "github-actions";
+    return { source, sourceUrl };
+  }
+
+  // Local run - no link
+  return { source: "local" };
+}
+
 function buildPRTitle(meta: PRMetadata): string {
   return `[CI] (${meta.shortId}) ${meta.appName}`;
 }
 
 function buildPRBody(meta: PRMetadata): string {
+  // Build source line with optional link
+  const sourceLine = meta.sourceUrl
+    ? `Source: [${meta.source}](${meta.sourceUrl})`
+    : `Source: ${meta.source || "unknown"}`;
+
   const lines = [
     `Automated wizard CI run`,
     "",
+    sourceLine,
     `Trigger ID: \`${meta.shortId}\``,
     `App: \`${meta.appName}\``,
     `App directory: \`apps/${meta.appName}\``,
@@ -397,6 +424,7 @@ async function pushOnlyMode(opts: Options): Promise<void> {
     shortId: branchShortId,
     branch: targetBranch,
     ...getDependencyRefs(),
+    ...getSourceInfo(),
   };
 
   const result = pushAndCreatePR({
@@ -489,6 +517,7 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
 
   // 2. Run wizard (always in CI mode)
   console.log("[2/5] Running wizard...\n");
+  const wizardStartTime = new Date();
   const result = await runWizard(app.path, { ci: true });
   console.log();
 
@@ -497,6 +526,12 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
     return false;
   }
   console.log(`      Completed in ${formatMs(result.duration)}\n`);
+
+  // Save wizard logs to app directory for inclusion in commit
+  const logFilePath = saveWizardLogs(app.path, wizardStartTime);
+  if (logFilePath) {
+    console.log(`      Saved logs: wizard-run.log\n`);
+  }
 
   // 3. Check changes in app directory only
   console.log("[3/5] Checking changes...");
@@ -600,6 +635,7 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
     branch: branchName,
     duration: result.duration,
     ...getDependencyRefs(),
+    ...getSourceInfo(),
   };
 
   const prResult = pushAndCreatePR({

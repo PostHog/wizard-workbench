@@ -7,6 +7,9 @@
 import { execSync } from "child_process";
 import type { PRData, PRFile } from "./types.js";
 
+// Files to exclude from PR evaluation (skill instructions and logs, not code changes)
+const EXCLUDED_PATH_PATTERNS = [/^.*\/\.claude\//, /^\.claude\//, /wizard-run\.log$/];
+
 // ============================================================================
 // Shell escaping
 // ============================================================================
@@ -42,6 +45,39 @@ export function createPR(opts: CreatePROptions): string {
 }
 
 /**
+ * Check if a file path should be excluded from evaluation
+ */
+function isExcludedPath(filepath: string): boolean {
+  return EXCLUDED_PATH_PATTERNS.some((pattern) => pattern.test(filepath));
+}
+
+/**
+ * Filter diff to remove excluded file sections
+ */
+function filterDiff(diff: string): string {
+  const lines = diff.split("\n");
+  const filteredLines: string[] = [];
+  let skipCurrentFile = false;
+
+  for (const line of lines) {
+    // Check for diff header (e.g., "diff --git a/path/to/file b/path/to/file")
+    if (line.startsWith("diff --git ")) {
+      const match = line.match(/diff --git a\/(.+) b\/(.+)/);
+      if (match) {
+        const filepath = match[2];
+        skipCurrentFile = isExcludedPath(filepath);
+      }
+    }
+
+    if (!skipCurrentFile) {
+      filteredLines.push(line);
+    }
+  }
+
+  return filteredLines.join("\n");
+}
+
+/**
  * Fetch PR data by number using gh CLI.
  * Works without authentication for public repos.
  */
@@ -54,19 +90,25 @@ export function fetchPR(prNumber: number, cwd: string): PRData {
   const pr = JSON.parse(prJson);
 
   // Fetch PR diff
-  const diff = execSync(`gh pr diff ${prNumber}`, { cwd, encoding: "utf-8", stdio: "pipe" });
+  const rawDiff = execSync(`gh pr diff ${prNumber}`, { cwd, encoding: "utf-8", stdio: "pipe" });
 
   // Fetch PR files
   const filesJson = execSync(`gh pr view ${prNumber} --json files`, { cwd, encoding: "utf-8", stdio: "pipe" });
   const filesData = JSON.parse(filesJson);
 
-  const files: PRFile[] = (filesData.files || []).map((f: { path: string; additions: number; deletions: number }) => ({
-    filename: f.path,
-    status: "modified" as const, // gh CLI doesn't provide status, default to modified
-    additions: f.additions,
-    deletions: f.deletions,
-    patch: undefined, // Would need separate call per file
-  }));
+  // Filter out excluded paths (e.g., .claude/ skill files)
+  const files: PRFile[] = (filesData.files || [])
+    .filter((f: { path: string }) => !isExcludedPath(f.path))
+    .map((f: { path: string; additions: number; deletions: number }) => ({
+      filename: f.path,
+      status: "modified" as const, // gh CLI doesn't provide status, default to modified
+      additions: f.additions,
+      deletions: f.deletions,
+      patch: undefined, // Would need separate call per file
+    }));
+
+  // Filter diff to exclude skill files
+  const diff = filterDiff(rawDiff);
 
   return {
     number: pr.number,

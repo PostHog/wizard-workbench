@@ -118,7 +118,13 @@ jobs:
             POSTHOG_REF="${{ github.event.client_payload.posthog_ref || 'master' }}"
             POSTHOG_REGION="${{ github.event.client_payload.posthog_region || 'us' }}"
             TRIGGER_ID="${{ github.event.client_payload.trigger_id || '' }}"
-            SOURCE="${{ github.event.client_payload.source || 'dispatch' }}"
+            # Map source values to readable labels
+            RAW_SOURCE="${{ github.event.client_payload.source || 'dispatch' }}"
+            case "$RAW_SOURCE" in
+              wizard) SOURCE="wizard repo" ;;
+              examples) SOURCE="examples repo" ;;
+              *) SOURCE="$RAW_SOURCE" ;;
+            esac
             NOTIFY_SLACK="${{ github.event.client_payload.notify_slack || 'false' }}"
             # PR notification inputs (for upstream PR triggers)
             NOTIFY_PR="${{ github.event.client_payload.notify_pr || 'false' }}"
@@ -554,6 +560,8 @@ jobs:
           WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
           EXAMPLES_REF: ${{ needs.discover.outputs.input_examples_ref }}
           POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
+          # Source info (for PR body)
+          CI_SOURCE: ${{ needs.discover.outputs.input_source }}
 
       - name: Prepare artifact name
         if: always()
