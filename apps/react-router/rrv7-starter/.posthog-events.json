@@ -1,0 +1,37 @@
+[
+  {
+    "event": "follower_package_selected",
+    "description": "User selected a follower package on the buy-followers page",
+    "file": "app/routes/buy-followers.tsx"
+  },
+  {
+    "event": "follower_package_purchased",
+    "description": "User completed a fake follower purchase (conversion event)",
+    "file": "app/routes/buy-followers.tsx"
+  },
+  {
+    "event": "post_liked",
+    "description": "User liked a post in the feed",
+    "file": "app/components/PostCard.tsx"
+  },
+  {
+    "event": "post_unliked",
+    "description": "User unliked a post in the feed",
+    "file": "app/components/PostCard.tsx"
+  },
+  {
+    "event": "user_followed",
+    "description": "User followed another user from their profile page",
+    "file": "app/routes/profile.tsx"
+  },
+  {
+    "event": "cta_clicked",
+    "description": "User clicked a call-to-action button on the home page",
+    "file": "app/routes/home.tsx"
+  },
+  {
+    "event": "buy_followers_header_clicked",
+    "description": "User clicked Buy Followers button in the header",
+    "file": "app/components/header.tsx"
+  }
+]
