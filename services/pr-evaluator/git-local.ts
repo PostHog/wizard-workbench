@@ -18,8 +18,8 @@ import {
   getCommitMessages,
 } from "../github/index.js";
 
-// Files to exclude from PR evaluation (skill instructions, not code changes)
-const EXCLUDED_PATH_PATTERNS = [/^.*\/\.claude\//, /^\.claude\//];
+// Files to exclude from PR evaluation (skill instructions and logs, not code changes)
+const EXCLUDED_PATH_PATTERNS = [/^.*\/\.claude\//, /^\.claude\//, /wizard-run\.log$/];
 
 function isExcludedPath(filepath: string): boolean {
   return EXCLUDED_PATH_PATTERNS.some((pattern) => pattern.test(filepath));
