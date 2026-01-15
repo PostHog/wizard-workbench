@@ -7,7 +7,7 @@ import { prisma } from "~/utils/database.server";
 
 export async function loader({ params, context, request }: Route.LoaderArgs) {
   const { pasteId } = params;
-  
+
   if (!pasteId) {
     throw new Response("Paste ID required", { status: 400 });
   }
@@ -24,16 +24,16 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
   // If paste is public, allow access
   if (paste.isPublic) {
     await prisma.paste.update({
-      where: { id: pasteId },
       data: { viewCount: { increment: 1 } },
+      where: { id: pasteId },
     });
 
     return data({
+      pageTitle: paste.title,
       paste: {
         ...paste,
         viewCount: paste.viewCount + 1,
       },
-      pageTitle: paste.title,
     });
   }
 
@@ -49,7 +49,10 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
     throw new Response("Paste not found", { status: 404 });
   }
 
-  const userAccount = await retrieveUserAccountWithMembershipsFromDatabaseBySupabaseUserId(supabaseUser.id);
+  const userAccount =
+    await retrieveUserAccountWithMembershipsFromDatabaseBySupabaseUserId(
+      supabaseUser.id,
+    );
 
   if (!userAccount) {
     throw new Response("Paste not found", { status: 404 });
@@ -57,7 +60,7 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
 
   // Check if user is a member of the paste's organization
   const hasAccess = userAccount.memberships.some(
-    (membership) => membership.organization.id === paste.organizationId
+    (membership) => membership.organization.id === paste.organizationId,
   );
 
   if (!hasAccess) {
@@ -66,17 +69,17 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
 
   // User has access
   await prisma.paste.update({
-    where: { id: pasteId },
     data: { viewCount: { increment: 1 } },
+    where: { id: pasteId },
   });
 
   return data(
     {
+      pageTitle: paste.title,
       paste: {
         ...paste,
         viewCount: paste.viewCount + 1,
       },
-      pageTitle: paste.title,
     },
     { headers },
   );
@@ -100,4 +103,3 @@ export default function ViewPasteRoute({ loaderData }: Route.ComponentProps) {
     </div>
   );
 }
-

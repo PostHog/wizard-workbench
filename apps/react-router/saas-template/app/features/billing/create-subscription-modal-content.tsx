@@ -1,6 +1,7 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, FormEvent } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, href, Link, useNavigation } from "react-router";
@@ -47,6 +48,7 @@ export function CreateSubscriptionModalContent({
     keyPrefix: "noCurrentPlanModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
 
   const navigation = useNavigation();
   const isSubmitting =
@@ -101,13 +103,40 @@ export function CreateSubscriptionModalContent({
     };
   };
 
-  // figure out which tiers can’t cover your seats:
+  // figure out which tiers can't cover your seats:
   const unavailable = (["low", "mid", "high"] as Tier[]).filter(
     (tier) => planLimits[tier] < currentSeats,
   );
 
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    const lookupKey = (e.nativeEvent as SubmitEvent).submitter?.getAttribute(
+      "value",
+    );
+
+    // Parse the lookup key to extract tier and interval
+    let tier: Tier | undefined;
+    let interval: Interval | undefined;
+    for (const [tierKey, intervals] of Object.entries(
+      priceLookupKeysByTierAndInterval,
+    )) {
+      for (const [intervalKey, key] of Object.entries(intervals)) {
+        if (key === lookupKey) {
+          tier = tierKey as Tier;
+          interval = intervalKey as Interval;
+          break;
+        }
+      }
+    }
+
+    posthog?.capture("subscription_checkout_started", {
+      interval,
+      lookup_key: lookupKey,
+      tier,
+    });
+  };
+
   return (
-    <Form method="post" replace>
+    <Form method="post" onSubmit={handleSubmit} replace>
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>

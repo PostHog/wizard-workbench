@@ -1,5 +1,6 @@
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
-import type { ComponentProps, MouseEventHandler } from "react";
+import type { ComponentProps, FormEvent, MouseEventHandler } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, href, Link } from "react-router";
@@ -54,6 +55,7 @@ export function CancelOrModifySubscriptionModalContent({
     keyPrefix: "billingPage.pricingModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
 
   const isSubmitting =
     isSwitchingToLow || isSwitchingToMid || isSwitchingToHigh;
@@ -117,9 +119,57 @@ export function CancelOrModifySubscriptionModalContent({
       : { children: tModal("downgradeButton"), variant: "outline" };
   };
 
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    const lookupKey = (e.nativeEvent as SubmitEvent).submitter?.getAttribute(
+      "value",
+    );
+
+    // Parse the lookup key to extract tier and interval
+    let newTier: Tier | undefined;
+    let newInterval: Interval | undefined;
+    for (const [tierKey, intervals] of Object.entries(
+      priceLookupKeysByTierAndInterval,
+    )) {
+      for (const [intervalKey, key] of Object.entries(intervals)) {
+        if (key === lookupKey) {
+          newTier = tierKey as Tier;
+          newInterval = intervalKey as Interval;
+          break;
+        }
+      }
+    }
+
+    const isUpgrade =
+      (currentTier === "low" && (newTier === "mid" || newTier === "high")) ||
+      (currentTier === "mid" && newTier === "high");
+    const isDowngrade =
+      (currentTier === "high" && (newTier === "mid" || newTier === "low")) ||
+      (currentTier === "mid" && newTier === "low");
+
+    posthog?.capture("subscription_plan_changed", {
+      change_type: isUpgrade
+        ? "upgrade"
+        : isDowngrade
+          ? "downgrade"
+          : "interval_switch",
+      new_interval: newInterval,
+      new_tier: newTier,
+      previous_interval: currentTierInterval,
+      previous_tier: currentTier,
+    });
+  };
+
+  const handleCancelClick: MouseEventHandler<HTMLButtonElement> = (e) => {
+    posthog?.capture("subscription_cancelled", {
+      interval: currentTierInterval,
+      tier: currentTier,
+    });
+    onCancelSubscriptionClick?.(e);
+  };
+
   return (
     <>
-      <Form method="post" replace>
+      <Form method="post" onSubmit={handleSubmit} replace>
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"
@@ -515,7 +565,7 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={handleCancelClick}
                 type="button"
                 variant="outline"
               >
