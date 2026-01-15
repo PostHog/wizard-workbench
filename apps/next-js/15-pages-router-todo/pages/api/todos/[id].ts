@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -46,12 +47,37 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
       return res.status(200).json(updatedTodo);
     } catch (error) {
+      const posthog = getPostHogClient();
+
       if (error instanceof z.ZodError) {
+        // Track validation failure event
+        posthog.capture({
+          distinctId: 'anonymous',
+          event: 'todo_update_failed',
+          properties: {
+            todo_id: todoId,
+            error_type: 'validation_error',
+            error_details: error.errors,
+          },
+        });
+
         return res.status(400).json({
           error: 'Invalid todo data',
           details: error.errors,
         });
       }
+
+      // Track server error event
+      posthog.capture({
+        distinctId: 'anonymous',
+        event: 'todo_update_failed',
+        properties: {
+          todo_id: todoId,
+          error_type: 'server_error',
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+
       console.error('Error updating todo:', error);
       return res.status(500).json({ error: 'Failed to update todo' });
     }
@@ -67,6 +93,19 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
       return res.status(200).json({ message: 'Todo deleted successfully' });
     } catch (error) {
+      const posthog = getPostHogClient();
+
+      // Track server error event
+      posthog.capture({
+        distinctId: 'anonymous',
+        event: 'todo_delete_failed',
+        properties: {
+          todo_id: todoId,
+          error_type: 'server_error',
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+
       console.error('Error deleting todo:', error);
       return res.status(500).json({ error: 'Failed to delete todo' });
     }
