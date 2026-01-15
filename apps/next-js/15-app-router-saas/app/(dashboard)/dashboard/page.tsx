@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -61,7 +62,11 @@ function ManageSubscription() {
               </p>
             </div>
             <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={() => posthog.capture('subscription_managed')}
+              >
                 Manage Subscription
               </Button>
             </form>
@@ -161,6 +166,7 @@ function TeamMembers() {
                     variant="outline"
                     size="sm"
                     disabled={isRemovePending}
+                    onClick={() => posthog.capture('team_member_removed', { member_id: member.id })}
                   >
                     {isRemovePending ? 'Removing...' : 'Remove'}
                   </Button>
@@ -243,6 +249,7 @@ function InviteTeamMember() {
             type="submit"
             className="bg-orange-500 hover:bg-orange-600 text-white"
             disabled={isInvitePending || !isOwner}
+            onClick={() => posthog.capture('team_member_invited')}
           >
             {isInvitePending ? (
               <>
