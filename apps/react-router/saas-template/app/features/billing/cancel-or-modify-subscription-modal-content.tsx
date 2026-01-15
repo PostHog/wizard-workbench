@@ -1,5 +1,6 @@
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
-import type { ComponentProps, MouseEventHandler } from "react";
+import type { ComponentProps, FormEvent, MouseEventHandler } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, href, Link } from "react-router";
@@ -53,6 +54,7 @@ export function CancelOrModifySubscriptionModalContent({
   const { t: tModal } = useTranslation("billing", {
     keyPrefix: "billingPage.pricingModal",
   });
+  const posthog = usePostHog();
   const [billingPeriod, setBillingPeriod] = useState("annual");
 
   const isSubmitting =
@@ -117,9 +119,28 @@ export function CancelOrModifySubscriptionModalContent({
       : { children: tModal("downgradeButton"), variant: "outline" };
   };
 
+  const handlePlanChangeSubmit = (e: FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const lookupKey = formData.get("lookupKey") as string;
+    posthog?.capture("subscription_plan_changed", {
+      billing_period: billingPeriod,
+      current_interval: currentTierInterval,
+      current_tier: currentTier,
+      new_lookup_key: lookupKey,
+    });
+  };
+
+  const handleCancelClick: MouseEventHandler<HTMLButtonElement> = (e) => {
+    posthog?.capture("subscription_cancellation_clicked", {
+      current_interval: currentTierInterval,
+      current_tier: currentTier,
+    });
+    onCancelSubscriptionClick?.(e);
+  };
+
   return (
     <>
-      <Form method="post" replace>
+      <Form method="post" onSubmit={handlePlanChangeSubmit} replace>
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"
@@ -515,7 +536,7 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={handleCancelClick}
                 type="button"
                 variant="outline"
               >
