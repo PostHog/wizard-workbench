@@ -7,8 +7,8 @@
 import { execSync } from "child_process";
 import type { PRData, PRFile } from "./types.js";
 
-// Files to exclude from PR evaluation (skill instructions and logs, not code changes)
-const EXCLUDED_PATH_PATTERNS = [/^.*\/\.claude\//, /^\.claude\//, /wizard-run\.log$/];
+// Files to exclude from PR evaluation (skill instructions, not code changes)
+const EXCLUDED_PATH_PATTERNS = [/^.*\/\.claude\//, /^\.claude\//];
 
 // ============================================================================
 // Shell escaping

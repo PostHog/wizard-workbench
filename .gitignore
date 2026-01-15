@@ -58,7 +58,6 @@ playwright/.cache/
 
 # Logs
 *.log
-!apps/**/*.log
 logs/
 *.tsbuildinfo
 
