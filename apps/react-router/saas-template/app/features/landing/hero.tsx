@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconBook2 } from "@tabler/icons-react";
 import type { CSSProperties } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -18,6 +19,7 @@ const imageFadeStyle: CSSProperties = {
 export function Hero() {
   const { t } = useTranslation("landing", { keyPrefix: "hero" });
   const { t: tCommon } = useTranslation("translation");
+  const posthog = usePostHog();
 
   return (
     <section className="relative z-0 py-24 text-center sm:pt-32">
@@ -78,10 +80,28 @@ export function Hero() {
         </p>
 
         <div className="mt-10 flex items-center justify-center gap-2">
-          <Button render={<Link to="/register" />}>{t("cta.primary")}</Button>
+          <Button
+            onClick={() => {
+              posthog?.capture("cta_clicked", {
+                cta_destination: "/register",
+                cta_location: "hero",
+                cta_type: "primary",
+              });
+            }}
+            render={<Link to="/register" />}
+          >
+            {t("cta.primary")}
+          </Button>
 
           <Button
             className="text-foreground"
+            onClick={() => {
+              posthog?.capture("cta_clicked", {
+                cta_destination: "github",
+                cta_location: "hero",
+                cta_type: "secondary",
+              });
+            }}
             render={
               // biome-ignore lint/a11y/useAnchorContent: anchor receives props
               <a href="https://github.com/janhesters/react-router-saas-template" />

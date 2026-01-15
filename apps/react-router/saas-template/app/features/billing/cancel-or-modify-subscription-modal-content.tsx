@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
@@ -54,6 +55,7 @@ export function CancelOrModifySubscriptionModalContent({
     keyPrefix: "billingPage.pricingModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
 
   const isSubmitting =
     isSwitchingToLow || isSwitchingToMid || isSwitchingToHigh;
@@ -117,9 +119,48 @@ export function CancelOrModifySubscriptionModalContent({
       : { children: tModal("downgradeButton"), variant: "outline" };
   };
 
+  const handlePlanChange = (lookupKey: string) => {
+    const [newTier, newInterval] = lookupKey.split("_");
+    const isUpgrade =
+      (currentTier === "low" && (newTier === "mid" || newTier === "high")) ||
+      (currentTier === "mid" && newTier === "high");
+    const isIntervalChange =
+      newTier === currentTier && newInterval !== currentTierInterval;
+
+    posthog?.capture("subscription_plan_changed", {
+      change_type: isIntervalChange
+        ? "interval_change"
+        : isUpgrade
+          ? "upgrade"
+          : "downgrade",
+      new_interval: newInterval,
+      new_tier: newTier,
+      previous_interval: currentTierInterval,
+      previous_tier: currentTier,
+    });
+  };
+
+  const handleCancelClick: MouseEventHandler<HTMLButtonElement> = (e) => {
+    posthog?.capture("subscription_cancellation_initiated", {
+      current_interval: currentTierInterval,
+      current_tier: currentTier,
+    });
+    onCancelSubscriptionClick?.(e);
+  };
+
   return (
     <>
-      <Form method="post" replace>
+      <Form
+        method="post"
+        onSubmit={(e) => {
+          const formData = new FormData(e.currentTarget);
+          const lookupKey = formData.get("lookupKey") as string;
+          if (lookupKey) {
+            handlePlanChange(lookupKey);
+          }
+        }}
+        replace
+      >
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"
@@ -515,7 +556,7 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={handleCancelClick}
                 type="button"
                 variant="outline"
               >
