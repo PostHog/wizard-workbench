@@ -10,7 +10,7 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { customerPortalAction } from '@/lib/payments/actions';
-import { useActionState } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { TeamDataWithMembers, User } from '@/lib/db/schema';
 import { removeTeamMember, inviteTeamMember } from '@/app/(login)/actions';
 import useSWR from 'swr';
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -40,6 +41,14 @@ function SubscriptionSkeleton() {
 function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
 
+  const handleManageSubscription = (formData: FormData) => {
+    posthog.capture('subscription_managed', {
+      current_plan: teamData?.planName || 'Free',
+      subscription_status: teamData?.subscriptionStatus,
+    });
+    customerPortalAction(formData);
+  };
+
   return (
     <Card className="mb-8">
       <CardHeader>
@@ -60,7 +69,7 @@ function ManageSubscription() {
                   : 'No active subscription'}
               </p>
             </div>
-            <form action={customerPortalAction}>
+            <form action={handleManageSubscription}>
               <Button type="submit" variant="outline">
                 Manage Subscription
               </Button>
@@ -102,6 +111,11 @@ function TeamMembers() {
 
   const getUserDisplayName = (user: Pick<User, 'id' | 'name' | 'email'>) => {
     return user.name || user.email || 'Unknown User';
+  };
+
+  const handleRemoveMember = (formData: FormData) => {
+    posthog.capture('team_member_removed');
+    removeAction(formData);
   };
 
   if (!teamData?.teamMembers?.length) {
@@ -154,7 +168,7 @@ function TeamMembers() {
                 </div>
               </div>
               {index > 1 ? (
-                <form action={removeAction}>
+                <form action={handleRemoveMember}>
                   <input type="hidden" name="memberId" value={member.id} />
                   <Button
                     type="submit"
@@ -194,6 +208,16 @@ function InviteTeamMember() {
     ActionState,
     FormData
   >(inviteTeamMember, {});
+
+  const prevInviteSuccess = useRef(inviteState.success);
+
+  // Track team member invitation success
+  useEffect(() => {
+    if (inviteState.success && inviteState.success !== prevInviteSuccess.current) {
+      posthog.capture('team_member_invited');
+    }
+    prevInviteSuccess.current = inviteState.success;
+  }, [inviteState.success]);
 
   return (
     <Card>

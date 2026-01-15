@@ -1,0 +1,49 @@
+---
+title: PostHog Setup - Edit
+description: Implement PostHog event tracking in the identified files, following best practices and the example project
+---
+
+For each event in .posthog-events.json, add PostHog capture calls to the exact file path specified. Do not relocate events to different files.
+
+Carefully examine the included example project code: your implementation should match it as closely as possible.
+
+## Client vs Server
+
+Events must be captured where they occur:
+
+- **Client-side files** (UI components, browser code): Use the client SDK to capture events
+- **Server-side files** (API routes, server actions, backend handlers): Use the server SDK to capture events, if server-side code exists
+
+Do not move server events to client code. If an event was planned for a server file, implement it there using the server SDK. Create any necessary helper files for server-side PostHog initialization.
+
+## Correlating users across client and server
+
+Call `identify()` on the client during login/signup events. To correlate server-side events with the same user:
+
+1. Pass `X-POSTHOG-DISTINCT-ID` header from client to server
+2. Use that distinct ID when capturing server-side events
+
+This ensures user behavior from both domains appears under the same user in PostHog.
+
+## Implementation guidelines
+
+- Use environment variables for PostHog keys—never hardcode them
+- If a file has existing integration code for other services, place PostHog code alongside it without removing anything
+- Add useful properties to each event
+- Add error tracking where relevant
+- Consult the documentation and example project for correct patterns
+
+Remember: Do not alter the fundamental architecture of existing files. Make your additions minimal and targeted.
+
+## Status
+
+Status to report in this phase:
+
+- Inserting PostHog capture code
+- A status message for each file whose edits you are planning, including a high level summary of changes
+- A status message for each file you have edited
+
+
+---
+
+**Upon completion, continue with:** [basic-integration-1.2-revise.md](basic-integration-1.2-revise.md)
