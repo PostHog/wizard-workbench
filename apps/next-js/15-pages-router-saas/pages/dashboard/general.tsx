@@ -1,4 +1,5 @@
 import { GetServerSideProps } from 'next';
+import posthog from 'posthog-js';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { verifyToken } from '@/lib/auth/session';
 import {
@@ -52,10 +53,17 @@ export default function GeneralPage() {
           return;
         }
 
+        // Track account updated event
+        posthog.capture('account updated', {
+          updated_name: data.name,
+          updated_email: data.email
+        });
+
         setSuccess(result.success);
         setName(result.name);
       } catch (err) {
         setError('An unexpected error occurred. Please try again.');
+        posthog.captureException(err);
       }
     });
   }

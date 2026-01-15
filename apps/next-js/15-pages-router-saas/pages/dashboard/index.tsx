@@ -1,4 +1,5 @@
 import { GetServerSideProps } from 'next';
+import posthog from 'posthog-js';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
@@ -25,6 +26,12 @@ function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
 
   async function handleManageSubscription() {
+    // Track customer portal opened event
+    posthog.capture('customer portal opened', {
+      plan_name: teamData?.planName || 'Free',
+      subscription_status: teamData?.subscriptionStatus || 'none'
+    });
+
     try {
       const response = await fetch('/api/stripe/customer-portal', {
         method: 'POST',
@@ -40,6 +47,7 @@ function ManageSubscription() {
       }
     } catch (err) {
       console.error('Failed to open customer portal');
+      posthog.captureException(err);
     }
   }
 
@@ -102,10 +110,16 @@ function TeamMembers() {
           return;
         }
 
+        // Track team member removed event
+        posthog.capture('team member removed', {
+          member_id: memberId
+        });
+
         // Refresh team data
         mutate('/api/team');
       } catch (err) {
         setError('An unexpected error occurred');
+        posthog.captureException(err);
       }
     });
   }
@@ -207,11 +221,18 @@ function InviteTeamMember() {
           return;
         }
 
+        // Track team member invited event
+        posthog.capture('team member invited', {
+          invited_email: data.email,
+          invited_role: data.role
+        });
+
         setSuccess(result.success);
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {
         setError('An unexpected error occurred');
+        posthog.captureException(err);
       }
     });
   }

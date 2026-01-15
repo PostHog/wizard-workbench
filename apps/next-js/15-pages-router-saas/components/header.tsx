@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
 import {
@@ -24,6 +25,10 @@ function UserMenu() {
 
   async function handleSignOut() {
     try {
+      // Track sign out event before resetting
+      posthog.capture('user signed out');
+      posthog.reset();
+
       // Call sign-out API to delete HttpOnly session cookie
       await fetch('/api/auth/sign-out', {
         method: 'POST'
@@ -37,6 +42,7 @@ function UserMenu() {
       router.push('/');
     } catch (error) {
       console.error('Sign out error:', error);
+      posthog.captureException(error);
     }
   }
 

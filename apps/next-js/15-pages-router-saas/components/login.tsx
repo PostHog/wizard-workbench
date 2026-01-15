@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,7 +55,30 @@ export function Login({
           setError(result.error || 'An error occurred');
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
+
+          // Track sign in/up failure
+          posthog.capture(mode === 'signin' ? 'sign in failed' : 'sign up failed', {
+            error: result.error || 'Unknown error'
+          });
           return;
+        }
+
+        // Track successful sign in/up and identify user
+        if (mode === 'signin') {
+          posthog.identify(data.email, {
+            email: data.email
+          });
+          posthog.capture('user signed in', {
+            email: data.email
+          });
+        } else {
+          posthog.identify(data.email, {
+            email: data.email
+          });
+          posthog.capture('user signed up', {
+            email: data.email,
+            has_invite: !!inviteId
+          });
         }
 
         if (result.success && result.redirectTo) {
@@ -65,6 +89,7 @@ export function Login({
         }
       } catch (err) {
         setError('An unexpected error occurred. Please try again.');
+        posthog.captureException(err);
       }
     });
   }
