@@ -523,7 +523,7 @@ jobs:
           fi
 
           $CMD 2>&1 | tee wizard-output.log
-          WIZARD_EXIT=$?
+          WIZARD_EXIT=${PIPESTATUS[0]}
 
           # Save resources zips from running server (for artifact upload)
           curl -s http://localhost:8765/examples-mcp-resources.zip -o examples-mcp-resources.zip || true
