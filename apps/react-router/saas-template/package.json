@@ -1,40 +1,4 @@
 {
-  "name": "saas-template",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "react-router build",
-    "check": "biome check --write .",
-    "dev": "react-router dev",
-    "dev:mocks": "cross-env MOCKS=true npm run dev",
-    "lint": "biome ci --css-parse-tailwind-directives=true .",
-    "prepare": "husky",
-    "prisma:deploy": "npx prisma migrate deploy && npx prisma generate",
-    "prisma:migrate": "npx prisma migrate dev --name",
-    "prisma:push": "npx prisma db push && npx prisma generate",
-    "prisma:reset-dev": "npm run prisma:wipe && npm run prisma:seed && npm run dev",
-    "prisma:seed": "tsx ./prisma/seed.ts",
-    "prisma:setup": "prisma generate && prisma migrate deploy && prisma db push",
-    "prisma:studio": "npx prisma studio",
-    "prisma:wipe": "npx prisma migrate reset --force && npx prisma db push",
-    "quickstart": "cp .env.example .env && npm run prisma:setup && npm run prisma:seed && npm run dev:mocks",
-    "start": "react-router-serve ./build/server/index.js",
-    "start:mocks": "cross-env MOCKS=true npm run start",
-    "stripe:resend-events": "xargs -n1 stripe events resend < stripe-events.txt",
-    "test": "vitest --reporter=verbose --run",
-    "test:e2e": "npx playwright test",
-    "test:e2e:ui": "npx playwright test --ui",
-    "test:watch": "vitest --reporter=verbose",
-    "typecheck": "npm run typegen && tsc",
-    "typegen": "npm run typegen:router && npm run typegen:prisma",
-    "typegen:prisma": "prisma generate",
-    "typegen:router": "react-router typegen"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,css,md}": [
-      "biome check --write --unsafe"
-    ]
-  },
   "config": {
     "commitizen": {
       "path": "cz-conventional-changelog"
@@ -53,6 +17,7 @@
     "@oslojs/crypto": "1.0.1",
     "@oslojs/encoding": "1.1.0",
     "@paralleldrive/cuid2": "3.0.4",
+    "@posthog/react": "^1.5.2",
     "@prisma/adapter-pg": "7.1.0",
     "@prisma/client": "7.1.0",
     "@radix-ui/react-visually-hidden": "1.2.4",
@@ -78,6 +43,8 @@
     "input-otp": "1.4.2",
     "isbot": "5.1.32",
     "motion": "12.23.26",
+    "posthog-js": "^1.325.0",
+    "posthog-node": "^5.21.0",
     "pretty-cache-header": "1.0.0",
     "ramda": "0.32.0",
     "react": "19.2.3",
@@ -131,5 +98,41 @@
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "4.0.15"
   },
-  "packageManager": "npm@11.7.0"
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md}": [
+      "biome check --write --unsafe"
+    ]
+  },
+  "name": "saas-template",
+  "packageManager": "npm@11.7.0",
+  "private": true,
+  "scripts": {
+    "build": "react-router build",
+    "check": "biome check --write .",
+    "dev": "react-router dev",
+    "dev:mocks": "cross-env MOCKS=true npm run dev",
+    "lint": "biome ci --css-parse-tailwind-directives=true .",
+    "prepare": "husky",
+    "prisma:deploy": "npx prisma migrate deploy && npx prisma generate",
+    "prisma:migrate": "npx prisma migrate dev --name",
+    "prisma:push": "npx prisma db push && npx prisma generate",
+    "prisma:reset-dev": "npm run prisma:wipe && npm run prisma:seed && npm run dev",
+    "prisma:seed": "tsx ./prisma/seed.ts",
+    "prisma:setup": "prisma generate && prisma migrate deploy && prisma db push",
+    "prisma:studio": "npx prisma studio",
+    "prisma:wipe": "npx prisma migrate reset --force && npx prisma db push",
+    "quickstart": "cp .env.example .env && npm run prisma:setup && npm run prisma:seed && npm run dev:mocks",
+    "start": "react-router-serve ./build/server/index.js",
+    "start:mocks": "cross-env MOCKS=true npm run start",
+    "stripe:resend-events": "xargs -n1 stripe events resend < stripe-events.txt",
+    "test": "vitest --reporter=verbose --run",
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:watch": "vitest --reporter=verbose",
+    "typecheck": "npm run typegen && tsc",
+    "typegen": "npm run typegen:router && npm run typegen:prisma",
+    "typegen:prisma": "prisma generate",
+    "typegen:router": "react-router typegen"
+  },
+  "type": "module"
 }

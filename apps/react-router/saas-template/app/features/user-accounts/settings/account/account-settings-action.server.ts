@@ -22,6 +22,7 @@ import {
   updateUserAccountInDatabaseById,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { supabaseAdminClient } from "~/features/user-authentication/supabase.server";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { badRequest } from "~/utils/http-responses.server";
 import { removeImageFromStorage } from "~/utils/storage-helpers.server";
@@ -77,6 +78,16 @@ export async function accountSettingsAction({
         await updateUserAccountInDatabaseById({
           id: user.id,
           user: updates,
+        });
+
+        // Track user account update event
+        const posthog = (context as PostHogContext).posthog;
+        posthog?.capture({
+          event: "user_account_updated",
+          properties: {
+            updated_avatar: !!updates.imageUrl,
+            updated_name: !!updates.name,
+          },
         });
       }
 
@@ -159,6 +170,10 @@ export async function accountSettingsAction({
       // Delete the user account (this will cascade delete their memberships)
       await deleteUserAccountFromDatabaseById(user.id);
       await supabaseAdminClient.auth.admin.deleteUser(user.supabaseUserId);
+
+      // Track user account deletion event (churn)
+      const posthog = (context as PostHogContext).posthog;
+      posthog?.capture({ event: "user_account_deleted" });
 
       return redirectWithToast(
         "/",

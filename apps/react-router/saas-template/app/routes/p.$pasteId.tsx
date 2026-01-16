@@ -19,16 +19,16 @@ export async function loader({ params }: Route.LoaderArgs) {
 
   // Increment view count
   await prisma.paste.update({
-    where: { id: pasteId },
     data: { viewCount: { increment: 1 } },
+    where: { id: pasteId },
   });
 
   return data({
+    pageTitle: paste.title,
     paste: {
       ...paste,
       viewCount: paste.viewCount + 1, // Show updated count immediately
     },
-    pageTitle: paste.title,
   });
 }
 
@@ -50,4 +50,3 @@ export default function PublicPasteRoute({ loaderData }: Route.ComponentProps) {
     </div>
   );
 }
-
