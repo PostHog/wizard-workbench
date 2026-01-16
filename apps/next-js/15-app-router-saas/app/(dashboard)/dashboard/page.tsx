@@ -10,7 +10,7 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { customerPortalAction } from '@/lib/payments/actions';
-import { useActionState } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { TeamDataWithMembers, User } from '@/lib/db/schema';
 import { removeTeamMember, inviteTeamMember } from '@/app/(login)/actions';
 import useSWR from 'swr';
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -39,6 +40,13 @@ function SubscriptionSkeleton() {
 
 function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
+
+  const handleManageSubscriptionClick = () => {
+    posthog.capture('manage_subscription_clicked', {
+      current_plan: teamData?.planName || 'Free',
+      subscription_status: teamData?.subscriptionStatus
+    });
+  };
 
   return (
     <Card className="mb-8">
@@ -61,7 +69,11 @@ function ManageSubscription() {
               </p>
             </div>
             <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={handleManageSubscriptionClick}
+              >
                 Manage Subscription
               </Button>
             </form>
@@ -99,6 +111,20 @@ function TeamMembers() {
     ActionState,
     FormData
   >(removeTeamMember, {});
+
+  const prevRemovePendingRef = useRef(isRemovePending);
+
+  // Track successful team member removal
+  useEffect(() => {
+    if (
+      prevRemovePendingRef.current &&
+      !isRemovePending &&
+      removeState.success
+    ) {
+      posthog.capture('team_member_removed');
+    }
+    prevRemovePendingRef.current = isRemovePending;
+  }, [isRemovePending, removeState.success]);
 
   const getUserDisplayName = (user: Pick<User, 'id' | 'name' | 'email'>) => {
     return user.name || user.email || 'Unknown User';
@@ -194,6 +220,20 @@ function InviteTeamMember() {
     ActionState,
     FormData
   >(inviteTeamMember, {});
+
+  const prevInvitePendingRef = useRef(isInvitePending);
+
+  // Track successful team member invitation
+  useEffect(() => {
+    if (
+      prevInvitePendingRef.current &&
+      !isInvitePending &&
+      inviteState.success
+    ) {
+      posthog.capture('team_member_invited');
+    }
+    prevInvitePendingRef.current = isInvitePending;
+  }, [isInvitePending, inviteState.success]);
 
   return (
     <Card>

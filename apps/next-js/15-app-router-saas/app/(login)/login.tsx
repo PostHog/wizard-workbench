@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import posthog from 'posthog-js';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
@@ -19,6 +20,30 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
+  const formRef = useRef<HTMLFormElement>(null);
+  const prevPendingRef = useRef(pending);
+
+  // Track successful sign-in/sign-up and identify user
+  useEffect(() => {
+    // Detect transition from pending to not pending without error (success)
+    if (prevPendingRef.current && !pending && !state.error) {
+      const form = formRef.current;
+      if (form) {
+        const formData = new FormData(form);
+        const email = formData.get('email') as string;
+
+        if (email) {
+          // Identify user in PostHog
+          posthog.identify(email, { email });
+
+          // Capture sign-in or sign-up event
+          const eventName = mode === 'signin' ? 'user_signed_in' : 'user_signed_up';
+          posthog.capture(eventName, { email });
+        }
+      }
+    }
+    prevPendingRef.current = pending;
+  }, [pending, state.error, mode]);
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -34,7 +59,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
+        <form ref={formRef} className="space-y-6" action={formAction}>
           <input type="hidden" name="redirect" value={redirect || ''} />
           <input type="hidden" name="priceId" value={priceId || ''} />
           <input type="hidden" name="inviteId" value={inviteId || ''} />
