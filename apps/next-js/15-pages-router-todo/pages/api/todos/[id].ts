@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -35,6 +36,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (req.method === 'PATCH') {
+    const posthog = getPostHogClient();
+    const distinctId = req.headers['x-posthog-distinct-id'] as string || 'anonymous';
+
     try {
       const validatedData = updateTodoSchema.parse(req.body);
 
@@ -43,6 +47,18 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!updatedTodo) {
         return res.status(404).json({ error: 'Todo not found' });
       }
+
+      // Track server-side todo update
+      posthog.capture({
+        distinctId,
+        event: 'server_todo_updated',
+        properties: {
+          todo_id: todoId,
+          updated_fields: Object.keys(validatedData),
+          is_completion_change: 'completed' in validatedData,
+          source: 'api',
+        },
+      });
 
       return res.status(200).json(updatedTodo);
     } catch (error) {
@@ -53,11 +69,28 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         });
       }
       console.error('Error updating todo:', error);
+
+      // Track API error
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId,
+        event: 'api_error',
+        properties: {
+          error_type: 'server_error',
+          endpoint: `/api/todos/${todoId}`,
+          method: 'PATCH',
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+
       return res.status(500).json({ error: 'Failed to update todo' });
     }
   }
 
   if (req.method === 'DELETE') {
+    const posthog = getPostHogClient();
+    const distinctId = req.headers['x-posthog-distinct-id'] as string || 'anonymous';
+
     try {
       const deleted = deleteTodo(todoId);
 
@@ -65,9 +98,32 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(404).json({ error: 'Todo not found' });
       }
 
+      // Track server-side todo deletion
+      posthog.capture({
+        distinctId,
+        event: 'server_todo_deleted',
+        properties: {
+          todo_id: todoId,
+          source: 'api',
+        },
+      });
+
       return res.status(200).json({ message: 'Todo deleted successfully' });
     } catch (error) {
       console.error('Error deleting todo:', error);
+
+      // Track API error
+      posthog.capture({
+        distinctId,
+        event: 'api_error',
+        properties: {
+          error_type: 'server_error',
+          endpoint: `/api/todos/${todoId}`,
+          method: 'DELETE',
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+
       return res.status(500).json({ error: 'Failed to delete todo' });
     }
   }
