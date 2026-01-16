@@ -79,14 +79,25 @@ export function findApps(appsDir: string): App[] {
     if (!existsSync(dir)) return;
 
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (!entry.isDirectory() || entry.name.startsWith(".") || entry.name === "node_modules") {
+      // Skip hidden entries and node_modules
+      if (entry.name.startsWith(".") || entry.name === "node_modules") {
+        continue;
+      }
+
+      // Handle both directories and symlinks to directories
+      if (!entry.isDirectory() && !entry.isSymbolicLink()) {
         continue;
       }
 
       const fullPath = join(dir, entry.name);
       const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
 
-      if (existsSync(join(fullPath, "package.json"))) {
+      // Check for JS/TS projects (package.json) or Python projects (manage.py for Django, requirements.txt)
+      const isJsProject = existsSync(join(fullPath, "package.json"));
+      const isDjangoProject = existsSync(join(fullPath, "manage.py"));
+      const isPythonProject = existsSync(join(fullPath, "requirements.txt")) || existsSync(join(fullPath, "pyproject.toml"));
+
+      if (isJsProject || isDjangoProject || isPythonProject) {
         apps.push({ name: relativePath, path: fullPath });
       } else {
         scan(fullPath, relativePath);
