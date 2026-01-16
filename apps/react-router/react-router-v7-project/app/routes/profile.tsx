@@ -1,16 +1,24 @@
 import { Link, Navigate } from 'react-router'
 import { useAuth } from '~/context/AuthContext'
 import { getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
+import { usePostHog } from '@posthog/react'
 import type { Route } from './+types/profile'
 
 export default function Profile() {
   const { user, logout } = useAuth()
+  const posthog = usePostHog()
 
   if (!user) {
     return <Navigate to="/login" replace />
   }
 
   const currentUser = getCurrentUser() || user
+
+  const handleLogout = () => {
+    posthog?.capture('user_logged_out')
+    posthog?.reset()
+    logout()
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
@@ -64,7 +72,7 @@ export default function Profile() {
                   View Stats
                 </Link>
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
                 >
                   Logout
