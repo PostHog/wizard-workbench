@@ -1,13 +1,15 @@
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+from flask import Flask, request, current_app, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+import posthog
+from posthog import identify_context, new_context
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -53,6 +55,40 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    # Initialize PostHog
+    if not app.config.get('POSTHOG_DISABLED') and app.config.get('POSTHOG_API_KEY'):
+        posthog.api_key = app.config['POSTHOG_API_KEY']
+        posthog.host = app.config['POSTHOG_HOST']
+        posthog.debug = app.debug
+
+    # Global error handler for PostHog exception capture
+    # Flask's built-in error handlers bypass PostHog's default autocapture,
+    # so we need to manually capture exceptions here
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        # Capture the exception in PostHog and get the event UUID
+        event_id = None
+        if not app.config.get('POSTHOG_DISABLED') and app.config.get('POSTHOG_API_KEY'):
+            with new_context():
+                if current_user.is_authenticated:
+                    identify_context(str(current_user.id))
+                event_id = posthog.capture_exception(e)
+
+        # For API routes, return JSON error response
+        if hasattr(e, 'code'):
+            status_code = e.code
+        else:
+            status_code = 500
+
+        return (
+            jsonify({
+                'error': str(e),
+                'error_id': event_id,
+                'message': 'An error occurred. Reference ID: ' + (event_id or 'unknown'),
+            }),
+            status_code,
+        )
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)

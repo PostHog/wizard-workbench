@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 from flask_babel import _, get_locale
 import sqlalchemy as sa
 from langdetect import detect, LangDetectException
+from posthog import capture, identify_context, new_context
 from app import db
 from app.main.forms import EditProfileForm, EmptyForm, PostForm, SearchForm, \
     MessageForm
@@ -36,6 +37,16 @@ def index():
                     language=language)
         db.session.add(post)
         db.session.commit()
+
+        # PostHog: Capture post created event
+        if not current_app.config.get('POSTHOG_DISABLED') and current_app.config.get('POSTHOG_API_KEY'):
+            with new_context():
+                identify_context(str(current_user.id))
+                capture('post_created', properties={
+                    'post_length': len(form.post.data),
+                    'language': language or 'unknown'
+                })
+
         flash(_('Your post is now live!'))
         return redirect(url_for('main.index'))
     page = request.args.get('page', 1, type=int)
@@ -102,6 +113,13 @@ def edit_profile():
         current_user.username = form.username.data
         current_user.about_me = form.about_me.data
         db.session.commit()
+
+        # PostHog: Capture profile updated event
+        if not current_app.config.get('POSTHOG_DISABLED') and current_app.config.get('POSTHOG_API_KEY'):
+            with new_context():
+                identify_context(str(current_user.id))
+                capture('profile_updated')
+
         flash(_('Your changes have been saved.'))
         return redirect(url_for('main.edit_profile'))
     elif request.method == 'GET':
@@ -126,6 +144,16 @@ def follow(username):
             return redirect(url_for('main.user', username=username))
         current_user.follow(user)
         db.session.commit()
+
+        # PostHog: Capture user followed event
+        if not current_app.config.get('POSTHOG_DISABLED') and current_app.config.get('POSTHOG_API_KEY'):
+            with new_context():
+                identify_context(str(current_user.id))
+                capture('user_followed', properties={
+                    'followed_user_id': str(user.id),
+                    'followed_username': user.username
+                })
+
         flash(_('You are following %(username)s!', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -147,6 +175,16 @@ def unfollow(username):
             return redirect(url_for('main.user', username=username))
         current_user.unfollow(user)
         db.session.commit()
+
+        # PostHog: Capture user unfollowed event
+        if not current_app.config.get('POSTHOG_DISABLED') and current_app.config.get('POSTHOG_API_KEY'):
+            with new_context():
+                identify_context(str(current_user.id))
+                capture('user_unfollowed', properties={
+                    'unfollowed_user_id': str(user.id),
+                    'unfollowed_username': user.username
+                })
+
         flash(_('You are not following %(username)s.', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -170,6 +208,17 @@ def search():
     page = request.args.get('page', 1, type=int)
     posts, total = Post.search(g.search_form.q.data, page,
                                current_app.config['POSTS_PER_PAGE'])
+
+    # PostHog: Capture search performed event
+    if not current_app.config.get('POSTHOG_DISABLED') and current_app.config.get('POSTHOG_API_KEY'):
+        with new_context():
+            identify_context(str(current_user.id))
+            capture('search_performed', properties={
+                'query_length': len(g.search_form.q.data),
+                'results_count': total,
+                'page': page
+            })
+
     next_url = url_for('main.search', q=g.search_form.q.data, page=page + 1) \
         if total > page * current_app.config['POSTS_PER_PAGE'] else None
     prev_url = url_for('main.search', q=g.search_form.q.data, page=page - 1) \
@@ -190,6 +239,16 @@ def send_message(recipient):
         user.add_notification('unread_message_count',
                               user.unread_message_count())
         db.session.commit()
+
+        # PostHog: Capture message sent event
+        if not current_app.config.get('POSTHOG_DISABLED') and current_app.config.get('POSTHOG_API_KEY'):
+            with new_context():
+                identify_context(str(current_user.id))
+                capture('message_sent', properties={
+                    'recipient_id': str(user.id),
+                    'message_length': len(form.message.data)
+                })
+
         flash(_('Your message has been sent.'))
         return redirect(url_for('main.user', username=recipient))
     return render_template('send_message.html', title=_('Send Message'),
@@ -224,6 +283,13 @@ def export_posts():
     else:
         current_user.launch_task('export_posts', _('Exporting posts...'))
         db.session.commit()
+
+        # PostHog: Capture posts exported event
+        if not current_app.config.get('POSTHOG_DISABLED') and current_app.config.get('POSTHOG_API_KEY'):
+            with new_context():
+                identify_context(str(current_user.id))
+                capture('posts_exported')
+
     return redirect(url_for('main.user', username=current_user.username))
 
 
