@@ -1,10 +1,10 @@
 import {
   IconChartBar,
+  IconFileText,
   IconFolder,
   IconHelp,
   IconLayoutDashboard,
   IconSettings,
-  IconFileText,
 } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
