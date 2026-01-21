@@ -3,9 +3,17 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
+import posthog from 'posthog-js';
 
 export function SubmitButton() {
   const { pending } = useFormStatus();
+
+  const handleClick = () => {
+    // PostHog: Track pricing CTA click
+    posthog.capture('pricing_page_cta_clicked', {
+      buttonText: 'Get Started'
+    });
+  };
 
   return (
     <Button
@@ -13,6 +21,7 @@ export function SubmitButton() {
       disabled={pending}
       variant="outline"
       className="w-full rounded-full"
+      onClick={handleClick}
     >
       {pending ? (
         <>
