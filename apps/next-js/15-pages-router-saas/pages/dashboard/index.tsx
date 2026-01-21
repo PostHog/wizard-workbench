@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, PlusCircle } from 'lucide-react';
 import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -25,6 +26,12 @@ function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
 
   async function handleManageSubscription() {
+    // Capture manage subscription clicked event
+    posthog.capture('manage_subscription_clicked', {
+      current_plan: teamData?.planName || 'Free',
+      subscription_status: teamData?.subscriptionStatus
+    });
+
     try {
       const response = await fetch('/api/stripe/customer-portal', {
         method: 'POST',
@@ -189,6 +196,12 @@ function InviteTeamMember() {
       email: formData.get('email') as string,
       role: formData.get('role') as 'member' | 'owner'
     };
+
+    // Capture invite form submitted event
+    posthog.capture('invite_form_submitted', {
+      invitee_email: data.email,
+      invited_role: data.role
+    });
 
     startTransition(async () => {
       try {
