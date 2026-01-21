@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -53,6 +54,19 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         });
       }
       console.error('Error updating todo:', error);
+
+      // Track server-side error
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: 'anonymous',
+        event: 'todo_update_failed',
+        properties: {
+          todo_id: todoId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          source: 'api',
+        },
+      });
+
       return res.status(500).json({ error: 'Failed to update todo' });
     }
   }
@@ -68,6 +82,19 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(200).json({ message: 'Todo deleted successfully' });
     } catch (error) {
       console.error('Error deleting todo:', error);
+
+      // Track server-side error
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: 'anonymous',
+        event: 'todo_delete_failed',
+        properties: {
+          todo_id: todoId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          source: 'api',
+        },
+      });
+
       return res.status(500).json({ error: 'Failed to delete todo' });
     }
   }

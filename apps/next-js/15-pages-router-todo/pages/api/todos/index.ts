@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -40,6 +41,18 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         });
       }
       console.error('Error creating todo:', error);
+
+      // Track server-side error
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: 'anonymous',
+        event: 'todo_create_failed',
+        properties: {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          source: 'api',
+        },
+      });
+
       return res.status(500).json({ error: 'Failed to create todo' });
     }
   }
