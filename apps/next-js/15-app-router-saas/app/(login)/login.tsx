@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,14 +9,41 @@ import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import posthog from 'posthog-js';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
   const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const handleFormAction = async (formData: FormData) => {
+    const email = formData.get('email') as string;
+
+    // Get PostHog session info to pass to server for correlation
+    const distinctId = posthog.get_distinct_id();
+    const sessionId = posthog.get_session_id();
+    if (distinctId) {
+      formData.set('posthog_distinct_id', distinctId);
+    }
+    if (sessionId) {
+      formData.set('posthog_session_id', sessionId);
+    }
+
+    const action = mode === 'signin' ? signIn : signUp;
+    const result = await action({ error: '' }, formData);
+
+    // If no error, identify the user on the client side
+    if (!result?.error && email) {
+      posthog.identify(email, { email });
+    }
+
+    return result;
+  };
+
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
-    mode === 'signin' ? signIn : signUp,
+    handleFormAction,
     { error: '' }
   );
 

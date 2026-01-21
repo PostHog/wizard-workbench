@@ -1,0 +1,74 @@
+[
+  {
+    "event": "user_signed_up",
+    "description": "User successfully created a new account",
+    "file": "app/(login)/actions.ts",
+    "type": "server"
+  },
+  {
+    "event": "user_signed_in",
+    "description": "User successfully signed into their account",
+    "file": "app/(login)/actions.ts",
+    "type": "server"
+  },
+  {
+    "event": "user_signed_out",
+    "description": "User signed out of their account",
+    "file": "app/(login)/actions.ts",
+    "type": "server"
+  },
+  {
+    "event": "checkout_started",
+    "description": "User clicked to start the checkout process for a pricing plan",
+    "file": "app/(dashboard)/pricing/submit-button.tsx",
+    "type": "client"
+  },
+  {
+    "event": "checkout_completed",
+    "description": "User successfully completed checkout and subscribed to a plan",
+    "file": "app/api/stripe/checkout/route.ts",
+    "type": "server"
+  },
+  {
+    "event": "subscription_updated",
+    "description": "User's subscription status changed (upgraded, downgraded, or canceled)",
+    "file": "app/api/stripe/webhook/route.ts",
+    "type": "server"
+  },
+  {
+    "event": "team_member_invited",
+    "description": "User invited a new team member",
+    "file": "app/(login)/actions.ts",
+    "type": "server"
+  },
+  {
+    "event": "team_member_removed",
+    "description": "Team member was removed from the team",
+    "file": "app/(login)/actions.ts",
+    "type": "server"
+  },
+  {
+    "event": "account_updated",
+    "description": "User updated their account information (name or email)",
+    "file": "app/(login)/actions.ts",
+    "type": "server"
+  },
+  {
+    "event": "password_updated",
+    "description": "User successfully changed their password",
+    "file": "app/(login)/actions.ts",
+    "type": "server"
+  },
+  {
+    "event": "account_deleted",
+    "description": "User deleted their account (churn event)",
+    "file": "app/(login)/actions.ts",
+    "type": "server"
+  },
+  {
+    "event": "pricing_page_viewed",
+    "description": "User viewed the pricing page (top of conversion funnel)",
+    "file": "app/(dashboard)/pricing/page.tsx",
+    "type": "server"
+  }
+]
