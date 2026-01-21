@@ -1,0 +1,21 @@
+{
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build"
+    },
+    "devDependencies": {
+        "@tailwindcss/forms": "^0.5.2",
+        "@tailwindcss/postcss": "^4.1.4",
+        "axios": "^1.6.4",
+        "daisyui": "^5.0.27",
+        "laravel-vite-plugin": "^1.0",
+        "postcss": "^8.4.31",
+        "tailwindcss": "^4.1.4",
+        "vite": "^6.3.2"
+    },
+    "dependencies": {
+        "alpinejs": "^3.14.1"
+    }
+}
