@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
+import { usePostHog } from '@posthog/react';
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
 
@@ -35,6 +36,7 @@ export async function clientLoader() {
 
 export default function Countries({ loaderData }: Route.ComponentProps) {
   const { user } = useAuth();
+  const posthog = usePostHog();
   const [search, setSearch] = useState<string>("");
   const [region, setRegion] = useState<string>("");
 
@@ -44,10 +46,55 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
     setSearch(newSearch);
   };
 
+  // Handler for search submit (track on blur or enter)
+  const handleSearchBlur = () => {
+    if (search.trim()) {
+      posthog?.capture('country_search_performed', {
+        search_term: search,
+        results_count: filteredCountries?.length || 0,
+      });
+    }
+  };
+
   // Handler for region filter
   const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRegion = e.target.value;
     setRegion(newRegion);
+    if (newRegion) {
+      posthog?.capture('region_filter_applied', {
+        region: newRegion,
+      });
+    }
+  };
+
+  // Handler for claiming a country
+  const handleClaimCountry = (countryName: string, region: string) => {
+    posthog?.capture('country_claimed', {
+      country_name: countryName,
+      region: region,
+    });
+    claimCountry(countryName);
+    window.location.reload();
+  };
+
+  // Handler for liking a country
+  const handleLikeCountry = (countryName: string, region: string) => {
+    posthog?.capture('country_liked', {
+      country_name: countryName,
+      region: region,
+    });
+    likeCountry(countryName);
+    window.location.reload();
+  };
+
+  // Handler for visiting a country
+  const handleVisitCountry = (countryName: string, region: string) => {
+    posthog?.capture('country_visited', {
+      country_name: countryName,
+      region: region,
+    });
+    visitCountry(countryName);
+    window.location.reload();
   };
 
   // Ensure loaderData is an array, fallback to empty array
@@ -76,6 +123,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
           placeholder="Search by name..."
           value={search}
           onChange={handleSearchChange}
+          onBlur={handleSearchBlur}
           className="border border-gray-300 rounded px-3 py-2 w-full sm:w-1/2 focus:outline-none focus:border-indigo-500"
         />
         <select
@@ -136,10 +184,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
-                        claimCountry(countryName);
-                        window.location.reload();
-                      }}
+                      onClick={() => handleClaimCountry(countryName, country.region)}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isClaimed
                           ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
@@ -149,10 +194,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
-                        likeCountry(countryName);
-                        window.location.reload();
-                      }}
+                      onClick={() => handleLikeCountry(countryName, country.region)}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isLiked
                           ? 'bg-red-100 text-red-700'
@@ -162,10 +204,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
-                        visitCountry(countryName);
-                        window.location.reload();
-                      }}
+                      onClick={() => handleVisitCountry(countryName, country.region)}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
                     >
                       ✈️

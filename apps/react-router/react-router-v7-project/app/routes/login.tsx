@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
 import { getCurrentUser } from '~/lib/utils/auth'
 import type { Route } from './+types/login'
@@ -7,6 +8,7 @@ import type { Route } from './+types/login'
 export default function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
+  const posthog = usePostHog()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -23,6 +25,12 @@ export default function Login() {
       setIsLoading(false)
 
       if (success) {
+        posthog?.identify(username, {
+          username: username,
+        })
+        posthog?.capture('user_logged_in', {
+          username: username,
+        })
         navigate('/profile')
       } else {
         setError('Invalid credentials! (But this is fake, so any password works if the username exists)')
