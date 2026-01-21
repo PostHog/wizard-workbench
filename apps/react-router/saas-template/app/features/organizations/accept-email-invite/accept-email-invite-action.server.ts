@@ -13,6 +13,7 @@ import type { Route } from ".react-router/types/app/routes/organizations_+/+type
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { requireSupabaseUserExists } from "~/features/user-accounts/user-accounts-helpers.server";
 import { createSupabaseServerClient } from "~/features/user-authentication/supabase.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
@@ -93,6 +94,16 @@ export async function acceptEmailInviteAction({
               request,
               role: link.role,
               userAccountId: userAccount.id,
+            });
+
+            // Track invite accepted event
+            const posthog = (context as PostHogContext).posthog;
+            posthog?.capture({
+              event: "invite accepted",
+              properties: {
+                organization_id: link.organization.id,
+                role: link.role,
+              },
             });
 
             return redirectWithToast(

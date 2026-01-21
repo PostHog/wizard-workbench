@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import type { ReactElement } from "react";
 import type { ErrorResponse } from "react-router";
 import { isRouteErrorResponse, useParams, useRouteError } from "react-router";
@@ -53,6 +54,10 @@ export function GeneralErrorBoundary({
 }) {
   const error = useRouteError();
   const params = useParams();
+  const posthog = usePostHog();
+
+  // Capture exceptions with PostHog
+  posthog?.captureException(error);
 
   if (typeof document !== "undefined") {
     console.error("client error in general error boundary", error);

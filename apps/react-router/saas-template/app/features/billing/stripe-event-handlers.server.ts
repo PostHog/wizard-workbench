@@ -1,3 +1,4 @@
+import { PostHog } from "posthog-node";
 import type { Stripe } from "stripe";
 
 import { updateOrganizationInDatabaseById } from "../organizations/organizations-model.server";
@@ -22,6 +23,21 @@ import {
 } from "./stripe-subscription-schedule-model.server";
 import { stripeAdmin } from "~/features/billing/stripe-admin.server";
 import { getErrorMessage } from "~/utils/get-error-message";
+
+// Create a PostHog client for webhook events (no request context available)
+const getWebhookPostHog = () => {
+  if (
+    !process.env.VITE_PUBLIC_POSTHOG_KEY ||
+    !process.env.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    return null;
+  }
+  return new PostHog(process.env.VITE_PUBLIC_POSTHOG_KEY, {
+    flushAt: 1,
+    flushInterval: 0,
+    host: process.env.VITE_PUBLIC_POSTHOG_HOST,
+  });
+};
 
 const ok = () => Response.json({ message: "OK" });
 
@@ -163,6 +179,26 @@ export const handleStripeCustomerSubscriptionCreatedEvent = async (
 ) => {
   try {
     await createStripeSubscriptionInDatabase(event.data.object);
+
+    // Track subscription created event
+    const posthog = getWebhookPostHog();
+    if (posthog) {
+      const customerId =
+        typeof event.data.object.customer === "string"
+          ? event.data.object.customer
+          : event.data.object.customer?.id;
+
+      posthog.capture({
+        distinctId: customerId || "anonymous",
+        event: "subscription created",
+        properties: {
+          customer_id: customerId,
+          status: event.data.object.status,
+          subscription_id: event.data.object.id,
+        },
+      });
+      await posthog.shutdown();
+    }
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);

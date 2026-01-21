@@ -40,6 +40,7 @@ import { deleteStripeSubscriptionScheduleFromDatabaseById } from "./stripe-subsc
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/organizations_+/$organizationSlug+/settings+/+types/billing";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { OrganizationMembershipRole } from "~/generated/client";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
@@ -97,6 +98,16 @@ export async function billingAction({
           customerId: organization.stripeCustomerId,
           organizationSlug: params.organizationSlug,
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
+        });
+
+        // Track subscription cancellation event
+        const posthog = (context as PostHogContext).posthog;
+        posthog?.capture({
+          event: "subscription cancelled",
+          properties: {
+            organization_id: organization.id,
+            organization_slug: params.organizationSlug,
+          },
         });
 
         return redirect(cancelSession.url);
@@ -159,6 +170,17 @@ export async function billingAction({
           seatsUsed: organization._count.memberships,
         });
 
+        // Track checkout started event
+        const posthog = (context as PostHogContext).posthog;
+        posthog?.capture({
+          event: "checkout started",
+          properties: {
+            lookup_key: body.lookupKey,
+            organization_id: organization.id,
+            product_name: price.product.name,
+          },
+        });
+
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
         return redirect(checkoutSession.url!);
       }
@@ -187,6 +209,15 @@ export async function billingAction({
             subscription: { cancelAtPeriodEnd: false },
           });
         }
+
+        // Track subscription resumed event
+        const posthogResume = (context as PostHogContext).posthog;
+        posthogResume?.capture({
+          event: "subscription resumed",
+          properties: {
+            organization_id: organization.id,
+          },
+        });
 
         const toast = await createToastHeaders({
           title: i18n.t(
@@ -231,6 +262,16 @@ export async function billingAction({
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
           subscriptionItemId:
             organization.stripeSubscriptions[0].items[0].stripeId,
+        });
+
+        // Track plan change event
+        const posthogSwitch = (context as PostHogContext).posthog;
+        posthogSwitch?.capture({
+          event: "plan changed",
+          properties: {
+            new_lookup_key: body.lookupKey,
+            organization_id: organization.id,
+          },
         });
 
         return redirect(portalSession.url);
