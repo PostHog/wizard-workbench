@@ -2,8 +2,10 @@ import json
 import sys
 import time
 import sqlalchemy as sa
+import posthog
 from flask import render_template
 from rq import get_current_job
+from posthog import identify_context, new_context
 from app import create_app, db
 from app.models import User, Post, Task
 from app.email import send_email
@@ -49,8 +51,16 @@ def export_posts(user_id):
             attachments=[('posts.json', 'application/json',
                           json.dumps({'posts': data}, indent=4))],
             sync=True)
-    except Exception:
+    except Exception as e:
         _set_task_progress(100)
         app.logger.error('Unhandled exception', exc_info=sys.exc_info())
+
+        # PostHog: Capture exception for error tracking
+        try:
+            with new_context():
+                identify_context(str(user_id))
+                posthog.capture_exception(e)
+        except Exception:
+            pass  # Don't let PostHog errors break task error handling
     finally:
         _set_task_progress(100)

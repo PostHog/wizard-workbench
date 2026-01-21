@@ -18,6 +18,7 @@ try:
 except ImportError:
     Redis = None
     rq = None
+import posthog
 from config import Config
 
 
@@ -53,6 +54,12 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    # Initialize PostHog
+    if not app.config.get('POSTHOG_DISABLED'):
+        posthog.api_key = app.config.get('POSTHOG_API_KEY')
+        posthog.host = app.config.get('POSTHOG_HOST')
+        posthog.debug = app.debug
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
