@@ -15,6 +15,7 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
@@ -56,7 +57,18 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const maybeUser =
       await retrieveUserAccountWithActiveMembershipsFromDatabaseByEmail(email);
 
+    const posthog = (context as PostHogContext).posthog;
+
     if (maybeUser) {
+      // Track user login event
+      posthog?.capture({
+        event: "user_logged_in",
+        properties: {
+          auth_method: "oauth",
+          user_id: maybeUser.id,
+        },
+      });
+
       if (inviteLinkInfo || emailInviteInfo) {
         const organizationId =
           // biome-ignore lint/style/noNonNullAssertion: The is checked above
@@ -181,6 +193,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const userProfile = await saveUserAccountToDatabase({
       email,
       supabaseUserId: user.id,
+    });
+
+    // Track user signup event for new users
+    posthog?.capture({
+      event: "user_signed_up",
+      properties: {
+        auth_method: "oauth",
+        user_id: userProfile.id,
+      },
     });
 
     if (emailInviteInfo) {

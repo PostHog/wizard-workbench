@@ -1,3 +1,5 @@
+import { PostHog } from "posthog-node";
+
 import type { Route } from "./+types/stripe.webhooks";
 import { stripeAdmin } from "~/features/billing/stripe-admin.server";
 import {
@@ -66,6 +68,26 @@ export async function action({ request }: Route.ActionArgs) {
         return handleStripeCustomerDeletedEvent(event);
       }
       case "customer.subscription.created": {
+        // Track subscription creation in PostHog
+        const posthog = new PostHog(process.env.VITE_PUBLIC_POSTHOG_KEY!, {
+          flushAt: 1,
+          flushInterval: 0,
+          host: process.env.VITE_PUBLIC_POSTHOG_HOST!,
+        });
+
+        const subscription = event.data.object;
+        posthog.capture({
+          distinctId: subscription.customer as string,
+          event: "subscription_created",
+          properties: {
+            customer_id: subscription.customer,
+            status: subscription.status,
+            subscription_id: subscription.id,
+          },
+        });
+
+        await posthog.shutdown().catch(() => {});
+
         return handleStripeCustomerSubscriptionCreatedEvent(event);
       }
       case "customer.subscription.deleted": {
