@@ -6,6 +6,7 @@ import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import posthog from 'posthog-js';
 
 export function TodoList() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -100,6 +101,7 @@ export function TodoList() {
           <Link
             href="/about"
             className="text-sm text-primary hover:underline"
+            onClick={() => posthog.capture('about_page_link_clicked')}
           >
             About
           </Link>
