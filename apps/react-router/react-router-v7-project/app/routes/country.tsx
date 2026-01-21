@@ -1,4 +1,5 @@
 import type { Route } from "./+types/country";
+import { PostHogCaptureOnViewed } from '@posthog/react';
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const countryName = params.countryName;
@@ -22,38 +23,48 @@ export default function Country({ loaderData }: Route.ComponentProps) {
   };
 
   return (
-    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div className="flex flex-col gap-4">
-        <h2 className="text-3xl font-bold text-gray-900">{country.name}</h2>
-        <div className="space-y-2 text-gray-700">
-          <p>
-            <span className="font-semibold">Official Name:</span>{" "}
-            {country.officialName}
-          </p>
-          <p>
-            <span className="font-semibold">Capital:</span> {country.capital}
-          </p>
-          <p>
-            <span className="font-semibold">Region:</span> {country.region}
-          </p>
-          <p>
-            <span className="font-semibold">Subregion:</span>{" "}
-            {country.subregion}
-          </p>
-          <p>
-            <span className="font-semibold">Population:</span>{" "}
-            {country.population.toLocaleString()}
-          </p>
+    <PostHogCaptureOnViewed
+      name="country_details_viewed"
+      properties={{
+        country_name: country.name,
+        region: country.region,
+        subregion: country.subregion,
+        population: country.population,
+      }}
+    >
+      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="flex flex-col gap-4">
+          <h2 className="text-3xl font-bold text-gray-900">{country.name}</h2>
+          <div className="space-y-2 text-gray-700">
+            <p>
+              <span className="font-semibold">Official Name:</span>{" "}
+              {country.officialName}
+            </p>
+            <p>
+              <span className="font-semibold">Capital:</span> {country.capital}
+            </p>
+            <p>
+              <span className="font-semibold">Region:</span> {country.region}
+            </p>
+            <p>
+              <span className="font-semibold">Subregion:</span>{" "}
+              {country.subregion}
+            </p>
+            <p>
+              <span className="font-semibold">Population:</span>{" "}
+              {country.population.toLocaleString()}
+            </p>
+          </div>
         </div>
+        {country.flagUrl && (
+          <div className="flex justify-center items-center">
+            <img
+              src={country.flagUrl}
+              className="w-56 h-auto border rounded shadow-lg"
+            />
+          </div>
+        )}
       </div>
-      {country.flagUrl && (
-        <div className="flex justify-center items-center">
-          <img
-            src={country.flagUrl}
-            className="w-56 h-auto border rounded shadow-lg"
-          />
-        </div>
-      )}
-    </div>
+    </PostHogCaptureOnViewed>
   );
 }
