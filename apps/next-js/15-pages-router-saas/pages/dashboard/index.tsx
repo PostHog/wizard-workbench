@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, PlusCircle } from 'lucide-react';
 import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -25,6 +26,12 @@ function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
 
   async function handleManageSubscription() {
+    // PostHog: Track manage_subscription_clicked event
+    posthog.capture('manage_subscription_clicked', {
+      current_plan: teamData?.planName,
+      subscription_status: teamData?.subscriptionStatus
+    });
+
     try {
       const response = await fetch('/api/stripe/customer-portal', {
         method: 'POST',
@@ -40,6 +47,7 @@ function ManageSubscription() {
       }
     } catch (err) {
       console.error('Failed to open customer portal');
+      posthog.captureException(err);
     }
   }
 
