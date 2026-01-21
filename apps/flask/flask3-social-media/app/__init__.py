@@ -8,6 +8,7 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+import posthog
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -53,6 +54,12 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    # Initialize PostHog
+    if app.config.get('POSTHOG_API_KEY'):
+        posthog.api_key = app.config['POSTHOG_API_KEY']
+        posthog.host = app.config.get('POSTHOG_HOST', 'https://us.i.posthog.com')
+        posthog.debug = app.debug
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
