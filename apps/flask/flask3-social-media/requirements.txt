@@ -12,6 +12,7 @@ Flask-SQLAlchemy
 Flask-WTF
 gunicorn
 langdetect
+posthog
 PyJWT
 python-dotenv
 redis
