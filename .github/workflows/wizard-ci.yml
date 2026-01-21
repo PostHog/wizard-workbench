@@ -198,9 +198,8 @@ jobs:
       - name: Find available apps
         id: find-apps
         run: |
-          # Find all directories with package.json in apps/
-          APPS=$(find apps -name "package.json" -not -path "*/node_modules/*" \
-            | sed 's|apps/||' | sed 's|/package.json||' | sort)
+          # List all apps using the fixed directory structure: apps/{framework}/{app}
+          APPS=$(ls -d apps/*/* 2>/dev/null | sed 's|apps/||' | sort)
 
           # Convert to JSON array
           APPS_JSON=$(echo "$APPS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
