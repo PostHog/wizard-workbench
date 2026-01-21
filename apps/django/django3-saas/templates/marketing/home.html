@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Django SaaS - Home{% endblock %}
+
+{% block content %}
+<section style="text-align: center; padding: 3rem 0;">
+    <h1>Build Better Products Faster</h1>
+    <p style="font-size: 1.2rem; color: var(--muted); max-width: 600px; margin: 0 auto;">
+        A modern SaaS platform to manage your projects, track progress, and scale your business.
+    </p>
+    <div style="margin-top: 2rem;">
+        {% if user.is_authenticated %}
+            <a href="{% url 'dashboard:index' %}" class="btn btn-primary">Go to Dashboard</a>
+        {% else %}
+            <a href="{% url 'accounts:register' %}" class="btn btn-primary">Start Free Trial</a>
+            <a href="{% url 'accounts:login' %}" class="btn btn-secondary">Login</a>
+        {% endif %}
+    </div>
+</section>
+
+<section style="padding: 2rem 0;">
+    <h2 style="text-align: center;">Why Choose Us?</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-top: 2rem;">
+        <div class="card">
+            <h3>Project Management</h3>
+            <p>Organize and track all your projects in one place with our intuitive dashboard.</p>
+        </div>
+        <div class="card">
+            <h3>Flexible Plans</h3>
+            <p>Choose from multiple pricing tiers that grow with your business needs.</p>
+        </div>
+        <div class="card">
+            <h3>Activity Tracking</h3>
+            <p>Monitor your team's progress with detailed activity logs and metrics.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

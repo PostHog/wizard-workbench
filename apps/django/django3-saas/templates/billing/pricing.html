@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Pricing - Django SaaS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 2rem; }
+    .pricing-card { text-align: center; }
+    .pricing-card.featured { border-color: var(--primary); border-width: 2px; }
+    .pricing-card h3 { margin-bottom: 0.5rem; }
+    .pricing-price { font-size: 2.5rem; font-weight: bold; margin: 1rem 0; }
+    .pricing-price span { font-size: 1rem; color: var(--muted); }
+    .pricing-features { list-style: none; padding: 0; margin: 1.5rem 0; text-align: left; }
+    .pricing-features li { padding: 0.5rem 0; border-bottom: 1px solid #eee; }
+    .pricing-features li:last-child { border-bottom: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 style="text-align: center;">Simple, Transparent Pricing</h1>
+<p style="text-align: center;" class="text-muted">Choose the plan that fits your needs.</p>
+
+<div class="pricing-grid">
+    {% for plan in plans %}
+    <div class="card pricing-card {% if plan.is_featured %}featured{% endif %}">
+        {% if plan.is_featured %}<span class="badge">Popular</span>{% endif %}
+        <h3>{{ plan.name }}</h3>
+        <div class="pricing-price">
+            {{ plan.get_price_display }}
+        </div>
+        {% if plan.description %}
+            <p class="text-muted">{{ plan.description }}</p>
+        {% endif %}
+        <ul class="pricing-features">
+            {% for feature in plan.features %}
+            <li>{{ feature }}</li>
+            {% endfor %}
+        </ul>
+        {% if user.is_authenticated %}
+            <a href="{% url 'billing:subscribe' plan.slug %}" class="btn {% if plan.is_featured %}btn-primary{% else %}btn-secondary{% endif %}">
+                Subscribe
+            </a>
+        {% else %}
+            <a href="{% url 'accounts:register' %}" class="btn {% if plan.is_featured %}btn-primary{% else %}btn-secondary{% endif %}">
+                Get Started
+            </a>
+        {% endif %}
+    </div>
+    {% empty %}
+    <p class="text-muted">No plans available.</p>
+    {% endfor %}
+</div>
+{% endblock %}
