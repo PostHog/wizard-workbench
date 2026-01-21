@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 // Disable body parsing, need raw body for Stripe webhook signature verification
 export const config = {
@@ -41,6 +42,23 @@ export default async function handler(
     case 'customer.subscription.deleted':
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+
+      // PostHog: Capture subscription updated event
+      const posthog = getPostHogClient();
+      const customerId = typeof subscription.customer === 'string'
+        ? subscription.customer
+        : subscription.customer.id;
+      posthog.capture({
+        distinctId: customerId,
+        event: 'subscription_updated',
+        properties: {
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscription.id,
+          subscriptionStatus: subscription.status,
+          eventType: event.type,
+          source: 'webhook'
+        }
+      });
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);

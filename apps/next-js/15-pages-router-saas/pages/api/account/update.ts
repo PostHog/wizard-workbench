@@ -9,6 +9,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -63,6 +64,28 @@ export default async function handler(
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
+
+    // PostHog: Capture account updated event and update user properties
+    const posthog = getPostHogClient();
+    posthog.identify({
+      distinctId: email,
+      properties: {
+        email: email,
+        name: name,
+        teamId: userWithTeam?.teamId
+      }
+    });
+    posthog.capture({
+      distinctId: email,
+      event: 'account_updated',
+      properties: {
+        previousEmail: user.email,
+        newEmail: email,
+        name: name,
+        teamId: userWithTeam?.teamId,
+        source: 'api'
+      }
+    });
 
     return res.status(200).json({ name, success: 'Account updated successfully.' });
   } catch (error) {

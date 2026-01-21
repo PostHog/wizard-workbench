@@ -7,6 +7,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -74,6 +75,15 @@ function PricingCard({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    // PostHog: Capture pricing plan selected event
+    posthog.capture('pricing_plan_selected', {
+      planName: name,
+      priceId: priceId,
+      price: price,
+      interval: interval,
+      trialDays: trialDays
+    });
+
     startTransition(async () => {
       try {
         const response = await fetch('/api/stripe/create-checkout', {
@@ -93,6 +103,8 @@ function PricingCard({
         }
       } catch (err) {
         console.error('Checkout error:', err);
+        // PostHog: Capture exception
+        posthog.captureException(err as Error);
       }
     });
   }
