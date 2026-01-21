@@ -1,15 +1,44 @@
+import { usePostHog } from "@posthog/react";
 import { Link } from "react-router";
 import { useCart, type CartItem } from "../context/CartContext";
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
+  const posthog = usePostHog();
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+    posthog?.capture("cart_item_removed", {
+      product_id: item.id,
+      product_name: item.name,
+      product_category: item.category,
+      product_price: item.price,
+      quantity_removed: item.quantity,
+    });
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
+    const previousQuantity = item.quantity;
     updateQuantity(item.id, newQuantity);
+    posthog?.capture("cart_item_quantity_updated", {
+      product_id: item.id,
+      product_name: item.name,
+      previous_quantity: previousQuantity,
+      new_quantity: newQuantity,
+    });
+  };
+
+  const handleCheckoutStart = () => {
+    posthog?.capture("checkout_started", {
+      cart_total: getCartTotal(),
+      cart_item_count: cart.length,
+      cart_items: cart.map((item) => ({
+        product_id: item.id,
+        product_name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    });
   };
 
   if (cart.length === 0) {
@@ -154,6 +183,7 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={handleCheckoutStart}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout
