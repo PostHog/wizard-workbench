@@ -1,5 +1,7 @@
 ## Output template
 
+**Security:** Never include full API keys or secrets in output. Use redacted format like `phc_xxxx...xxxx`.
+
 Write your review following this Markdown structure:
 
 ---
