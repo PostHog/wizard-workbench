@@ -1,0 +1,74 @@
+@php
+    $brand = config('branding');
+    $brandName = data_get($brand, 'name', config('app.name', 'Laravel'));
+    $tagline = data_get($brand, 'tagline', 'Launch faster with a production-ready SaaS kit.');
+@endphp
+
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+
+        <x-seo :title="$brandName" :description="$tagline" />
+        <link rel="icon" href="{{ asset(data_get($brand, 'assets.favicon', 'favicon.ico')) }}" type="image/svg+xml">
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link href="https://fonts.bunny.net/css?family=manrope:300,400,500,600,700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=space-grotesk:400,500,600,700&display=swap" rel="stylesheet" />
+
+        <!-- Scripts -->
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    </head>
+    <body class="min-h-screen antialiased">
+        <div class="grid min-h-screen lg:grid-cols-2">
+            <div class="relative hidden overflow-hidden border-r border-sand-200 bg-sand-50 px-10 py-12 lg:flex">
+                <div class="absolute -top-24 left-0 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,var(--color-clay-500),transparent_70%)] opacity-35 blur-3xl"></div>
+                <div class="relative z-10 flex h-full flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 font-display text-lg">
+                            <span class="flex h-10 w-10 items-center justify-center rounded-full bg-ink-900 text-white">
+                                {{ strtoupper(substr($brandName, 0, 1)) }}
+                            </span>
+                            <span>{{ $brandName }}</span>
+                        </div>
+                        <p class="max-w-sm text-lg text-ink-700">
+                            {{ $tagline }}
+                        </p>
+                    </div>
+                    <div class="space-y-3 text-sm text-ink-600">
+                        <div class="flex items-center gap-2">
+                            <span class="h-2 w-2 rounded-full bg-moss-500"></span>
+                            Billing-ready with Cashier and Stripe
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="h-2 w-2 rounded-full bg-clay-500"></span>
+                            Livewire + Alpine powered workflows
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="h-2 w-2 rounded-full bg-ink-600"></span>
+                            SEO, OG images, and email templates
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center px-6 py-12">
+                <div class="w-full max-w-md rounded-3xl border border-sand-200 bg-white/85 p-8 shadow-xl shadow-ink-900/10">
+                    <div class="mb-6">
+                        <a href="{{ route('home') }}" class="flex items-center gap-3 font-display text-lg text-ink-900">
+                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-ink-900 text-white">
+                                {{ strtoupper(substr($brandName, 0, 1)) }}
+                            </span>
+                            <span>{{ $brandName }}</span>
+                        </a>
+                    </div>
+                    {{ $slot }}
+                </div>
+            </div>
+        </div>
+
+        @include('cookie-consent::index')
+    </body>
+</html>
