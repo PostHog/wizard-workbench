@@ -15,11 +15,14 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
+  const posthog = (context as PostHogContext).posthog;
+
   try {
     const { supabase, headers } = context.get(anonymousContext);
     const i18n = getInstance(context);
@@ -57,6 +60,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       await retrieveUserAccountWithActiveMembershipsFromDatabaseByEmail(email);
 
     if (maybeUser) {
+      // Track user login event
+      posthog?.capture({ event: "user_logged_in", properties: { email } });
+
       if (inviteLinkInfo || emailInviteInfo) {
         const organizationId =
           // biome-ignore lint/style/noNonNullAssertion: The is checked above
@@ -110,6 +116,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
             userAccountId: maybeUser.id,
           });
 
+          // Track invite acceptance
+          posthog?.capture({
+            event: "invite_link_accepted",
+            properties: {
+              invite_type: "email",
+              organization_id: emailInviteInfo.organizationId,
+              organization_name: emailInviteInfo.organizationName,
+            },
+          });
+
           return redirectWithToast(
             href("/organizations/:organizationSlug/dashboard", {
               organizationSlug: emailInviteInfo.organizationSlug,
@@ -144,6 +160,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
             organizationId: inviteLinkInfo.organizationId,
             request,
             userAccountId: maybeUser.id,
+          });
+
+          // Track invite acceptance
+          posthog?.capture({
+            event: "invite_link_accepted",
+            properties: {
+              invite_type: "link",
+              organization_id: inviteLinkInfo.organizationId,
+              organization_name: inviteLinkInfo.organizationName,
+            },
           });
 
           return redirectWithToast(
@@ -183,6 +209,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       supabaseUserId: user.id,
     });
 
+    // Track user signup event
+    posthog?.capture({
+      event: "user_signed_up",
+      properties: {
+        email,
+        user_id: userProfile.id,
+      },
+    });
+
     if (emailInviteInfo) {
       await acceptEmailInvite({
         deactivatedAt: null,
@@ -194,6 +229,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         role: emailInviteInfo.role,
         userAccountId: userProfile.id,
       });
+
+      // Track invite acceptance for new user
+      posthog?.capture({
+        event: "invite_link_accepted",
+        properties: {
+          invite_type: "email",
+          is_new_user: true,
+          organization_id: emailInviteInfo.organizationId,
+          organization_name: emailInviteInfo.organizationName,
+        },
+      });
     } else if (inviteLinkInfo) {
       await acceptInviteLink({
         i18n,
@@ -203,6 +249,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         request,
         userAccountId: userProfile.id,
       });
+
+      // Track invite acceptance for new user
+      posthog?.capture({
+        event: "invite_link_accepted",
+        properties: {
+          invite_type: "link",
+          is_new_user: true,
+          organization_id: inviteLinkInfo.organizationId,
+          organization_name: inviteLinkInfo.organizationName,
+        },
+      });
     }
 
     return redirect(href("/onboarding"), {
@@ -210,6 +267,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     });
   } catch (error) {
     console.log(error);
+    posthog?.captureException(error);
     throw error;
   }
 }

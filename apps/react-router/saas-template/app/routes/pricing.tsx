@@ -1,5 +1,6 @@
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { href, Link } from "react-router";
 
@@ -39,6 +40,16 @@ export default function PricingRoute() {
   const { t } = useTranslation("billing", { keyPrefix: "pricing" });
   const { t: tPage } = useTranslation("billing", { keyPrefix: "pricingPage" });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
+  const hasTrackedPageView = useRef(false);
+
+  // Track pricing page view (only once on initial mount)
+  useEffect(() => {
+    if (posthog && !hasTrackedPageView.current) {
+      posthog.capture("pricing_page_viewed");
+      hasTrackedPageView.current = true;
+    }
+  }, [posthog]);
 
   const getFeatures = (key: string): string[] =>
     t(`plans.${key}.features`, "", { returnObjects: true }) as string[];

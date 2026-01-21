@@ -6,7 +6,7 @@ import { prisma } from "~/utils/database.server";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
   const { organizationSlug, pasteId } = params;
-  
+
   if (!pasteId) {
     throw new Response("Paste ID required", { status: 400 });
   }
@@ -34,17 +34,17 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   }
 
   await prisma.paste.update({
-    where: { id: pasteId },
     data: { viewCount: { increment: 1 } },
+    where: { id: pasteId },
   });
 
   return data(
     {
+      pageTitle: paste.title,
       paste: {
         ...paste,
         viewCount: paste.viewCount + 1,
       },
-      pageTitle: paste.title,
     },
     { headers },
   );
@@ -68,4 +68,3 @@ export default function ViewPasteRoute({ loaderData }: Route.ComponentProps) {
     </div>
   );
 }
-

@@ -1,7 +1,20 @@
+import { PostHog } from "posthog-node";
 import type { Stripe } from "stripe";
 
 import { updateOrganizationInDatabaseById } from "../organizations/organizations-model.server";
 import { updateStripeCustomer } from "./stripe-helpers.server";
+
+// Create a PostHog client for webhook event tracking
+// Note: Webhooks don't have access to the middleware context, so we create a dedicated client
+const getPostHogClient = () => {
+  if (!process.env.VITE_PUBLIC_POSTHOG_KEY) return null;
+  return new PostHog(process.env.VITE_PUBLIC_POSTHOG_KEY, {
+    flushAt: 1,
+    flushInterval: 0,
+    host: process.env.VITE_PUBLIC_POSTHOG_HOST,
+  });
+};
+
 import {
   deleteStripePriceFromDatabaseById,
   saveStripePriceFromAPIToDatabase,
@@ -98,6 +111,8 @@ export const handleStripeChargeDisputeClosedEvent = async (
 export const handleStripeCheckoutSessionCompletedEvent = async (
   event: Stripe.CheckoutSessionCompletedEvent,
 ) => {
+  const posthog = getPostHogClient();
+
   try {
     if (event.data.object.metadata?.organizationId) {
       const organization = await updateOrganizationInDatabaseById({
@@ -121,6 +136,19 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
           organizationId: organization.id,
         });
       }
+
+      // Track checkout completed event
+      posthog?.capture({
+        distinctId: event.data.object.metadata.organizationId,
+        event: "checkout_completed",
+        properties: {
+          amount_total: event.data.object.amount_total,
+          currency: event.data.object.currency,
+          organization_id: event.data.object.metadata.organizationId,
+          organization_name: organization.name,
+          stripe_customer_id: event.data.object.customer,
+        },
+      });
     } else {
       console.error("No organization ID found in checkout session metadata");
       prettyPrint(event);
@@ -132,8 +160,10 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
       "Error handling Stripe checkout session completed event",
       message,
     );
+    posthog?.captureException(error);
   }
 
+  await posthog?.shutdown().catch(() => {});
   return ok();
 };
 
@@ -161,42 +191,103 @@ export const handleStripeCustomerDeletedEvent = async (
 export const handleStripeCustomerSubscriptionCreatedEvent = async (
   event: Stripe.CustomerSubscriptionCreatedEvent,
 ) => {
+  const posthog = getPostHogClient();
+
   try {
     await createStripeSubscriptionInDatabase(event.data.object);
+
+    // Track subscription created event
+    const customerId =
+      typeof event.data.object.customer === "string"
+        ? event.data.object.customer
+        : event.data.object.customer.id;
+
+    posthog?.capture({
+      distinctId: event.data.object.metadata?.organizationId ?? customerId,
+      event: "subscription_created",
+      properties: {
+        status: event.data.object.status,
+        stripe_customer_id: customerId,
+        subscription_id: event.data.object.id,
+      },
+    });
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);
     console.error("Error creating Stripe subscription", message);
+    posthog?.captureException(error);
   }
 
+  await posthog?.shutdown().catch(() => {});
   return ok();
 };
 
 export const handleStripeCustomerSubscriptionDeletedEvent = async (
   event: Stripe.CustomerSubscriptionDeletedEvent,
 ) => {
+  const posthog = getPostHogClient();
+
   try {
     await updateStripeSubscriptionFromAPIInDatabase(event.data.object);
+
+    // Track subscription deleted event
+    const customerId =
+      typeof event.data.object.customer === "string"
+        ? event.data.object.customer
+        : event.data.object.customer.id;
+
+    posthog?.capture({
+      distinctId: event.data.object.metadata?.organizationId ?? customerId,
+      event: "subscription_deleted",
+      properties: {
+        canceled_at: event.data.object.canceled_at,
+        stripe_customer_id: customerId,
+        subscription_id: event.data.object.id,
+      },
+    });
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);
     console.error("Error updating deleted Stripe subscription", message);
+    posthog?.captureException(error);
   }
 
+  await posthog?.shutdown().catch(() => {});
   return ok();
 };
 
 export const handleStripeCustomerSubscriptionUpdatedEvent = async (
   event: Stripe.CustomerSubscriptionUpdatedEvent,
 ) => {
+  const posthog = getPostHogClient();
+
   try {
     await updateStripeSubscriptionFromAPIInDatabase(event.data.object);
+
+    // Track subscription updated event
+    const customerId =
+      typeof event.data.object.customer === "string"
+        ? event.data.object.customer
+        : event.data.object.customer.id;
+
+    posthog?.capture({
+      distinctId: event.data.object.metadata?.organizationId ?? customerId,
+      event: "subscription_updated",
+      properties: {
+        cancel_at_period_end: event.data.object.cancel_at_period_end,
+        status: event.data.object.status,
+        stripe_customer_id: customerId,
+        subscription_id: event.data.object.id,
+      },
+    });
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);
     console.error("Error updating Stripe subscription", message);
+    posthog?.captureException(error);
   }
 
+  await posthog?.shutdown().catch(() => {});
   return ok();
 };
 
