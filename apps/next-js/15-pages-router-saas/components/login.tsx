@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +39,11 @@ export function Login({
       inviteId: formData.get('inviteId') as string
     };
 
+    // Capture form submission event
+    posthog.capture(mode === 'signin' ? 'sign_in_form_submitted' : 'sign_up_form_submitted', {
+      email: data.email,
+    });
+
     startTransition(async () => {
       try {
         const response = await fetch(`/api/auth/${mode === 'signin' ? 'sign-in' : 'sign-up'}`, {
@@ -57,6 +63,16 @@ export function Login({
           return;
         }
 
+        // Identify user in PostHog on successful authentication
+        posthog.identify(data.email, {
+          email: data.email,
+        });
+
+        // Capture successful authentication event
+        posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up', {
+          email: data.email,
+        });
+
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
@@ -64,6 +80,7 @@ export function Login({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err as Error);
         setError('An unexpected error occurred. Please try again.');
       }
     });
