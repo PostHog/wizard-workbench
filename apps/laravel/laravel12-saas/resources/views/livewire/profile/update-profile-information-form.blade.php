@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -23,7 +24,7 @@ new class extends Component
     /**
      * Update the profile information for the currently authenticated user.
      */
-    public function updateProfileInformation(): void
+    public function updateProfileInformation(PostHogService $posthog): void
     {
         $user = Auth::user();
 
@@ -31,6 +32,9 @@ new class extends Component
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'indisposable', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user->id)],
         ]);
+
+        $emailChanged = $user->isDirty('email') || $user->email !== $validated['email'];
+        $nameChanged = $user->name !== $validated['name'];
 
         $user->fill($validated);
 
@@ -40,13 +44,19 @@ new class extends Component
 
         $user->save();
 
+        // PostHog: Track profile update
+        $posthog->capture($user->email, 'profile_updated', [
+            'email_changed' => $emailChanged,
+            'name_changed' => $nameChanged,
+        ]);
+
         $this->dispatch('profile-updated', name: $user->name);
     }
 
     /**
      * Send an email verification notification to the current user.
      */
-    public function sendVerification(): void
+    public function sendVerification(PostHogService $posthog): void
     {
         $user = Auth::user();
 
@@ -57,6 +67,9 @@ new class extends Component
         }
 
         $user->sendEmailVerificationNotification();
+
+        // PostHog: Track email verification sent
+        $posthog->capture($user->email, 'email_verification_sent');
 
         Session::flash('status', 'verification-link-sent');
     }
