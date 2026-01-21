@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import posthog from 'posthog-js';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
@@ -19,6 +20,28 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
+
+  const emailRef = useRef<HTMLInputElement>(null);
+  const prevPendingRef = useRef(false);
+
+  // Track successful login/signup and identify user
+  useEffect(() => {
+    // Detect successful submission: was pending, now not pending, no error
+    if (prevPendingRef.current && !pending && !state.error && emailRef.current?.value) {
+      const email = emailRef.current.value;
+
+      // Identify user in PostHog
+      posthog.identify(email, { email });
+
+      // Capture the appropriate event
+      if (mode === 'signin') {
+        posthog.capture('user_signed_in', { email });
+      } else {
+        posthog.capture('user_signed_up', { email, invite_id: inviteId || undefined });
+      }
+    }
+    prevPendingRef.current = pending;
+  }, [pending, state.error, mode, inviteId]);
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -56,6 +79,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 maxLength={50}
                 className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
                 placeholder="Enter your email"
+                ref={emailRef}
               />
             </div>
           </div>
