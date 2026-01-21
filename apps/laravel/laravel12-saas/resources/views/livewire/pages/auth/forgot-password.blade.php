@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Password;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -11,7 +12,7 @@ new #[Layout('layouts.guest')] class extends Component
     /**
      * Send a password reset link to the provided email address.
      */
-    public function sendPasswordResetLink(): void
+    public function sendPasswordResetLink(PostHogService $posthog): void
     {
         $this->validate([
             'email' => ['required', 'string', 'email'],
@@ -23,6 +24,11 @@ new #[Layout('layouts.guest')] class extends Component
         $status = Password::sendResetLink(
             $this->only('email')
         );
+
+        // PostHog: Track password reset request
+        $posthog->capture($this->email, 'password_reset_requested', [
+            'success' => $status === Password::RESET_LINK_SENT,
+        ]);
 
         if ($status != Password::RESET_LINK_SENT) {
             $this->addError('email', __($status));

@@ -7,11 +7,16 @@ use App\Actions\Billing\GetSubscriptionSummary;
 use App\Actions\Billing\RedirectToBillingPortal;
 use App\Actions\Billing\SwapPlan;
 use App\Domains\Billing\PlanCatalog;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Http\Request;
 
 class SubscriptionController extends Controller
 {
+    public function __construct(
+        protected PostHogService $posthog
+    ) {}
+
     public function index(Request $request, PlanCatalog $catalog, GetSubscriptionSummary $summary)
     {
         $plans = $catalog->all();
@@ -28,8 +33,14 @@ class SubscriptionController extends Controller
         $plan = $catalog->findOrFail($request->plan);
         $user = $request->user();
 
+        // PostHog: Track checkout initiated
+        $this->posthog->capture($user->email, 'subscription_checkout_started', [
+            'plan_name' => $plan->name,
+            'plan_price' => $plan->price,
+        ]);
+
         // Stub out subscription if Stripe isn't configured (for demo/development)
-        if (!CheckoutPlan::isStripeConfigured()) {
+        if (! CheckoutPlan::isStripeConfigured()) {
             return $this->createStubSubscription($user, $plan);
         }
 
@@ -49,16 +60,16 @@ class SubscriptionController extends Controller
         // Create a fake subscription
         $user->subscriptions()->create([
             'type' => 'default',
-            'stripe_id' => 'sub_demo_' . uniqid(),
+            'stripe_id' => 'sub_demo_'.uniqid(),
             'stripe_status' => 'active',
-            'stripe_price' => $plan->stripe_plan_id ?? 'price_demo_' . uniqid(),
+            'stripe_price' => $plan->stripe_plan_id ?? 'price_demo_'.uniqid(),
             'quantity' => 1,
             'trial_ends_at' => null,
             'ends_at' => null,
             'amount' => $plan->price ?? 0,
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'Demo subscription created for ' . $plan->name . '. (Stripe not configured)');
+        return redirect()->route('dashboard')->with('success', 'Demo subscription created for '.$plan->name.'. (Stripe not configured)');
     }
 
     public function swap(Request $request, PlanCatalog $catalog, SwapPlan $swapPlan)
@@ -70,8 +81,17 @@ class SubscriptionController extends Controller
             try {
                 $swapPlan($user, $plan);
 
+                // PostHog: Track plan swap
+                $this->posthog->capture($user->email, 'subscription_plan_swapped', [
+                    'new_plan_name' => $plan->name,
+                    'new_plan_price' => $plan->price,
+                ]);
+
                 return redirect()->route('subscribe')->with('success', 'Your subscription has been updated to '.$plan->name.'.');
             } catch (Exception $e) {
+                // PostHog: Capture plan swap error
+                $this->posthog->captureException($e, $user->email);
+
                 return redirect()->route('subscribe')->with('error', 'There was an error updating your subscription: '.$e->getMessage());
             }
         }
