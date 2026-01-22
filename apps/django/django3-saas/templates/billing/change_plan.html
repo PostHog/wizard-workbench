@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Change Plan{% endblock %}
+
+{% block content %}
+<h1>Change Plan</h1>
+
+<div class="card">
+    <p>
+        <strong>Current Plan:</strong> {{ subscription.plan.name }} ({{ subscription.plan.get_price_display }})<br>
+        <strong>New Plan:</strong> {{ plan.name }} ({{ plan.get_price_display }})
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+        <p class="text-muted text-small">
+            Your plan will be changed immediately.
+        </p>
+        <button type="submit" class="btn btn-primary">Confirm Change</button>
+        <a href="{% url 'billing:manage' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}
