@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
 import { z } from 'zod';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 const updateTodoSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -44,6 +45,20 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(404).json({ error: 'Todo not found' });
       }
 
+      // Capture server-side todo updated event
+      const posthog = getPostHogClient();
+      const distinctId = req.headers['x-posthog-distinct-id'] as string || 'anonymous';
+      posthog.capture({
+        distinctId,
+        event: 'server_todo_updated',
+        properties: {
+          todo_id: todoId,
+          updated_fields: Object.keys(validatedData),
+          completed: updatedTodo.completed,
+          source: 'api',
+        },
+      });
+
       return res.status(200).json(updatedTodo);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -53,6 +68,20 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         });
       }
       console.error('Error updating todo:', error);
+
+      // Capture API error event
+      const posthog = getPostHogClient();
+      const distinctId = req.headers['x-posthog-distinct-id'] as string || 'anonymous';
+      posthog.capture({
+        distinctId,
+        event: 'server_api_error',
+        properties: {
+          endpoint: `/api/todos/${todoId}`,
+          method: 'PATCH',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+
       return res.status(500).json({ error: 'Failed to update todo' });
     }
   }
@@ -65,9 +94,35 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(404).json({ error: 'Todo not found' });
       }
 
+      // Capture server-side todo deleted event
+      const posthog = getPostHogClient();
+      const distinctId = req.headers['x-posthog-distinct-id'] as string || 'anonymous';
+      posthog.capture({
+        distinctId,
+        event: 'server_todo_deleted',
+        properties: {
+          todo_id: todoId,
+          source: 'api',
+        },
+      });
+
       return res.status(200).json({ message: 'Todo deleted successfully' });
     } catch (error) {
       console.error('Error deleting todo:', error);
+
+      // Capture API error event
+      const posthog = getPostHogClient();
+      const distinctId = req.headers['x-posthog-distinct-id'] as string || 'anonymous';
+      posthog.capture({
+        distinctId,
+        event: 'server_api_error',
+        properties: {
+          endpoint: `/api/todos/${todoId}`,
+          method: 'DELETE',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+
       return res.status(500).json({ error: 'Failed to delete todo' });
     }
   }
