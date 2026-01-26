@@ -8,6 +8,7 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+import posthog
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -45,6 +46,12 @@ def create_app(config_class=Config):
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
+
+    # Initialize PostHog
+    posthog.api_key = app.config.get('POSTHOG_API_KEY')
+    posthog.host = app.config.get('POSTHOG_HOST', 'https://us.i.posthog.com')
+    posthog.debug = app.debug
+
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if Elasticsearch and app.config['ELASTICSEARCH_URL'] else None
     if Redis and rq:
