@@ -1,3 +1,4 @@
+import posthog
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -60,6 +61,15 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            # PostHog: Track project creation
+            with posthog.new_context():
+                posthog.identify_context(str(request.user.id))
+                posthog.capture('project_created', properties={
+                    'project_id': project.id,
+                    'project_name': project.name,
+                    'total_projects': request.user.projects.count(),
+                })
+
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +93,14 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            # PostHog: Track project update
+            with posthog.new_context():
+                posthog.identify_context(str(request.user.id))
+                posthog.capture('project_updated', properties={
+                    'project_id': project.id,
+                    'project_name': project.name,
+                })
+
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -104,6 +122,14 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+
+        # PostHog: Track project deletion
+        with posthog.new_context():
+            posthog.identify_context(str(request.user.id))
+            posthog.capture('project_deleted', properties={
+                'project_name': name,
+                'remaining_projects': request.user.projects.count(),
+            })
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')

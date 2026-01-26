@@ -1,3 +1,4 @@
+import posthog
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -15,9 +16,42 @@ class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+
+        # PostHog: Identify user and capture login event
+        with posthog.new_context():
+            posthog.identify_context(str(user.id))
+
+            # Set person properties
+            posthog.tag('email', user.email)
+            posthog.tag('username', user.username)
+            posthog.tag('name', user.get_full_name() or user.username)
+            if hasattr(user, 'company_name') and user.company_name:
+                posthog.tag('company_name', user.company_name)
+            posthog.tag('date_joined', user.date_joined.isoformat())
+
+            posthog.capture('user_logged_in', properties={
+                'login_method': 'email',
+            })
+
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            user_id = str(request.user.id)
+
+            # PostHog: Track logout before session ends
+            with posthog.new_context():
+                posthog.identify_context(user_id)
+                posthog.capture('user_logged_out')
+
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -49,6 +83,23 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+
+            # PostHog: Identify new user and capture signup event
+            with posthog.new_context():
+                posthog.identify_context(str(user.id))
+
+                # Set person properties
+                posthog.tag('email', user.email)
+                posthog.tag('username', user.username)
+                posthog.tag('name', user.get_full_name() or user.username)
+                if hasattr(user, 'company_name') and user.company_name:
+                    posthog.tag('company_name', user.company_name)
+                posthog.tag('date_joined', user.date_joined.isoformat())
+
+                posthog.capture('user_signed_up', properties={
+                    'signup_method': 'email',
+                })
+
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +114,19 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+
+            # PostHog: Track profile update
+            with posthog.new_context():
+                posthog.identify_context(str(request.user.id))
+
+                # Update person properties
+                posthog.tag('email', request.user.email)
+                posthog.tag('name', request.user.get_full_name() or request.user.username)
+                if hasattr(request.user, 'company_name') and request.user.company_name:
+                    posthog.tag('company_name', request.user.company_name)
+
+                posthog.capture('profile_updated')
+
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:

@@ -1,4 +1,5 @@
 import uuid
+import posthog
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -57,6 +58,8 @@ def subscribe(request, plan_slug):
                 )
                 return redirect(checkout_session.url)
             except Exception as e:
+                # PostHog: Capture payment exception
+                posthog.capture_exception(e)
                 messages.error(request, f'Payment error: {str(e)}')
                 return redirect('billing:pricing')
         else:
@@ -70,6 +73,18 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+
+            # PostHog: Track subscription started (demo mode)
+            with posthog.new_context():
+                posthog.identify_context(str(request.user.id))
+                posthog.capture('subscription_started', properties={
+                    'plan_name': plan.name,
+                    'plan_slug': plan.slug,
+                    'plan_price': float(plan.price),
+                    'plan_interval': plan.interval,
+                    'mode': 'demo',
+                })
+
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -130,13 +145,39 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+
+                # PostHog: Track plan change (Stripe mode)
+                with posthog.new_context():
+                    posthog.identify_context(str(request.user.id))
+                    posthog.capture('subscription_plan_changed', properties={
+                        'new_plan_name': plan.name,
+                        'new_plan_slug': plan.slug,
+                        'new_plan_price': float(plan.price),
+                        'new_plan_interval': plan.interval,
+                        'mode': 'stripe',
+                    })
+
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
+                # PostHog: Capture plan change exception
+                posthog.capture_exception(e)
                 messages.error(request, f'Error changing plan: {str(e)}')
         else:
             # Demo mode
             subscription.plan = plan
             subscription.save()
+
+            # PostHog: Track plan change (demo mode)
+            with posthog.new_context():
+                posthog.identify_context(str(request.user.id))
+                posthog.capture('subscription_plan_changed', properties={
+                    'new_plan_name': plan.name,
+                    'new_plan_slug': plan.slug,
+                    'new_plan_price': float(plan.price),
+                    'new_plan_interval': plan.interval,
+                    'mode': 'demo',
+                })
+
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -165,12 +206,26 @@ def cancel(request):
                     cancel_at_period_end=True,
                 )
             except Exception as e:
+                # PostHog: Capture cancellation exception
+                posthog.capture_exception(e)
                 messages.error(request, f'Error canceling: {str(e)}')
                 return redirect('billing:manage')
 
+        plan = subscription.plan
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+
+        # PostHog: Track subscription cancellation
+        with posthog.new_context():
+            posthog.identify_context(str(request.user.id))
+            posthog.capture('subscription_canceled', properties={
+                'plan_name': plan.name,
+                'plan_slug': plan.slug,
+                'plan_price': float(plan.price),
+                'plan_interval': plan.interval,
+            })
+
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -196,6 +251,8 @@ def billing_portal(request):
         )
         return redirect(portal_session.url)
     except Exception as e:
+        # PostHog: Capture billing portal exception
+        posthog.capture_exception(e)
         messages.error(request, f'Error accessing billing portal: {str(e)}')
         return redirect('billing:manage')
 
@@ -270,6 +327,26 @@ def _handle_checkout_completed(session):
         stripe_customer_id=stripe_sub['customer'],
     )
 
+    # PostHog: Track checkout completed (server-side webhook)
+    with posthog.new_context():
+        posthog.identify_context(str(user.id))
+        posthog.capture('checkout_completed', properties={
+            'plan_name': plan.name,
+            'plan_slug': plan.slug,
+            'plan_price': float(plan.price),
+            'plan_interval': plan.interval,
+            'mode': 'stripe',
+        })
+
+        # Also track subscription started for consistency
+        posthog.capture('subscription_started', properties={
+            'plan_name': plan.name,
+            'plan_slug': plan.slug,
+            'plan_price': float(plan.price),
+            'plan_interval': plan.interval,
+            'mode': 'stripe',
+        })
+
 
 def _handle_subscription_updated(subscription_data):
     """Update subscription status."""
@@ -323,5 +400,14 @@ def _handle_payment_failed(invoice):
         )
         subscription.status = 'past_due'
         subscription.save()
+
+        # PostHog: Track payment failure (server-side webhook)
+        with posthog.new_context():
+            posthog.identify_context(str(subscription.user.id))
+            posthog.capture('payment_failed', properties={
+                'plan_name': subscription.plan.name,
+                'plan_slug': subscription.plan.slug,
+                'attempt_count': invoice.get('attempt_count', 1),
+            })
     except Subscription.DoesNotExist:
         pass
