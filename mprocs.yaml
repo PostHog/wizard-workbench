@@ -3,14 +3,14 @@ procs:
   # DEV SERVERS - Auto-start for hot-reload development
   # ═══════════════════════════════════════════════════════════════════════════
 
-  examples:
-    # Resources manifest ZIP available at: http://localhost:8765/examples-mcp-resources.zip
-    shell: "source .env && cd $EXAMPLES_PATH && npm run dev"
+  context-mill:
+    # Skills and resources manifest ZIP available at: http://localhost:8765/skills-mcp-resources.zip
+    shell: "source .env && cd $CONTEXT_MILL_PATH && npm run dev"
     autostart: true
     stop_signal: SIGTERM
 
   mcp:
-    # Use dev:local-resources to read from local examples server 
+    # Use dev:local-resources to read from local context-mill server
     # Runs at http://localhost:8787
     shell: "source .env && cd $MCP_PATH && pnpm run dev:local-resources"
     autostart: true

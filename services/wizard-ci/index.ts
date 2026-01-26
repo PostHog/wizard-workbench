@@ -67,16 +67,16 @@ interface PRMetadata {
   branch: string;
   duration?: number;
   wizardRef?: string;
-  examplesRef?: string;
+  contextMillRef?: string;
   posthogRef?: string;
   source?: string;
   sourceUrl?: string;
 }
 
-function getDependencyRefs(): Pick<PRMetadata, "wizardRef" | "examplesRef" | "posthogRef"> {
+function getDependencyRefs(): Pick<PRMetadata, "wizardRef" | "contextMillRef" | "posthogRef"> {
   return {
     wizardRef: process.env.WIZARD_REF,
-    examplesRef: process.env.EXAMPLES_REF,
+    contextMillRef: process.env.CONTEXT_MILL_REF,
     posthogRef: process.env.POSTHOG_REF,
   };
 }
@@ -118,7 +118,7 @@ function buildPRBody(meta: PRMetadata): string {
     `App directory: \`apps/${meta.appName}\``,
     `Workbench branch: \`${meta.branch}\``,
     `Wizard branch: \`${meta.wizardRef || "main"}\``,
-    `Examples branch: \`${meta.examplesRef || "main"}\``,
+    `Context Mill branch: \`${meta.contextMillRef || "main"}\``,
     `PostHog (MCP) branch: \`${meta.posthogRef || "master"}\``,
     `Timestamp: ${new Date().toISOString()}`,
   ];

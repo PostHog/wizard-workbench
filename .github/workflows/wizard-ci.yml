@@ -28,8 +28,8 @@ on:
         description: 'Wizard repo branch/tag/sha'
         type: string
         default: 'main'
-      examples_ref:
-        description: 'Examples repo branch/tag/sha'
+      context_mill_ref:
+        description: 'Context Mill repo branch/tag/sha'
         type: string
         default: 'main'
       posthog_ref:
@@ -53,7 +53,7 @@ on:
         type: boolean
         default: false
 
-  # Webhook trigger from external repos (wizard, examples, posthog)
+  # Webhook trigger from external repos (wizard, context-mill, posthog)
   # POST https://api.github.com/repos/{owner}/{repo}/dispatches
   # Body: {"event_type": "wizard-ci-trigger", "client_payload": {"app": "all", "source": "wizard"}}
   repository_dispatch:
@@ -75,7 +75,7 @@ jobs:
       input_evaluate: ${{ steps.resolve-inputs.outputs.evaluate }}
       input_base_branch: ${{ steps.resolve-inputs.outputs.base_branch }}
       input_wizard_ref: ${{ steps.resolve-inputs.outputs.wizard_ref }}
-      input_examples_ref: ${{ steps.resolve-inputs.outputs.examples_ref }}
+      input_context_mill_ref: ${{ steps.resolve-inputs.outputs.context_mill_ref }}
       input_posthog_ref: ${{ steps.resolve-inputs.outputs.posthog_ref }}
       input_posthog_region: ${{ steps.resolve-inputs.outputs.posthog_region }}
       input_source: ${{ steps.resolve-inputs.outputs.source }}
@@ -97,7 +97,7 @@ jobs:
             EVALUATE="true"
             BASE_BRANCH="main"
             WIZARD_REF="main"
-            EXAMPLES_REF="main"
+            CONTEXT_MILL_REF="main"
             POSTHOG_REF="master"
             POSTHOG_REGION="us"
             TRIGGER_ID=""
@@ -114,7 +114,7 @@ jobs:
             EVALUATE="${{ github.event.client_payload.evaluate || 'true' }}"
             BASE_BRANCH="${{ github.event.client_payload.base_branch || 'main' }}"
             WIZARD_REF="${{ github.event.client_payload.wizard_ref || 'main' }}"
-            EXAMPLES_REF="${{ github.event.client_payload.examples_ref || 'main' }}"
+            CONTEXT_MILL_REF="${{ github.event.client_payload.context_mill_ref || 'main' }}"
             POSTHOG_REF="${{ github.event.client_payload.posthog_ref || 'master' }}"
             POSTHOG_REGION="${{ github.event.client_payload.posthog_region || 'us' }}"
             TRIGGER_ID="${{ github.event.client_payload.trigger_id || '' }}"
@@ -122,7 +122,7 @@ jobs:
             RAW_SOURCE="${{ github.event.client_payload.source || 'dispatch' }}"
             case "$RAW_SOURCE" in
               wizard) SOURCE="wizard repo" ;;
-              examples) SOURCE="examples repo" ;;
+              context-mill) SOURCE="context-mill repo" ;;
               *) SOURCE="$RAW_SOURCE" ;;
             esac
             NOTIFY_SLACK="${{ github.event.client_payload.notify_slack || 'false' }}"
@@ -137,7 +137,7 @@ jobs:
             EVALUATE="${{ inputs.evaluate }}"
             BASE_BRANCH="${{ inputs.base_branch }}"
             WIZARD_REF="${{ inputs.wizard_ref }}"
-            EXAMPLES_REF="${{ inputs.examples_ref }}"
+            CONTEXT_MILL_REF="${{ inputs.context_mill_ref }}"
             POSTHOG_REF="${{ inputs.posthog_ref }}"
             POSTHOG_REGION="${{ inputs.posthog_region }}"
             TRIGGER_ID="${{ inputs.trigger_id }}"
@@ -154,7 +154,7 @@ jobs:
           echo "evaluate=$EVALUATE" >> $GITHUB_OUTPUT
           echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
           echo "wizard_ref=$WIZARD_REF" >> $GITHUB_OUTPUT
-          echo "examples_ref=$EXAMPLES_REF" >> $GITHUB_OUTPUT
+          echo "context_mill_ref=$CONTEXT_MILL_REF" >> $GITHUB_OUTPUT
           echo "posthog_ref=$POSTHOG_REF" >> $GITHUB_OUTPUT
           echo "posthog_region=$POSTHOG_REGION" >> $GITHUB_OUTPUT
           echo "trigger_id=$TRIGGER_ID" >> $GITHUB_OUTPUT
@@ -170,7 +170,7 @@ jobs:
           echo "  evaluate: $EVALUATE"
           echo "  base_branch: $BASE_BRANCH"
           echo "  wizard_ref: $WIZARD_REF"
-          echo "  examples_ref: $EXAMPLES_REF"
+          echo "  context_mill_ref: $CONTEXT_MILL_REF"
           echo "  posthog_ref: $POSTHOG_REF"
           echo "  posthog_region: $POSTHOG_REGION"
           echo "  source: $SOURCE"
@@ -326,7 +326,7 @@ jobs:
             const allApps = ${{ needs.discover.outputs.apps }};
             const workflowUrl = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}';
             const wizardRef = '${{ needs.discover.outputs.input_wizard_ref }}';
-            const examplesRef = '${{ needs.discover.outputs.input_examples_ref }}';
+            const contextMillRef = '${{ needs.discover.outputs.input_context_mill_ref }}';
             const posthogRef = '${{ needs.discover.outputs.input_posthog_ref }}';
             const prsUrl = workflowUrl.replace('/actions/runs/', '/pulls?q=') + triggerId;
 
@@ -352,7 +352,7 @@ jobs:
               '| Setting | Value |',
               '|---------|-------|',
               '| Wizard ref | `' + wizardRef + '` |',
-              '| Examples ref | `' + examplesRef + '` |',
+              '| Context Mill ref | `' + contextMillRef + '` |',
               '| PostHog ref | `' + posthogRef + '` |',
               '',
               '> Search for trigger ID `' + triggerId + '` in [wizard-workbench PRs](' + prsUrl + ').'
@@ -435,23 +435,23 @@ jobs:
 
           echo "WIZARD_PATH=$HOME/wizard" >> $GITHUB_ENV
 
-      - name: Clone and build Examples
+      - name: Clone and build Context Mill
         run: |
-          echo "::group::Cloning examples repo"
-          git clone --depth 1 --branch ${{ needs.discover.outputs.input_examples_ref }} \
-            https://github.com/PostHog/examples.git $HOME/examples
+          echo "::group::Cloning context-mill repo"
+          git clone --depth 1 --branch ${{ needs.discover.outputs.input_context_mill_ref }} \
+            https://github.com/PostHog/context-mill.git $HOME/context-mill
           echo "::endgroup::"
 
-          echo "::group::Installing examples dependencies"
-          cd $HOME/examples
+          echo "::group::Installing context-mill dependencies"
+          cd $HOME/context-mill
           npm install
           echo "::endgroup::"
 
-          echo "::group::Building examples MCP resources"
+          echo "::group::Building context-mill MCP resources"
           npm run build
           echo "::endgroup::"
 
-          echo "EXAMPLES_PATH=$HOME/examples" >> $GITHUB_ENV
+          echo "CONTEXT_MILL_PATH=$HOME/context-mill" >> $GITHUB_ENV
 
       - name: Clone PostHog monorepo and install MCP
         run: |
@@ -481,16 +481,16 @@ jobs:
       - name: Run Wizard CI
         id: run-wizard
         run: |
-          # Start examples dev server in background (serves resources at localhost:8765)
-          cd $EXAMPLES_PATH
+          # Start context-mill dev server in background (serves resources at localhost:8765)
+          cd $CONTEXT_MILL_PATH
           npm run dev &
-          EXAMPLES_PID=$!
+          CONTEXT_MILL_PID=$!
 
-          # Wait for examples server to be ready
-          echo "Waiting for examples server to start..."
+          # Wait for context-mill server to be ready
+          echo "Waiting for context-mill server to start..."
           for i in {1..30}; do
-            if curl -s http://localhost:8765/examples-mcp-resources.zip > /dev/null 2>&1; then
-              echo "Examples server is ready"
+            if curl -s http://localhost:8765/context-mill-mcp-resources.zip > /dev/null 2>&1; then
+              echo "Context Mill server is ready"
               break
             fi
             sleep 1
@@ -525,12 +525,12 @@ jobs:
           WIZARD_EXIT=${PIPESTATUS[0]}
 
           # Save resources zips from running server (for artifact upload)
-          curl -s http://localhost:8765/examples-mcp-resources.zip -o examples-mcp-resources.zip || true
+          curl -s http://localhost:8765/context-mill-mcp-resources.zip -o context-mill-mcp-resources.zip || true
           curl -s http://localhost:8765/skills-mcp-resources.zip -o skills-mcp-resources.zip || true
 
           # Stop servers
           kill $MCP_PID 2>/dev/null || true
-          kill $EXAMPLES_PID 2>/dev/null || true
+          kill $CONTEXT_MILL_PID 2>/dev/null || true
 
           # Extract PR URL
           PR_URL=$(grep -oP 'PR: \K(https://github.com/[^\s]+)' wizard-output.log || true)
@@ -553,11 +553,11 @@ jobs:
           POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
           # Dependency paths
           WIZARD_PATH: ${{ env.WIZARD_PATH }}
-          EXAMPLES_PATH: ${{ env.EXAMPLES_PATH }}
+          CONTEXT_MILL_PATH: ${{ env.CONTEXT_MILL_PATH }}
           MCP_PATH: ${{ env.MCP_PATH }}
           # Dependency refs (for PR body)
           WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
-          EXAMPLES_REF: ${{ needs.discover.outputs.input_examples_ref }}
+          CONTEXT_MILL_REF: ${{ needs.discover.outputs.input_context_mill_ref }}
           POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
           # Source info (for PR body)
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
@@ -572,14 +572,14 @@ jobs:
           SAFE_NAME="${SAFE_NAME//\//-}"
           echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
 
-      - name: Upload examples resources
+      - name: Upload context-mill resources
         # Only upload once (from the first matrix job) since the zip is identical across all jobs
         if: always() && !env.ACT && matrix.app == needs.discover.outputs.first_app
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: examples-resources-${{ github.run_id }}
-          path: examples-mcp-resources.zip
+          name: context-mill-resources-${{ github.run_id }}
+          path: context-mill-mcp-resources.zip
           if-no-files-found: warn
 
       - name: Upload skills resources
@@ -611,7 +611,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Dependency Versions" >> $GITHUB_STEP_SUMMARY
           echo "- **wizard:** ${{ needs.discover.outputs.input_wizard_ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **examples:** ${{ needs.discover.outputs.input_examples_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **context-mill:** ${{ needs.discover.outputs.input_context_mill_ref }}" >> $GITHUB_STEP_SUMMARY
           echo "- **mcp (posthog):** ${{ needs.discover.outputs.input_posthog_ref }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -n "${{ steps.run-wizard.outputs.pr_url }}" ]; then
@@ -757,7 +757,7 @@ jobs:
           echo "| Base Branch | ${{ needs.discover.outputs.input_base_branch }} |" >> $GITHUB_STEP_SUMMARY
           echo "| PostHog Region | ${{ needs.discover.outputs.input_posthog_region }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Wizard Ref | ${{ needs.discover.outputs.input_wizard_ref }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Examples Ref | ${{ needs.discover.outputs.input_examples_ref }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Context Mill Ref | ${{ needs.discover.outputs.input_context_mill_ref }} |" >> $GITHUB_STEP_SUMMARY
           echo "| PostHog Ref | ${{ needs.discover.outputs.input_posthog_ref }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> Search for trigger ID \`${{ needs.discover.outputs.trigger_id }}\` to find all related PRs." >> $GITHUB_STEP_SUMMARY
