@@ -53,7 +53,7 @@ on:
         type: boolean
         default: false
 
-  # Webhook trigger from external repos (wizard, examples, posthog)
+  # Webhook trigger from external repos (wizard, context-mill, posthog)
   # POST https://api.github.com/repos/{owner}/{repo}/dispatches
   # Body: {"event_type": "wizard-ci-trigger", "client_payload": {"app": "all", "source": "wizard"}}
   repository_dispatch:
