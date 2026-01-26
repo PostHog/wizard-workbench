@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,14 +9,35 @@ import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import posthog from 'posthog-js';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
   const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const wrappedAction = async (prevState: ActionState, formData: FormData) => {
+    const email = formData.get('email') as string;
+    const result = await (mode === 'signin' ? signIn : signUp)(prevState, formData);
+
+    // If no error and no redirect happened, track the event
+    // Note: successful auth redirects, so this only triggers on validation errors
+    if (result && !result.error && email) {
+      // Identify user and capture event
+      posthog.identify(email, { email });
+      posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up', {
+        email,
+        has_invite: !!inviteId,
+      });
+    }
+
+    return result;
+  };
+
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
-    mode === 'signin' ? signIn : signUp,
+    wrappedAction,
     { error: '' }
   );
 

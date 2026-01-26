@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Lock, Trash2, Loader2 } from 'lucide-react';
 import { useActionState } from 'react';
 import { updatePassword, deleteAccount } from '@/app/(login)/actions';
+import posthog from 'posthog-js';
 
 type PasswordState = {
   currentPassword?: string;
@@ -23,15 +24,35 @@ type DeleteState = {
 };
 
 export default function SecurityPage() {
+  const wrappedPasswordAction = async (prevState: PasswordState, formData: FormData) => {
+    const result = await updatePassword(prevState, formData);
+
+    // Track password update on success
+    if (result && 'success' in result && result.success) {
+      posthog.capture('password_updated');
+    }
+
+    return result;
+  };
+
+  const wrappedDeleteAction = async (prevState: DeleteState, formData: FormData) => {
+    // Capture account deletion event before the action (since it redirects)
+    posthog.capture('account_deleted');
+    posthog.reset();
+
+    const result = await deleteAccount(prevState, formData);
+    return result;
+  };
+
   const [passwordState, passwordAction, isPasswordPending] = useActionState<
     PasswordState,
     FormData
-  >(updatePassword, {});
+  >(wrappedPasswordAction, {});
 
   const [deleteState, deleteAction, isDeletePending] = useActionState<
     DeleteState,
     FormData
-  >(deleteAccount, {});
+  >(wrappedDeleteAction, {});
 
   return (
     <section className="flex-1 p-4 lg:p-8">
