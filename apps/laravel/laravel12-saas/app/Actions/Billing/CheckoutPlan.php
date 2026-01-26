@@ -14,12 +14,13 @@ class CheckoutPlan
     public static function isStripeConfigured(): bool
     {
         $key = config('cashier.secret');
-        return !empty($key) && $key !== 'sk_test_xxx' && !str_starts_with($key, 'your_');
+
+        return ! empty($key) && $key !== 'sk_test_xxx' && ! str_starts_with($key, 'your_');
     }
 
     public function __invoke(User $user, Plan $plan): Checkout
     {
-        if (!self::isStripeConfigured()) {
+        if (! self::isStripeConfigured()) {
             throw new \RuntimeException('Stripe is not configured. Please set STRIPE_SECRET in your .env file.');
         }
 
