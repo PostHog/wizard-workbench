@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { fakeUser } from '@/lib/data/fake-data'
 import { getFollowers } from '@/lib/utils/localStorage'
 
 export const Header = () => {
+  const posthog = usePostHog()
   const [followers, setFollowers] = useState(fakeUser.followers)
 
   useEffect(() => {
@@ -32,16 +34,24 @@ export const Header = () => {
         <nav className="flex items-center justify-center md:justify-self-center">
           <ul className="flex items-center gap-3 md:gap-6 font-mono uppercase text-sm">
             <li>
-              <Link to="/" className="hover:text-accent transition">Home</Link>
+              <Link to="/" className="hover:text-accent transition">
+                Home
+              </Link>
             </li>
             <li>
-              <Link to="/feed" className="hover:text-accent transition">Feed</Link>
+              <Link to="/feed" className="hover:text-accent transition">
+                Feed
+              </Link>
             </li>
             <li>
-              <Link to="/profile" className="hover:text-accent transition">Profile</Link>
+              <Link to="/profile" className="hover:text-accent transition">
+                Profile
+              </Link>
             </li>
             <li>
-              <Link to="/analytics" className="hover:text-accent transition">Analytics</Link>
+              <Link to="/analytics" className="hover:text-accent transition">
+                Analytics
+              </Link>
             </li>
           </ul>
         </nav>
@@ -54,16 +64,13 @@ export const Header = () => {
         </div>
         <Link
           to="/buy-followers"
+          onClick={() => posthog?.capture('buy_followers_header_clicked', { location: 'header' })}
           className="bg-accent text-primary font-bold px-4 py-2 rounded-lg text-sm hover:opacity-80 transition"
         >
           Buy Followers
         </Link>
         <Link to="/profile" className="flex items-center gap-2">
-          <img
-            src={fakeUser.avatar}
-            alt={fakeUser.username}
-            className="w-8 h-8 rounded-full border-2 border-accent"
-          />
+          <img src={fakeUser.avatar} alt={fakeUser.username} className="w-8 h-8 rounded-full border-2 border-accent" />
         </Link>
       </div>
     </header>
