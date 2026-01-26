@@ -22,6 +22,7 @@ import {
   organizationMembershipContext,
   organizationMembershipMiddleware,
 } from "~/features/organizations/organizations-middleware.server";
+import { PostHogIdentify } from "~/lib/posthog-identify";
 
 /**
  * @see https://reactrouter.com/start/framework/route-module#shouldrevalidate
@@ -108,8 +109,8 @@ export default function OrganizationLayoutRoute({
   );
 
   // Check if we're on a paste detail page
-  const isPasteDetailPage = matches.some(
-    (match) => match.id?.includes("pastes.$pasteId"),
+  const isPasteDetailPage = matches.some((match) =>
+    match?.id?.includes("pastes.$pasteId"),
   );
 
   // If it's a paste detail page, render without sidebar
@@ -119,6 +120,8 @@ export default function OrganizationLayoutRoute({
 
   return (
     <SidebarProvider defaultOpen={defaultSidebarOpen}>
+      {/* Identify user with PostHog */}
+      <PostHogIdentify user={navUserProps.user} />
       <AppSidebar
         billingSidebarCardProps={
           billingSidebarCardProps && {

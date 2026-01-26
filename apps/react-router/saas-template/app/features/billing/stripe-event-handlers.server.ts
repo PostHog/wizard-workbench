@@ -1,7 +1,18 @@
+import { PostHog } from "posthog-node";
 import type { Stripe } from "stripe";
 
 import { updateOrganizationInDatabaseById } from "../organizations/organizations-model.server";
 import { updateStripeCustomer } from "./stripe-helpers.server";
+
+// Create a PostHog client for webhook events (these don't have access to request context)
+function getWebhookPostHog() {
+  return new PostHog(process.env.VITE_PUBLIC_POSTHOG_KEY!, {
+    flushAt: 1,
+    flushInterval: 0,
+    host: process.env.VITE_PUBLIC_POSTHOG_HOST!,
+  });
+}
+
 import {
   deleteStripePriceFromDatabaseById,
   saveStripePriceFromAPIToDatabase,
@@ -98,6 +109,7 @@ export const handleStripeChargeDisputeClosedEvent = async (
 export const handleStripeCheckoutSessionCompletedEvent = async (
   event: Stripe.CheckoutSessionCompletedEvent,
 ) => {
+  const posthog = getWebhookPostHog();
   try {
     if (event.data.object.metadata?.organizationId) {
       const organization = await updateOrganizationInDatabaseById({
@@ -121,6 +133,19 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
           organizationId: organization.id,
         });
       }
+
+      // Track checkout completed event with PostHog
+      const distinctId =
+        event.data.object.metadata?.purchasedById || "anonymous";
+      posthog.capture({
+        distinctId,
+        event: "checkout_completed",
+        properties: {
+          amount_total: event.data.object.amount_total,
+          currency: event.data.object.currency,
+          organization_id: event.data.object.metadata.organizationId,
+        },
+      });
     } else {
       console.error("No organization ID found in checkout session metadata");
       prettyPrint(event);
@@ -132,6 +157,8 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
       "Error handling Stripe checkout session completed event",
       message,
     );
+  } finally {
+    await posthog.shutdown().catch(() => {});
   }
 
   return ok();
@@ -161,12 +188,29 @@ export const handleStripeCustomerDeletedEvent = async (
 export const handleStripeCustomerSubscriptionCreatedEvent = async (
   event: Stripe.CustomerSubscriptionCreatedEvent,
 ) => {
+  const posthog = getWebhookPostHog();
   try {
     await createStripeSubscriptionInDatabase(event.data.object);
+
+    // Track subscription created event with PostHog
+    const customerId =
+      typeof event.data.object.customer === "string"
+        ? event.data.object.customer
+        : event.data.object.customer?.id;
+    posthog.capture({
+      distinctId: customerId || "anonymous",
+      event: "subscription_created",
+      properties: {
+        status: event.data.object.status,
+        subscription_id: event.data.object.id,
+      },
+    });
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);
     console.error("Error creating Stripe subscription", message);
+  } finally {
+    await posthog.shutdown().catch(() => {});
   }
 
   return ok();
