@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodos, createTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -36,13 +37,30 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
+    const posthog = getPostHogClient();
     if (error instanceof z.ZodError) {
+      posthog.capture({
+        distinctId: 'server',
+        event: 'todo_create_failed',
+        properties: {
+          reason: 'validation_error',
+          errors: error.errors,
+        },
+      });
       return NextResponse.json(
         { error: 'Invalid todo data', details: error.errors },
         { status: 400 }
       );
     }
     console.error('Error creating todo:', error);
+    posthog.capture({
+      distinctId: 'server',
+      event: 'todo_create_failed',
+      properties: {
+        reason: 'server_error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
     return NextResponse.json(
       { error: 'Failed to create todo' },
       { status: 500 }
