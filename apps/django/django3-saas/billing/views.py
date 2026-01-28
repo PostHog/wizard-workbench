@@ -1,4 +1,6 @@
 import uuid
+import posthog
+from posthog import new_context, identify_context, capture
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -36,6 +38,17 @@ def subscribe(request, plan_slug):
         return redirect('billing:manage')
 
     if request.method == 'POST':
+        # PostHog: Track checkout initiation
+        with new_context():
+            identify_context(str(request.user.id))
+            capture('checkout_initiated', properties={
+                'plan_name': plan.name,
+                'plan_slug': plan.slug,
+                'plan_price': float(plan.price) if hasattr(plan, 'price') else None,
+                'plan_interval': plan.interval if hasattr(plan, 'interval') else None,
+                'stripe_mode': STRIPE_CONFIGURED and bool(plan.stripe_price_id),
+            })
+
         if STRIPE_CONFIGURED and plan.stripe_price_id:
             # Create Stripe Checkout Session
             try:
@@ -57,12 +70,13 @@ def subscribe(request, plan_slug):
                 )
                 return redirect(checkout_session.url)
             except Exception as e:
+                posthog.capture_exception(e)
                 messages.error(request, f'Payment error: {str(e)}')
                 return redirect('billing:pricing')
         else:
             # Demo mode - create subscription directly
             now = timezone.now()
-            Subscription.objects.create(
+            subscription = Subscription.objects.create(
                 user=request.user,
                 plan=plan,
                 status='active',
@@ -70,6 +84,17 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+
+            # PostHog: Track subscription started (demo mode)
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('subscription_started', properties={
+                    'plan_name': plan.name,
+                    'plan_slug': plan.slug,
+                    'subscription_id': subscription.id,
+                    'is_demo_mode': True,
+                })
+
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -87,8 +112,18 @@ def success(request):
     if STRIPE_CONFIGURED and session_id:
         try:
             session = stripe.checkout.Session.retrieve(session_id)
+
+            # PostHog: Track subscription started (Stripe mode)
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('subscription_started', properties={
+                    'session_id': session_id,
+                    'is_demo_mode': False,
+                })
+
             messages.success(request, 'Subscription successful! Welcome aboard.')
-        except Exception:
+        except Exception as e:
+            posthog.capture_exception(e)
             messages.warning(request, 'Could not verify payment. Please check your subscription status.')
 
     return redirect('dashboard:index')
@@ -115,6 +150,8 @@ def change_plan(request, plan_slug):
     if not subscription:
         return redirect('billing:subscribe', plan_slug=plan_slug)
 
+    old_plan_name = subscription.plan.name if subscription.plan else None
+
     if request.method == 'POST':
         if STRIPE_CONFIGURED and subscription.stripe_subscription_id and not subscription.stripe_subscription_id.startswith('sub_demo_'):
             # Update Stripe subscription
@@ -130,13 +167,36 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+
+                # PostHog: Track plan change
+                with new_context():
+                    identify_context(str(request.user.id))
+                    capture('subscription_plan_changed', properties={
+                        'old_plan_name': old_plan_name,
+                        'new_plan_name': plan.name,
+                        'new_plan_slug': plan.slug,
+                        'is_demo_mode': False,
+                    })
+
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
+                posthog.capture_exception(e)
                 messages.error(request, f'Error changing plan: {str(e)}')
         else:
             # Demo mode
             subscription.plan = plan
             subscription.save()
+
+            # PostHog: Track plan change (demo mode)
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('subscription_plan_changed', properties={
+                    'old_plan_name': old_plan_name,
+                    'new_plan_name': plan.name,
+                    'new_plan_slug': plan.slug,
+                    'is_demo_mode': True,
+                })
+
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -156,6 +216,8 @@ def cancel(request):
         messages.warning(request, 'No active subscription to cancel.')
         return redirect('billing:manage')
 
+    plan_name = subscription.plan.name if subscription.plan else None
+
     if request.method == 'POST':
         if STRIPE_CONFIGURED and subscription.stripe_subscription_id and not subscription.stripe_subscription_id.startswith('sub_demo_'):
             # Cancel at period end in Stripe
@@ -165,12 +227,22 @@ def cancel(request):
                     cancel_at_period_end=True,
                 )
             except Exception as e:
+                posthog.capture_exception(e)
                 messages.error(request, f'Error canceling: {str(e)}')
                 return redirect('billing:manage')
 
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+
+        # PostHog: Track subscription cancellation
+        with new_context():
+            identify_context(str(request.user.id))
+            capture('subscription_canceled', properties={
+                'plan_name': plan_name,
+                'subscription_id': subscription.id,
+            })
+
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -196,6 +268,7 @@ def billing_portal(request):
         )
         return redirect(portal_session.url)
     except Exception as e:
+        posthog.capture_exception(e)
         messages.error(request, f'Error accessing billing portal: {str(e)}')
         return redirect('billing:manage')
 
@@ -256,7 +329,7 @@ def _handle_checkout_completed(session):
     # Get subscription details from Stripe
     stripe_sub = stripe.Subscription.retrieve(session['subscription'])
 
-    Subscription.objects.create(
+    subscription = Subscription.objects.create(
         user=user,
         plan=plan,
         status='active',
@@ -269,6 +342,17 @@ def _handle_checkout_completed(session):
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
     )
+
+    # PostHog: Track subscription started from webhook
+    with new_context():
+        identify_context(str(user.id))
+        capture('subscription_started', properties={
+            'plan_name': plan.name,
+            'plan_slug': plan.slug,
+            'subscription_id': subscription.id,
+            'source': 'webhook',
+            'is_demo_mode': False,
+        })
 
 
 def _handle_subscription_updated(subscription_data):
@@ -307,6 +391,16 @@ def _handle_subscription_deleted(subscription_data):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+
+        # PostHog: Track subscription canceled from webhook
+        if subscription.user:
+            with new_context():
+                identify_context(str(subscription.user.id))
+                capture('subscription_canceled', properties={
+                    'plan_name': subscription.plan.name if subscription.plan else None,
+                    'subscription_id': subscription.id,
+                    'source': 'webhook',
+                })
     except Subscription.DoesNotExist:
         pass
 
@@ -323,5 +417,15 @@ def _handle_payment_failed(invoice):
         )
         subscription.status = 'past_due'
         subscription.save()
+
+        # PostHog: Track payment failed
+        if subscription.user:
+            with new_context():
+                identify_context(str(subscription.user.id))
+                capture('payment_failed', properties={
+                    'plan_name': subscription.plan.name if subscription.plan else None,
+                    'subscription_id': subscription.id,
+                    'invoice_id': invoice.get('id'),
+                })
     except Subscription.DoesNotExist:
         pass
