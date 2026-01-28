@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -165,6 +166,31 @@ export default async function handler(
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
       setSession(createdUser, res)
     ]);
+
+    // PostHog: Track user signup and identify
+    const posthog = getPostHogClient();
+    const distinctId = req.headers['x-posthog-distinct-id'] as string || createdUser.id.toString();
+
+    posthog.capture({
+      distinctId,
+      event: 'user_signed_up',
+      properties: {
+        email: createdUser.email,
+        user_id: createdUser.id,
+        team_id: teamId,
+        has_invitation: !!inviteId,
+        source: 'api'
+      }
+    });
+
+    posthog.identify({
+      distinctId,
+      properties: {
+        email: createdUser.email,
+        user_id: createdUser.id,
+        created_at: new Date().toISOString()
+      }
+    });
 
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,6 +10,19 @@ export default async function handler(
   }
 
   try {
+    // PostHog: Track user sign out
+    const distinctId = req.headers['x-posthog-distinct-id'] as string;
+    if (distinctId) {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId,
+        event: 'user_signed_out',
+        properties: {
+          source: 'api'
+        }
+      });
+    }
+
     // Delete the session cookie by setting it with an expired date
     res.setHeader(
       'Set-Cookie',
