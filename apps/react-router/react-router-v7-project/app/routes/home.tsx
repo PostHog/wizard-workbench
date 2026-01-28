@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/home";
+import { usePostHog } from "@posthog/react";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -9,6 +10,16 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+  const posthog = usePostHog();
+
+  const handleExploreClick = () => {
+    posthog?.capture('explore_cta_clicked');
+  };
+
+  const handleLearnMoreClick = () => {
+    posthog?.capture('learn_more_clicked');
+  };
+
   return (
     <div className="px-2 py-32 bg-white md:px-0">
       <div className="container items-center max-w-6xl mx-auto xl:px-5">
@@ -29,6 +40,7 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row sm:space-x-4">
                 <Link
                   to="/countries"
+                  onClick={handleExploreClick}
                   className="flex items-center justify-center px-6 py-3 text-lg text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
                 >
                   Explore Now
@@ -48,6 +60,7 @@ export default function Home() {
                 </Link>
                 <Link
                   to="/about"
+                  onClick={handleLearnMoreClick}
                   className="flex items-center px-6 py-3 text-gray-500 bg-gray-100 rounded-md hover:bg-gray-200 hover:text-gray-600"
                 >
                   Learn More
