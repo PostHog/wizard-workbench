@@ -1,0 +1,72 @@
+[
+  {
+    "event_name": "login_submitted",
+    "description": "User submitted login form with email or Google",
+    "file_path": "app/routes/_user-authentication+/_anonymous-routes+/login.tsx"
+  },
+  {
+    "event_name": "signup_submitted",
+    "description": "User submitted registration form with email or Google",
+    "file_path": "app/routes/_user-authentication+/_anonymous-routes+/register.tsx"
+  },
+  {
+    "event_name": "logout_clicked",
+    "description": "User initiated logout action",
+    "file_path": "app/routes/_user-authentication+/logout.ts"
+  },
+  {
+    "event_name": "onboarding_user_account_completed",
+    "description": "User completed the user account onboarding step",
+    "file_path": "app/routes/_authenticated-routes+/onboarding+/user-account.tsx"
+  },
+  {
+    "event_name": "organization_created",
+    "description": "User created a new organization",
+    "file_path": "app/routes/_authenticated-routes+/organizations_+/new.tsx"
+  },
+  {
+    "event_name": "subscription_plan_selected",
+    "description": "User selected a subscription plan to checkout",
+    "file_path": "app/features/billing/create-subscription-modal-content.tsx"
+  },
+  {
+    "event_name": "subscription_upgrade_initiated",
+    "description": "User initiated a subscription upgrade",
+    "file_path": "app/features/billing/cancel-or-modify-subscription-modal-content.tsx"
+  },
+  {
+    "event_name": "subscription_downgrade_initiated",
+    "description": "User initiated a subscription downgrade",
+    "file_path": "app/features/billing/cancel-or-modify-subscription-modal-content.tsx"
+  },
+  {
+    "event_name": "subscription_cancel_clicked",
+    "description": "User clicked cancel subscription button",
+    "file_path": "app/features/billing/cancel-or-modify-subscription-modal-content.tsx"
+  },
+  {
+    "event_name": "contact_sales_submitted",
+    "description": "User submitted the contact sales form",
+    "file_path": "app/routes/contact-sales.tsx"
+  },
+  {
+    "event_name": "team_member_invited",
+    "description": "Admin invited a new team member via email",
+    "file_path": "app/routes/_authenticated-routes+/organizations_+/$organizationSlug+/settings+/members.tsx"
+  },
+  {
+    "event_name": "checkout_completed",
+    "description": "Stripe checkout session completed successfully (server-side)",
+    "file_path": "app/features/billing/stripe-event-handlers.server.ts"
+  },
+  {
+    "event_name": "subscription_created",
+    "description": "New subscription created via Stripe webhook (server-side)",
+    "file_path": "app/features/billing/stripe-event-handlers.server.ts"
+  },
+  {
+    "event_name": "subscription_cancelled",
+    "description": "Subscription cancelled via Stripe webhook (server-side)",
+    "file_path": "app/features/billing/stripe-event-handlers.server.ts"
+  }
+]

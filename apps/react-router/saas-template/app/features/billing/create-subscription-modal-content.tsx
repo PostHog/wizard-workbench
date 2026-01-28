@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
@@ -47,6 +48,15 @@ export function CreateSubscriptionModalContent({
     keyPrefix: "noCurrentPlanModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
+
+  const handlePlanSelect = (tier: Tier, interval: Interval) => {
+    posthog?.capture("subscription_plan_selected", {
+      tier,
+      interval,
+      current_seats: currentSeats,
+    });
+  };
 
   const navigation = useNavigation();
   const isSubmitting =
@@ -107,7 +117,22 @@ export function CreateSubscriptionModalContent({
   );
 
   return (
-    <Form method="post" replace>
+    <Form
+      method="post"
+      onSubmit={(e) => {
+        const formData = new FormData(e.currentTarget);
+        const lookupKey = formData.get("lookupKey") as string;
+        // Parse tier and interval from lookupKey
+        const tier = (["low", "mid", "high"] as const).find((t) =>
+          lookupKey?.includes(t),
+        );
+        const interval = lookupKey?.includes("annual") ? "annual" : "monthly";
+        if (tier) {
+          handlePlanSelect(tier, interval as Interval);
+        }
+      }}
+      replace
+    >
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>

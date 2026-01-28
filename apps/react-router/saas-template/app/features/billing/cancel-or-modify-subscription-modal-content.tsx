@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
@@ -54,9 +55,34 @@ export function CancelOrModifySubscriptionModalContent({
     keyPrefix: "billingPage.pricingModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
 
   const isSubmitting =
     isSwitchingToLow || isSwitchingToMid || isSwitchingToHigh;
+
+  const handleSubscriptionChange = (
+    newTier: Tier,
+    newInterval: Interval,
+    isUpgrade: boolean,
+  ) => {
+    posthog?.capture(
+      isUpgrade ? "subscription_upgrade_initiated" : "subscription_downgrade_initiated",
+      {
+        current_tier: currentTier,
+        current_interval: currentTierInterval,
+        new_tier: newTier,
+        new_interval: newInterval,
+      },
+    );
+  };
+
+  const handleCancelClick: MouseEventHandler<HTMLButtonElement> = (e) => {
+    posthog?.capture("subscription_cancel_clicked", {
+      current_tier: currentTier,
+      current_interval: currentTierInterval,
+    });
+    onCancelSubscriptionClick?.(e);
+  };
 
   // TODO: change to "Tier" - high, low, mid, enterprise
   const getFeatures = (key: string): string[] =>
@@ -119,7 +145,28 @@ export function CancelOrModifySubscriptionModalContent({
 
   return (
     <>
-      <Form method="post" replace>
+      <Form
+        method="post"
+        onSubmit={(e) => {
+          const formData = new FormData(e.currentTarget);
+          const lookupKey = formData.get("lookupKey") as string;
+          // Parse tier and interval from lookupKey
+          const newTier = (["low", "mid", "high"] as const).find((t) =>
+            lookupKey?.includes(t),
+          );
+          const newInterval = lookupKey?.includes("annual")
+            ? "annual"
+            : "monthly";
+          if (newTier) {
+            const isUpgrade =
+              (currentTier === "low" &&
+                (newTier === "mid" || newTier === "high")) ||
+              (currentTier === "mid" && newTier === "high");
+            handleSubscriptionChange(newTier, newInterval as Interval, isUpgrade);
+          }
+        }}
+        replace
+      >
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"
@@ -515,7 +562,7 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={handleCancelClick}
                 type="button"
                 variant="outline"
               >
