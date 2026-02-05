@@ -25,11 +25,6 @@ class Settings(BaseSettings):
     # Credits
     default_credits: int = 100
 
-    # PostHog
-    posthog_api_key: str = "<ph_project_api_key>"
-    posthog_host: str = "https://us.i.posthog.com"
-    posthog_disabled: bool = False
-
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
