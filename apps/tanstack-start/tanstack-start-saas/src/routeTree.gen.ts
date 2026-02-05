@@ -21,11 +21,14 @@ import { Route as PostsIndexRouteImport } from './routes/posts.index'
 import { Route as UsersUserIdRouteImport } from './routes/users.$userId'
 import { Route as PostsPostIdRouteImport } from './routes/posts.$postId'
 import { Route as ApiUsersRouteImport } from './routes/api/users'
+import { Route as ApiInvoicesRouteImport } from './routes/api/invoices'
 import { Route as PathlessLayoutNestedLayoutRouteImport } from './routes/_pathlessLayout/_nested-layout'
 import { Route as PostsPostIdDeepRouteImport } from './routes/posts_.$postId.deep'
 import { Route as ApiUsersUserIdRouteImport } from './routes/api/users.$userId'
+import { Route as ApiInvoicesInvoiceIdRouteImport } from './routes/api/invoices.$invoiceId'
 import { Route as PathlessLayoutNestedLayoutRouteBRouteImport } from './routes/_pathlessLayout/_nested-layout/route-b'
 import { Route as PathlessLayoutNestedLayoutRouteARouteImport } from './routes/_pathlessLayout/_nested-layout/route-a'
+import { Route as ApiInvoicesInvoiceIdPayRouteImport } from './routes/api/invoices.$invoiceId.pay'
 
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
@@ -86,6 +89,11 @@ const ApiUsersRoute = ApiUsersRouteImport.update({
   path: '/api/users',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInvoicesRoute = ApiInvoicesRouteImport.update({
+  id: '/api/invoices',
+  path: '/api/invoices',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PathlessLayoutNestedLayoutRoute =
   PathlessLayoutNestedLayoutRouteImport.update({
     id: '/_nested-layout',
@@ -101,6 +109,11 @@ const ApiUsersUserIdRoute = ApiUsersUserIdRouteImport.update({
   path: '/$userId',
   getParentRoute: () => ApiUsersRoute,
 } as any)
+const ApiInvoicesInvoiceIdRoute = ApiInvoicesInvoiceIdRouteImport.update({
+  id: '/$invoiceId',
+  path: '/$invoiceId',
+  getParentRoute: () => ApiInvoicesRoute,
+} as any)
 const PathlessLayoutNestedLayoutRouteBRoute =
   PathlessLayoutNestedLayoutRouteBRouteImport.update({
     id: '/route-b',
@@ -113,6 +126,11 @@ const PathlessLayoutNestedLayoutRouteARoute =
     path: '/route-a',
     getParentRoute: () => PathlessLayoutNestedLayoutRoute,
   } as any)
+const ApiInvoicesInvoiceIdPayRoute = ApiInvoicesInvoiceIdPayRouteImport.update({
+  id: '/pay',
+  path: '/pay',
+  getParentRoute: () => ApiInvoicesInvoiceIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -121,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/posts': typeof PostsRouteWithChildren
   '/redirect': typeof RedirectRoute
   '/users': typeof UsersRouteWithChildren
+  '/api/invoices': typeof ApiInvoicesRouteWithChildren
   '/api/users': typeof ApiUsersRouteWithChildren
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$userId': typeof UsersUserIdRoute
@@ -128,14 +147,17 @@ export interface FileRoutesByFullPath {
   '/users/': typeof UsersIndexRoute
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
+  '/api/invoices/$invoiceId': typeof ApiInvoicesInvoiceIdRouteWithChildren
   '/api/users/$userId': typeof ApiUsersUserIdRoute
   '/posts/$postId/deep': typeof PostsPostIdDeepRoute
+  '/api/invoices/$invoiceId/pay': typeof ApiInvoicesInvoiceIdPayRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/customScript.js': typeof CustomScriptDotjsRoute
   '/deferred': typeof DeferredRoute
   '/redirect': typeof RedirectRoute
+  '/api/invoices': typeof ApiInvoicesRouteWithChildren
   '/api/users': typeof ApiUsersRouteWithChildren
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$userId': typeof UsersUserIdRoute
@@ -143,8 +165,10 @@ export interface FileRoutesByTo {
   '/users': typeof UsersIndexRoute
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
+  '/api/invoices/$invoiceId': typeof ApiInvoicesInvoiceIdRouteWithChildren
   '/api/users/$userId': typeof ApiUsersUserIdRoute
   '/posts/$postId/deep': typeof PostsPostIdDeepRoute
+  '/api/invoices/$invoiceId/pay': typeof ApiInvoicesInvoiceIdPayRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -156,6 +180,7 @@ export interface FileRoutesById {
   '/redirect': typeof RedirectRoute
   '/users': typeof UsersRouteWithChildren
   '/_pathlessLayout/_nested-layout': typeof PathlessLayoutNestedLayoutRouteWithChildren
+  '/api/invoices': typeof ApiInvoicesRouteWithChildren
   '/api/users': typeof ApiUsersRouteWithChildren
   '/posts/$postId': typeof PostsPostIdRoute
   '/users/$userId': typeof UsersUserIdRoute
@@ -163,8 +188,10 @@ export interface FileRoutesById {
   '/users/': typeof UsersIndexRoute
   '/_pathlessLayout/_nested-layout/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/_pathlessLayout/_nested-layout/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
+  '/api/invoices/$invoiceId': typeof ApiInvoicesInvoiceIdRouteWithChildren
   '/api/users/$userId': typeof ApiUsersUserIdRoute
   '/posts_/$postId/deep': typeof PostsPostIdDeepRoute
+  '/api/invoices/$invoiceId/pay': typeof ApiInvoicesInvoiceIdPayRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -175,6 +202,7 @@ export interface FileRouteTypes {
     | '/posts'
     | '/redirect'
     | '/users'
+    | '/api/invoices'
     | '/api/users'
     | '/posts/$postId'
     | '/users/$userId'
@@ -182,14 +210,17 @@ export interface FileRouteTypes {
     | '/users/'
     | '/route-a'
     | '/route-b'
+    | '/api/invoices/$invoiceId'
     | '/api/users/$userId'
     | '/posts/$postId/deep'
+    | '/api/invoices/$invoiceId/pay'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/customScript.js'
     | '/deferred'
     | '/redirect'
+    | '/api/invoices'
     | '/api/users'
     | '/posts/$postId'
     | '/users/$userId'
@@ -197,8 +228,10 @@ export interface FileRouteTypes {
     | '/users'
     | '/route-a'
     | '/route-b'
+    | '/api/invoices/$invoiceId'
     | '/api/users/$userId'
     | '/posts/$postId/deep'
+    | '/api/invoices/$invoiceId/pay'
   id:
     | '__root__'
     | '/'
@@ -209,6 +242,7 @@ export interface FileRouteTypes {
     | '/redirect'
     | '/users'
     | '/_pathlessLayout/_nested-layout'
+    | '/api/invoices'
     | '/api/users'
     | '/posts/$postId'
     | '/users/$userId'
@@ -216,8 +250,10 @@ export interface FileRouteTypes {
     | '/users/'
     | '/_pathlessLayout/_nested-layout/route-a'
     | '/_pathlessLayout/_nested-layout/route-b'
+    | '/api/invoices/$invoiceId'
     | '/api/users/$userId'
     | '/posts_/$postId/deep'
+    | '/api/invoices/$invoiceId/pay'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -228,6 +264,7 @@ export interface RootRouteChildren {
   PostsRoute: typeof PostsRouteWithChildren
   RedirectRoute: typeof RedirectRoute
   UsersRoute: typeof UsersRouteWithChildren
+  ApiInvoicesRoute: typeof ApiInvoicesRouteWithChildren
   ApiUsersRoute: typeof ApiUsersRouteWithChildren
   PostsPostIdDeepRoute: typeof PostsPostIdDeepRoute
 }
@@ -272,7 +309,7 @@ declare module '@tanstack/react-router' {
     '/_pathlessLayout': {
       id: '/_pathlessLayout'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof PathlessLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -318,10 +355,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/invoices': {
+      id: '/api/invoices'
+      path: '/api/invoices'
+      fullPath: '/api/invoices'
+      preLoaderRoute: typeof ApiInvoicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_pathlessLayout/_nested-layout': {
       id: '/_pathlessLayout/_nested-layout'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof PathlessLayoutNestedLayoutRouteImport
       parentRoute: typeof PathlessLayoutRoute
     }
@@ -339,6 +383,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUsersUserIdRouteImport
       parentRoute: typeof ApiUsersRoute
     }
+    '/api/invoices/$invoiceId': {
+      id: '/api/invoices/$invoiceId'
+      path: '/$invoiceId'
+      fullPath: '/api/invoices/$invoiceId'
+      preLoaderRoute: typeof ApiInvoicesInvoiceIdRouteImport
+      parentRoute: typeof ApiInvoicesRoute
+    }
     '/_pathlessLayout/_nested-layout/route-b': {
       id: '/_pathlessLayout/_nested-layout/route-b'
       path: '/route-b'
@@ -352,6 +403,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/route-a'
       preLoaderRoute: typeof PathlessLayoutNestedLayoutRouteARouteImport
       parentRoute: typeof PathlessLayoutNestedLayoutRoute
+    }
+    '/api/invoices/$invoiceId/pay': {
+      id: '/api/invoices/$invoiceId/pay'
+      path: '/pay'
+      fullPath: '/api/invoices/$invoiceId/pay'
+      preLoaderRoute: typeof ApiInvoicesInvoiceIdPayRouteImport
+      parentRoute: typeof ApiInvoicesInvoiceIdRoute
     }
   }
 }
@@ -410,6 +468,29 @@ const UsersRouteChildren: UsersRouteChildren = {
 
 const UsersRouteWithChildren = UsersRoute._addFileChildren(UsersRouteChildren)
 
+interface ApiInvoicesInvoiceIdRouteChildren {
+  ApiInvoicesInvoiceIdPayRoute: typeof ApiInvoicesInvoiceIdPayRoute
+}
+
+const ApiInvoicesInvoiceIdRouteChildren: ApiInvoicesInvoiceIdRouteChildren = {
+  ApiInvoicesInvoiceIdPayRoute: ApiInvoicesInvoiceIdPayRoute,
+}
+
+const ApiInvoicesInvoiceIdRouteWithChildren =
+  ApiInvoicesInvoiceIdRoute._addFileChildren(ApiInvoicesInvoiceIdRouteChildren)
+
+interface ApiInvoicesRouteChildren {
+  ApiInvoicesInvoiceIdRoute: typeof ApiInvoicesInvoiceIdRouteWithChildren
+}
+
+const ApiInvoicesRouteChildren: ApiInvoicesRouteChildren = {
+  ApiInvoicesInvoiceIdRoute: ApiInvoicesInvoiceIdRouteWithChildren,
+}
+
+const ApiInvoicesRouteWithChildren = ApiInvoicesRoute._addFileChildren(
+  ApiInvoicesRouteChildren,
+)
+
 interface ApiUsersRouteChildren {
   ApiUsersUserIdRoute: typeof ApiUsersUserIdRoute
 }
@@ -430,6 +511,7 @@ const rootRouteChildren: RootRouteChildren = {
   PostsRoute: PostsRouteWithChildren,
   RedirectRoute: RedirectRoute,
   UsersRoute: UsersRouteWithChildren,
+  ApiInvoicesRoute: ApiInvoicesRouteWithChildren,
   ApiUsersRoute: ApiUsersRouteWithChildren,
   PostsPostIdDeepRoute: PostsPostIdDeepRoute,
 }

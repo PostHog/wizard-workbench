@@ -7,23 +7,26 @@ export const Route = createFileRoute('/_pathlessLayout/_nested-layout')({
 function LayoutComponent() {
   return (
     <div>
-      <div>I'm a nested layout</div>
-      <div className="flex gap-2 border-b">
+      <div className="flex border-b dark:border-gray-700">
         <Link
           to="/route-a"
+          className="px-4 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-b-2 border-transparent transition-colors"
           activeProps={{
-            className: 'font-bold',
+            className:
+              'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 font-medium',
           }}
         >
-          Go to route A
+          Profile
         </Link>
         <Link
           to="/route-b"
+          className="px-4 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border-b-2 border-transparent transition-colors"
           activeProps={{
-            className: 'font-bold',
+            className:
+              'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 font-medium',
           }}
         >
-          Go to route B
+          Notifications
         </Link>
       </div>
       <div>
