@@ -18,7 +18,8 @@ procs:
 
   mcp-inspector:
     # Opens MCP Inspector UI at http://localhost:6274
-    shell: "source .env && cd $MCP_PATH && pnpm run inspector"
+    # MCP_AUTO_OPEN_ENABLED=false prevents browser from auto-opening
+    shell: "source .env && cd $MCP_PATH && MCP_AUTO_OPEN_ENABLED=false pnpm run inspector"
     autostart: true
 
   wizard-build:
