@@ -1,0 +1,3 @@
+# User Service - Pure Python dependencies
+# This service uses only Python standard library
+# No external dependencies required
