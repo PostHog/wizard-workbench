@@ -9,17 +9,22 @@ export const Breadcrumbs = () => {
     isMatch(match, 'loaderData.crumb'),
   )
 
+  if (matchesWithCrumbs.length === 0) return null
+
   return (
-    <nav>
-      <ul className="flex gap-2 items-center">
+    <nav className="hidden md:block">
+      <ul className="flex items-center text-sm">
         {matchesWithCrumbs.map((match, i) => (
-          <li className="flex gap-2">
-            <Link className="text-blue-700" from={match.fullPath}>
+          <li key={match.fullPath} className="flex items-center">
+            {i > 0 && (
+              <span className="mx-2 text-gray-400">/</span>
+            )}
+            <Link
+              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+              from={match.fullPath}
+            >
               {match.loaderData?.crumb}
             </Link>
-            {i + 1 < matchesWithCrumbs.length ? (
-              <span className="">{'>'}</span>
-            ) : null}
           </li>
         ))}
       </ul>

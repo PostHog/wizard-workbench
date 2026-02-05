@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import * as React from 'react'
 
 export const Route = createFileRoute('/dashboard/users/')({
   component: UsersIndexComponent,
@@ -7,24 +6,16 @@ export const Route = createFileRoute('/dashboard/users/')({
 
 function UsersIndexComponent() {
   return (
-    <div className="p-2 space-y-2">
-      <p>
-        Normally, setting default search parameters would either need to be done
-        manually in every link to a page, or as a side-effect (not a great
-        experience).
-      </p>
-      <p>
-        Instead, we can use <strong>search filters</strong> to provide defaults
-        or even persist search params for links to routes (and child routes).
-      </p>
-      <p>
-        A good example of this is the sorting and filtering of the users list.
-        In a traditional router, both would be lost while navigating around
-        individual users or even changing each sort/filter option unless each
-        state was manually passed from the current route into each new link we
-        created (that's a lot of tedious and error-prone work). With TanStack
-        router and search filters, they are persisted with little effort.
-      </p>
+    <div className="h-full flex items-center justify-center p-8">
+      <div className="text-center max-w-md">
+        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-3xl">👥</span>
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Select a Team Member</h3>
+        <p className="text-gray-600 dark:text-gray-400">
+          Choose a team member from the list to view their profile, contact information, and role details.
+        </p>
+      </div>
     </div>
   )
 }
