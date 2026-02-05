@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block nav %}
+<a href="/login" class="btn btn-secondary">Login</a>
+<a href="/signup" class="btn" style="margin-left: 0.5rem;">Sign Up</a>
+{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 4rem 0;">
+    <h1 style="font-size: 2.5rem; margin-bottom: 1rem;">AI Content Generation</h1>
+    <p style="color: #666; margin-bottom: 2rem; font-size: 1.1rem;">
+        Generate blog posts, emails, and social media content with AI.
+    </p>
+    <a href="/signup" class="btn" style="font-size: 1.1rem; padding: 0.75rem 2rem;">Get Started Free</a>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 1rem;">Features</h3>
+    <ul style="margin-left: 1.5rem;">
+        <li><strong>Blog Posts</strong> - 10 credits</li>
+        <li><strong>Email Drafts</strong> - 5 credits</li>
+        <li><strong>Social Posts</strong> - 2 credits</li>
+    </ul>
+    <p style="margin-top: 1rem; color: #666;">New accounts start with 100 free credits.</p>
+</div>
+{% endblock %}

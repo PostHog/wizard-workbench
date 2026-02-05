@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Acme AI{% endblock %}
+
+{% block nav %}
+<span class="credits">{{ user.credits }} credits</span>
+<a href="/settings" style="margin-left: 1rem;">Settings</a>
+<a href="/logout" style="margin-left: 1rem;">Logout</a>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">Dashboard</h1>
+
+<!-- Stats Cards -->
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem;">
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 2rem; font-weight: bold; color: #4f46e5;">{{ user.credits }}</div>
+        <div style="color: #666; font-size: 0.9rem;">Credits Remaining</div>
+    </div>
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 2rem; font-weight: bold; color: #059669;">{{ total_generations }}</div>
+        <div style="color: #666; font-size: 0.9rem;">Total Generations</div>
+    </div>
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 2rem; font-weight: bold; color: #d97706;">{{ total_credits_used }}</div>
+        <div style="color: #666; font-size: 0.9rem;">Credits Used</div>
+    </div>
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 2rem; font-weight: bold; color: #7c3aed;">{{ api_key_count }}</div>
+        <div style="color: #666; font-size: 0.9rem;">API Keys</div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+    <!-- Generate Content -->
+    <div>
+        <div class="card">
+            <h3 style="margin-bottom: 1rem;">Generate Content</h3>
+            <form id="generate-form">
+                <div class="form-group">
+                    <label for="type">Content Type</label>
+                    <select id="type" name="type">
+                        <option value="social">Social Post (2 credits)</option>
+                        <option value="email">Email Draft (5 credits)</option>
+                        <option value="blog">Blog Post (10 credits)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="prompt">Prompt</label>
+                    <textarea id="prompt" name="prompt" rows="3" placeholder="Describe what you want to generate..."></textarea>
+                </div>
+                <button type="submit" class="btn">Generate</button>
+            </form>
+            <div id="result" style="margin-top: 1rem; display: none;">
+                <h4>Generated Content:</h4>
+                <pre id="result-content" style="background: #f5f5f5; padding: 1rem; border-radius: 4px; white-space: pre-wrap; margin-top: 0.5rem;"></pre>
+            </div>
+        </div>
+
+        <!-- Recent Generations -->
+        <div class="card" style="margin-top: 1rem;">
+            <h3 style="margin-bottom: 1rem;">Recent Generations</h3>
+            {% if recent_generations %}
+                {% for gen in recent_generations %}
+                <div style="padding: 0.75rem 0; border-bottom: 1px solid #eee;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 500;">{{ gen.generation_type | title }}</span>
+                        <span style="color: #666; font-size: 0.85rem;">{{ gen.credits_used }} credits</span>
+                    </div>
+                    <p style="color: #666; font-size: 0.9rem; margin-top: 0.25rem;">{{ gen.prompt[:80] }}{% if gen.prompt|length > 80 %}...{% endif %}</p>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: #666;">No generations yet. Try creating one!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div>
+        <!-- Quick Links -->
+        <div class="card">
+            <h3 style="margin-bottom: 1rem;">Quick Links</h3>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <a href="/settings" class="btn btn-secondary" style="text-align: center;">Account Settings</a>
+                <a href="/docs" class="btn btn-secondary" style="text-align: center;">API Documentation</a>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card" style="margin-top: 1rem;">
+            <h3 style="margin-bottom: 1rem;">Recent Activity</h3>
+            {% if recent_activity %}
+                {% for activity in recent_activity %}
+                <div style="padding: 0.5rem 0; border-bottom: 1px solid #eee; font-size: 0.9rem;">
+                    <strong>{{ activity.action }}</strong>
+                    <p style="color: #666; margin: 0;">{{ activity.description }}</p>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: #666; font-size: 0.9rem;">No recent activity</p>
+            {% endif %}
+        </div>
+
+        <!-- Account Info -->
+        <div class="card" style="margin-top: 1rem;">
+            <h3 style="margin-bottom: 1rem;">Account</h3>
+            <p style="font-size: 0.9rem;"><strong>Email:</strong> {{ user.email }}</p>
+            <p style="font-size: 0.9rem; margin-top: 0.5rem;"><strong>Member since:</strong> {{ user.created_at.strftime('%b %d, %Y') }}</p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('generate-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const type = document.getElementById('type').value;
+    const prompt = document.getElementById('prompt').value;
+
+    if (!prompt.trim()) {
+        alert('Please enter a prompt');
+        return;
+    }
+
+    const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ generation_type: type, prompt: prompt })
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('result-content').textContent = data.content;
+        document.querySelector('.credits').textContent = data.credits_remaining + ' credits';
+        setTimeout(() => location.reload(), 1500);
+    } else {
+        alert(data.detail || 'Generation failed');
+    }
+});
+</script>
+{% endblock %}
