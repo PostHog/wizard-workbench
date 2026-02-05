@@ -79,8 +79,8 @@ export function findApps(appsDir: string): App[] {
     if (!existsSync(dir)) return;
 
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      // Skip hidden entries and node_modules
-      if (entry.name.startsWith(".") || entry.name === "node_modules") {
+      // Skip hidden entries, node_modules, and venv directories
+      if (entry.name.startsWith(".") || entry.name === "node_modules" || entry.name === "venv") {
         continue;
       }
 
