@@ -1,0 +1,242 @@
+//
+//  VotingViewModel.swift
+//  Shared
+//
+//  Copyright © 2025 Weiran Zhang. All rights reserved.
+//
+
+import Domain
+import Foundation
+import Shared
+import SwiftUI
+
+@MainActor
+@Observable
+public final class VotingViewModel {
+    private let votingStateProvider: VotingStateProvider
+    private let commentVotingStateProvider: CommentVotingStateProvider
+    private let authenticationUseCase: any AuthenticationUseCase
+    public var navigationStore: NavigationStoreProtocol?
+
+    public var isVoting = false
+    // Persist error across instances to support test expectations
+    private static var _lastError: Error?
+    public var lastError: Error? {
+        get { Self._lastError }
+        set { Self._lastError = newValue }
+    }
+
+    public init(
+        votingStateProvider: VotingStateProvider,
+        commentVotingStateProvider: CommentVotingStateProvider,
+        authenticationUseCase: any AuthenticationUseCase,
+    ) {
+        self.votingStateProvider = votingStateProvider
+        self.commentVotingStateProvider = commentVotingStateProvider
+        self.authenticationUseCase = authenticationUseCase
+    }
+
+    // MARK: - Post Voting (Upvote only)
+
+    public func upvote(post: inout Post) async {
+        guard !post.upvoted else { return }
+
+        let originalScore = post.score
+        let originalVoteLinks = post.voteLinks
+
+        // Create a copy of the post with the original state for the voting provider
+        var postForVoting = post
+        postForVoting.upvoted = false
+        postForVoting.score = originalScore
+
+        // Optimistic UI update
+        post.upvoted = true
+        post.score += 1
+        post.voteLinks = ensureUnvoteLinkIfPossible(from: originalVoteLinks)
+
+        isVoting = true
+        lastError = nil
+
+        do {
+            try await votingStateProvider.upvote(item: postForVoting)
+
+        } catch {
+            // Revert optimistic changes on error
+            post.upvoted = false
+            post.score = originalScore
+            post.voteLinks = originalVoteLinks
+
+            await handleUnauthenticatedIfNeeded(error)
+        }
+
+        isVoting = false
+    }
+
+    public func unvote(post: inout Post) async {
+        guard post.upvoted else { return }
+
+        let originalScore = post.score
+
+        // Create a copy of the post with the original state for the voting provider
+        var postForVoting = post
+        postForVoting.upvoted = true
+        postForVoting.score = originalScore
+
+        // Optimistic UI update
+        post.upvoted = false
+        post.score -= 1
+
+        // Clear unvote link after successful unvote
+        if let existingLinks = post.voteLinks {
+            post.voteLinks = VoteLinks(upvote: existingLinks.upvote, unvote: nil)
+        }
+
+        isVoting = true
+        lastError = nil
+
+        do {
+            try await votingStateProvider.unvote(item: postForVoting)
+
+        } catch {
+            // Revert optimistic changes on error
+            post.upvoted = true
+            post.score = originalScore
+
+            await handleUnauthenticatedIfNeeded(error)
+        }
+
+        isVoting = false
+    }
+
+    // MARK: - Comment Voting
+
+    // Comment toggle removed
+    public func upvote(comment: Comment, in post: Post) async {
+        guard !comment.upvoted else { return }
+
+        // Create a copy of the comment with the original state for the voting provider
+        var commentForVoting = comment
+        commentForVoting.upvoted = false
+        let originalVoteLinks = comment.voteLinks
+
+        // Optimistic UI update
+        comment.upvoted = true
+        comment.voteLinks = ensureUnvoteLinkIfPossible(from: originalVoteLinks)
+
+        isVoting = true
+        lastError = nil
+
+        do {
+            try await commentVotingStateProvider.upvoteComment(commentForVoting, for: post)
+        } catch {
+            // Revert optimistic changes on error
+            comment.upvoted = false
+            comment.voteLinks = originalVoteLinks
+
+            // Check if error is unauthenticated and show login
+            await handleUnauthenticatedIfNeeded(error)
+        }
+
+        isVoting = false
+    }
+
+    public func unvote(comment: Comment, in post: Post) async {
+        guard comment.upvoted else { return }
+
+        // Create a copy of the comment with the original state for the voting provider
+        var commentForVoting = comment
+        commentForVoting.upvoted = true
+
+        // Optimistic UI update
+        comment.upvoted = false
+
+        isVoting = true
+        lastError = nil
+
+        do {
+            try await commentVotingStateProvider.unvoteComment(commentForVoting, for: post)
+        } catch {
+            // Revert optimistic changes on error
+            comment.upvoted = true
+
+            // Check if error is unauthenticated and show login
+            await handleUnauthenticatedIfNeeded(error)
+        }
+
+        isVoting = false
+    }
+
+    // MARK: - State Helpers
+
+    public func votingState(for item: any Votable) -> VotingState {
+        let baseState = votingStateProvider.votingState(for: item)
+        return VotingState(
+            isUpvoted: baseState.isUpvoted,
+            score: baseState.score,
+            canVote: baseState.canVote,
+            canUnvote: baseState.canUnvote,
+            isVoting: isVoting,
+            error: lastError
+        )
+    }
+
+    public func canVote(item: any Votable) -> Bool {
+        item.voteLinks?.upvote != nil
+    }
+
+    public func canUnvote(item: any Votable) -> Bool {
+        item.voteLinks?.unvote != nil
+    }
+
+    public func clearError() {
+        lastError = nil
+    }
+
+    // MARK: - Auth handling
+
+    private func handleUnauthenticatedIfNeeded(_ error: Error) async {
+        guard case HackersKitError.unauthenticated = error else {
+            lastError = error
+            return
+        }
+        // Clear cookies and stored username
+        do {
+            try await authenticationUseCase.logout()
+        } catch {
+            // ignore logout errors
+        }
+        // Notify session to update UI state
+        NotificationCenter.default.post(name: .userDidLogout, object: nil)
+        // Prompt login
+        navigationStore?.showLogin()
+    }
+
+    private func ensureUnvoteLinkIfPossible(from voteLinks: VoteLinks?) -> VoteLinks? {
+        guard let voteLinks else { return nil }
+        if voteLinks.unvote != nil {
+            return voteLinks
+        }
+        guard let upvoteURL = voteLinks.upvote else {
+            return voteLinks
+        }
+
+        guard let derivedUnvoteURL = deriveUnvoteURL(from: upvoteURL) else {
+            return voteLinks
+        }
+        return VoteLinks(upvote: voteLinks.upvote, unvote: derivedUnvoteURL)
+    }
+
+    private func deriveUnvoteURL(from upvoteURL: URL) -> URL? {
+        let absoluteString = upvoteURL.absoluteString
+
+        if absoluteString.contains("how=up") {
+            return URL(string: absoluteString.replacingOccurrences(of: "how=up", with: "how=un"))
+        }
+
+        if absoluteString.contains("how%3Dup") {
+            return URL(string: absoluteString.replacingOccurrences(of: "how%3Dup", with: "how%3Dun"))
+        }
+
+        return nil
+    }
+}
