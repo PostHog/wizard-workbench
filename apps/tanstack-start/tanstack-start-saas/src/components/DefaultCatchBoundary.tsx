@@ -5,16 +5,31 @@ import {
   useMatch,
   useRouter,
 } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
+import { useRef } from 'react'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter()
+  const posthog = usePostHog()
+  const hasReportedError = useRef(false)
   const isRoot = useMatch({
     strict: false,
     select: (state) => state.id === rootRouteId,
   })
 
   console.error('DefaultCatchBoundary Error:', error)
+
+  // Capture error in PostHog once
+  if (!hasReportedError.current) {
+    hasReportedError.current = true
+    posthog.captureException(error)
+    posthog.capture('error_boundary_triggered', {
+      error_message: error instanceof Error ? error.message : String(error),
+      error_name: error instanceof Error ? error.name : 'Unknown',
+      boundary_type: 'default',
+    })
+  }
 
   return (
     <div className="min-w-0 flex-1 p-8 flex flex-col items-center justify-center">

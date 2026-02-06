@@ -1,4 +1,5 @@
 import { Link, Outlet, createFileRoute } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 import { fetchUsers } from '../utils/users'
 
 export const Route = createFileRoute('/users')({
@@ -8,7 +9,16 @@ export const Route = createFileRoute('/users')({
 
 function UsersComponent() {
   const users = Route.useLoaderData()
+  const posthog = usePostHog()
   const roles = ['Admin', 'Developer', 'Designer', 'Manager', 'Analyst']
+
+  const handleTeamMemberClick = (user: { id: string | number; name: string }, role: string) => {
+    posthog.capture('team_member_selected', {
+      user_id: user.id,
+      user_name: user.name,
+      user_role: role,
+    })
+  }
 
   return (
     <div className="flex h-full">
@@ -45,6 +55,7 @@ function UsersComponent() {
                 params={{
                   userId: String(user.id),
                 }}
+                onClick={() => handleTeamMemberClick(user, roles[index % roles.length])}
                 className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                 activeProps={{
                   className:

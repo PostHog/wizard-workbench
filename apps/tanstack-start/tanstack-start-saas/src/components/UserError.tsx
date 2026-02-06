@@ -1,7 +1,23 @@
 import { ErrorComponent, Link } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
+import { useRef } from 'react'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 
 export function UserErrorComponent({ error }: ErrorComponentProps) {
+  const posthog = usePostHog()
+  const hasReportedError = useRef(false)
+
+  // Capture error in PostHog once
+  if (!hasReportedError.current) {
+    hasReportedError.current = true
+    posthog.captureException(error)
+    posthog.capture('user_error', {
+      error_message: error instanceof Error ? error.message : String(error),
+      error_name: error instanceof Error ? error.name : 'Unknown',
+      error_context: 'team_member',
+    })
+  }
+
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
       <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
