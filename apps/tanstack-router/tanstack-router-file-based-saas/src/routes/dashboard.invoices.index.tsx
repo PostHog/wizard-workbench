@@ -1,4 +1,6 @@
+import * as React from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { usePostHog } from 'posthog-js/react'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { Spinner } from '../components/Spinner'
 import { useMutation } from '../hooks/useMutation'
@@ -11,11 +13,29 @@ export const Route = createFileRoute('/dashboard/invoices/')({
 
 function InvoicesIndexComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
 
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data }) => {
+      // Capture invoice created event
+      posthog.capture('invoice_created', {
+        invoice_id: data.id,
+        invoice_title: data.title,
+      })
+      router.invalidate()
+    },
   })
+
+  // Track invoice creation failures
+  React.useEffect(() => {
+    if (createInvoiceMutation.status === 'error' && createInvoiceMutation.error) {
+      posthog.capture('invoice_creation_failed', {
+        error_message: createInvoiceMutation.error.message,
+      })
+      posthog.captureException(createInvoiceMutation.error)
+    }
+  }, [createInvoiceMutation.status, createInvoiceMutation.error, posthog])
 
   return (
     <div className="p-6">

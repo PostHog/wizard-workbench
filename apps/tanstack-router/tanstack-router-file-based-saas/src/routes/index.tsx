@@ -1,10 +1,20 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { usePostHog } from 'posthog-js/react'
 
 export const Route = createFileRoute('/')({
   component: IndexComponent,
 })
 
 function IndexComponent() {
+  const posthog = usePostHog()
+
+  const handleCtaClick = (ctaName: string, destination: string) => {
+    posthog.capture('cta_clicked', {
+      cta_name: ctaName,
+      destination: destination,
+      page: 'home',
+    })
+  }
   return (
     <div className={`p-8`}>
       <div className={`max-w-4xl mx-auto`}>
@@ -18,12 +28,14 @@ function IndexComponent() {
           <div className={`flex gap-4`}>
             <Link
               to="/dashboard"
+              onClick={() => handleCtaClick('Go to Dashboard', '/dashboard')}
               className={`px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors`}
             >
               Go to Dashboard
             </Link>
             <Link
               to="/login"
+              onClick={() => handleCtaClick('Sign In', '/login')}
               className={`px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors`}
             >
               Sign In
@@ -74,6 +86,7 @@ function IndexComponent() {
             <Link
               to="/dashboard/invoices/$invoiceId"
               params={{ invoiceId: 3 }}
+              onClick={() => handleCtaClick('View Invoice', '/dashboard/invoices/3')}
               className={`px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors`}
             >
               View Invoice

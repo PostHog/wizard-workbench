@@ -1,0 +1,58 @@
+---
+name: react-tanstack-router-file-based
+description: >-
+  PostHog integration for React applications using TanStack Router with
+  file-based routing
+metadata:
+  author: PostHog
+  version: dev
+---
+
+# PostHog integration for React with TanStack Router (file-based)
+
+This skill helps you add PostHog analytics to React with TanStack Router (file-based) applications.
+
+## Workflow
+
+Follow these steps in order to complete the integration:
+
+1. `basic-integration-1.0-begin.md` - PostHog Setup - Begin ← **Start here**
+2. `basic-integration-1.1-edit.md` - PostHog Setup - Edit
+3. `basic-integration-1.2-revise.md` - PostHog Setup - Revise
+4. `basic-integration-1.3-conclude.md` - PostHog Setup - Conclusion
+
+## Reference files
+
+- `EXAMPLE.md` - React with TanStack Router (file-based) example project code
+- `identify-users.md` - Identify users - docs
+- `basic-integration-1.0-begin.md` - PostHog setup - begin
+- `basic-integration-1.1-edit.md` - PostHog setup - edit
+- `basic-integration-1.2-revise.md` - PostHog setup - revise
+- `basic-integration-1.3-conclude.md` - PostHog setup - conclusion
+
+The example project shows the target implementation pattern. Consult the documentation for API details.
+
+## Key principles
+
+- **Environment variables**: Always use environment variables for PostHog keys. Never hardcode them.
+- **Minimal changes**: Add PostHog code alongside existing integrations. Don't replace or restructure existing code.
+- **Match the example**: Your implementation should follow the example project's patterns as closely as possible.
+
+## Framework guidelines
+
+- Never use useEffect() for analytics capture - it's brittle and causes errors
+- Prefer event handlers or routing mechanisms to trigger analytics calls
+- Add handlers where user actions occur rather than reacting to state changes
+- Use TanStack Router's built-in navigation events for pageview tracking instead of useEffect
+- Use PostHogProvider in the root component defined in either the file-based convention (__root.tsx) or code-based convention (wherever createRootRoute() is called) so all child routes have access to the PostHog client
+- Remember that source code is available in the node_modules directory
+- Check package.json for type checking or build scripts to validate changes
+- posthog-js is the JavaScript SDK package name
+
+## Identifying users
+
+Identify users during login and signup events. Refer to the example code and documentation for the correct identify pattern for this framework. If both frontend and backend code exist, pass the client-side session and distinct ID using `X-POSTHOG-DISTINCT-ID` and `X-POSTHOG-SESSION-ID` headers to maintain correlation.
+
+## Error tracking
+
+Add PostHog error tracking to relevant files, particularly around critical user flows and API boundaries.

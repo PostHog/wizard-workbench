@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
+import { usePostHog } from 'posthog-js/react'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
 import { fetchInvoiceById, patchInvoice } from '../utils/mockTodos'
@@ -28,11 +29,40 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data }) => {
+      // Capture invoice updated event
+      posthog.capture('invoice_updated', {
+        invoice_id: data?.id,
+        invoice_title: data?.title,
+      })
+      router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
+
+  // Track invoice viewed event
+  React.useEffect(() => {
+    posthog.capture('invoice_viewed', {
+      invoice_id: invoice.id,
+      invoice_title: invoice.title,
+      invoice_status: invoice.id % 2 === 0 ? 'paid' : 'pending',
+      invoice_amount: invoice.id * 125,
+    })
+  }, [invoice.id, invoice.title, posthog])
+
+  // Track invoice update failures
+  React.useEffect(() => {
+    if (updateInvoiceMutation.status === 'error' && updateInvoiceMutation.error) {
+      posthog.capture('invoice_update_failed', {
+        invoice_id: invoice.id,
+        error_message: updateInvoiceMutation.error.message,
+      })
+      posthog.captureException(updateInvoiceMutation.error)
+    }
+  }, [updateInvoiceMutation.status, updateInvoiceMutation.error, invoice.id, posthog])
 
   React.useEffect(() => {
     navigate({

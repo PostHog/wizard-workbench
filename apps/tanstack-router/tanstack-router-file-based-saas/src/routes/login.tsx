@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
+import { usePostHog } from 'posthog-js/react'
 
 export const Route = createFileRoute('/login')({
   validateSearch: z.object({
@@ -12,6 +13,7 @@ export const Route = createFileRoute('/login')({
 
 function LoginComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
   const { auth, status } = Route.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
   })
@@ -21,6 +23,26 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+
+    // Identify user in PostHog
+    posthog.identify(username, {
+      username: username,
+    })
+
+    // Capture login event
+    posthog.capture('user_logged_in', {
+      username: username,
+    })
+
+    router.invalidate()
+  }
+
+  const handleLogout = () => {
+    // Capture logout event before resetting
+    posthog.capture('user_logged_out')
+    posthog.reset()
+
+    auth.logout()
     router.invalidate()
   }
 
@@ -55,10 +77,7 @@ function LoginComponent() {
             <p className="text-lg mb-1">Signed in as</p>
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
-              onClick={() => {
-                auth.logout()
-                router.invalidate()
-              }}
+              onClick={handleLogout}
               className="w-full px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
               Sign Out
