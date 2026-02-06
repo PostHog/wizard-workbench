@@ -5,7 +5,7 @@
  * This file contains only wizard-ci specific utilities.
  */
 import { spawn } from "child_process";
-import { existsSync, readdirSync } from "fs";
+import { existsSync, readdirSync, statSync } from "fs";
 import { join } from "path";
 
 // Re-export git operations from shared service
@@ -89,15 +89,26 @@ export function findApps(appsDir: string): App[] {
         continue;
       }
 
+      // Symlinks might point to files — resolve and skip non-directories
+      if (entry.isSymbolicLink()) {
+        try {
+          if (!statSync(join(dir, entry.name)).isDirectory()) continue;
+        } catch {
+          continue;
+        }
+      }
+
       const fullPath = join(dir, entry.name);
       const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
 
-      // Check for JS/TS projects (package.json) or Python projects (manage.py for Django, requirements.txt)
+      // Check for JS/TS projects (package.json), Python projects (manage.py for Django, requirements.txt),
+      // or Android projects (build.gradle or build.gradle.kts)
       const isJsProject = existsSync(join(fullPath, "package.json"));
       const isDjangoProject = existsSync(join(fullPath, "manage.py"));
       const isPythonProject = existsSync(join(fullPath, "requirements.txt")) || existsSync(join(fullPath, "pyproject.toml"));
+      const isAndroidProject = existsSync(join(fullPath, "build.gradle")) || existsSync(join(fullPath, "build.gradle.kts"));
 
-      if (isJsProject || isDjangoProject || isPythonProject) {
+      if (isJsProject || isDjangoProject || isPythonProject || isAndroidProject) {
         apps.push({ name: relativePath, path: fullPath });
       } else {
         scan(fullPath, relativePath);
