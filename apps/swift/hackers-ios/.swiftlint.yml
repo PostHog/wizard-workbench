@@ -1,0 +1,41 @@
+excluded:
+  - scan_derived_data
+  - fastlane
+  - vendor
+  - .build
+  - DerivedData
+  - "**/SwiftSoup/**"
+  - "**/.build/**"
+  - "Features/**/.build/**"
+  - "Data/.build/**"
+  - "**/.DerivedData/**"
+  - build
+  - "**/build/**"
+  # Exclude all tests from linting
+  - "**/Tests/**"
+  - "**/*Tests.swift"
+  - "HackersTests"
+reporter: "xcode"
+warning_threshold: 1000
+# Don't fail build on violations during development
+strict: false
+opt_in_rules:
+  - convenience_type
+  - empty_count
+  - empty_string
+  - fatal_error_message
+  - first_where
+  - modifier_order
+  - toggle_bool
+  - overridden_super_call
+type_name:
+  excluded:
+    - T
+  allowed_symbols:
+    - _Previews
+identifier_name:
+  excluded:
+      - id
+      - by
+  allowed_symbols:
+    - _body
