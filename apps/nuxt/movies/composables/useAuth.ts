@@ -1,32 +1,48 @@
 export const useAuth = () => {
-  // Initialize from cookie if available
-  const cookie = useCookie<string | null>('auth-user')
+  const cookie = useCookie<string | null>('auth-user', {
+    httpOnly: false,
+    secure: true,
+    sameSite: 'strict',
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+  })
+  
   const user = useState<string | null>('auth-user', () => cookie.value)
   const isAuthenticated = computed(() => !!user.value)
 
   const login = async (username: string, password: string) => {
-    // Fake auth - accepts any username/password
-    const response = await $fetch('/api/auth/login', {
-      method: 'POST',
-      body: { username, password },
-    })
-    
-    if (response.success) {
-      user.value = username
-      cookie.value = username
-      await navigateTo('/')
+    if (!username?.trim() || !password?.trim()) {
+      throw new Error('Username and password are required')
     }
-    
-    return response
+
+    try {
+      const response = await $fetch<{ success: boolean; user: string }>('/api/auth/login', {
+        method: 'POST',
+        body: { username: username.trim(), password },
+      })
+      
+      if (response.success) {
+        user.value = response.user
+        cookie.value = response.user
+        await navigateTo('/')
+      }
+      
+      return response
+    } catch (error: any) {
+      throw new Error(error.data?.message || error.message || 'Login failed')
+    }
   }
 
   const logout = async () => {
-    await $fetch('/api/auth/logout', {
-      method: 'POST',
-    })
-    user.value = null
-    cookie.value = null
-    await navigateTo('/login')
+    try {
+      await $fetch('/api/auth/logout', { method: 'POST' })
+    } catch (error) {
+      // Continue with logout even if API call fails
+      console.warn('Logout API call failed:', error)
+    } finally {
+      user.value = null
+      cookie.value = null
+      await navigateTo('/login')
+    }
   }
 
   return {

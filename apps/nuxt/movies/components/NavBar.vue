@@ -3,44 +3,63 @@ const { user, logout } = useAuth()
 </script>
 
 <template>
-  <div
+  <nav
     flex="~ row lg:col"
     justify-evenly items-center
     py5 lg:px5
     border="t lg:r base"
     bg-black
+    role="navigation"
+    aria-label="Main navigation"
   >
-    <NuxtLink v-slot="{ isActive }" to="/" :title="$t('Home')">
-      <div
-        text-2xl
-        :class="isActive ? 'i-ph-house-fill text-primary' : 'i-ph-house'"
-      />
+    <NuxtLink
+      v-slot="{ isActive }"
+      to="/"
+      :title="$t('Home')"
+      class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
+      :aria-label="$t('Home')"
+    >
+      <span :class="isActive ? 'i-ph-house-fill text-primary' : 'i-ph-house'" aria-hidden="true" />
     </NuxtLink>
-    <NuxtLink v-slot="{ isActive }" to="/movie" :title="$t('Movies')">
-      <div
-        text-2xl
-        :class="isActive ? 'i-ph-film-strip-fill text-primary' : 'i-ph-film-strip'"
-      />
+    <NuxtLink
+      v-slot="{ isActive }"
+      to="/movie"
+      :title="$t('Movies')"
+      class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
+      :aria-label="$t('Movies')"
+    >
+      <span :class="isActive ? 'i-ph-film-strip-fill text-primary' : 'i-ph-film-strip'" aria-hidden="true" />
     </NuxtLink>
-    <NuxtLink v-slot="{ isActive }" to="/tv" :title="$t('TV Shows')">
-      <div
-        text-2xl
-        :class="isActive ? 'i-ph-television-simple-fill text-primary' : 'i-ph-television-simple'"
-      />
+    <NuxtLink
+      v-slot="{ isActive }"
+      to="/tv"
+      :title="$t('TV Shows')"
+      class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
+      :aria-label="$t('TV Shows')"
+    >
+      <span :class="isActive ? 'i-ph-television-simple-fill text-primary' : 'i-ph-television-simple'" aria-hidden="true" />
     </NuxtLink>
-    <NuxtLink v-slot="{ isActive }" to="/search" :title="$t('Search')">
-      <div
-        text-2xl
-        :class="isActive ? 'i-ph-magnifying-glass-fill text-primary' : 'i-ph-magnifying-glass'"
-      />
+    <NuxtLink
+      v-slot="{ isActive }"
+      to="/search"
+      :title="$t('Search')"
+      class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
+      :aria-label="$t('Search')"
+    >
+      <span :class="isActive ? 'i-ph-magnifying-glass-fill text-primary' : 'i-ph-magnifying-glass'" aria-hidden="true" />
     </NuxtLink>
-    <div v-if="user" class="flex items-center gap-2">
+    <div v-if="user" class="flex items-center gap-3">
       <span class="text-sm text-gray-400">{{ user }}</span>
       <button
+        type="button"
         @click="logout"
-        class="i-ph-sign-out text-2xl hover:text-primary cursor-pointer"
-        title="Logout"
-      />
+        class="text-2xl hover:text-primary cursor-pointer transition-colors flex items-center justify-center"
+        :title="$t('Logout')"
+        :aria-label="$t('Logout')"
+      >
+        <span class="i-ph-sign-out" aria-hidden="true" />
+        <span class="sr-only">{{ $t('Logout') }}</span>
+      </button>
     </div>
-  </div>
+  </nav>
 </template>

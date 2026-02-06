@@ -1,5 +1,4 @@
 export default defineNuxtRouteMiddleware((to) => {
-  // Check cookie directly for server-side compatibility
   const cookie = useCookie<string | null>('auth-user')
   const isAuthenticated = !!cookie.value
   
