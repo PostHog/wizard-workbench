@@ -1,3 +1,7 @@
+<script setup lang="ts">
+const { user, logout } = useAuth()
+</script>
+
 <template>
   <div
     flex="~ row lg:col"
@@ -30,5 +34,13 @@
         :class="isActive ? 'i-ph-magnifying-glass-fill text-primary' : 'i-ph-magnifying-glass'"
       />
     </NuxtLink>
+    <div v-if="user" class="flex items-center gap-2">
+      <span class="text-sm text-gray-400">{{ user }}</span>
+      <button
+        @click="logout"
+        class="i-ph-sign-out text-2xl hover:text-primary cursor-pointer"
+        title="Logout"
+      />
+    </div>
   </div>
 </template>

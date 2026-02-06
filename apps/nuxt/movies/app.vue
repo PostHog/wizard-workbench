@@ -1,6 +1,10 @@
 <script setup>
 import '@unocss/reset/tailwind.css'
 
+const route = useRoute()
+const { isAuthenticated } = useAuth()
+const showNavBar = computed(() => isAuthenticated.value && route.path !== '/login')
+
 useHead({
   htmlAttrs: {
     lang: 'en',
@@ -31,7 +35,7 @@ useHead({
     <div id="app-scroller" of-x-hidden of-y-auto relative>
       <NuxtPage />
     </div>
-    <NavBar lg:order-first />
+    <NavBar v-if="showNavBar" lg:order-first />
     <IframeModal />
     <PhotoModal />
   </div>
