@@ -1,0 +1,78 @@
+<section class="main-container profile-page">
+  <!-- Profile Header -->
+  <div class="profile-header">
+    <div class="avatar-section">
+      <div class="avatar">
+        <span>{{ userInitials() }}</span>
+      </div>
+      <button class="btn-upload" type="button">Change Photo</button>
+    </div>
+    <div class="user-info">
+      <h2>{{ credentialsService.credentials()?.firstName }} {{ credentialsService.credentials()?.lastName }}</h2>
+      <span class="role-badge">{{ credentialsService.credentials()?.roles?.[0] || 'User' }}</span>
+      <p class="user-email">{{ credentialsService.credentials()?.email }}</p>
+    </div>
+  </div>
+
+  <!-- Profile Card -->
+  <div class="profile-card">
+    <div class="card-header">
+      <h3>Personal Information</h3>
+      <button type="button" (click)="toggleEdit()" class="btn-edit">
+        {{ isEditing() ? 'Cancel' : 'Edit' }}
+      </button>
+    </div>
+
+    <form [formGroup]="profileForm" (ngSubmit)="onSave()">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="firstName">First Name</label>
+          <input id="firstName" formControlName="firstName" [readonly]="!isEditing()" [class.readonly]="!isEditing()" />
+        </div>
+        <div class="form-group">
+          <label for="lastName">Last Name</label>
+          <input id="lastName" formControlName="lastName" [readonly]="!isEditing()" [class.readonly]="!isEditing()" />
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input id="email" type="email" formControlName="email" [readonly]="!isEditing()" [class.readonly]="!isEditing()" />
+        </div>
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input id="username" formControlName="username" [readonly]="!isEditing()" [class.readonly]="!isEditing()" />
+        </div>
+      </div>
+
+      @if (isEditing()) {
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      }
+    </form>
+  </div>
+
+  <!-- Account Info Card -->
+  <div class="profile-card">
+    <div class="card-header">
+      <h3>Account Information</h3>
+    </div>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">Account ID</span>
+        <span class="info-value">{{ credentialsService.credentials()?.id || 'N/A' }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Role</span>
+        <span class="info-value">{{ credentialsService.credentials()?.roles?.[0] || 'User' }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Member Since</span>
+        <span class="info-value">January 2024</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">Status</span>
+        <span class="info-value status-active">Active</span>
+      </div>
+    </div>
+  </div>
+</section>

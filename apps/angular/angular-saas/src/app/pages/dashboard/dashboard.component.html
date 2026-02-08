@@ -1,0 +1,26 @@
+<section class="main-container dashboard">
+  <!-- Welcome Banner -->
+  <app-welcome-banner [userName]="credentialsService.credentials()?.firstName" organizationName="your workspace"> </app-welcome-banner>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    @for (stat of stats(); track stat.label) {
+      <app-stats-card [label]="stat.label" [value]="stat.value" [icon]="stat.icon" [iconBg]="stat.iconBg" [changePercent]="stat.change"> </app-stats-card>
+    }
+  </div>
+
+  <!-- Two Column Layout -->
+  <div class="dashboard-grid">
+    <div class="main-column">
+      <app-activity-feed></app-activity-feed>
+    </div>
+    <div class="side-column">
+      <app-quick-actions (newProject)="openCreateProjectModal()" (addMember)="openAddMemberModal()"> </app-quick-actions>
+    </div>
+  </div>
+</section>
+
+<!-- Modals -->
+<app-create-project-modal [isOpen]="showCreateProjectModal()" (close)="onModalClosed()" (created)="onModalClosed()"> </app-create-project-modal>
+
+<app-add-member-modal [isOpen]="showAddMemberModal()" (close)="onModalClosed()" (created)="onModalClosed()"> </app-add-member-modal>
