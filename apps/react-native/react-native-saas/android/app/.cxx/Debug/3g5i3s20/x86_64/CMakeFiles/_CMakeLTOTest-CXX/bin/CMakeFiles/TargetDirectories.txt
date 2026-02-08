@@ -1,0 +1,4 @@
+/Users/edwinyjlim/development/wizard-workbench/apps/react-native/react-native-saas/android/app/.cxx/Debug/3g5i3s20/x86_64/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir
+/Users/edwinyjlim/development/wizard-workbench/apps/react-native/react-native-saas/android/app/.cxx/Debug/3g5i3s20/x86_64/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir
+/Users/edwinyjlim/development/wizard-workbench/apps/react-native/react-native-saas/android/app/.cxx/Debug/3g5i3s20/x86_64/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/edit_cache.dir
+/Users/edwinyjlim/development/wizard-workbench/apps/react-native/react-native-saas/android/app/.cxx/Debug/3g5i3s20/x86_64/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/rebuild_cache.dir

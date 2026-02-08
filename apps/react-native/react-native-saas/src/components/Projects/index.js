@@ -1,0 +1,55 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+
+import NewProject from '~/components/NewProject';
+import Can from '~/components/Can';
+
+import { getProjectsRequest } from '~/store/modules/projects/actions';
+
+import styles from './styles';
+
+export default function Projects() {
+  const dispatch = useDispatch();
+  const projects = useSelector(state => state.projects);
+  const activeTeam = useSelector(state => state.teams.active);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (activeTeam) {
+      dispatch(getProjectsRequest());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!activeTeam) return null;
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        contentContainerStyle={styles.projectsList}
+        data={projects.data}
+        keyExtractor={item => String(item.id)}
+        renderItem={({ item }) => (
+          <View style={styles.projectContainer}>
+            <Text style={styles.projectTitle}>{item.title}</Text>
+          </View>
+        )}
+      />
+
+      <Can checkPermission="projects_create">
+        <TouchableOpacity
+          style={styles.newProjectButton}
+          onPress={() => setIsModalOpen(true)}
+        >
+          <Text style={{ fontSize: 28, color: '#FFF', fontWeight: 'bold' }}>+</Text>
+        </TouchableOpacity>
+      </Can>
+
+      <NewProject
+        visible={isModalOpen}
+        onRequestClose={() => setIsModalOpen(false)}
+      />
+    </View>
+  );
+}

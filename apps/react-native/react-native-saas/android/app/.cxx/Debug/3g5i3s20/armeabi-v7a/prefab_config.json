@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "prefabPath": "/Users/edwinyjlim/.gradle/caches/modules-2/files-2.1/com.google.prefab/cli/2.1.0/aa32fec809c44fa531f01dcfb739b5b3304d3050/cli-2.1.0-all.jar",
+  "packages": [
+    "/Users/edwinyjlim/.gradle/caches/9.0.0/transforms/4c26de9c12ae8a9829439ab102c24dd1/transformed/react-android-0.83.0-debug/prefab",
+    "/Users/edwinyjlim/development/wizard-workbench/apps/react-native/react-native-saas/node_modules/react-native-reanimated/android/build/intermediates/prefab_package/debug/prefab",
+    "/Users/edwinyjlim/development/wizard-workbench/apps/react-native/react-native-saas/node_modules/react-native-worklets/android/build/intermediates/prefab_package/debug/prefab",
+    "/Users/edwinyjlim/.gradle/caches/9.0.0/transforms/29919e313b2d3f97cb0d6a9c4fe8034f/transformed/hermes-android-0.14.0-debug/prefab",
+    "/Users/edwinyjlim/.gradle/caches/9.0.0/transforms/b85f62a599074afc3b2ec6cfb7884973/transformed/fbjni-0.7.0/prefab"
+  ]
+}
