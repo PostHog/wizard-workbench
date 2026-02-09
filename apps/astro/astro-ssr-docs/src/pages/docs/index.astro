@@ -1,0 +1,60 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+
+// Server-side rendered timestamp to demonstrate SSR
+const renderTime = new Date().toISOString();
+---
+
+<DocsLayout title="Introduction">
+  <h1>Introduction</h1>
+  <p class="subtitle">Welcome to the NeuralFlow documentation</p>
+
+  <div class="callout">
+    <p>This documentation site is server-rendered on each request, enabling dynamic content and personalization.</p>
+  </div>
+
+  <p>
+    NeuralFlow is an AI-powered automation platform that helps teams work smarter.
+    This documentation covers everything you need to integrate NeuralFlow into your applications.
+  </p>
+
+  <h2>What is NeuralFlow?</h2>
+  <p>
+    NeuralFlow provides a suite of AI tools for document processing, workflow automation,
+    and intelligent data analysis. Our platform is designed to be developer-friendly while
+    remaining accessible to non-technical users.
+  </p>
+
+  <h2>Key Features</h2>
+  <ul>
+    <li><strong>Document Processing</strong> - Extract structured data from any document type</li>
+    <li><strong>Workflow Automation</strong> - Build complex sequences with our visual builder</li>
+    <li><strong>Semantic Search</strong> - Find information by meaning, not just keywords</li>
+    <li><strong>REST API</strong> - Full programmatic access to all features</li>
+    <li><strong>Webhooks</strong> - Real-time notifications for any event</li>
+  </ul>
+
+  <h2>Getting Started</h2>
+  <p>
+    The fastest way to get started is to follow our <a href="/docs/quickstart">Quick Start guide</a>,
+    which will have you processing your first document in under 5 minutes.
+  </p>
+
+  <h3>Prerequisites</h3>
+  <ul>
+    <li>A NeuralFlow account (sign up for free)</li>
+    <li>An API key from your dashboard</li>
+    <li>Node.js 18+ or Python 3.9+ (for SDK)</li>
+  </ul>
+
+  <h2>Next Steps</h2>
+  <p>
+    Once you've completed the quick start, explore our <a href="/docs/concepts">Core Concepts</a>
+    to understand how NeuralFlow works, or dive into the <a href="/docs/api">API Reference</a>
+    for detailed endpoint documentation.
+  </p>
+
+  <div class="render-info">
+    Server-rendered at: {renderTime}
+  </div>
+</DocsLayout>

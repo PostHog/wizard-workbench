@@ -1,0 +1,284 @@
+.billing-page {
+  h2 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  .section-title {
+    margin: 2rem 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+.current-plan-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  border-radius: 12px;
+  color: white;
+
+  .plan-info {
+    .label {
+      font-size: 0.75rem;
+      opacity: 0.9;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    h3 {
+      margin: 0.25rem 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.875rem;
+      opacity: 0.9;
+    }
+  }
+
+  .plan-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+
+    .plan-price {
+      font-size: 1.5rem;
+      font-weight: 700;
+
+      .period {
+        font-size: 0.875rem;
+        font-weight: 400;
+        opacity: 0.8;
+      }
+    }
+  }
+
+  .btn-outline {
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.plan-card {
+  position: relative;
+  background: var(--white);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  &.recommended {
+    border-color: #f97316;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+  }
+
+  &.current {
+    background: #f9fafb;
+  }
+
+  .recommended-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.25rem 0.75rem;
+    background: #f97316;
+    color: white;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  h4 {
+    margin: 0.5rem 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .price {
+    margin: 1rem 0;
+
+    .amount {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .period {
+      font-size: 0.875rem;
+      color: var(--text-color-medium, #6b7280);
+    }
+  }
+
+  .features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      font-size: 0.875rem;
+
+      .check {
+        color: #10b981;
+      }
+    }
+  }
+
+  button {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.btn-primary {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+      border: none;
+    }
+
+    &.btn-outline {
+      background: white;
+      border: 1px solid #e5e7eb;
+      color: var(--text-color-dark, #1f2937);
+
+      &:hover:not(:disabled) {
+        background: #f9fafb;
+      }
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.payment-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: var(--white);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  .card-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .card-icon {
+      font-size: 1.5rem;
+    }
+
+    .card-number {
+      margin: 0;
+      font-weight: 500;
+    }
+
+    .card-expiry {
+      margin: 0.25rem 0 0 0;
+      font-size: 0.75rem;
+      color: var(--text-color-medium, #6b7280);
+    }
+  }
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: #f97316;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.invoices-table {
+  background: var(--white);
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+
+  .table-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 100px 80px;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: #f9fafb;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-color-medium, #6b7280);
+  }
+
+  .table-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 100px 80px;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    font-size: 0.875rem;
+    align-items: center;
+
+    .invoice-id {
+      font-weight: 500;
+    }
+
+    .status {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-align: center;
+
+      &.paid {
+        background: #dcfce7;
+        color: #16a34a;
+      }
+
+      &.pending {
+        background: #fef3c7;
+        color: #d97706;
+      }
+
+      &.failed {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+    }
+  }
+}

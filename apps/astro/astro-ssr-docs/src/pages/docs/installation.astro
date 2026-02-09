@@ -1,0 +1,59 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+
+const renderTime = new Date().toISOString();
+---
+
+<DocsLayout title="Installation">
+  <h1>Installation</h1>
+  <p class="subtitle">Set up the NeuralFlow SDK in your project</p>
+
+  <h2>Node.js / JavaScript</h2>
+  <p>Install the NeuralFlow SDK using your preferred package manager:</p>
+
+  <pre><code>npm install @neuralflow/sdk</code></pre>
+
+  <p>Or with yarn:</p>
+
+  <pre><code>yarn add @neuralflow/sdk</code></pre>
+
+  <h3>Basic Setup</h3>
+  <p>Initialize the client with your API key:</p>
+
+  <pre><code>import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
+
+const client = new NeuralFlow({'{'}
+  apiKey: process.env.NEURALFLOW_API_KEY,
+{'}'});</code></pre>
+
+  <h2>Python</h2>
+  <p>Install with pip:</p>
+
+  <pre><code>pip install neuralflow</code></pre>
+
+  <h3>Basic Setup</h3>
+
+  <pre><code>from neuralflow import NeuralFlow
+
+client = NeuralFlow(api_key=os.environ['NEURALFLOW_API_KEY'])</code></pre>
+
+  <h2>Environment Variables</h2>
+  <p>We recommend storing your API key in an environment variable:</p>
+
+  <pre><code># .env
+NEURALFLOW_API_KEY=your_api_key_here</code></pre>
+
+  <div class="callout">
+    <p><strong>Security Note:</strong> Never commit your API key to version control. Always use environment variables.</p>
+  </div>
+
+  <h2>Next Steps</h2>
+  <p>
+    Now that you have the SDK installed, follow the <a href="/docs/quickstart">Quick Start</a> guide
+    to process your first document.
+  </p>
+
+  <div class="render-info">
+    Server-rendered at: {renderTime}
+  </div>
+</DocsLayout>
