@@ -1,0 +1,61 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+
+const renderTime = new Date().toISOString();
+---
+
+<DocsLayout title="Quick Start">
+  <h1>Quick Start</h1>
+  <p class="subtitle">Process your first document in under 5 minutes</p>
+
+  <h2>Step 1: Get Your API Key</h2>
+  <p>
+    Sign in to your NeuralFlow dashboard and navigate to Settings → API Keys.
+    Create a new key and copy it to your clipboard.
+  </p>
+
+  <h2>Step 2: Install the SDK</h2>
+
+  <pre><code>npm install @neuralflow/sdk</code></pre>
+
+  <h2>Step 3: Process a Document</h2>
+
+  <pre><code>import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
+import fs from 'fs';
+
+const client = new NeuralFlow({'{'}
+  apiKey: process.env.NEURALFLOW_API_KEY,
+{'}'});
+
+// Upload and process a document
+const document = await client.documents.create({'{'}
+  file: fs.createReadStream('./invoice.pdf'),
+  extractFields: ['date', 'total', 'vendor', 'line_items'],
+{'}'});
+
+console.log('Extracted data:', document.data);</code></pre>
+
+  <h2>Step 4: View Results</h2>
+  <p>The extracted data will be returned as structured JSON:</p>
+
+  <pre><code>{'{'}
+  "date": "2024-01-15",
+  "total": 1250.00,
+  "vendor": "Acme Corp",
+  "line_items": [
+    {'{'} "description": "Consulting", "amount": 1000.00 {'}'},
+    {'{'} "description": "Expenses", "amount": 250.00 {'}'}
+  ]
+{'}'}</code></pre>
+
+  <h2>What's Next?</h2>
+  <ul>
+    <li>Learn about <a href="/docs/workflows">Workflow Automation</a></li>
+    <li>Explore the full <a href="/docs/api">API Reference</a></li>
+    <li>Set up <a href="/docs/api/authentication">Authentication</a> for production</li>
+  </ul>
+
+  <div class="render-info">
+    Server-rendered at: {renderTime}
+  </div>
+</DocsLayout>

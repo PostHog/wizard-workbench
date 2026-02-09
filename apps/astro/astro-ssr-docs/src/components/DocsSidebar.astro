@@ -1,0 +1,54 @@
+---
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+
+const sections = [
+  {
+    title: 'Getting Started',
+    links: [
+      { href: '/docs', label: 'Introduction' },
+      { href: '/docs/installation', label: 'Installation' },
+      { href: '/docs/quickstart', label: 'Quick Start' },
+    ],
+  },
+  {
+    title: 'Core Concepts',
+    links: [
+      { href: '/docs/concepts', label: 'Overview' },
+      { href: '/docs/workflows', label: 'Workflows' },
+      { href: '/docs/automation', label: 'Automation' },
+    ],
+  },
+  {
+    title: 'API Reference',
+    links: [
+      { href: '/docs/api', label: 'Overview' },
+      { href: '/docs/api/authentication', label: 'Authentication' },
+      { href: '/docs/api/endpoints', label: 'Endpoints' },
+    ],
+  },
+];
+---
+
+<aside class="docs-sidebar">
+  {sections.map((section) => (
+    <div class="sidebar-section">
+      <h3 class="sidebar-title">{section.title}</h3>
+      <ul class="sidebar-links">
+        {section.links.map((link) => (
+          <li>
+            <a
+              href={link.href}
+              class:list={["sidebar-link", { active: currentPath === link.href }]}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ))}
+</aside>
