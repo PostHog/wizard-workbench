@@ -1,0 +1,18 @@
+---
+const currentPath = Astro.url.pathname;
+const isDocs = currentPath.startsWith('/docs');
+---
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <span>NeuralFlow</span> Docs
+    </a>
+    <ul class="nav-links">
+      <li><a href="/docs" class:list={["nav-link", { active: isDocs }]}>Documentation</a></li>
+      <li><a href="/docs/api" class="nav-link">API Reference</a></li>
+      <li><a href="https://github.com" class="nav-link" target="_blank">GitHub</a></li>
+      <li><a href="#" class="nav-cta">Get Started</a></li>
+    </ul>
+  </div>
+</nav>

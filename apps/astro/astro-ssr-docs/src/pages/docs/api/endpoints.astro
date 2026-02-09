@@ -1,0 +1,60 @@
+---
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+
+const renderTime = new Date().toISOString();
+---
+
+<DocsLayout title="API Endpoints">
+  <h1>API Endpoints</h1>
+  <p class="subtitle">Complete endpoint reference</p>
+
+  <h2>Documents</h2>
+
+  <h3>Create Document</h3>
+  <pre><code>POST /v1/documents</code></pre>
+  <p>Upload and process a new document.</p>
+
+  <h3>Get Document</h3>
+  <pre><code>GET /v1/documents/:id</code></pre>
+  <p>Retrieve a processed document and its extracted data.</p>
+
+  <h3>List Documents</h3>
+  <pre><code>GET /v1/documents</code></pre>
+  <p>List all documents with pagination.</p>
+
+  <h3>Delete Document</h3>
+  <pre><code>DELETE /v1/documents/:id</code></pre>
+  <p>Permanently delete a document.</p>
+
+  <h2>Workflows</h2>
+
+  <h3>Create Workflow</h3>
+  <pre><code>POST /v1/workflows</code></pre>
+  <p>Create a new automation workflow.</p>
+
+  <h3>Execute Workflow</h3>
+  <pre><code>POST /v1/workflows/:id/execute</code></pre>
+  <p>Manually trigger a workflow execution.</p>
+
+  <h3>Get Execution</h3>
+  <pre><code>GET /v1/executions/:id</code></pre>
+  <p>Get the status and results of a workflow execution.</p>
+
+  <h2>Webhooks</h2>
+
+  <h3>Create Webhook</h3>
+  <pre><code>POST /v1/webhooks</code></pre>
+  <p>Register a new webhook endpoint.</p>
+
+  <h3>List Webhooks</h3>
+  <pre><code>GET /v1/webhooks</code></pre>
+  <p>List all registered webhooks.</p>
+
+  <h3>Delete Webhook</h3>
+  <pre><code>DELETE /v1/webhooks/:id</code></pre>
+  <p>Remove a webhook registration.</p>
+
+  <div class="render-info">
+    Server-rendered at: {renderTime}
+  </div>
+</DocsLayout>

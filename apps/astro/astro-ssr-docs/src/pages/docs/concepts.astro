@@ -1,0 +1,53 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+
+const renderTime = new Date().toISOString();
+---
+
+<DocsLayout title="Core Concepts">
+  <h1>Core Concepts</h1>
+  <p class="subtitle">Understanding the fundamentals of NeuralFlow</p>
+
+  <h2>Documents</h2>
+  <p>
+    Documents are the primary input to NeuralFlow. You can upload PDFs, images, Word documents,
+    and many other file types. NeuralFlow uses AI to understand the content and structure of
+    your documents.
+  </p>
+
+  <h2>Extraction</h2>
+  <p>
+    Extraction is the process of pulling structured data from unstructured documents.
+    You can define custom schemas or use our pre-built templates for common document types
+    like invoices, receipts, and contracts.
+  </p>
+
+  <h2>Workflows</h2>
+  <p>
+    Workflows allow you to chain multiple operations together. For example, you might create
+    a workflow that:
+  </p>
+  <ol>
+    <li>Receives a document via email</li>
+    <li>Extracts key fields</li>
+    <li>Validates the data</li>
+    <li>Sends to your CRM</li>
+    <li>Notifies your team via Slack</li>
+  </ol>
+
+  <h2>Webhooks</h2>
+  <p>
+    Webhooks notify your application when events occur. You can subscribe to events like
+    <code>document.processed</code>, <code>workflow.completed</code>, or <code>error.occurred</code>.
+  </p>
+
+  <h2>API Keys</h2>
+  <p>
+    API keys authenticate your requests to NeuralFlow. You can create multiple keys with
+    different permission levels for development, staging, and production environments.
+  </p>
+
+  <div class="render-info">
+    Server-rendered at: {renderTime}
+  </div>
+</DocsLayout>
