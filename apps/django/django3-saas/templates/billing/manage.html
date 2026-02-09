@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Subscription{% endblock %}
+
+{% block content %}
+<h1>Billing</h1>
+
+{% if subscription %}
+<div class="card">
+    <h2>Current Subscription</h2>
+    <p>
+        <strong>Plan:</strong> {{ subscription.plan.name }}<br>
+        <strong>Status:</strong>
+        <span class="badge {% if subscription.status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
+            {{ subscription.get_status_display }}
+        </span><br>
+        <strong>Price:</strong> {{ subscription.plan.get_price_display }}<br>
+        <strong>Current Period:</strong> {{ subscription.current_period_start|date:"M d, Y" }} - {{ subscription.current_period_end|date:"M d, Y" }}
+    </p>
+
+    <div class="mt-1">
+        <a href="{% url 'billing:cancel' %}" class="btn btn-danger btn-small">Cancel Subscription</a>
+    </div>
+</div>
+
+<h2 class="mt-1">Change Plan</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+    {% for plan in plans %}
+    {% if plan != subscription.plan %}
+    <div class="card">
+        <h3>{{ plan.name }}</h3>
+        <p>{{ plan.get_price_display }}</p>
+        <a href="{% url 'billing:change_plan' plan.slug %}" class="btn btn-secondary btn-small">Switch</a>
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="card" style="text-align: center;">
+    <h2>No Active Subscription</h2>
+    <p class="text-muted">Choose a plan to get started.</p>
+    <a href="{% url 'billing:pricing' %}" class="btn btn-primary">View Plans</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -24,7 +24,6 @@ import {
   checkout,
   getCurrentBranch,
   getRepoRoot,
-  getRemoteUrl,
   listBranches,
   pushAndCreatePR,
   switchOrCreateBranch,
@@ -68,16 +67,36 @@ interface PRMetadata {
   branch: string;
   duration?: number;
   wizardRef?: string;
-  examplesRef?: string;
+  contextMillRef?: string;
   posthogRef?: string;
+  source?: string;
+  sourceUrl?: string;
 }
 
-function getDependencyRefs(): Pick<PRMetadata, "wizardRef" | "examplesRef" | "posthogRef"> {
+function getDependencyRefs(): Pick<PRMetadata, "wizardRef" | "contextMillRef" | "posthogRef"> {
   return {
     wizardRef: process.env.WIZARD_REF,
-    examplesRef: process.env.EXAMPLES_REF,
+    contextMillRef: process.env.CONTEXT_MILL_REF,
     posthogRef: process.env.POSTHOG_REF,
   };
+}
+
+function getSourceInfo(): Pick<PRMetadata, "source" | "sourceUrl"> {
+  // Check if running in GitHub Actions
+  const githubRunId = process.env.GITHUB_RUN_ID;
+  const githubRepository = process.env.GITHUB_REPOSITORY;
+  const githubServerUrl = process.env.GITHUB_SERVER_URL || "https://github.com";
+
+  if (githubRunId && githubRepository) {
+    // Running in GitHub Actions - build the workflow run URL
+    const sourceUrl = `${githubServerUrl}/${githubRepository}/actions/runs/${githubRunId}`;
+    // Use CI_SOURCE env var if set (e.g., "scheduled", "manual", "dispatch"), otherwise default to "github-actions"
+    const source = process.env.CI_SOURCE || "github-actions";
+    return { source, sourceUrl };
+  }
+
+  // Local run - no link
+  return { source: "local" };
 }
 
 function buildPRTitle(meta: PRMetadata): string {
@@ -85,15 +104,21 @@ function buildPRTitle(meta: PRMetadata): string {
 }
 
 function buildPRBody(meta: PRMetadata): string {
+  // Build source line with optional link
+  const sourceLine = meta.sourceUrl
+    ? `Source: [${meta.source}](${meta.sourceUrl})`
+    : `Source: ${meta.source || "unknown"}`;
+
   const lines = [
     `Automated wizard CI run`,
     "",
+    sourceLine,
     `Trigger ID: \`${meta.shortId}\``,
     `App: \`${meta.appName}\``,
     `App directory: \`apps/${meta.appName}\``,
     `Workbench branch: \`${meta.branch}\``,
     `Wizard branch: \`${meta.wizardRef || "main"}\``,
-    `Examples branch: \`${meta.examplesRef || "main"}\``,
+    `Context Mill branch: \`${meta.contextMillRef || "main"}\``,
     `PostHog (MCP) branch: \`${meta.posthogRef || "master"}\``,
     `Timestamp: ${new Date().toISOString()}`,
   ];
@@ -384,8 +409,7 @@ async function pushOnlyMode(opts: Options): Promise<void> {
 
   // Push and create PR
   console.log("\n[1/2] Pushing to remote...");
-  const remoteUrl = getRemoteUrl(repoRoot, opts.remote);
-  console.log(`      Remote: ${opts.remote} (${remoteUrl})`);
+  console.log(`      Remote: ${opts.remote}`);
 
   // Extract app name and shortId from branch name if it follows wizard-ci pattern
   const branchMatch = targetBranch.match(/^wizard-ci\/(.+)\/([a-f0-9]{7})$/);
@@ -397,6 +421,7 @@ async function pushOnlyMode(opts: Options): Promise<void> {
     shortId: branchShortId,
     branch: targetBranch,
     ...getDependencyRefs(),
+    ...getSourceInfo(),
   };
 
   const result = pushAndCreatePR({
@@ -591,8 +616,7 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
 
   // 5. Push and create PR
   console.log("[5/5] Pushing and creating PR...");
-  const remoteUrl = getRemoteUrl(repoRoot, opts.remote);
-  console.log(`      Remote: ${opts.remote} (${remoteUrl})`);
+  console.log(`      Remote: ${opts.remote}`);
 
   const prMeta: PRMetadata = {
     appName: app.name,
@@ -600,6 +624,7 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
     branch: branchName,
     duration: result.duration,
     ...getDependencyRefs(),
+    ...getSourceInfo(),
   };
 
   const prResult = pushAndCreatePR({

@@ -42,19 +42,31 @@ Check for:
 - Build configuration is valid
 
 ### 3. PostHog implementation (score 1-5)
+
 Check for:
-- `posthog-js` or `posthog-node` in dependencies
-- Correct initialization patterns by framework
+
+- PostHog SDK in dependencies:
+  - JavaScript: `posthog-js` or `posthog-node` in package.json
+  - Python: `posthog` in requirements.txt or pyproject.toml
+  - Other: appropriate SDK for the language/framework
+- Correct initialization patterns by framework:
+  - JavaScript: Provider component or singleton client module
+  - Django: `AppConfig.ready()` in apps.py
+  - Other: SDK initialized at app startup
 - Correct API host configuration
-- PostHog initialization with API key
+- PostHog initialization with API key (via environment variable, not hardcoded)
 - Captures baseline events (pageviews, screen views, custom events)
 - `posthog.capture()` calls for user actions
 - Page view tracking setup
-- User identification (`posthog.identify()`)
+- User identification:
+  - JavaScript: `posthog.identify()`
+  - Python: `identify_context()` within `new_context()` blocks
 - Error tracking setup (exception capture)
 - No PII in event properties
 - Proper cleanup on unmount (React)
 - Reverse proxy that circumvents adblock issues when sending events to PostHog
+
+**Note:** Python SDK v7+ uses a context-based API. Do not flag `new_context()`, `capture()`, `tag()` patterns as errors.
 
 ### 4. Quality of PostHog insights and events (score 1-5)
 Check for:

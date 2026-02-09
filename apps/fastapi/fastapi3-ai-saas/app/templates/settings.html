@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Acme AI{% endblock %}
+
+{% block nav %}
+<span class="credits">{{ user.credits }} credits</span>
+<a href="/dashboard" style="margin-left: 1rem;">Dashboard</a>
+<a href="/logout" style="margin-left: 1rem;">Logout</a>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">Account Settings</h1>
+
+{% if success %}
+<div style="background: #d1fae5; border: 1px solid #34d399; color: #065f46; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem;">
+    {{ success }}
+</div>
+{% endif %}
+
+{% if error %}
+<div class="error">{{ error }}</div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+    <!-- Profile Settings -->
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;">Profile</h3>
+        <form method="post" action="/settings">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{ user.email }}" required>
+            </div>
+            <button type="submit" class="btn">Update Email</button>
+        </form>
+    </div>
+
+    <!-- Password Change -->
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;">Change Password</h3>
+        <form method="post" action="/settings/password">
+            <div class="form-group">
+                <label for="current_password">Current Password</label>
+                <input type="password" id="current_password" name="current_password" required>
+            </div>
+            <div class="form-group">
+                <label for="new_password">New Password</label>
+                <input type="password" id="new_password" name="new_password" required minlength="6">
+            </div>
+            <button type="submit" class="btn">Change Password</button>
+        </form>
+    </div>
+</div>
+
+<!-- API Keys Section -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3>API Keys</h3>
+        <button onclick="createApiKey()" class="btn">Create New Key</button>
+    </div>
+    <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+        API keys allow programmatic access to Acme AI. You can have up to 5 active keys.
+        Currently using: <strong>{{ api_key_count }}/5</strong>
+    </p>
+    <div id="api-keys-list">
+        <p style="color: #666;">Loading API keys...</p>
+    </div>
+</div>
+
+<!-- Account Info -->
+<div class="card" style="margin-top: 1.5rem;">
+    <h3 style="margin-bottom: 1rem;">Account Information</h3>
+    <p><strong>Credits remaining:</strong> {{ user.credits }}</p>
+    <p style="margin-top: 0.5rem;"><strong>Member since:</strong> {{ user.created_at.strftime('%B %d, %Y') }}</p>
+</div>
+
+<script>
+async function loadApiKeys() {
+    const response = await fetch('/api/keys');
+    const keys = await response.json();
+
+    const container = document.getElementById('api-keys-list');
+
+    if (keys.length === 0) {
+        container.innerHTML = '<p style="color: #666;">No API keys yet. Create one to get started.</p>';
+        return;
+    }
+
+    container.innerHTML = keys.map(key => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #eee;">
+            <div>
+                <strong>${key.name}</strong>
+                <code style="margin-left: 0.5rem; background: #f5f5f5; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">${key.key_prefix}</code>
+                ${!key.is_active ? '<span style="color: #dc2626; margin-left: 0.5rem;">(Revoked)</span>' : ''}
+            </div>
+            ${key.is_active ? `<button onclick="revokeApiKey(${key.id})" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.25rem 0.5rem;">Revoke</button>` : ''}
+        </div>
+    `).join('');
+}
+
+async function createApiKey() {
+    const name = prompt('Enter a name for this API key:');
+    if (!name) return;
+
+    const response = await fetch('/api/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+    });
+
+    if (response.ok) {
+        const data = await response.json();
+        alert('API Key created!\\n\\nKey: ' + data.key + '\\n\\nSave this key - it will not be shown again!');
+        loadApiKeys();
+    } else {
+        const error = await response.json();
+        alert(error.detail || 'Failed to create API key');
+    }
+}
+
+async function revokeApiKey(id) {
+    if (!confirm('Are you sure you want to revoke this API key?')) return;
+
+    const response = await fetch('/api/keys/' + id, { method: 'DELETE' });
+
+    if (response.ok) {
+        loadApiKeys();
+    } else {
+        alert('Failed to revoke API key');
+    }
+}
+
+loadApiKeys();
+</script>
+{% endblock %}

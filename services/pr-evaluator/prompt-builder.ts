@@ -29,8 +29,10 @@ Evaluate this pull request.
 ### PR Description
 ${prData.description || "(No description provided)"}
 
-### Changed Files
+### Changed Files (committed in this PR)
 ${prData.files.map((f) => `- ${f.filename} (${f.status}: +${f.additions}/-${f.deletions})`).join("\n")}
+
+**Note:** Files you read that are not listed above exist locally but are not committed.
 
 ### Diff
 \`\`\`diff

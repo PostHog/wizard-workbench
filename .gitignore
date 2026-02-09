@@ -1,6 +1,14 @@
 # Dependencies
 node_modules/
 **/node_modules/
+vendor/
+**/vendor/
+
+# Laravel
+**/storage/
+**/public/fonts/
+**/public/css/filament*/
+**/bootstrap/cache/
 
 # Build outputs
 .next/
@@ -80,7 +88,7 @@ Desktop.ini
 *.sublime-*
 
 # Tools
-.claude/
+.claude/*.local.*
 .stripe/
 
 # Temporary

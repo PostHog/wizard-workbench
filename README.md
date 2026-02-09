@@ -14,10 +14,14 @@ A stable of test applications and codebases, with no PostHog installed, lives in
 apps/
 └── next-js/
 │   ├── 15-app-router-saas
-│   ├── 15-app-router-todo
 │   ├── 15-pages-router-saas
-│   └── 15-pages-router-todo
-└── react/
+└── react-router/
+│   ├── react-router-v7-projects
+│   ├── saas-template
+└── django/
+│   ├── 15-pages-router-saas
+└── flask/
+└── laravel/
 ```
 
 To add a new test app, create a directory under `/apps`.
@@ -40,11 +44,11 @@ services/
 
 The workbench can run the entire Wizard stack in local development mode, with hot reload where supported. It uses `mprocs` to run all the repos defined in your `.env` file:
 
-- [Examples repo](https://github.com/PostHog/examples)
+- [Context Mill repo](https://github.com/PostHog/context-mill)
 - [Wizard repo](https://github.com/PostHog/wizard)
 - [MCP repo](https://github.com/PostHog/posthog/tree/master/services/mcp) (within PostHog monorepo)
 
-![local dev stack](https://res.cloudinary.com/dmukukwp6/image/upload/q_auto,f_auto/wizard_workbench_local_dev_760610ecfb.png)
+![local dev stack](https://res.cloudinary.com/dmukukwp6/image/upload/q_auto,f_auto/pasted_image_2026_01_26_T20_15_17_777_Z_473d28d6e1.png)
 
 ### Setup
 
@@ -70,7 +74,7 @@ cp .env.example .env
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `EXAMPLES_PATH` | Yes | Path to your local examples repo (e.g., `~/development/examples`) |
+| `CONTEXT_MILL_PATH` | Yes | Path to your local context-mill repo (e.g., `~/development/context-mill`) |
 | `MCP_PATH` | Yes | Path to MCP service (e.g., `~/development/posthog/services/mcp`) |
 | `WIZARD_PATH` | Yes | Path to your local wizard repo (e.g., `~/development/wizard`) |
 | `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key for wizard CI mode and PR evaluator |
@@ -94,7 +98,7 @@ Use keyboard shortcuts in mprocs: `s` to start, `x` to stop, `r` to restart, `q`
 
 | Process | Port | Description |
 |---------|------|-------------|
-| `examples` | 8765 | Examples server with MCP resources ZIP |
+| `context-mill` | 8765 | Context Mill server with MCP resources ZIP |
 | `mcp` | 8787 | MCP server using local resources |
 | `mcp-inspector` | 6274 | MCP Inspector UI for debugging |
 | `wizard-build` | - | Builds and watches Wizard for changes |
@@ -142,7 +146,7 @@ The `wizard-ci.yml` workflow is a unified CI/CD pipeline that handles app discov
 | `evaluate` | `true` | Run PR evaluator after wizard completes |
 | `base_branch` | `main` | Base branch for PR |
 | `wizard_ref` | `main` | Wizard repo branch/tag/sha |
-| `examples_ref` | `main` | Examples repo branch/tag/sha |
+| `context_mill_ref` | `main` | Context Mill repo branch/tag/sha |
 | `posthog_ref` | `master` | PostHog repo branch/tag/sha (for MCP) |
 | `posthog_region` | `us` | PostHog region (`us` or `eu`) |
 | `trigger_id` | auto-gen | Seven character ID |
