@@ -1,0 +1,78 @@
+<section class="main-container billing-page">
+  <h2>Billing & Subscription</h2>
+
+  <!-- Current Plan Card -->
+  <div class="current-plan-card">
+    <div class="plan-info">
+      <span class="label">Current Plan</span>
+      <h3>{{ currentPlanDetails()?.name }}</h3>
+      <p>Your plan renews on March 1, 2024</p>
+    </div>
+    <div class="plan-actions">
+      <span class="plan-price"> ${{ currentPlanDetails()?.price }}<span class="period">/month</span> </span>
+      <button class="btn-outline">Manage Subscription</button>
+    </div>
+  </div>
+
+  <!-- Plans Grid -->
+  <h3 class="section-title">Available Plans</h3>
+  <div class="plans-grid">
+    @for (plan of plans; track plan.id) {
+      <div class="plan-card" [class.recommended]="plan.recommended" [class.current]="plan.id === currentPlan()">
+        @if (plan.recommended) {
+          <span class="recommended-badge">Recommended</span>
+        }
+        <h4>{{ plan.name }}</h4>
+        <div class="price">
+          <span class="amount">${{ plan.price }}</span>
+          <span class="period">/{{ plan.period }}</span>
+        </div>
+        <ul class="features">
+          @for (feature of plan.features; track feature) {
+            <li>
+              <span class="check">✓</span>
+              {{ feature }}
+            </li>
+          }
+        </ul>
+        <button [class.btn-primary]="plan.recommended && plan.id !== currentPlan()" [class.btn-outline]="!plan.recommended || plan.id === currentPlan()" [disabled]="plan.id === currentPlan()">
+          {{ plan.id === currentPlan() ? 'Current Plan' : 'Upgrade' }}
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Payment Method -->
+  <h3 class="section-title">Payment Method</h3>
+  <div class="payment-card">
+    <div class="card-info">
+      <div class="card-icon">💳</div>
+      <div class="card-details">
+        <p class="card-number">•••• •••• •••• 4242</p>
+        <p class="card-expiry">Expires 12/25</p>
+      </div>
+    </div>
+    <button class="btn-text">Update</button>
+  </div>
+
+  <!-- Invoice History -->
+  <h3 class="section-title">Invoice History</h3>
+  <div class="invoices-table">
+    <div class="table-header">
+      <span>Invoice</span>
+      <span>Date</span>
+      <span>Amount</span>
+      <span>Status</span>
+      <span></span>
+    </div>
+    @for (invoice of invoices; track invoice.id) {
+      <div class="table-row">
+        <span class="invoice-id">{{ invoice.id }}</span>
+        <span>{{ invoice.date }}</span>
+        <span>${{ invoice.amount }}.00</span>
+        <span class="status" [class]="invoice.status">{{ invoice.status | titlecase }}</span>
+        <button class="btn-text">Download</button>
+      </div>
+    }
+  </div>
+</section>
