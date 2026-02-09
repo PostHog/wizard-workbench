@@ -12,8 +12,8 @@ function play() {
 </script>
 
 <template>
-  <button pb2 text-left data-testid="play-button" @click="play()">
-    <div
+  <button pb2 text-left data-testid="play-button" @click="play()" :aria-label="`Play ${props.item.name}`">
+    <span
       block bg-gray4:10 p1 flex
       class="aspect-16/9"
       transition duration-400 relative
@@ -29,15 +29,15 @@ function play() {
         w-full h-full object-cover
         data-testid="video-image"
       />
-      <div flex w-full h-full absolute inset-0 op20 hover:op100 transition>
-        <div i-ph-play ma text-3xl data-testid="play-icon" />
-      </div>
-    </div>
-    <div mt-2 data-testid="video-name">
+      <span flex w-full h-full absolute inset-0 op20 hover:op100 transition>
+        <span i-ph-play ma text-3xl data-testid="play-icon" />
+      </span>
+    </span>
+    <span mt-2 data-testid="video-name">
       {{ props.item.name }}
-    </div>
-    <div op60 text-sm data-testid="video-type">
+    </span>
+    <span op60 text-sm data-testid="video-type">
       {{ props.item.type }}
-    </div>
+    </span>
   </button>
 </template>

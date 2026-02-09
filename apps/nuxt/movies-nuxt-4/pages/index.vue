@@ -23,7 +23,10 @@ const AsyncWrapper = defineComponent({
 <template>
   <div>
     <AsyncWrapper v-slot="{ item }">
-      <NuxtLink :to="`/${type}/${item.id}`">
+      <NuxtLink 
+        :to="`/${type}/${item.id}`"
+        :aria-label="`View ${item.title || item.name}`"
+      >
         <MediaHero :item="item" />
       </NuxtLink>
     </AsyncWrapper>

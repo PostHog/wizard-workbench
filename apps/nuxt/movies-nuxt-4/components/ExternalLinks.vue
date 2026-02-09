@@ -23,7 +23,8 @@ const imdbType = computed(() => {
       rel="noopener"
       n-link
     >
-      <div i-simple-icons:twitter />
+      <span i-simple-icons:twitter aria-hidden="true" />
+      <span class="sr-only">Link to Twitter account</span>
     </a>
     <a
       v-if="links.facebook_id"
@@ -33,7 +34,8 @@ const imdbType = computed(() => {
       rel="noopener"
       n-link
     >
-      <div i-simple-icons:facebook />
+      <span i-simple-icons:facebook aria-hidden="true" />
+      <span class="sr-only">Link to Facebook account</span>
     </a>
     <a
       v-if="links.instagram_id"
@@ -43,7 +45,8 @@ const imdbType = computed(() => {
       rel="noopener"
       n-link
     >
-      <div i-simple-icons:instagram />
+      <span i-simple-icons:instagram aria-hidden="true" />
+      <span class="sr-only">Link to Instagram account</span>
     </a>
     <a
       v-if="links.imdb_id"
@@ -53,7 +56,8 @@ const imdbType = computed(() => {
       rel="noopener"
       n-link
     >
-      <div i-cib:imdb />
+      <span i-cib:imdb aria-hidden="true" />
+      <span class="sr-only">Link to IMDb account</span>
     </a>
     <a
       v-if="links.github_id"
@@ -63,7 +67,8 @@ const imdbType = computed(() => {
       rel="noopener"
       n-link
     >
-      <div i-simple-icons:github />
+      <span i-simple-icons:github aria-hidden="true" />
+      <span class="sr-only">Link to GitHub account</span>
     </a>
     <a
       v-if="links.linkedin_id"
@@ -73,7 +78,8 @@ const imdbType = computed(() => {
       rel="noopener"
       n-link
     >
-      <div i-simple-icons:linkedin />
+      <span i-simple-icons:linkedin aria-hidden="true" />
+      <span class="sr-only">Link to LinkedIn account</span>
     </a>
     <a
       v-if="links.email"
@@ -82,7 +88,8 @@ const imdbType = computed(() => {
       rel="noopener" scale-120
       n-link
     >
-      <div i-ph-envelope-simple />
+      <span i-ph-envelope-simple aria-hidden="true" />
+      <span class="sr-only">Link to Email</span>
     </a>
     <a
       v-if="links.homepage"
@@ -91,7 +98,8 @@ const imdbType = computed(() => {
       rel="noopener" scale-120
       n-link
     >
-      <div i-ph-link-simple />
+      <span i-ph-link-simple aria-hidden="true" />
+      <span class="sr-only">Link to Homepage</span>
     </a>
     <slot />
   </div>

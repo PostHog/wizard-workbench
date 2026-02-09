@@ -74,9 +74,10 @@ const mounted = useMounted()
               flex="~ gap2" items-center p="x6 y3"
               bg="gray/15 hover:gray/20" transition
               :title="$t('Watch Trailer')"
+              :aria-label="$t('Watch Trailer')"
               @click="playTrailer()"
             >
-              <div i-ph-play />
+              <span i-ph-play aria-hidden="true" />
               {{ $t('Watch Trailer') }}
             </button>
           </div>
@@ -88,9 +89,11 @@ const mounted = useMounted()
         type="button"
         items-center p10 text-5xl op20 hover:op80 transition
         :title="$t('Watch Trailer')"
+        :aria-label="$t('Watch Trailer')"
         @click="playTrailer()"
       >
-        <div i-ph-play-circle-light />
+        <span i-ph-play-circle-light aria-hidden="true" />
+        <span class="sr-only">{{ $t('Watch Trailer') }}</span>
       </button>
     </div>
   </div>

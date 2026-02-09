@@ -12,6 +12,7 @@ const props = defineProps<{
     bg-gray4:10 transition
     duration-400 relative hover="scale-102 z10"
     title="View photo"
+    aria-label="View photo"
     data-testid="photo-button"
   >
     <NuxtImg
@@ -22,6 +23,8 @@ const props = defineProps<{
       alt="Photo"
       w-full h-full object-cover
       data-testid="photo-image"
+      aria-hidden="true"
     />
+    <span class="sr-only">View photo</span>
   </button>
 </template>

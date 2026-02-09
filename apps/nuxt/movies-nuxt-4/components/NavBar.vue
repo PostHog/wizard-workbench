@@ -9,7 +9,6 @@ const { user, logout } = useAuth()
     py5 lg:px5
     border="t lg:r base"
     bg-black
-    role="navigation"
     aria-label="Main navigation"
   >
     <NuxtLink
@@ -20,6 +19,7 @@ const { user, logout } = useAuth()
       :aria-label="$t('Home')"
     >
       <span :class="isActive ? 'i-ph-house-fill text-primary' : 'i-ph-house'" aria-hidden="true" />
+      <span class="sr-only">{{ $t('Home') }}</span>
     </NuxtLink>
     <NuxtLink
       v-slot="{ isActive }"
@@ -29,6 +29,7 @@ const { user, logout } = useAuth()
       :aria-label="$t('Movies')"
     >
       <span :class="isActive ? 'i-ph-film-strip-fill text-primary' : 'i-ph-film-strip'" aria-hidden="true" />
+      <span class="sr-only">{{ $t('Movies') }}</span>
     </NuxtLink>
     <NuxtLink
       v-slot="{ isActive }"
@@ -38,6 +39,7 @@ const { user, logout } = useAuth()
       :aria-label="$t('TV Shows')"
     >
       <span :class="isActive ? 'i-ph-television-simple-fill text-primary' : 'i-ph-television-simple'" aria-hidden="true" />
+      <span class="sr-only">{{ $t('TV Shows') }}</span>
     </NuxtLink>
     <NuxtLink
       v-slot="{ isActive }"
@@ -47,6 +49,7 @@ const { user, logout } = useAuth()
       :aria-label="$t('Search')"
     >
       <span :class="isActive ? 'i-ph-magnifying-glass-fill text-primary' : 'i-ph-magnifying-glass'" aria-hidden="true" />
+      <span class="sr-only">{{ $t('Search') }}</span>
     </NuxtLink>
     <div v-if="user" class="flex items-center gap-3">
       <span class="text-sm text-gray-400">{{ user }}</span>
