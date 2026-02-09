@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { Media } from '../types'
 import { getMedia, getRecommendations } from '../composables/useTMDB'
@@ -62,8 +62,16 @@ const loading = ref(false)
 const showModal = ref(false)
 const trailerUrl = computed(() => item.value ? getTrailer(item.value) : null)
 
-onMounted(async () => {
-  // Try to load real data in background
+async function loadMedia() {
+  loading.value = true
+  // Reset to fake data immediately for visual feedback
+  item.value = {
+    ...fakeItem,
+    id: id.value || '123',
+    title: type.value === 'movie' ? 'Loading...' : undefined,
+    name: type.value === 'tv' ? 'Loading...' : undefined,
+  }
+  
   try {
     const media = await getMedia(type.value as any, id.value)
     item.value = media
@@ -77,8 +85,19 @@ onMounted(async () => {
   } catch (error) {
     // Keep fake data if real data fails
     console.error('Error loading media:', error)
+  } finally {
+    loading.value = false
   }
+}
+
+onMounted(() => {
+  loadMedia()
 })
+
+// Watch for route changes to reload data
+watch(() => route.fullPath, () => {
+  loadMedia()
+}, { immediate: false })
 
 function playTrailer() {
   if (trailerUrl.value) {

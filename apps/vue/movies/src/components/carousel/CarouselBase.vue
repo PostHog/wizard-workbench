@@ -35,7 +35,7 @@ function scrollRight() {
       </div>
       <button
         type="button"
-        class="flex flex-col absolute top-0 left-0 bottom-0 bg-black/50 p-3 items-center justify-center opacity-0 hover:opacity-100 transition"
+        class="flex flex-col absolute top-0 left-0 bottom-0 bg-black/50 p-3 items-center justify-center opacity-0 hover:opacity-100 transition pointer-events-none hover:pointer-events-auto z-10"
         title="Scroll left"
         @click="scrollLeft()"
       >
@@ -43,7 +43,7 @@ function scrollRight() {
       </button>
       <button
         type="button"
-        class="flex flex-col absolute top-0 right-0 bottom-0 bg-black/50 p-3 items-center justify-center opacity-0 hover:opacity-100 transition"
+        class="flex flex-col absolute top-0 right-0 bottom-0 bg-black/50 p-3 items-center justify-center opacity-0 hover:opacity-100 transition pointer-events-none hover:pointer-events-auto z-10"
         title="Scroll right"
         @click="scrollRight()"
       >

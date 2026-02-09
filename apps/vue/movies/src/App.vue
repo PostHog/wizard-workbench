@@ -12,7 +12,7 @@ const showNavBar = computed(() => isAuthenticated.value && route.path !== '/logi
 <template>
   <div class="h-full w-full font-sans overflow-hidden app-layout">
     <div id="app-scroller" class="overflow-x-hidden overflow-y-auto relative min-h-full">
-      <router-view />
+      <router-view :key="$route.fullPath" />
     </div>
     <NavBar v-if="showNavBar" />
   </div>
