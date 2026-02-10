@@ -1,0 +1,24 @@
+---
+const currentPath = Astro.url.pathname;
+---
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a href="/" class="nav-logo">
+      <span>NeuralFlow</span> AI
+    </a>
+    <ul class="nav-links">
+      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]}>Features</a></li>
+      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
+      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
+      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
+      <li><a href="#" class="nav-cta">Get Started</a></li>
+    </ul>
+  </div>
+</nav>
+
+<style>
+  .nav-link.active {
+    color: var(--color-text);
+  }
+</style>

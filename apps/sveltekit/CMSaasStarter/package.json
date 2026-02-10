@@ -1,0 +1,68 @@
+{
+  "name": "cmsassstarter",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "test": "vitest",
+    "test_run": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write --plugin prettier-plugin-svelte ./",
+    "format_check": "prettier --check --plugin prettier-plugin-svelte ./"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "^6.0.0",
+    "@sveltejs/kit": "^2.21.1",
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "@tailwindcss/postcss": "^4.0.9",
+    "@tailwindcss/typography": "^0.5.13",
+    "@types/glob": "^8.1.0",
+    "@types/html-to-text": "^9.0.4",
+    "@types/jsdom": "^21.1.7",
+    "@typescript-eslint/eslint-plugin": "^6.20.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "daisyui": "^5.0.0",
+    "eslint": "^8.28.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-svelte": "^2.45.1",
+    "fuse.js": "^7.0.0",
+    "glob": "^10.4.5",
+    "html-to-text": "^9.0.5",
+    "jsdom": "^24.1.1",
+    "postcss": "^8.4.31",
+    "prettier": "^3.1.0",
+    "prettier-plugin-svelte": "^3.2.6",
+    "super-sitemap": "^0.15.1",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "tailwindcss": "^4.0.9",
+    "typescript": "^5.5.0",
+    "vite": "^6.3.5",
+    "vitest": "^3.0.7"
+  },
+  "type": "module",
+  "dependencies": {
+    "@supabase/auth-ui-shared": "^0.1.8",
+    "@supabase/auth-ui-svelte": "^0.2.9",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.45.2",
+    "handlebars": "^4.7.8",
+    "resend": "^3.5.0",
+    "stripe": "^13.3.0"
+  },
+  "overrides": {
+    "@supabase/auth-ui-svelte": {
+      "svelte": "$svelte"
+    },
+    "@supabase/ssr": {
+      "cookie": "^0.7.0"
+    },
+    "@sveltejs/kit": {
+      "cookie": "^0.7.0"
+    }
+  }
+}

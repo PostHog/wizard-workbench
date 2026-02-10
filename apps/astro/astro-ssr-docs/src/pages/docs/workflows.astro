@@ -1,0 +1,62 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+
+const renderTime = new Date().toISOString();
+---
+
+<DocsLayout title="Workflows">
+  <h1>Workflows</h1>
+  <p class="subtitle">Build powerful automation sequences</p>
+
+  <h2>Creating a Workflow</h2>
+  <p>
+    Workflows can be created in the dashboard using our visual builder, or programmatically
+    via the API.
+  </p>
+
+  <pre><code>const workflow = await client.workflows.create({'{'}
+  name: 'Invoice Processing',
+  trigger: {'{'}
+    type: 'document.uploaded',
+    filter: {'{'} documentType: 'invoice' {'}'},
+  {'}'},
+  steps: [
+    {'{'}
+      type: 'extract',
+      config: {'{'} fields: ['vendor', 'total', 'date'] {'}'},
+    {'}'},
+    {'{'}
+      type: 'validate',
+      config: {'{'} rules: ['total > 0'] {'}'},
+    {'}'},
+    {'{'}
+      type: 'webhook',
+      config: {'{'} url: 'https://your-app.com/invoices' {'}'},
+    {'}'},
+  ],
+{'}'});</code></pre>
+
+  <h2>Triggers</h2>
+  <p>Workflows can be triggered by:</p>
+  <ul>
+    <li><code>document.uploaded</code> - When a document is uploaded</li>
+    <li><code>schedule</code> - On a recurring schedule</li>
+    <li><code>api</code> - Manually via API call</li>
+    <li><code>email</code> - When receiving an email</li>
+  </ul>
+
+  <h2>Steps</h2>
+  <p>Common workflow steps include:</p>
+  <ul>
+    <li><strong>Extract</strong> - Pull data from documents</li>
+    <li><strong>Transform</strong> - Modify and enrich data</li>
+    <li><strong>Validate</strong> - Check data against rules</li>
+    <li><strong>Branch</strong> - Conditional logic</li>
+    <li><strong>Webhook</strong> - Send data to external services</li>
+    <li><strong>Notify</strong> - Send emails or Slack messages</li>
+  </ul>
+
+  <div class="render-info">
+    Server-rendered at: {renderTime}
+  </div>
+</DocsLayout>

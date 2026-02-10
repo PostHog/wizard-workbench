@@ -1,0 +1,51 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+
+const renderTime = new Date().toISOString();
+---
+
+<DocsLayout title="Automation">
+  <h1>Automation</h1>
+  <p class="subtitle">Automate repetitive tasks with AI</p>
+
+  <h2>Email Automation</h2>
+  <p>
+    Configure NeuralFlow to monitor an inbox and automatically process incoming documents.
+    Our AI will classify, extract, and route documents based on your rules.
+  </p>
+
+  <h3>Setting Up Email Monitoring</h3>
+  <pre><code>const emailSource = await client.sources.create({'{'}
+  type: 'email',
+  config: {'{'}
+    provider: 'gmail',
+    labels: ['invoices'],
+    autoProcess: true,
+  {'}'},
+{'}'});</code></pre>
+
+  <h2>Scheduled Tasks</h2>
+  <p>
+    Run workflows on a schedule to generate reports, sync data, or perform maintenance tasks.
+  </p>
+
+  <pre><code>const schedule = await client.schedules.create({'{'}
+  workflow: 'weekly-report',
+  cron: '0 9 * * MON', // Every Monday at 9am
+  timezone: 'America/New_York',
+{'}'});</code></pre>
+
+  <h2>Event-Driven Automation</h2>
+  <p>
+    React to events in real-time. When a document is processed, a workflow completes,
+    or an error occurs, your automation can respond immediately.
+  </p>
+
+  <div class="callout">
+    <p><strong>Pro tip:</strong> Combine multiple automation types for powerful, hands-off workflows.</p>
+  </div>
+
+  <div class="render-info">
+    Server-rendered at: {renderTime}
+  </div>
+</DocsLayout>

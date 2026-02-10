@@ -1,0 +1,46 @@
+<nav class="header-nav" aria-label="Main navigation">
+  <div class="header-left">
+    <h1 class="app-title">SaaS App</h1>
+  </div>
+
+  <div class="header-right">
+    <!-- Theme Toggle -->
+    <button class="icon-btn" (click)="toggleTheme()" [attr.aria-label]="isDarkTheme() ? 'Switch to light theme' : 'Switch to dark theme'">
+      <span>{{ isDarkTheme() ? '☀️' : '🌙' }}</span>
+    </button>
+
+    <!-- Notifications -->
+    <button class="icon-btn notification-btn" aria-label="Notifications (3 unread)">
+      <span>🔔</span>
+      <span class="notification-badge" aria-hidden="true">3</span>
+    </button>
+
+    <!-- User Menu -->
+    <div
+      class="user-menu"
+      (click)="toggleMenu()"
+      role="button"
+      tabindex="0"
+      [attr.aria-expanded]="!menuHidden()"
+      aria-haspopup="menu"
+      (keydown.enter)="toggleMenu()"
+      (keydown.space)="toggleMenu(); $event.preventDefault()"
+    >
+      <div class="user-avatar" aria-hidden="true">{{ userInitials() }}</div>
+      <span class="user-name">{{ user()?.firstName }}</span>
+      <span class="chevron" aria-hidden="true">▼</span>
+
+      <div class="dropdown-menu" [class.hidden]="menuHidden()" role="menu" (click)="$event.stopPropagation()">
+        <div class="dropdown-header">
+          <strong>{{ user()?.firstName }} {{ user()?.lastName }}</strong>
+          <small>{{ user()?.email }}</small>
+        </div>
+        <div class="dropdown-divider" role="separator"></div>
+        <a (click)="navigateToProfile()" class="dropdown-item" role="menuitem" tabindex="0"> <span class="item-icon" aria-hidden="true">👤</span> Profile </a>
+        <a (click)="navigateToSettings()" class="dropdown-item" role="menuitem" tabindex="0"> <span class="item-icon" aria-hidden="true">⚙️</span> Settings </a>
+        <div class="dropdown-divider" role="separator"></div>
+        <a (click)="logout()" class="dropdown-item text-danger" role="menuitem" tabindex="0"> <span class="item-icon" aria-hidden="true">🚪</span> Logout </a>
+      </div>
+    </div>
+  </div>
+</nav>

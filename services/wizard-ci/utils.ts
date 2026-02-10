@@ -84,21 +84,20 @@ export function findApps(appsDir: string): App[] {
         continue;
       }
 
-      // Handle both directories and symlinks to directories
-      if (!entry.isDirectory() && !entry.isSymbolicLink()) {
-        continue;
-      }
+      const fullPath = join(dir, entry.name);
 
-      // Symlinks might point to files — resolve and skip non-directories
+      // Handle both directories and symlinks to directories
+      // For symlinks, we need to check if the target is actually a directory
       if (entry.isSymbolicLink()) {
         try {
-          if (!statSync(join(dir, entry.name)).isDirectory()) continue;
+          const stat = statSync(fullPath);
+          if (!stat.isDirectory()) continue;
         } catch {
-          continue;
+          continue; // Skip broken symlinks
         }
+      } else if (!entry.isDirectory()) {
+        continue;
       }
-
-      const fullPath = join(dir, entry.name);
       const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
 
       // Check for JS/TS projects (package.json), Python projects (manage.py for Django, requirements.txt),
