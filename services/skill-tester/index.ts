@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Skill detect — lightweight detection debugger
+ * Framework detect — lightweight detection debugger
  *
  * Point it at any directory to see what the wizard's detection logic finds.
  * Run without arguments for an interactive app picker.
  *
- *   pnpm skill-detect                     Interactive picker
- *   pnpm skill-detect <dir> [--verbose]   Direct path
+ *   pnpm framework-detect                     Interactive picker
+ *   pnpm framework-detect <dir> [--verbose]   Direct path
  */
 import "dotenv/config";
 import { createInterface } from "readline";
@@ -127,22 +127,22 @@ async function interactiveMode(verbose: boolean): Promise<void> {
 
 function printUsage(): void {
   console.log(`
-Skill Detect — what does the wizard see?
+Framework Detect — what does the wizard see?
 
 Usage:
-  pnpm skill-detect                      Interactive app picker
-  pnpm skill-detect <dir>                Run detection on a directory
-  pnpm skill-detect <dir> --verbose      Show full detection trace
+  pnpm framework-detect                      Interactive app picker
+  pnpm framework-detect <dir>                Run detection on a directory
+  pnpm framework-detect <dir> --verbose      Show full detection trace
 
 Options:
   --verbose, -v    Show which detectors ran and matched
   --help, -h       Show this help message
 
 Examples:
-  pnpm skill-detect
-  pnpm skill-detect apps/python/meeting-summarizer
-  pnpm skill-detect apps/django --verbose
-  pnpm skill-detect apps/angular -v
+  pnpm framework-detect
+  pnpm framework-detect apps/python/meeting-summarizer
+  pnpm framework-detect apps/django --verbose
+  pnpm framework-detect apps/angular -v
 `);
 }
 
