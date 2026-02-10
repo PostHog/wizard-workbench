@@ -1,0 +1,86 @@
+<nav [class.pb]="navExpanded()" [class.squeeze]="!navExpanded()" aria-label="Sidebar navigation">
+  <span
+    (click)="toggleSidebar(!navExpanded())"
+    [class.open]="navExpanded()"
+    class="toggle-icon"
+    role="button"
+    tabindex="0"
+    [attr.aria-label]="navExpanded() ? 'Collapse sidebar' : 'Expand sidebar'"
+    (keydown.enter)="toggleSidebar(!navExpanded())"
+  >
+    <!-- TODO: You can put any icon here, below span is just temporary for demo purpose  -->
+    <span style="color: var(--gray-400)" aria-hidden="true"><</span>
+  </span>
+
+  <div class="logo-container" routerLink="/">
+    <img ngSrc="images/placeholder.png" alt="Logo" class="logo" width="40" height="40" priority />
+    <h4>Brand Title</h4>
+  </div>
+
+  <div class="navbar-menu-items" dir="auto" role="menu">
+    @for (item of sidebarItems; track item; let i = $index) {
+      @if (shellService.allowedAccess(item)) {
+        <div class="menu">
+          @if (!item.divider) {
+            <a
+              (click)="activateSidebarItem(i)"
+              [class.active]="item.active"
+              [class.disabled]="item.disabled"
+              class="menu-item"
+              id="menu-item-{{ i }}"
+              role="menuitem"
+              [attr.aria-expanded]="item.subItems?.length ? sidebarExtendedItem() === i : null"
+            >
+              <div class="item">
+                @if (item.icon) {
+                  <!-- TODO This below i tag is temporary for demo purposes replace with proper icon passed in menu item -->
+                  @if (item.active) {
+                    <i style="color: var(--gray-400)" aria-hidden="true">^</i>
+                  } @else {
+                    <i style="color: var(--sidebar-icon-color)" aria-hidden="true">^</i>
+                  }
+                }
+                <span>{{ item.title | translate }}</span>
+              </div>
+              @if (item.subItems && item.subItems.length) {
+                <span [class.open]="sidebarExtendedItem() === i" class="submenu-icon" aria-hidden="true">
+                  <!-- TODO This below i tag is temporary for demo purposes, use any up down arrow icon -->
+                  @if (item.subItems && item.subItems.length && item.active) {
+                    <!-- Active Icon -->
+                    <i style="color: var(--gray-400)">^</i>
+                  } @else if (item.subItems && item.subItems.length && !item.active) {
+                    <!-- Inactive Icon -->
+                    <i style="color: var(--sidebar-icon-color)">^</i>
+                  }
+                </span>
+              }
+            </a>
+            @if (item.subItems && item.subItems.length) {
+              <ul [style.display]="sidebarExtendedItem() === i ? 'block' : 'none'" class="sub-menu-items" role="menu">
+                @for (subItem of item.subItems; track subItem) {
+                  @if (shellService.allowedAccess(subItem)) {
+                    <li [class.disabled]="subItem.disabled" role="none">
+                      <a (click)="activateSidebarSubItem(i, subItem)" [class.disabled]="subItem.disabled" [routerLink]="subItem.href || undefined" routerLinkActive="active" role="menuitem">
+                        <!-- TODO This below i tag is temporary for demo purposes replace with proper icon passed in submenu item -->
+                        @if (item.subItems && item.subItems.length && item.active) {
+                          <!-- Active Icon -->
+                          <i style="color: var(--gray-400)" aria-hidden="true">^</i>
+                        } @else if (item.subItems && item.subItems.length && !item.active) {
+                          <!-- Inactive Icon -->
+                          <i style="color: var(--sidebar-icon-color)" aria-hidden="true">^</i>
+                        }
+                        <span>{{ subItem.title | translate }}</span>
+                      </a>
+                    </li>
+                  }
+                }
+              </ul>
+            }
+          } @else {
+            <span class="divider" role="separator"></span>
+          }
+        </div>
+      }
+    }
+  </div>
+</nav>

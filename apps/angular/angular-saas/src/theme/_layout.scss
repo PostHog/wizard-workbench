@@ -1,0 +1,62 @@
+/*
+ *  Contains styles specific to the overall app layout and components like headers and footers
+ */
+
+.shell.layout-wrapper {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: relative;
+
+  aside {
+    position: relative;
+  }
+
+  main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+
+    header.main-header {
+      -webkit-box-shadow: 0 1px 5px -3px rgba(173, 171, 173, 0.5);
+      -moz-box-shadow: 0 1px 5px -3px rgba(173, 171, 173, 0.5);
+      box-shadow: 0 1px 5px -3px rgba(173, 171, 173, 0.5);
+      z-index: 30;
+    }
+
+    .content {
+      flex: 1;
+      overflow: auto;
+      z-index: 20;
+    }
+
+    .side-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      margin: 0 auto;
+      left: 0;
+      right: 0;
+    }
+  }
+
+  &.overlay {
+    &::after {
+      width: 100%;
+      height: 100%;
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 0;
+      background-color: rgba(#393b3d, 0.4);
+      z-index: 200;
+    }
+  }
+}
+
+.main-container {
+  padding: 24px;
+  background: var(--surface-1);
+}
