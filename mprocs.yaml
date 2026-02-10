@@ -75,3 +75,12 @@ procs:
     autostart: false
     env_file: .env
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # FRAMEWORK DETECT - Lightweight wizard framework/language detection, good for debugging
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  framework-detect:
+    shell: "pnpm framework-detect --verbose"
+    autostart: false
+    env_file: .env
+
