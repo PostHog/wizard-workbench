@@ -95,3 +95,6 @@ Desktop.ini
 tmp/
 temp/
 *.tmp
+
+# Android build artifacts
+**/.cxx/
