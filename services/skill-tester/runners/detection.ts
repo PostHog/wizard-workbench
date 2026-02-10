@@ -5,7 +5,8 @@
  * wizard's dependencies (posthog-node, @clack/prompts, etc.) resolve correctly.
  */
 import { execFileSync } from "child_process";
-import { resolve } from "path";
+import { existsSync } from "fs";
+import { resolve, join } from "path";
 import { homedir } from "os";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -108,6 +109,14 @@ export async function runDetection(installDir: string): Promise<DetectionResult>
   const wizardPath = getWizardPath();
   const absInstallDir = resolve(installDir);
 
+  // Check wizard is built
+  const registryPath = join(wizardPath, "dist", "src", "lib", "registry.js");
+  if (!existsSync(registryPath)) {
+    throw new Error(
+      `Wizard not built — expected ${registryPath}\nRun "pnpm build" in ${wizardPath} (or start wizard-build in mprocs).`,
+    );
+  }
+
   const output = execFileSync(process.execPath, ["-e", DETECTION_SCRIPT, absInstallDir], {
     cwd: wizardPath,
     encoding: "utf-8",
@@ -116,5 +125,7 @@ export async function runDetection(installDir: string): Promise<DetectionResult>
     stdio: ["pipe", "pipe", "pipe"],
   });
 
-  return JSON.parse(output.trim()) as DetectionResult;
+  // Parse only the last line, earlier lines may be stray console output from wizard deps
+  const lines = output.trim().split("\n");
+  return JSON.parse(lines[lines.length - 1]) as DetectionResult;
 }
