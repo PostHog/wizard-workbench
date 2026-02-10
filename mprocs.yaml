@@ -75,3 +75,12 @@ procs:
     autostart: false
     env_file: .env
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SKILL DETECT - Lightweight wizard framework/language skill detection, good for debugging
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  skill-detect:
+    shell: "pnpm skill-detect --verbose"
+    autostart: false
+    env_file: .env
+
