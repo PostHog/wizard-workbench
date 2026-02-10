@@ -5,7 +5,7 @@
   "scripts": {
     "evaluate": "tsx services/pr-evaluator/index.ts",
     "wizard-ci": "tsx services/wizard-ci/index.ts",
-    "framework-detect": "tsx services/skill-tester/index.ts"
+    "framework-detect": "tsx services/framework-detect/index.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.0",
