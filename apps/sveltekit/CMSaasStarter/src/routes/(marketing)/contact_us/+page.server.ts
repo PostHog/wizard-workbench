@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { getPostHogClient } from "$lib/server/posthog"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -73,6 +74,18 @@ export const actions = {
     await sendAdminEmail({
       subject: "New contact request",
       body: `New contact request from ${firstName} ${lastName}.\n\nEmail: ${email}\n\nPhone: ${phone}\n\nCompany: ${company}\n\nMessage: ${message}`,
+    })
+
+    // Track contact form submission with PostHog
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: email, // Use email as distinct ID for anonymous contact form submissions
+      event: "contact_form_submitted",
+      properties: {
+        has_company: company.length > 0,
+        has_phone: phone.length > 0,
+        has_message: message.length > 0,
+      },
     })
   },
 }

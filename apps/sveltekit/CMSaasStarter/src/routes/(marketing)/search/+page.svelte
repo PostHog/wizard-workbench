@@ -5,6 +5,7 @@
   import Fuse from "fuse.js"
   import { goto } from "$app/navigation"
   import { dev } from "$app/environment"
+  import posthog from "posthog-js"
 
   const fuseOptions = {
     keys: [
@@ -52,9 +53,23 @@
 
   // searchQuery is $page.url.hash minus the "#" at the beginning if present
   let searchQuery = $state(decodeURIComponent($page.url.hash.slice(1) ?? ""))
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
   $effect(() => {
     if (fuse) {
       results = fuse.search(searchQuery)
+
+      // Track search with PostHog (debounced to avoid excessive events)
+      if (browser && searchQuery.length >= 2) {
+        if (searchDebounceTimer) {
+          clearTimeout(searchDebounceTimer)
+        }
+        searchDebounceTimer = setTimeout(() => {
+          posthog.capture("search_performed", {
+            query: searchQuery,
+            results_count: results.length,
+          })
+        }, 1000)
+      }
     }
   })
   // Update the URL hash when searchQuery changes so the browser can bookmark/share the search results
