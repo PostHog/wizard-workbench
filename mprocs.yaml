@@ -59,6 +59,12 @@ procs:
     autostart: false
     env_file: .env
 
+  wizard-ci-benchmark:
+    # Runs wizard with benchmark mode only (no evaluation)
+    shell: "pnpm wizard-ci --local"
+    autostart: false
+    env_file: .env
+
   wizard-ci-create-pr:
     # Only pushes branch and creates PR on GH
     shell: "pnpm wizard-ci --push-only --branch"

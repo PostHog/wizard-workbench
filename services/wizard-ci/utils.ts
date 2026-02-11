@@ -7,6 +7,7 @@
 import { spawn } from "child_process";
 import { existsSync, readdirSync, statSync } from "fs";
 import { join } from "path";
+import { readBenchmarkFile, type BenchmarkData } from "./benchmark.js";
 
 // Re-export git operations from shared service
 export {
@@ -133,6 +134,7 @@ export interface WizardResult {
   success: boolean;
   duration: number;
   error?: string;
+  benchmark?: BenchmarkData;
 }
 
 export interface WizardOptions {
@@ -181,14 +183,22 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
     const child = spawn("node", args, {
       cwd: appPath,
       stdio: "inherit",
-      env: process.env,
+      env: {
+        ...process.env,
+        // Always enable benchmark mode in CI to collect usage data
+        POSTHOG_WIZARD_BENCHMARK: "true",
+      },
     });
 
     child.on("close", (code) => {
+      // Read benchmark data written by the wizard (if any)
+      const benchmark = readBenchmarkFile() ?? undefined;
+
       resolve({
         success: code === 0,
         duration: Date.now() - start,
         error: code !== 0 ? `Exit code: ${code}` : undefined,
+        benchmark,
       });
     });
 

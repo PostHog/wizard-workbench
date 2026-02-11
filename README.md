@@ -111,6 +111,7 @@ Use keyboard shortcuts in mprocs: `s` to start, `x` to stop, `r` to restart, `q`
 | `wizard-tail-run` | Tail the wizard's verbose output (`/tmp/posthog-wizard.log`) |
 | `wizard-ci-run` | Full CI flow: run wizard, create PR, evaluate |
 | `wizard-ci-local-run` | CI flow with local evaluation (no PR) |
+| `wizard-ci-benchmark` | Benchmark only: run wizard with per-phase tracking (no evaluation) |
 | `wizard-ci-create-pr` | Push branch and create PR only (skip wizard run) |
 | `wizard-ci-evaluate-pr` | Evaluate an existing PR or local branch |
 
@@ -160,4 +161,36 @@ You can activate `wizard-ci.yml` in a few ways:
 
 1. **Manual** - Run from GitHub Actions UI
 2. **Schedule** - Runs on cron
-3. **Dispatch** - Webhook call via `repository_dispatch` with event type `wizard-ci-trigger` 
+3. **Dispatch** - Webhook call via `repository_dispatch` with event type `wizard-ci-trigger`
+
+---
+
+## Benchmarking
+
+Wizard CI runs automatically collect per-phase token usage, cost, and timing data. The wizard's `--benchmark` flag is always enabled in CI mode, breaking execution into separate agent calls per workflow phase (setup, 1.0-begin, 1.1-edit, 1.2-revise, 1.3-conclude).
+
+### Running a benchmark
+
+In mprocs, start **`wizard-ci-benchmark`** (press `s`), pick your test app, and the benchmark table prints after the wizard completes:
+
+```
+┌─────────────┬──────────┬──────────┬───────────┬───────┬─────────┐
+│ Phase       │ Input    │ Output   │ Cost      │ Turns │ Time    │
+├─────────────┼──────────┼──────────┼───────────┼───────┼─────────┤
+│ Setup       │   1,234  │     567  │ $0.0234   │     5 │   42.3s │
+│ 1.0-begin   │  12,345  │   2,345  │ $0.1234   │    12 │  123.4s │
+│ 1.1-edit    │  34,567  │   8,901  │ $0.3456   │    25 │  234.5s │
+│ 1.2-revise  │   8,901  │   1,234  │ $0.0890   │     8 │   67.8s │
+│ 1.3-conclude│   5,678  │   2,345  │ $0.0567   │    10 │   89.0s │
+├─────────────┼──────────┼──────────┼───────────┼───────┼─────────┤
+│ TOTAL       │  62,725  │  15,392  │ $0.6381   │    60 │  557.0s │
+└─────────────┴──────────┴──────────┴───────────┴───────┴─────────┘
+```
+
+Benchmark data is also saved to `test-evaluations/<run-name>/benchmark.json`.
+
+Use **`wizard-ci-run`** instead if you want the full flow with a GitHub PR — the benchmark table is included in the PR body as markdown.
+
+### Raw data
+
+The wizard writes `/tmp/posthog-wizard-benchmark.json` with per-step token counts, cost, duration, and model usage. The CI runner reads and cleans up this file automatically.
