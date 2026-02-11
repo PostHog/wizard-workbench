@@ -14,8 +14,8 @@ import Layout from '../layouts/Layout.astro';
         and automated insights. Built for teams that move fast.
       </p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Start Free Trial</a>
-        <a href="/docs" class="btn btn-secondary">Read the Docs</a>
+        <a href="#" class="btn btn-primary" data-cta="start_free_trial">Start Free Trial</a>
+        <a href="/docs" class="btn btn-secondary" data-cta="read_the_docs">Read the Docs</a>
       </div>
     </div>
   </section>
@@ -61,3 +61,29 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupHomePage() {
+    const ctaButtons = document.querySelectorAll('[data-cta]');
+    ctaButtons.forEach(btn => {
+      // Remove existing listener to prevent duplicates during view transitions
+      btn.removeEventListener('click', handleCtaClick);
+      btn.addEventListener('click', handleCtaClick);
+    });
+  }
+
+  function handleCtaClick(event) {
+    const ctaType = event.currentTarget.getAttribute('data-cta');
+    window.posthog?.capture('cta_clicked', {
+      cta_type: ctaType,
+      page: 'home',
+      button_text: event.currentTarget.textContent.trim()
+    });
+  }
+
+  // Run on initial page load
+  document.addEventListener('DOMContentLoaded', setupHomePage);
+
+  // Run after view transitions complete (for soft navigation)
+  document.addEventListener('astro:page-load', setupHomePage);
+</script>

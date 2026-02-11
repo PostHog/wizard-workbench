@@ -24,7 +24,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Basic integrations</li>
             <li>Email support</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-plan="starter" data-price="29">Get Started</a>
         </div>
 
         <div class="pricing-card featured">
@@ -40,7 +40,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Advanced analytics</li>
             <li>Custom workflows</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
+          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;" data-plan="pro" data-price="99">Start Free Trial</a>
         </div>
 
         <div class="pricing-card">
@@ -57,9 +57,36 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-plan="enterprise" data-price="custom">Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupPricingPage() {
+    const planButtons = document.querySelectorAll('[data-plan]');
+    planButtons.forEach(btn => {
+      // Remove existing listener to prevent duplicates during view transitions
+      btn.removeEventListener('click', handlePlanClick);
+      btn.addEventListener('click', handlePlanClick);
+    });
+  }
+
+  function handlePlanClick(event) {
+    const plan = event.currentTarget.getAttribute('data-plan');
+    const price = event.currentTarget.getAttribute('data-price');
+    window.posthog?.capture('pricing_plan_selected', {
+      plan_name: plan,
+      plan_price: price,
+      button_text: event.currentTarget.textContent.trim()
+    });
+  }
+
+  // Run on initial page load
+  document.addEventListener('DOMContentLoaded', setupPricingPage);
+
+  // Run after view transitions complete (for soft navigation)
+  document.addEventListener('astro:page-load', setupPricingPage);
+</script>

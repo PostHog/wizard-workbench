@@ -12,7 +12,7 @@ const currentPath = Astro.url.pathname;
       <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
       <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
       <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="#" class="nav-cta" id="nav-get-started">Get Started</a></li>
     </ul>
   </div>
 </nav>
@@ -22,3 +22,27 @@ const currentPath = Astro.url.pathname;
     color: var(--color-text);
   }
 </style>
+
+<script is:inline>
+  function setupNavigation() {
+    const getStartedBtn = document.getElementById('nav-get-started');
+    if (getStartedBtn) {
+      // Remove existing listener to prevent duplicates during view transitions
+      getStartedBtn.removeEventListener('click', handleNavGetStartedClick);
+      getStartedBtn.addEventListener('click', handleNavGetStartedClick);
+    }
+  }
+
+  function handleNavGetStartedClick() {
+    window.posthog?.capture('nav_get_started_clicked', {
+      location: 'navigation_header',
+      current_page: window.location.pathname
+    });
+  }
+
+  // Run on initial page load
+  document.addEventListener('DOMContentLoaded', setupNavigation);
+
+  // Run after view transitions complete (for soft navigation)
+  document.addEventListener('astro:page-load', setupNavigation);
+</script>
