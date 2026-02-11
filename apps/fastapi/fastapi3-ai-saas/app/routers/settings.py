@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Form, Request, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from posthog import capture
 from pydantic import BaseModel, EmailStr
 
 from app.dependencies import DbSession, RequiredUser
@@ -64,9 +65,20 @@ async def update_settings(
         if existing:
             error = "Email already in use"
         else:
+            old_email = current_user.email
             current_user.email = email
             db.commit()
             success = "Settings updated successfully"
+
+            # Capture settings update event
+            capture(
+                "settings updated",
+                properties={
+                    "field_changed": "email",
+                    "old_email": old_email,
+                    "new_email": email,
+                },
+            )
     else:
         success = "No changes made"
 
@@ -103,12 +115,27 @@ async def change_password(
 
     if not current_user.check_password(current_password):
         error = "Current password is incorrect"
+
+        # Capture password change failed event
+        capture(
+            "password change failed",
+            properties={"reason": "incorrect_current_password"},
+        )
     elif len(new_password) < 6:
         error = "New password must be at least 6 characters"
+
+        # Capture password change failed event
+        capture(
+            "password change failed",
+            properties={"reason": "password_too_short"},
+        )
     else:
         current_user.set_password(new_password)
         db.commit()
         success = "Password changed successfully"
+
+        # Capture password changed event
+        capture("password changed")
 
     api_key_count = db.query(APIKey).filter(
         APIKey.user_id == current_user.id,

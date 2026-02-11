@@ -3,6 +3,7 @@
 from typing import List
 
 from fastapi import APIRouter, HTTPException, status
+from posthog import capture
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
@@ -73,6 +74,16 @@ async def create_api_key(
 
     api_key = APIKey.create(db, user_id=current_user.id, name=request.name)
 
+    # Capture API key creation event
+    capture(
+        "api key created",
+        properties={
+            "api_key_id": api_key.id,
+            "api_key_name": api_key.name,
+            "active_keys_count": active_count + 1,
+        },
+    )
+
     return APIKeyCreated(
         id=api_key.id,
         name=api_key.name,
@@ -103,5 +114,14 @@ async def revoke_api_key(
 
     api_key.is_active = False
     db.commit()
+
+    # Capture API key revocation event
+    capture(
+        "api key revoked",
+        properties={
+            "api_key_id": api_key.id,
+            "api_key_name": api_key.name,
+        },
+    )
 
     return None
