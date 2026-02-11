@@ -1,10 +1,32 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 
 export const Route = createFileRoute('/')({
   component: Home,
 })
 
 function Home() {
+  const posthog = usePostHog()
+
+  const handleViewInvoicesClick = () => {
+    posthog.capture('view_invoices_clicked', {
+      source: 'homepage_cta',
+    })
+  }
+
+  const handleManageTeamClick = () => {
+    posthog.capture('manage_team_clicked', {
+      source: 'homepage_cta',
+    })
+  }
+
+  const handlePendingInvoiceClick = () => {
+    posthog.capture('pending_invoice_clicked', {
+      invoice_id: 3,
+      source: 'homepage_notification',
+    })
+  }
+
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
@@ -18,12 +40,14 @@ function Home() {
           <div className="flex gap-4">
             <Link
               to="/posts"
+              onClick={handleViewInvoicesClick}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
               View Invoices
             </Link>
             <Link
               to="/users"
+              onClick={handleManageTeamClick}
               className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
               Manage Team
@@ -74,6 +98,7 @@ function Home() {
             <Link
               to="/posts/$postId"
               params={{ postId: '3' }}
+              onClick={handlePendingInvoiceClick}
               className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
             >
               View Invoice
