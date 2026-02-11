@@ -5,12 +5,21 @@ const props = defineProps<{
   links: ExternalIds
 }>()
 
+const { $posthog: posthog } = useNuxtApp()
+
 const imdbType = computed(() => {
   if (props.links.imdb_id?.startsWith('nm'))
     return 'name'
 
   return 'title'
 })
+
+function trackExternalLink(platform: string, url: string) {
+  posthog?.capture('external_link_clicked', {
+    platform,
+    url,
+  })
+}
 </script>
 
 <template>
@@ -22,6 +31,7 @@ const imdbType = computed(() => {
       aria-label="Link to Twitter account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('twitter', `https://twitter.com/${links.twitter_id}`)"
     >
       <span i-simple-icons:twitter aria-hidden="true" />
       <span class="sr-only">Link to Twitter account</span>
@@ -33,6 +43,7 @@ const imdbType = computed(() => {
       aria-label="Link to Facebook account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('facebook', `https://www.facebook.com/${links.facebook_id}`)"
     >
       <span i-simple-icons:facebook aria-hidden="true" />
       <span class="sr-only">Link to Facebook account</span>
@@ -44,6 +55,7 @@ const imdbType = computed(() => {
       aria-label="Link to Instagram account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('instagram', `https://instagram.com/${links.instagram_id}`)"
     >
       <span i-simple-icons:instagram aria-hidden="true" />
       <span class="sr-only">Link to Instagram account</span>
@@ -55,6 +67,7 @@ const imdbType = computed(() => {
       aria-label="Link to IMDb account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('imdb', `https://www.imdb.com/${imdbType}/${links.imdb_id}`)"
     >
       <span i-cib:imdb aria-hidden="true" />
       <span class="sr-only">Link to IMDb account</span>
@@ -66,6 +79,7 @@ const imdbType = computed(() => {
       aria-label="Link to GitHub account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('github', `https://github.com/${links.github_id}`)"
     >
       <span i-simple-icons:github aria-hidden="true" />
       <span class="sr-only">Link to GitHub account</span>
@@ -77,6 +91,7 @@ const imdbType = computed(() => {
       aria-label="Link to LinkedIn account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('linkedin', `https://www.linkedin.com/in/${links.linkedin_id}`)"
     >
       <span i-simple-icons:linkedin aria-hidden="true" />
       <span class="sr-only">Link to LinkedIn account</span>
@@ -87,6 +102,7 @@ const imdbType = computed(() => {
       aria-label="Link to Email"
       rel="noopener" scale-120
       n-link
+      @click="trackExternalLink('email', links.email)"
     >
       <span i-ph-envelope-simple aria-hidden="true" />
       <span class="sr-only">Link to Email</span>
@@ -97,6 +113,7 @@ const imdbType = computed(() => {
       aria-label="Link to Homepage"
       rel="noopener" scale-120
       n-link
+      @click="trackExternalLink('homepage', links.homepage)"
     >
       <span i-ph-link-simple aria-hidden="true" />
       <span class="sr-only">Link to Homepage</span>
