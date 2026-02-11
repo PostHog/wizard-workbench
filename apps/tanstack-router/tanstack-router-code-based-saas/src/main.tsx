@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -86,7 +87,16 @@ function RouterSpinner() {
 
 function RootComponent() {
   return (
-    <>
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY!}
+      options={{
+        api_host: '/ingest',
+        ui_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST || 'https://us.posthog.com',
+        defaults: '2025-11-30',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
@@ -132,7 +142,7 @@ function RootComponent() {
         </div>
       </div>
       <TanStackRouterDevtools position="bottom-right" />
-    </>
+    </PostHogProvider>
   )
 }
 
@@ -433,9 +443,16 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: (ctx) => {
+      posthog.capture('invoice_created', {
+        invoice_id: ctx.data.id,
+        invoice_title: ctx.data.title,
+      })
+      router.invalidate()
+    },
   })
 
   return (
@@ -481,9 +498,16 @@ function InvoicesIndexComponent() {
                 Invoice created successfully!
               </div>
             ) : createInvoiceMutation.status === 'error' ? (
-              <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm font-medium">
-                Failed to create invoice.
-              </div>
+              (() => {
+                posthog.capture('invoice_create_failed', {
+                  error: createInvoiceMutation.error?.message,
+                })
+                return (
+                  <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm font-medium">
+                    Failed to create invoice.
+                  </div>
+                )
+              })()
             ) : null}
           </div>
         </form>
@@ -514,12 +538,19 @@ const invoiceRoute = createRoute({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: (ctx) => {
+      posthog.capture('invoice_updated', {
+        invoice_id: ctx.data?.id,
+        invoice_title: ctx.data?.title,
+      })
+      router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -535,6 +566,13 @@ function InvoiceComponent() {
 
   const isPaid = invoice.id % 2 === 0
   const amount = invoice.id * 125
+
+  const handleNotesToggle = () => {
+    posthog.capture('invoice_notes_toggled', {
+      invoice_id: invoice.id,
+      action: search.showNotes ? 'hide' : 'show',
+    })
+  }
 
   return (
     <div className="p-6">
@@ -605,6 +643,7 @@ function InvoiceComponent() {
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 from={invoiceRoute.fullPath}
                 params={true}
+                onClick={handleNotesToggle}
               >
                 {search.showNotes ? 'Hide Notes' : 'Add Notes'}
               </Link>
@@ -644,9 +683,17 @@ function InvoiceComponent() {
                     Changes saved!
                   </div>
                 ) : updateInvoiceMutation.status === 'error' ? (
-                  <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm font-medium">
-                    Failed to save changes.
-                  </div>
+                  (() => {
+                    posthog.capture('invoice_update_failed', {
+                      invoice_id: invoice.id,
+                      error: updateInvoiceMutation.error?.message,
+                    })
+                    return (
+                      <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm font-medium">
+                        Failed to save changes.
+                      </div>
+                    )
+                  })()
                 ) : null}
               </div>
             ) : null}
@@ -860,7 +907,19 @@ const userRoute = createRoute({
 })
 
 function UserComponent() {
+  const posthog = usePostHog()
   const user = userRoute.useLoaderData()
+
+  // Track team member view when user data is loaded
+  React.useEffect(() => {
+    if (user) {
+      posthog.capture('team_member_viewed', {
+        user_id: user.id,
+        user_name: user.name,
+        user_role: roles[user.id % roles.length],
+      })
+    }
+  }, [user?.id])
 
   if (!user) {
     return <div className="p-6">User not found</div>
@@ -1002,9 +1061,24 @@ const profileRoute = createRoute({
 })
 
 function ProfileComponent() {
+  const posthog = usePostHog()
   const { username } = profileRoute.useRouteContext()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
+
+  const handleUpgradeClick = () => {
+    posthog.capture('upgrade_clicked', {
+      current_plan: 'free',
+      username: username,
+    })
+  }
+
+  const handleLogout = () => {
+    posthog.capture('user_logged_out')
+    posthog.reset()
+    auth.logout()
+    router.invalidate()
+  }
 
   return (
     <div className="p-8">
@@ -1049,7 +1123,10 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={handleUpgradeClick}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Upgrade
             </button>
           </div>
@@ -1066,10 +1143,7 @@ function ProfileComponent() {
               <span className="text-gray-400">→</span>
             </Link>
             <button
-              onClick={() => {
-                auth.logout()
-                router.invalidate()
-              }}
+              onClick={handleLogout}
               className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
             >
               <span>Sign Out</span>
@@ -1093,6 +1167,7 @@ const loginRoute = createRoute({
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -1103,6 +1178,24 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+
+    // Identify user in PostHog using username as distinct ID
+    posthog.identify(username, {
+      username: username,
+    })
+
+    // Capture login event
+    posthog.capture('user_logged_in', {
+      username: username,
+    })
+
+    router.invalidate()
+  }
+
+  const handleLogout = () => {
+    posthog.capture('user_logged_out')
+    posthog.reset()
+    auth.logout()
     router.invalidate()
   }
 
@@ -1137,10 +1230,7 @@ function LoginComponent() {
             <p className="text-lg mb-1">Signed in as</p>
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
-              onClick={() => {
-                auth.logout()
-                router.invalidate()
-              }}
+              onClick={handleLogout}
               className="w-full px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
               Sign Out
