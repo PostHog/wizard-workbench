@@ -6,6 +6,7 @@ import { getMedia, getRecommendations } from '../composables/useTMDB'
 import { formatTime, formatVote, getTrailer } from '../composables/utils'
 import MediaCard from '../components/media/MediaCard.vue'
 import CarouselBase from '../components/carousel/CarouselBase.vue'
+import posthog from 'posthog-js'
 
 console.log('MediaDetailView component loaded')
 
@@ -75,7 +76,15 @@ async function loadMedia() {
   try {
     const media = await getMedia(type.value as any, id.value)
     item.value = media
-    
+
+    // Track media view event
+    posthog.capture('media_viewed', {
+      media_id: id.value,
+      media_type: type.value,
+      media_title: media.title || media.name,
+      vote_average: media.vote_average,
+    })
+
     try {
       const recs = await getRecommendations(type.value as any, id.value, 1)
       recommendations.value = recs.results || []
@@ -85,6 +94,12 @@ async function loadMedia() {
   } catch (error) {
     // Keep fake data if real data fails
     console.error('Error loading media:', error)
+    // Track media load failure
+    posthog.capture('media_load_failed', {
+      media_id: id.value,
+      media_type: type.value,
+    })
+    posthog.captureException(error)
   } finally {
     loading.value = false
   }
@@ -102,6 +117,12 @@ watch(() => route.fullPath, () => {
 function playTrailer() {
   if (trailerUrl.value) {
     showModal.value = true
+    // Track trailer play event
+    posthog.capture('trailer_played', {
+      media_id: id.value,
+      media_type: type.value,
+      media_title: item.value?.title || item.value?.name,
+    })
   }
 }
 
