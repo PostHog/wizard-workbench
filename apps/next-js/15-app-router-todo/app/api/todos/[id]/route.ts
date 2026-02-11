@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -42,6 +43,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const posthog = getPostHogClient();
+
   try {
     const { id } = await params;
     const todoId = parseInt(id);
@@ -56,8 +59,26 @@ export async function PATCH(
     const updatedTodo = updateTodo(todoId, validatedData);
 
     if (!updatedTodo) {
+      posthog.capture({
+        distinctId: 'server',
+        event: 'api_todo_not_found',
+        properties: {
+          todo_id: todoId,
+          operation: 'update',
+        },
+      });
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
+
+    posthog.capture({
+      distinctId: 'server',
+      event: 'api_todo_updated',
+      properties: {
+        todo_id: todoId,
+        updated_fields: Object.keys(validatedData),
+        is_completion_toggle: 'completed' in validatedData,
+      },
+    });
 
     return NextResponse.json(updatedTodo);
   } catch (error) {
@@ -80,6 +101,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const posthog = getPostHogClient();
+
   try {
     const { id } = await params;
     const todoId = parseInt(id);
@@ -91,8 +114,24 @@ export async function DELETE(
     const deleted = deleteTodo(todoId);
 
     if (!deleted) {
+      posthog.capture({
+        distinctId: 'server',
+        event: 'api_todo_not_found',
+        properties: {
+          todo_id: todoId,
+          operation: 'delete',
+        },
+      });
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
+
+    posthog.capture({
+      distinctId: 'server',
+      event: 'api_todo_deleted',
+      properties: {
+        todo_id: todoId,
+      },
+    });
 
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
