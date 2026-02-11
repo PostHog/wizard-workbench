@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import posthog from 'posthog-js';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
@@ -19,6 +20,24 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
+
+  const handleFormAction = async (formData: FormData) => {
+    const email = formData.get('email') as string;
+
+    // Call the server action
+    formAction(formData);
+
+    // Identify user and capture event on form submission
+    // Note: This captures the attempt; success is determined by redirect
+    if (email) {
+      posthog.identify(email, { email });
+      if (mode === 'signin') {
+        posthog.capture('user_signed_in', { email });
+      } else {
+        posthog.capture('user_signed_up', { email, invite_id: inviteId || undefined });
+      }
+    }
+  };
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -34,7 +53,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
+        <form className="space-y-6" action={handleFormAction}>
           <input type="hidden" name="redirect" value={redirect || ''} />
           <input type="hidden" name="priceId" value={priceId || ''} />
           <input type="hidden" name="inviteId" value={inviteId || ''} />
