@@ -40,6 +40,7 @@ import { deleteStripeSubscriptionScheduleFromDatabaseById } from "./stripe-subsc
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/organizations_+/$organizationSlug+/settings+/+types/billing";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { OrganizationMembershipRole } from "~/generated/client";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
@@ -157,6 +158,18 @@ export async function billingAction({
           priceId: price.stripeId,
           purchasedById: user.id,
           seatsUsed: organization._count.memberships,
+        });
+
+        // Track checkout started event
+        const posthog = (context as PostHogContext).posthog;
+        posthog?.capture({
+          event: "checkout_started",
+          properties: {
+            organization_id: organization.id,
+            price_lookup_key: body.lookupKey,
+            product_name: price.product.name,
+            seats_used: organization._count.memberships,
+          },
         });
 
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
