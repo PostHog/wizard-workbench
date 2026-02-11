@@ -12,7 +12,7 @@ procs:
   mcp:
     # Use dev:local-resources to read from local context-mill server
     # Runs at http://localhost:8787
-    shell: "source .env && cd $MCP_PATH && pnpm run dev:local-resources"
+    shell: "source .env && cd $MCP_PATH && pnpm build:ui-apps && pnpm run dev:local-resources"
     autostart: true
     stop_signal: SIGTERM
 
