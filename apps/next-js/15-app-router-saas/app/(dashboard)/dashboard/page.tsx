@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -39,6 +40,13 @@ function SubscriptionSkeleton() {
 
 function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
+
+  const handleManageSubscriptionClick = () => {
+    posthog.capture('manage_subscription_clicked', {
+      current_plan: teamData?.planName || 'Free',
+      subscription_status: teamData?.subscriptionStatus || 'none',
+    });
+  };
 
   return (
     <Card className="mb-8">
@@ -61,7 +69,7 @@ function ManageSubscription() {
               </p>
             </div>
             <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
+              <Button type="submit" variant="outline" onClick={handleManageSubscriptionClick}>
                 Manage Subscription
               </Button>
             </form>
@@ -104,6 +112,14 @@ function TeamMembers() {
     return user.name || user.email || 'Unknown User';
   };
 
+  const handleRemoveMember = (memberId: number, memberRole: string) => (formData: FormData) => {
+    posthog.capture('team_member_removed', {
+      member_id: memberId,
+      member_role: memberRole,
+    });
+    removeAction(formData);
+  };
+
   if (!teamData?.teamMembers?.length) {
     return (
       <Card className="mb-8">
@@ -128,7 +144,7 @@ function TeamMembers() {
             <li key={member.id} className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <Avatar>
-                  {/* 
+                  {/*
                     This app doesn't save profile images, but here
                     is how you'd show them:
 
@@ -154,7 +170,7 @@ function TeamMembers() {
                 </div>
               </div>
               {index > 1 ? (
-                <form action={removeAction}>
+                <form action={handleRemoveMember(member.id, member.role)}>
                   <input type="hidden" name="memberId" value={member.id} />
                   <Button
                     type="submit"
@@ -195,13 +211,25 @@ function InviteTeamMember() {
     FormData
   >(inviteTeamMember, {});
 
+  const handleInviteSubmit = (formData: FormData) => {
+    const email = formData.get('email') as string;
+    const role = formData.get('role') as string;
+
+    posthog.capture('team_member_invited', {
+      invited_email: email,
+      invited_role: role,
+    });
+
+    inviteAction(formData);
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Invite Team Member</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={inviteAction} className="space-y-4">
+        <form action={handleInviteSubmit} className="space-y-4">
           <div>
             <Label htmlFor="email" className="mb-2">
               Email
