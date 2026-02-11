@@ -55,38 +55,59 @@ import Layout from '../layouts/Layout.astro';
   </section>
 </Layout>
 
-<script>
-  const form = document.getElementById('contact-form') as HTMLFormElement;
-  const messageDiv = document.getElementById('form-message') as HTMLDivElement;
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('contact-form');
+    const messageDiv = document.getElementById('form-message');
 
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
 
-    try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+      // Track form submission attempt (client-side)
+      window.posthog?.capture('contact_form_submitted', {
+        interest: data.interest,
+        source: 'client'
       });
 
-      const result = await response.json();
+      try {
+        // Get session ID and distinct ID to pass to server
+        const sessionId = window.posthog?.get_session_id?.() || null;
+        const distinctId = window.posthog?.get_distinct_id?.() || null;
 
-      if (response.ok) {
-        messageDiv.className = 'form-message success';
-        messageDiv.textContent = result.message;
-        form.reset();
-      } else {
+        const response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-PostHog-Session-Id': sessionId || '',
+            'X-PostHog-Distinct-Id': distinctId || ''
+          },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          messageDiv.className = 'form-message success';
+          messageDiv.textContent = result.message;
+          form.reset();
+        } else {
+          messageDiv.className = 'form-message error';
+          messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
+          // Capture client-side error
+          window.posthog?.capture('contact_form_error', {
+            error_type: 'validation_error',
+            interest: data.interest
+          });
+        }
+      } catch (error) {
         messageDiv.className = 'form-message error';
-        messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
+        messageDiv.textContent = 'Network error. Please try again.';
+        // Capture network error
+        window.posthog?.captureException(error);
       }
-    } catch (error) {
-      messageDiv.className = 'form-message error';
-      messageDiv.textContent = 'Network error. Please try again.';
-    }
+    });
   });
 </script>
