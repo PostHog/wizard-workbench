@@ -59,3 +59,20 @@ console.log('Extracted data:', document.data);</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Track code block copy events
+    const codeBlocks = document.querySelectorAll('pre code');
+    codeBlocks.forEach((codeBlock, index) => {
+      codeBlock.addEventListener('copy', () => {
+        const codeSnippet = codeBlock.textContent?.substring(0, 50) || '';
+        window.posthog?.capture('code_block_copied', {
+          page: window.location.pathname,
+          code_index: index,
+          code_preview: codeSnippet + (codeBlock.textContent?.length > 50 ? '...' : '')
+        });
+      });
+    });
+  });
+</script>

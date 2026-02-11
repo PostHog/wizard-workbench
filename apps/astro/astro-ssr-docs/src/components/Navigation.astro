@@ -16,3 +16,26 @@ const isDocs = currentPath.startsWith('/docs');
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Track external link clicks in navigation
+    const navLinks = document.querySelectorAll('.nav-links a');
+    navLinks.forEach((link) => {
+      link.addEventListener('click', (e) => {
+        const target = e.currentTarget;
+        const href = target.getAttribute('href');
+        const text = target.textContent?.trim();
+        const isExternal = target.getAttribute('target') === '_blank' || (href && href.startsWith('http'));
+
+        if (isExternal) {
+          window.posthog?.capture('external_link_clicked', {
+            link_text: text,
+            destination_url: href,
+            location: 'navigation'
+          });
+        }
+      });
+    });
+  });
+</script>

@@ -54,3 +54,36 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </footer>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Track CTA button clicks in hero section
+    const heroButtons = document.querySelectorAll('.hero-buttons .btn');
+    heroButtons.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget;
+        const href = target.getAttribute('href');
+        const text = target.textContent?.trim();
+        window.posthog?.capture('docs_cta_clicked', {
+          button_text: text,
+          destination: href,
+          location: 'hero'
+        });
+      });
+    });
+
+    // Track feature card clicks
+    const featureCards = document.querySelectorAll('.feature-card');
+    featureCards.forEach((card) => {
+      card.addEventListener('click', (e) => {
+        const target = e.currentTarget;
+        const href = target.getAttribute('href');
+        const title = target.querySelector('h3')?.textContent?.trim();
+        window.posthog?.capture('feature_card_clicked', {
+          card_title: title,
+          destination: href
+        });
+      });
+    });
+  });
+</script>
