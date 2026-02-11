@@ -462,7 +462,7 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Installing MCP dependencies"
-          cd $HOME/posthog/services/mcp/typescript
+          cd $HOME/posthog/services/mcp
           # Use --ignore-workspace to avoid resolving all 45 workspace packages
           pnpm install --ignore-workspace --no-frozen-lockfile
           echo "::endgroup::"
@@ -495,7 +495,7 @@ jobs:
           done
 
           # Start MCP server in background (consumes from local examples server)
-          cd $MCP_PATH/typescript
+          cd $MCP_PATH
           pnpm dev:local-resources &
           MCP_PID=$!
 
