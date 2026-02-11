@@ -1,0 +1,57 @@
+[
+  {
+    "event": "user_logged_in",
+    "description": "User successfully logged in to the application",
+    "file": "src/app/auth/login/login.component.ts"
+  },
+  {
+    "event": "user_logged_out",
+    "description": "User logged out of the application",
+    "file": "src/app/auth/logout/logout.component.ts"
+  },
+  {
+    "event": "profile_updated",
+    "description": "User updated their profile information",
+    "file": "src/app/pages/profile/profile.component.ts"
+  },
+  {
+    "event": "project_created",
+    "description": "User created a new project",
+    "file": "src/app/shared/components/create-project-modal/create-project-modal.component.ts"
+  },
+  {
+    "event": "team_member_added",
+    "description": "User added a new team member",
+    "file": "src/app/shared/components/add-member-modal/add-member-modal.component.ts"
+  },
+  {
+    "event": "two_factor_auth_toggled",
+    "description": "User enabled or disabled two-factor authentication",
+    "file": "src/app/pages/settings/components/security-settings/security-settings.component.ts"
+  },
+  {
+    "event": "session_revoked",
+    "description": "User revoked an active session",
+    "file": "src/app/pages/settings/components/security-settings/security-settings.component.ts"
+  },
+  {
+    "event": "account_settings_saved",
+    "description": "User saved account settings changes",
+    "file": "src/app/pages/settings/components/account-settings/account-settings.component.ts"
+  },
+  {
+    "event": "quick_action_clicked",
+    "description": "User clicked a quick action button on the dashboard",
+    "file": "src/app/pages/dashboard/components/quick-actions/quick-actions.component.ts"
+  },
+  {
+    "event": "billing_page_viewed",
+    "description": "User viewed the billing page (conversion funnel top)",
+    "file": "src/app/pages/billing/billing.component.ts"
+  },
+  {
+    "event": "http_error_occurred",
+    "description": "HTTP request error occurred in the application",
+    "file": "src/app/@core/interceptors/error-handler.interceptor.ts"
+  }
+]
