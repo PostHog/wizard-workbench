@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -10,7 +11,9 @@ const todoSchema = z.object({
 
 // GET /api/todos - Get all todos
 // POST /api/todos - Create a new todo
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Get distinct ID from header for server-side tracking correlation
+  const distinctId = req.headers['x-posthog-distinct-id'] as string | undefined;
   if (req.method === 'GET') {
     try {
       const allTodos = getTodos();
@@ -29,6 +32,18 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         title: validatedData.title,
         description: validatedData.description,
         completed: validatedData.completed,
+      });
+
+      // Track server-side todo created event
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: distinctId || 'anonymous',
+        event: 'todo_created_server',
+        properties: {
+          todo_id: newTodo.id,
+          has_description: !!validatedData.description,
+          source: 'api',
+        },
       });
 
       return res.status(201).json(newTodo);
