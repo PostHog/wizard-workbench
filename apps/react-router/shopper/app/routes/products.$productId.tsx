@@ -1,8 +1,9 @@
+import { usePostHog } from "@posthog/react";
 import { Link, data } from "react-router";
 import type { Route } from "./+types/products.$productId";
 import { getProductById } from "../data/products";
 import { useCart } from "../context/CartContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const productId = parseInt(params.productId);
@@ -18,12 +19,29 @@ export async function clientLoader({ params }: Route.LoaderArgs) {
 export default function ProductDetail({ loaderData }: Route.ComponentProps) {
   const { product } = loaderData;
   const { addToCart } = useCart();
+  const posthog = usePostHog();
   const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    posthog?.capture("product_viewed", {
+      product_id: product.id,
+      product_name: product.name,
+      product_price: product.price,
+      product_category: product.category,
+    });
+  }, [product.id, product.name, product.price, product.category, posthog]);
 
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
     }
+    posthog?.capture("product_added_to_cart", {
+      product_id: product.id,
+      product_name: product.name,
+      product_price: product.price,
+      product_category: product.category,
+      quantity: quantity,
+    });
   };
 
   return (
