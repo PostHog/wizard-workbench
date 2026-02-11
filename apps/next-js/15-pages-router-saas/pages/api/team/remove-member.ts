@@ -9,6 +9,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -77,9 +78,26 @@ export default async function handler(
       ActivityType.REMOVE_TEAM_MEMBER
     );
 
+    // PostHog: Track team member removed event
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'team_member_removed',
+      properties: {
+        removed_member_id: memberId,
+        team_id: userWithTeam.teamId,
+        remover_email: user.email,
+      },
+    });
+
     return res.status(200).json({ success: 'Team member removed successfully' });
   } catch (error) {
     console.error('Remove team member error:', error);
+
+    // PostHog: Capture remove member error
+    const posthog = getPostHogClient();
+    posthog.captureException(error as Error);
+
     return res.status(500).json({ error: 'Failed to remove team member' });
   }
 }
