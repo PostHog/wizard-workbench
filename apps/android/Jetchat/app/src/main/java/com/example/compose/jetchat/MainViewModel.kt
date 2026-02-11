@@ -17,6 +17,7 @@
 package com.example.compose.jetchat
 
 import androidx.lifecycle.ViewModel
+import com.posthog.PostHog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -35,6 +36,9 @@ class MainViewModel : ViewModel() {
 
     fun openDrawer() {
         _drawerShouldBeOpened.value = true
+
+        // PostHog: Track drawer opened event
+        PostHog.capture(event = "drawer_opened")
     }
 
     fun resetOpenDrawerAction() {
@@ -44,9 +48,23 @@ class MainViewModel : ViewModel() {
     fun login(username: String, password: String) {
         // Fake auth: accept anything; password intentionally unused.
         _loggedInUsername.value = username
+
+        // PostHog: Identify the user and capture login event
+        PostHog.identify(
+            distinctId = username,
+            userProperties = mapOf(
+                "username" to username,
+                "login_method" to "password"
+            )
+        )
+        PostHog.capture(event = "user_logged_in")
     }
 
     fun logout() {
+        // PostHog: Capture logout event before resetting
+        PostHog.capture(event = "user_logged_out")
+        PostHog.reset()
+
         _loggedInUsername.value = null
     }
 }
