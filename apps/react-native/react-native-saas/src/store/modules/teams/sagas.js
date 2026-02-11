@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoTeams } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import { getTeamsSuccess, createTeamSuccess, closeTeamModal } from './actions';
 import { getProjectsRequest } from '../projects/actions';
@@ -35,6 +36,14 @@ export function* createTeam({ payload }) {
       yield put(createTeamSuccess(newTeam));
       yield put(closeTeamModal());
       toast.showSuccess('Team created');
+
+      // Capture team created event
+      posthog.capture('team_created', {
+        team_name: name,
+        team_slug: slug,
+        is_demo_mode: true,
+      });
+
       return;
     }
 
@@ -44,7 +53,29 @@ export function* createTeam({ payload }) {
     yield put(closeTeamModal());
 
     toast.showSuccess('Team created');
+
+    // Capture team created event
+    posthog.capture('team_created', {
+      team_name: response.data.name,
+      team_slug: response.data.slug,
+      team_id: response.data.id,
+      is_demo_mode: false,
+    });
   } catch (err) {
+    // Capture team creation failure event
+    posthog.capture('team_creation_failed', {
+      team_name: payload.name,
+      error_message: err.message || 'Error creating team',
+    });
+
+    // Capture exception in PostHog
+    posthog.capture('$exception', {
+      $exception_type: err.name || 'TeamCreationError',
+      $exception_message: err.message || 'Error creating team',
+      $exception_source: 'teams/sagas.createTeam',
+      $exception_stack_trace_raw: err.stack,
+    });
+
     toast.showError('Error creating team');
   }
 }
@@ -53,6 +84,13 @@ export function* selectActiveTeam({ payload }) {
   const { team } = payload;
 
   yield call([AsyncStorage, 'setItem'], '@Omni:team', JSON.stringify(team));
+
+  // Capture team selected event
+  posthog.capture('team_selected', {
+    team_name: team.name,
+    team_slug: team.slug,
+    team_id: team.id,
+  });
 
   yield put(getProjectsRequest());
 }

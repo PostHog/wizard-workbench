@@ -2,6 +2,7 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoProjects } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   getProjectsSuccess,
@@ -28,6 +29,7 @@ export function* getProjects() {
 export function* createProject({ payload }) {
   const { title } = payload;
   const token = yield select(state => state.auth.token);
+  const team = yield select(state => state.teams.active);
 
   try {
     // Demo mode
@@ -36,6 +38,14 @@ export function* createProject({ payload }) {
       yield put(createProjectSuccess(newProject));
       yield put(closeProjectModal());
       toast.showSuccess('Project created');
+
+      // Capture project created event
+      posthog.capture('project_created', {
+        project_title: title,
+        team_slug: team?.slug,
+        is_demo_mode: true,
+      });
+
       return;
     }
 
@@ -45,7 +55,30 @@ export function* createProject({ payload }) {
     yield put(closeProjectModal());
 
     toast.showSuccess('Project created');
+
+    // Capture project created event
+    posthog.capture('project_created', {
+      project_title: response.data.title,
+      project_id: response.data.id,
+      team_slug: team?.slug,
+      is_demo_mode: false,
+    });
   } catch (err) {
+    // Capture project creation failure event
+    posthog.capture('project_creation_failed', {
+      project_title: title,
+      team_slug: team?.slug,
+      error_message: err.message || 'Error creating project',
+    });
+
+    // Capture exception in PostHog
+    posthog.capture('$exception', {
+      $exception_type: err.name || 'ProjectCreationError',
+      $exception_message: err.message || 'Error creating project',
+      $exception_source: 'projects/sagas.createProject',
+      $exception_stack_trace_raw: err.stack,
+    });
+
     toast.showError('Error creating project');
   }
 }

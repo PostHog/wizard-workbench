@@ -4,6 +4,7 @@ import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   signInSuccess,
@@ -44,6 +45,24 @@ export function* signIn({ payload }) {
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
       toast.showSuccess('Welcome to demo mode!');
+
+      // PostHog identify - use email as distinct ID
+      // @see https://posthog.com/docs/libraries/react-native#identifying-users
+      posthog.identify(email, {
+        $set: {
+          email: email,
+        },
+        $set_once: {
+          first_login_date: new Date().toISOString(),
+        },
+      });
+
+      // Capture sign in event
+      posthog.capture('user_signed_in', {
+        email: email,
+        is_demo_mode: true,
+      });
+
       NavigationService.navigate('Main');
       return;
     }
@@ -53,13 +72,53 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+
+    // PostHog identify - use email as distinct ID
+    // @see https://posthog.com/docs/libraries/react-native#identifying-users
+    posthog.identify(email, {
+      $set: {
+        email: email,
+      },
+      $set_once: {
+        first_login_date: new Date().toISOString(),
+      },
+    });
+
+    // Capture sign in event
+    posthog.capture('user_signed_in', {
+      email: email,
+      is_demo_mode: false,
+    });
+
     NavigationService.navigate('Main');
   } catch (err) {
+    // Capture sign in failure event
+    posthog.capture('sign_in_failed', {
+      email: payload.email,
+      error_message: err.message || 'Invalid credentials',
+    });
+
+    // Capture exception in PostHog
+    posthog.capture('$exception', {
+      $exception_type: err.name || 'SignInError',
+      $exception_message: err.message || 'Invalid credentials',
+      $exception_source: 'auth/sagas.signIn',
+      $exception_stack_trace_raw: err.stack,
+    });
+
     toast.showError('Invalid credentials');
   }
 }
 
 export function* signOut() {
+  // Capture sign out event before reset
+  posthog.capture('user_signed_out');
+
+  // Reset PostHog - clears the current user's distinct ID and anonymous ID
+  // This should be called when the user logs out
+  // @see https://posthog.com/docs/libraries/react-native#reset-after-logout
+  posthog.reset();
+
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
