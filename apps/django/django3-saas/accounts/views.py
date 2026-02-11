@@ -1,3 +1,5 @@
+import posthog
+from posthog import new_context, identify_context, tag, capture
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -15,9 +17,41 @@ class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+
+        # PostHog: Identify user and capture login event
+        with new_context():
+            identify_context(str(user.id))
+
+            # Set person properties (PII goes in tag, not capture)
+            tag('email', user.email)
+            tag('username', user.username)
+            tag('name', user.get_full_name() or user.username)
+            tag('company_name', user.company_name)
+            tag('date_joined', user.date_joined.isoformat())
+
+            capture('user_logged_in', properties={
+                'login_method': 'email',
+            })
+
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            user_id = str(request.user.id)
+
+            # PostHog: Track logout before session ends
+            with new_context():
+                identify_context(user_id)
+                capture('user_logged_out')
+
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -25,6 +59,17 @@ class CustomPasswordResetView(PasswordResetView):
     email_template_name = 'accounts/password_reset_email.html'
     subject_template_name = 'accounts/password_reset_subject.txt'
     success_url = reverse_lazy('accounts:password_reset_done')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        # PostHog: Track password reset request
+        with new_context():
+            capture('password_reset_requested', properties={
+                'email_provided': bool(form.cleaned_data.get('email')),
+            })
+
+        return response
 
 
 class CustomPasswordResetDoneView(PasswordResetDoneView):
@@ -50,6 +95,23 @@ def register(request):
             user = form.save()
             login(request, user)
             messages.success(request, 'Registration successful. Welcome!')
+
+            # PostHog: Identify user and capture signup event
+            with new_context():
+                identify_context(str(user.id))
+
+                # Set person properties
+                tag('email', user.email)
+                tag('username', user.username)
+                tag('name', user.get_full_name() or user.username)
+                tag('company_name', user.company_name)
+                tag('date_joined', user.date_joined.isoformat())
+
+                capture('user_signed_up', properties={
+                    'signup_method': 'email',
+                    'has_company': bool(user.company_name),
+                })
+
             return redirect('dashboard:index')
     else:
         form = RegisterForm()
@@ -64,6 +126,20 @@ def settings(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Settings updated.')
+
+            # PostHog: Track profile update
+            with new_context():
+                identify_context(str(request.user.id))
+
+                # Update person properties
+                tag('email', request.user.email)
+                tag('name', request.user.get_full_name() or request.user.username)
+                tag('company_name', request.user.company_name)
+
+                capture('profile_updated', properties={
+                    'fields_updated': list(form.changed_data),
+                })
+
             return redirect('accounts:settings')
     else:
         form = ProfileForm(instance=request.user)
