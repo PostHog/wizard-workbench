@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
+import { usePostHog } from 'posthog-js/react'
 import { z } from 'zod'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
@@ -28,11 +29,35 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      // Capture invoice updated event
+      posthog.capture('invoice_updated', {
+        invoice_id: invoice.id,
+        invoice_title: invoice.title,
+        invoice_amount: invoice.id * 125,
+        invoice_status: invoice.id % 2 === 0 ? 'paid' : 'pending',
+      })
+      router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
+
+  // Track invoice viewed as a funnel event
+  const hasTrackedView = React.useRef(false)
+  React.useEffect(() => {
+    if (!hasTrackedView.current) {
+      posthog.capture('invoice_viewed', {
+        invoice_id: invoice.id,
+        invoice_title: invoice.title,
+        invoice_amount: invoice.id * 125,
+        invoice_status: invoice.id % 2 === 0 ? 'paid' : 'pending',
+      })
+      hasTrackedView.current = true
+    }
+  }, [invoice.id])
 
   React.useEffect(() => {
     navigate({
@@ -117,6 +142,12 @@ function InvoiceComponent() {
                 })}
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 params={true}
+                onClick={() => {
+                  posthog.capture('invoice_notes_toggled', {
+                    invoice_id: invoice.id,
+                    notes_visible: !search.showNotes,
+                  })
+                }}
               >
                 {search.showNotes ? 'Hide Notes' : 'Add Notes'}
               </Link>

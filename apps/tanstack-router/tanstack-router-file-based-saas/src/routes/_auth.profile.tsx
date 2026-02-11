@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import * as React from 'react'
+import { usePostHog } from 'posthog-js/react'
 
 export const Route = createFileRoute('/_auth/profile')({
   component: ProfileComponent,
@@ -6,6 +8,18 @@ export const Route = createFileRoute('/_auth/profile')({
 
 function ProfileComponent() {
   const { username } = Route.useRouteContext()
+  const posthog = usePostHog()
+
+  // Track profile settings viewed
+  const hasTrackedView = React.useRef(false)
+  React.useEffect(() => {
+    if (!hasTrackedView.current) {
+      posthog.capture('profile_settings_viewed', {
+        username: username,
+      })
+      hasTrackedView.current = true
+    }
+  }, [])
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
 
@@ -52,7 +66,15 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => {
+                posthog.capture('upgrade_clicked', {
+                  username: username,
+                  current_plan: 'Free Plan',
+                })
+              }}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Upgrade
             </button>
           </div>

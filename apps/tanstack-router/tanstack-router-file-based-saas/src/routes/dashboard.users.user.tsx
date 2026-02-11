@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
+import * as React from 'react'
+import { usePostHog } from 'posthog-js/react'
 import { z } from 'zod'
 import { fetchUserById } from '../utils/mockTodos'
 
@@ -21,6 +23,21 @@ export const Route = createFileRoute('/dashboard/users/user')({
 
 function UserComponent() {
   const { user } = Route.useLoaderData()
+  const posthog = usePostHog()
+
+  // Track team member viewed as a funnel event
+  const hasTrackedView = React.useRef(false)
+  React.useEffect(() => {
+    if (user && !hasTrackedView.current) {
+      posthog.capture('team_member_viewed', {
+        team_member_id: user.id,
+        team_member_name: user.name,
+        team_member_email: user.email,
+        team_member_role: roles[user.id % roles.length],
+      })
+      hasTrackedView.current = true
+    }
+  }, [user?.id])
 
   if (!user) {
     return <div className="p-6">User not found</div>
