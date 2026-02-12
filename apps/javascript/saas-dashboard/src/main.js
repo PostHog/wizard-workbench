@@ -5,6 +5,7 @@ import { renderDashboard } from './pages/dashboard.js';
 import { renderProjects } from './pages/projects.js';
 import { renderProjectDetail } from './pages/project-detail.js';
 import { renderSettings } from './pages/settings.js';
+import { renderActivity } from './pages/activity.js';
 
 /**
  * Auth guard — redirects to login if no user is logged in.
@@ -25,6 +26,7 @@ router.on('/login', renderLogin);
 router.on('/dashboard', requireAuth(renderDashboard));
 router.on('/projects', requireAuth(renderProjects));
 router.on('/projects/:id', requireAuth(renderProjectDetail));
+router.on('/activity', requireAuth(renderActivity));
 router.on('/settings', requireAuth(renderSettings));
 
 router.notFound(() => {

@@ -95,4 +95,9 @@ export const api = {
     await delay();
     return store.state.settings;
   },
+
+  async getActivities() {
+    await delay();
+    return store.getActivities();
+  },
 };

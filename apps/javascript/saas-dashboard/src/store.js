@@ -9,6 +9,18 @@ const STORAGE_KEY = 'trackflow_data';
 
 const DEFAULT_STATE = {
   currentUser: null,
+  activities: [
+    { id: 'a1', action: 'created_project', detail: 'Marketing Website', user: 'alice', timestamp: '2025-12-01T10:00:00Z' },
+    { id: 'a2', action: 'added_task', detail: 'Design homepage mockup → Marketing Website', user: 'alice', timestamp: '2025-12-01T10:05:00Z' },
+    { id: 'a3', action: 'created_project', detail: 'Mobile App v2', user: 'bob', timestamp: '2025-11-15T09:00:00Z' },
+    { id: 'a4', action: 'completed_task', detail: 'Design homepage mockup', user: 'alice', timestamp: '2025-12-10T14:30:00Z' },
+    { id: 'a5', action: 'completed_task', detail: 'Implement responsive nav', user: 'bob', timestamp: '2025-12-12T11:00:00Z' },
+    { id: 'a6', action: 'assigned_task', detail: 'Write landing page copy → Carol Kim', user: 'alice', timestamp: '2025-12-03T15:00:00Z' },
+    { id: 'a7', action: 'moved_task', detail: 'Write landing page copy → In Progress', user: 'carol', timestamp: '2025-12-05T09:00:00Z' },
+    { id: 'a8', action: 'created_project', detail: 'API Migration', user: 'bob', timestamp: '2025-10-01T08:00:00Z' },
+    { id: 'a9', action: 'completed_task', detail: 'Schema design', user: 'bob', timestamp: '2025-10-20T16:00:00Z' },
+    { id: 'a10', action: 'completed_task', detail: 'Client migration', user: 'carol', timestamp: '2025-11-01T10:00:00Z' },
+  ],
   projects: [
     {
       id: 'proj_1',
@@ -65,7 +77,11 @@ const DEFAULT_STATE = {
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : structuredClone(DEFAULT_STATE);
+    if (!raw) return structuredClone(DEFAULT_STATE);
+    const parsed = JSON.parse(raw);
+    // Backfill activities for existing localStorage data
+    if (!parsed.activities) parsed.activities = structuredClone(DEFAULT_STATE.activities);
+    return parsed;
   } catch {
     return structuredClone(DEFAULT_STATE);
   }
@@ -87,6 +103,28 @@ export const store = {
     this.save();
   },
 
+  // --- Activities ---
+
+  logActivity(action, detail) {
+    const activity = {
+      id: `a_${Date.now()}`,
+      action,
+      detail,
+      user: state.currentUser?.id || 'system',
+      timestamp: new Date().toISOString(),
+    };
+    state.activities.unshift(activity);
+    // Keep last 50 entries
+    if (state.activities.length > 50) state.activities.length = 50;
+    this.save();
+  },
+
+  getActivities() {
+    return [...state.activities].sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
+    );
+  },
+
   // --- Auth ---
 
   login(email) {
@@ -94,6 +132,7 @@ export const store = {
     if (!member) return false;
     state.currentUser = member;
     this.save();
+    this.logActivity('logged_in', member.name);
     return true;
   },
 
@@ -119,12 +158,16 @@ export const store = {
     };
     state.projects.push(project);
     this.save();
+    this.logActivity('created_project', name);
     return project;
   },
 
   deleteProject(id) {
+    const project = this.getProject(id);
+    const name = project?.name || id;
     state.projects = state.projects.filter((p) => p.id !== id);
     this.save();
+    this.logActivity('deleted_project', name);
   },
 
   // --- Tasks ---
@@ -143,6 +186,7 @@ export const store = {
     };
     project.tasks.push(task);
     this.save();
+    this.logActivity('added_task', `${title} → ${project.name}`);
     return task;
   },
 
@@ -154,6 +198,11 @@ export const store = {
     if (task) {
       task.status = status;
       this.save();
+      const label = status === 'done' ? 'Completed' : status === 'in_progress' ? 'In Progress' : 'To Do';
+      this.logActivity(
+        status === 'done' ? 'completed_task' : 'moved_task',
+        `${task.title} → ${label}`,
+      );
     }
   },
 
@@ -161,8 +210,10 @@ export const store = {
     const project = this.getProject(projectId);
     if (!project) return;
 
+    const task = project.tasks.find((t) => t.id === taskId);
     project.tasks = project.tasks.filter((t) => t.id !== taskId);
     this.save();
+    if (task) this.logActivity('deleted_task', task.title);
   },
 
   assignTask(projectId, taskId, assigneeId) {
@@ -173,6 +224,11 @@ export const store = {
     if (task) {
       task.assignee = assigneeId;
       this.save();
+      const member = state.teamMembers.find((m) => m.id === assigneeId);
+      this.logActivity(
+        'assigned_task',
+        `${task.title} → ${member?.name || 'Unassigned'}`,
+      );
     }
   },
 

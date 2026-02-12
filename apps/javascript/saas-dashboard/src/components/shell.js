@@ -25,6 +25,10 @@ export function renderShell(activeSection) {
             <span class="nav-icon">&#x2630;</span>
             Projects
           </a>
+          <a href="#/activity" class="nav-item ${activeSection === 'activity' ? 'active' : ''}">
+            <span class="nav-icon">&#x23F1;</span>
+            Activity
+          </a>
           <a href="#/settings" class="nav-item ${activeSection === 'settings' ? 'active' : ''}">
             <span class="nav-icon">&#x2699;</span>
             Settings
