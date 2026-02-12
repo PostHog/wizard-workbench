@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -166,6 +167,29 @@ export default async function handler(
       setSession(createdUser, res)
     ]);
 
+    // Capture server-side sign up event with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: createdUser.id.toString(),
+      event: 'user_signed_up',
+      properties: {
+        email: createdUser.email,
+        teamId: teamId,
+        userRole: userRole,
+        hasInvite: !!inviteId,
+        source: 'api'
+      }
+    });
+
+    // Identify user on server side
+    posthog.identify({
+      distinctId: createdUser.id.toString(),
+      properties: {
+        email: createdUser.email,
+        createdAt: new Date().toISOString()
+      }
+    });
+
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({
         team: createdTeam,
@@ -178,6 +202,9 @@ export default async function handler(
     return res.status(200).json({ success: true, redirectTo: '/dashboard' });
   } catch (error) {
     console.error('Sign up error:', error);
+    // Capture exception with PostHog
+    const posthog = getPostHogClient();
+    posthog.captureException(error as Error, undefined, { context: 'sign_up' });
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });
   }
 }

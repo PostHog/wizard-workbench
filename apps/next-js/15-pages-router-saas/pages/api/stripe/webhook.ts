@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 // Disable body parsing, need raw body for Stripe webhook signature verification
 export const config = {
@@ -36,11 +37,44 @@ export default async function handler(
     return res.status(400).json({ error: 'Webhook signature verification failed.' });
   }
 
+  const posthog = getPostHogClient();
+
   switch (event.type) {
     case 'customer.subscription.updated':
+      {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionChange(subscription);
+
+        // Capture subscription updated event with PostHog
+        // Use customer ID as distinct ID for webhook events
+        posthog.capture({
+          distinctId: subscription.customer as string,
+          event: 'subscription_updated',
+          properties: {
+            subscriptionId: subscription.id,
+            status: subscription.status,
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            source: 'stripe_webhook'
+          }
+        });
+      }
+      break;
     case 'customer.subscription.deleted':
-      const subscription = event.data.object as Stripe.Subscription;
-      await handleSubscriptionChange(subscription);
+      {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionChange(subscription);
+
+        // Capture subscription cancelled event with PostHog
+        posthog.capture({
+          distinctId: subscription.customer as string,
+          event: 'subscription_cancelled',
+          properties: {
+            subscriptionId: subscription.id,
+            status: subscription.status,
+            source: 'stripe_webhook'
+          }
+        });
+      }
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);

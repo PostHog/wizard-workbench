@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -24,10 +25,25 @@ export default async function handler(
       });
     }
 
+    // Capture checkout started event with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'checkout_started',
+      properties: {
+        teamId: team.id,
+        priceId: priceId,
+        source: 'api'
+      }
+    });
+
     const result = await createCheckoutSession({ team, priceId, userId: user.id });
     return res.status(200).json(result);
   } catch (error) {
     console.error('Checkout error:', error);
+    // Capture exception with PostHog
+    const posthog = getPostHogClient();
+    posthog.captureException(error as Error, undefined, { context: 'checkout' });
     return res.status(500).json({ error: 'Failed to create checkout session' });
   }
 }

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCustomerPortalSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -24,10 +25,25 @@ export default async function handler(
       return res.status(400).json({ error: 'Team not found' });
     }
 
+    // Capture customer portal accessed event with PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'customer_portal_accessed',
+      properties: {
+        teamId: team.id,
+        planName: team.planName,
+        source: 'api'
+      }
+    });
+
     const portalSession = await createCustomerPortalSession(team);
     return res.status(200).json({ url: portalSession.url });
   } catch (error) {
     console.error('Customer portal error:', error);
+    // Capture exception with PostHog
+    const posthog = getPostHogClient();
+    posthog.captureException(error as Error, undefined, { context: 'customer_portal' });
     return res.status(500).json({ error: 'Failed to create customer portal session' });
   }
 }
