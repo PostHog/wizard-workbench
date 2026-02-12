@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -100,6 +101,12 @@ function TeamMembers() {
     FormData
   >(removeTeamMember, {});
 
+  const handleRemoveMember = (formData: FormData) => {
+    const memberId = formData.get('memberId');
+    posthog.capture('team_member_removed', { member_id: memberId });
+    removeAction(formData);
+  };
+
   const getUserDisplayName = (user: Pick<User, 'id' | 'name' | 'email'>) => {
     return user.name || user.email || 'Unknown User';
   };
@@ -154,7 +161,7 @@ function TeamMembers() {
                 </div>
               </div>
               {index > 1 ? (
-                <form action={removeAction}>
+                <form action={handleRemoveMember}>
                   <input type="hidden" name="memberId" value={member.id} />
                   <Button
                     type="submit"
@@ -195,13 +202,20 @@ function InviteTeamMember() {
     FormData
   >(inviteTeamMember, {});
 
+  const handleInviteMember = (formData: FormData) => {
+    const email = formData.get('email');
+    const role = formData.get('role');
+    posthog.capture('team_member_invited', { invited_email: email, role });
+    inviteAction(formData);
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Invite Team Member</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={inviteAction} className="space-y-4">
+        <form action={handleInviteMember} className="space-y-4">
           <div>
             <Label htmlFor="email" className="mb-2">
               Email
