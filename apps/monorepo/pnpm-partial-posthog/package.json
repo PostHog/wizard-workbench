@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "name": "monorepo-partial-posthog",
+  "scripts": {
+    "dev": "echo 'Run dev in individual apps'"
+  }
+}

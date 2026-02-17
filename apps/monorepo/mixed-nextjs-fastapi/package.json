@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "name": "monorepo-nextjs-fastapi",
+  "workspaces": ["apps/frontend"],
+  "scripts": {
+    "dev": "echo 'Run dev in individual apps'"
+  }
+}

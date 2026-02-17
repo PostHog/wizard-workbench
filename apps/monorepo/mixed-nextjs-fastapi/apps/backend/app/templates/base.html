@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Acme AI{% endblock %}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }
+        nav { background: #1a1a2e; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        nav a { color: #eee; text-decoration: none; }
+        nav .logo { font-weight: bold; font-size: 1.2rem; }
+        .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .card { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .btn { display: inline-block; padding: 0.5rem 1rem; background: #4f46e5; color: white; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; }
+        .btn:hover { background: #4338ca; }
+        .btn-secondary { background: #6b7280; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.25rem; font-weight: 500; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
+        .error { background: #fee; border: 1px solid #fcc; color: #c00; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; }
+        .credits { background: #e0f2fe; padding: 0.5rem 1rem; border-radius: 4px; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">Acme AI</a>
+        <div>
+            {% block nav %}{% endblock %}
+        </div>
+    </nav>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

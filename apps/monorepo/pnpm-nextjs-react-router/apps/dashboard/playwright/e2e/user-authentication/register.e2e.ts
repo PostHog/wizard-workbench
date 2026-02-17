@@ -1,0 +1,381 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test } from "@playwright/test";
+
+import {
+  getPath,
+  setupEmailInviteCookie,
+  setupInviteLinkCookie,
+  setupOrganizationAndLoginAsMember,
+} from "../../utils";
+import { EMAIL_INVITE_INFO_SESSION_NAME } from "~/features/organizations/accept-email-invite/accept-email-invite-constants";
+import { INVITE_LINK_INFO_SESSION_NAME } from "~/features/organizations/accept-invite-link/accept-invite-link-constants";
+import { saveOrganizationEmailInviteLinkToDatabase } from "~/features/organizations/organizations-email-invite-link-model.server";
+import {
+  createPopulatedOrganization,
+  createPopulatedOrganizationEmailInviteLink,
+  createPopulatedOrganizationInviteLink,
+} from "~/features/organizations/organizations-factories.server";
+import { saveOrganizationInviteLinkToDatabase } from "~/features/organizations/organizations-invite-link-model.server";
+import { createPopulatedUserAccount } from "~/features/user-accounts/user-accounts-factories.server";
+import {
+  deleteUserAccountFromDatabaseById,
+  saveUserAccountToDatabase,
+} from "~/features/user-accounts/user-accounts-model.server";
+import {
+  createUserWithOrgAndAddAsMember,
+  teardownOrganizationAndMember,
+} from "~/test/test-utils";
+
+const path = "/register";
+
+test.describe("register page", () => {
+  test("given: a logged in user, should: redirect to the organizations page", async ({
+    page,
+  }) => {
+    const { organization, user } = await setupOrganizationAndLoginAsMember({
+      page,
+    });
+
+    await page.goto(path);
+
+    expect(getPath(page)).toEqual(
+      `/organizations/${organization.slug}/dashboard`,
+    );
+
+    await teardownOrganizationAndMember({ organization, user });
+  });
+
+  test("given: a logged out user, should: have the correct title, and show the link to the login page & the terms and privacy policy links", async ({
+    page,
+  }) => {
+    await page.goto(path);
+
+    // The page title is correct.
+    await expect(page).toHaveTitle(/register | react router saas template/i);
+
+    // The login button has the correct link.
+    await expect(page.getByRole("link", { name: /sign in/i })).toHaveAttribute(
+      "href",
+      "/login",
+    );
+
+    // Check that the terms and privacy policy links are visible and have the
+    // correct attributes.
+    const termsLink = page.getByRole("link", { name: /terms of service/i });
+    const privacyLink = page.getByRole("link", { name: /privacy policy/i });
+    await expect(termsLink).toHaveAttribute("href", "/terms-of-service");
+    await expect(privacyLink).toHaveAttribute("href", "/privacy-policy");
+  });
+
+  test.describe("email registration", () => {
+    test("given: a logged out user entering invalid data, should: show the correct error messages", async ({
+      page,
+    }) => {
+      await page.goto(path);
+
+      // Invalid email.
+      await expect(page.getByText(/create an account/i)).toBeVisible();
+      const registerButton = page.getByRole("button", {
+        name: /create account/i,
+      });
+      await expect(registerButton).toBeVisible();
+      const emailInput = page.getByLabel(/email/i);
+      await expect(emailInput).toBeVisible();
+      await emailInput.fill("invalid@email");
+      await registerButton.click();
+      await expect(
+        page.getByText(/please enter a valid email address/i),
+      ).toBeVisible();
+    });
+
+    test("given: a logged out user with an existing account, should: show the correct error message", async ({
+      page,
+    }) => {
+      const userAccount = createPopulatedUserAccount();
+      await saveUserAccountToDatabase(userAccount);
+
+      await page.goto(path);
+
+      // Fill in the email and click the register button.
+      await expect(page.getByText(/create an account/i)).toBeVisible();
+      const registerButton = page.getByRole("button", {
+        name: /create account/i,
+      });
+      await expect(registerButton).toBeVisible();
+      const emailInput = page.getByLabel(/email/i);
+      await expect(emailInput).toBeVisible();
+      await emailInput.fill(userAccount.email);
+      await registerButton.click();
+
+      // Check that the user already exists error is shown.
+      await expect(
+        page.getByText(
+          /user with given email already exists. did you mean to log in instead?/i,
+        ),
+      ).toBeVisible();
+
+      await deleteUserAccountFromDatabaseById(userAccount.id);
+    });
+
+    test("given: a logged out user with a new email, should: show the verification form", async ({
+      page,
+    }) => {
+      const userAccount = createPopulatedUserAccount();
+
+      await page.goto(path);
+
+      // Fill in the email and click the register button.
+      await expect(page.getByText(/create an account/i)).toBeVisible();
+      const registerButton = page.getByRole("button", {
+        name: /create account/i,
+      });
+      await expect(registerButton).toBeVisible();
+      const emailInput = page.getByLabel(/email/i);
+      await expect(emailInput).toBeVisible();
+      await emailInput.fill(userAccount.email);
+      await registerButton.click();
+
+      // Check that the verification form is shown. The button
+      // should be disabled because you can only request a new link every 60
+      // seconds.
+      await expect(page.getByText(/verify your email/i)).toBeVisible();
+      await expect(
+        page.getByText(
+          /if you haven't received the email within 60 seconds, you may request another verification link./i,
+        ),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: /request new verification link/i }),
+      ).toBeDisabled();
+    });
+  });
+
+  test.describe("google registration", () => {
+    test("given: a logged out user, should: log the user and redirect to the google login page", async ({
+      page,
+    }) => {
+      // Mock the Supabase OAuth authorize endpoint to return a mock Google sign-in page
+      await page.route("**/auth/v1/authorize*", async (route) => {
+        const url = new URL(route.request().url());
+        const provider = url.searchParams.get("provider");
+
+        if (provider === "google") {
+          await route.fulfill({
+            body: `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sign in - Google Accounts</title>
+</head>
+<body>
+  <h1>Sign in</h1>
+  <p>Sign in with Google</p>
+  <p>to continue to vpszwsdvgeeazuheoxfw.supabase.co</p>
+</body>
+</html>
+            `,
+            contentType: "text/html",
+          });
+        } else {
+          await route.continue();
+        }
+      });
+
+      await page.goto(path);
+
+      // Click the Google registration button.
+      const googleRegistrationButton = page.getByRole("button", {
+        name: /continue with google/i,
+      });
+      await googleRegistrationButton.click();
+
+      // Check that the user is redirected to the google login page.
+      await expect(
+        page.getByRole("heading", { level: 1, name: /sign in/i }),
+      ).toBeVisible();
+      await expect(page.getByText(/sign in with google/i)).toBeVisible();
+    });
+  });
+
+  test("given: an anonymous user, should: lack any automatically detectable accessibility issues", async ({
+    page,
+  }) => {
+    await page.goto(path);
+
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .disableRules("color-contrast")
+      .analyze();
+
+    expect(accessibilityScanResults.violations).toEqual([]);
+  });
+
+  test("given: an anonymous user with an active invite link in their cookies, should: show text letting the user know they will join the organization after registering", async ({
+    page,
+  }) => {
+    const { organization, user } = await createUserWithOrgAndAddAsMember({
+      organization: createPopulatedOrganization({
+        name: "Moore, O'Hara and Gerlach",
+      }),
+    });
+    const link = createPopulatedOrganizationInviteLink({
+      creatorId: user.id,
+      organizationId: organization.id,
+    });
+    await saveOrganizationInviteLinkToDatabase(link);
+
+    // Set the invite link cookie
+    await setupInviteLinkCookie({
+      link: { expiresAt: link.expiresAt, inviteLinkToken: link.token },
+      page,
+    });
+
+    await page.goto(path);
+
+    await expect(
+      page.getByText(new RegExp(`register to join ${organization.name}`, "i")),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        new RegExp(
+          `${user.name} has invited you to join ${organization.name}`,
+          "i",
+        ),
+      ),
+    ).toBeVisible();
+
+    await teardownOrganizationAndMember({ organization, user });
+  });
+
+  test("given: an anonymous user with an inactive invite link in their cookies, should: NOT show any text about joining an organization and also clear the invite link cookie", async ({
+    page,
+  }) => {
+    const { organization, user } = await createUserWithOrgAndAddAsMember();
+    const link = createPopulatedOrganizationInviteLink({
+      creatorId: user.id,
+      deactivatedAt: new Date(),
+      organizationId: organization.id,
+    });
+    await saveOrganizationInviteLinkToDatabase(link);
+
+    // Set the invite link cookie
+    await setupInviteLinkCookie({
+      link: { expiresAt: link.expiresAt, inviteLinkToken: link.token },
+      page,
+    });
+
+    await page.goto(path);
+
+    // Check that the normal registration text is shown instead of the invite text
+    await expect(page.getByText(/create an account/i)).toBeVisible();
+    await expect(
+      page.getByText(/enter your email below to create your account/i),
+    ).toBeVisible();
+
+    // Verify that the invite-specific text is not shown
+    await expect(
+      page.getByText(new RegExp(`register to join ${organization.name}`, "i")),
+    ).not.toBeVisible();
+    await expect(
+      page.getByText(
+        new RegExp(
+          `${user.name} has invited you to join ${organization.name}`,
+          "i",
+        ),
+      ),
+    ).not.toBeVisible();
+
+    // Verify that the invite link cookie is cleared
+    const cookies = await page.context().cookies();
+    const inviteLinkCookie = cookies.find(
+      (cookie) => cookie.name === INVITE_LINK_INFO_SESSION_NAME,
+    );
+    expect(inviteLinkCookie).toBeUndefined();
+
+    await teardownOrganizationAndMember({ organization, user });
+  });
+
+  test("given: an anonymous user with an active email invite in their cookies, should: show text letting the user know they will join the organization after registering", async ({
+    page,
+  }) => {
+    const { organization, user } = await createUserWithOrgAndAddAsMember({
+      organization: createPopulatedOrganization({
+        name: "Moore, O'Hara and Gerlach",
+      }),
+    });
+    const invite = createPopulatedOrganizationEmailInviteLink({
+      invitedById: user.id,
+      organizationId: organization.id,
+    });
+    await saveOrganizationEmailInviteLinkToDatabase(invite);
+
+    // Set the email invite cookie
+    await setupEmailInviteCookie({
+      invite: { emailInviteToken: invite.token, expiresAt: invite.expiresAt },
+      page,
+    });
+
+    await page.goto(path);
+
+    await expect(
+      page.getByText(new RegExp(`register to join ${organization.name}`, "i")),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        new RegExp(
+          `${user.name} has invited you to join ${organization.name}`,
+          "i",
+        ),
+      ),
+    ).toBeVisible();
+
+    await teardownOrganizationAndMember({ organization, user });
+  });
+
+  test("given: an anonymous user with an inactive email invite in their cookies, should: NOT show any text about joining an organization and also clear the email invite cookie", async ({
+    page,
+  }) => {
+    const { organization, user } = await createUserWithOrgAndAddAsMember();
+    const invite = createPopulatedOrganizationEmailInviteLink({
+      deactivatedAt: new Date(),
+      invitedById: user.id,
+      organizationId: organization.id,
+    });
+    await saveOrganizationEmailInviteLinkToDatabase(invite);
+
+    // Set the email invite cookie
+    await setupEmailInviteCookie({
+      invite: { emailInviteToken: invite.id, expiresAt: invite.expiresAt },
+      page,
+    });
+
+    await page.goto(path);
+
+    // Check that the normal registration text is shown instead of the invite text
+    await expect(page.getByText(/create an account/i)).toBeVisible();
+    await expect(
+      page.getByText(/enter your email below to create your account/i),
+    ).toBeVisible();
+
+    // Verify that the invite-specific text is not shown
+    await expect(
+      page.getByText(new RegExp(`register to join ${organization.name}`, "i")),
+    ).not.toBeVisible();
+    await expect(
+      page.getByText(
+        new RegExp(
+          `${user.name} has invited you to join ${organization.name}`,
+          "i",
+        ),
+      ),
+    ).not.toBeVisible();
+
+    // Verify that the email invite cookie is cleared
+    const cookies = await page.context().cookies();
+    const emailInviteCookie = cookies.find(
+      (cookie) => cookie.name === EMAIL_INVITE_INFO_SESSION_NAME,
+    );
+    expect(emailInviteCookie).toBeUndefined();
+
+    await teardownOrganizationAndMember({ organization, user });
+  });
+});
