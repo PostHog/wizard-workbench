@@ -7,8 +7,25 @@
 import { execSync } from "child_process";
 import type { PRData, PRFile } from "./types.js";
 
-// Files to exclude from PR evaluation (skill instructions, not code changes)
-const EXCLUDED_PATH_PATTERNS = [/^.*\/\.claude\//, /^\.claude\//];
+// Files to exclude from PR evaluation (skill instructions, lock files - not code changes)
+export const EXCLUDED_PATH_PATTERNS = [
+  /^.*\/\.claude\//, // .claude directory anywhere in path
+  /^\.claude\//, // .claude at root
+  // Lock files (these are auto-generated and can be huge)
+  /\/pnpm-lock\.yaml$/, // pnpm lock files
+  /\/package-lock\.json$/, // npm lock files
+  /\/yarn\.lock$/, // yarn lock files
+  /\/bun\.lockb$/, // bun lock files
+  /\/Podfile\.lock$/, // CocoaPods lock files (React Native iOS)
+  /\/pubspec\.lock$/, // Flutter/Dart lock files
+  /\.lockfile$/, // Gradle lock files (Android)
+  /\/packages\.lock\.json$/, // NuGet lock files (Xamarin/.NET MAUI)
+  /\/Gemfile\.lock$/, // Ruby lock files
+  /\/Cargo\.lock$/, // Rust lock files
+  /\/composer\.lock$/, // PHP lock files
+  /\/poetry\.lock$/, // Python poetry lock files
+  /\/Pipfile\.lock$/, // Python pipfile lock files
+];
 
 // ============================================================================
 // Shell escaping
@@ -47,14 +64,14 @@ export function createPR(opts: CreatePROptions): string {
 /**
  * Check if a file path should be excluded from evaluation
  */
-function isExcludedPath(filepath: string): boolean {
+export function isExcludedPath(filepath: string): boolean {
   return EXCLUDED_PATH_PATTERNS.some((pattern) => pattern.test(filepath));
 }
 
 /**
  * Filter diff to remove excluded file sections
  */
-function filterDiff(diff: string): string {
+export function filterDiff(diff: string): string {
   const lines = diff.split("\n");
   const filteredLines: string[] = [];
   let skipCurrentFile = false;
