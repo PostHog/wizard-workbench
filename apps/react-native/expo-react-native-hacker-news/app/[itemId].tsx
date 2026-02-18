@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
 
 import { parseTitle } from "@/lib/text";
@@ -22,6 +23,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -72,7 +74,19 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              testID="item-detail-author"
+              onPress={() => {
+                // Track user profile view from item detail
+                posthog.capture("user_profile_viewed", {
+                  user_id: item.by,
+                  source: "item_detail",
+                  item_id: item.id,
+                  item_type: item.type,
+                });
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -118,8 +132,16 @@ export default function ItemDetails() {
             }}
           >
             <Pressable
+              testID="item-detail-upvote"
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                // Track item detail upvote
+                posthog.capture("item_detail_upvoted", {
+                  item_id: item.id,
+                  item_title: item.title,
+                  item_type: item.type,
+                  current_score: item.score || 0,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -139,6 +161,7 @@ export default function ItemDetails() {
               </Text>
             </Pressable>
             <Pressable
+              testID="item-detail-comments"
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
                 await Haptics.notificationAsync(
@@ -161,8 +184,16 @@ export default function ItemDetails() {
             </Pressable>
             {item.url && (
               <Pressable
+                testID="item-detail-external-link"
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  // Track external link click from item detail
+                  posthog.capture("item_detail_link_clicked", {
+                    item_id: item.id,
+                    item_title: item.title,
+                    url: item.url,
+                    url_host: new URL(item.url).host,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -185,6 +216,7 @@ export default function ItemDetails() {
 
           {parentItem ? (
             <Pressable
+              testID="parent-item-link"
               style={{
                 width: "100%",
                 backgroundColor: "#ffedd5",
@@ -194,7 +226,16 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                // Track navigation to parent item
+                posthog.capture("parent_item_clicked", {
+                  current_item_id: item.id,
+                  parent_item_id: parentItem.id,
+                  parent_item_type: parentItem.type,
+                  parent_title: parentItem.title,
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{

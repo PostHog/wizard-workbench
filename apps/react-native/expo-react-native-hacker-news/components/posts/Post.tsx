@@ -10,6 +10,7 @@ import { useMemo } from "react";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePostHog } from "posthog-react-native";
 import { Link2, MessageSquareText } from "lucide-react-native";
 
 import type { Item } from "@/shared/types";
@@ -17,6 +18,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export const Post = ({ id, title, url, score, text, kids }: Item) => {
   const QC = useQueryClient();
+  const posthog = usePostHog();
 
   const isExternal = useMemo(() => {
     return text === undefined;
@@ -33,9 +35,26 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
   return (
     <View style={{ gap: 12 }}>
       <Pressable
+        testID="post-title"
         onPress={async () => {
-          if (isExternal) Linking.openURL(url);
-          else await navigateToDetails();
+          if (isExternal) {
+            // Track external link click from post title
+            posthog.capture("post_clicked", {
+              post_id: id,
+              post_title: title,
+              is_external: true,
+              url_host: url ? new URL(url).host : null,
+            });
+            Linking.openURL(url);
+          } else {
+            // Track internal navigation to post details
+            posthog.capture("post_clicked", {
+              post_id: id,
+              post_title: title,
+              is_external: false,
+            });
+            await navigateToDetails();
+          }
         }}
       >
         <Text style={{ color: "black", fontSize: 20, fontWeight: 500 }}>
@@ -44,8 +63,15 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
       </Pressable>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <Pressable
+          testID="post-upvote"
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            // Track post upvote action
+            posthog.capture("post_upvoted", {
+              post_id: id,
+              post_title: title,
+              current_score: score,
+            });
             await Haptics.notificationAsync(
               Haptics.NotificationFeedbackType.Success
             );
@@ -64,8 +90,15 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           </Text>
         </Pressable>
         <Pressable
+          testID="post-comments"
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            // Track opening comments for a post
+            posthog.capture("post_comments_opened", {
+              post_id: id,
+              post_title: title,
+              comment_count: kids?.length || 0,
+            });
             await navigateToDetails();
           }}
         >
@@ -84,8 +117,16 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         </Pressable>
         {url && (
           <Pressable
+            testID="post-external-link"
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              // Track external link click
+              posthog.capture("external_link_clicked", {
+                post_id: id,
+                post_title: title,
+                url: url,
+                url_host: new URL(url).host,
+              });
               Linking.openURL(url);
             }}
           >
