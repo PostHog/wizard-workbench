@@ -3,6 +3,7 @@ import { error, redirect } from "@sveltejs/kit"
 import Stripe from "stripe"
 import { getOrCreateCustomerId } from "../../../subscription_helpers.server"
 import type { PageServerLoad } from "./$types"
+import { getPostHogClient } from "$lib/server/posthog"
 const stripe = new Stripe(PRIVATE_STRIPE_API_KEY, { apiVersion: "2023-08-16" })
 
 export const load: PageServerLoad = async ({
@@ -32,6 +33,14 @@ export const load: PageServerLoad = async ({
       return_url: `${url.origin}/account/billing`,
     })
     portalLink = portalSession?.url
+
+    // Track billing portal opened with PostHog
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "billing_portal_opened",
+    })
+    await posthog.flush()
   } catch (e) {
     console.error("Error creating billing portal session", e)
     error(500, "Unknown error (PSE). If issue persists, please contact us.")

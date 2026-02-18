@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -27,6 +28,17 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    // Track email subscription toggle with PostHog
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_subscription_toggled",
+      properties: {
+        unsubscribed: newUnsubscribedStatus,
+      },
+    })
+    await posthog.flush()
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -70,6 +82,14 @@ export const actions = {
         email,
       })
     }
+
+    // Track email change with PostHog
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_changed",
+    })
+    await posthog.flush()
 
     return {
       email,
@@ -172,6 +192,17 @@ export const actions = {
       })
     }
 
+    // Track password change with PostHog
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "password_changed",
+      properties: {
+        via_recovery: isRecoverySession,
+      },
+    })
+    await posthog.flush()
+
     return {
       newPassword1,
       newPassword2,
@@ -208,6 +239,14 @@ export const actions = {
       // The user was logged out because of bad password. Redirect to error page explaining.
       redirect(303, "/login/current_password_error")
     }
+
+    // Track account deletion with PostHog before deleting
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+    })
+    await posthog.flush()
 
     const { error } = await supabaseServiceRole.auth.admin.deleteUser(
       user.id,
@@ -303,6 +342,20 @@ export const actions = {
     // If the profile was just created, send an email to the user and admin
     const newProfile =
       priorProfile?.updated_at === null && priorProfileError === null
+
+    // Track profile creation or update with PostHog
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: newProfile ? "profile_created" : "profile_updated",
+      properties: {
+        full_name: fullName,
+        company_name: companyName,
+        website: website,
+      },
+    })
+    await posthog.flush()
+
     if (newProfile) {
       await sendAdminEmail({
         subject: "Profile Created",

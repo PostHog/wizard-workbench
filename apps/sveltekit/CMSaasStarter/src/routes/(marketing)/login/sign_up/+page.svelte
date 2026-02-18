@@ -1,8 +1,32 @@
 <script lang="ts">
   import { Auth } from "@supabase/auth-ui-svelte"
   import { sharedAppearance, oauthProviders } from "../login_config"
+  import { onMount } from "svelte"
+  import posthog from "posthog-js"
+  import { browser } from "$app/environment"
 
   let { data } = $props()
+
+  onMount(() => {
+    data.supabase.auth.onAuthStateChange((event, session) => {
+      // Capture sign up event when user registers
+      if (event === "SIGNED_IN" && session?.user) {
+        // Check if this is a new user (created within last minute)
+        const createdAt = new Date(session.user.created_at).getTime()
+        const now = Date.now()
+        const isNewUser = now - createdAt < 60000 // Within 1 minute
+
+        if (browser && isNewUser) {
+          posthog.identify(session.user.id, {
+            email: session.user.email,
+          })
+          posthog.capture("user_signed_up", {
+            method: session.user.app_metadata?.provider || "email",
+          })
+        }
+      }
+    })
+  })
 </script>
 
 <svelte:head>
