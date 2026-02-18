@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -10,7 +11,7 @@ const todoSchema = z.object({
 
 // GET /api/todos - Get all todos
 // POST /api/todos - Create a new todo
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
       const allTodos = getTodos();
@@ -30,6 +31,17 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         description: validatedData.description,
         completed: validatedData.completed,
       });
+
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: 'anonymous',
+        event: 'server_todo_created',
+        properties: {
+          todo_id: newTodo.id,
+          has_description: !!newTodo.description,
+        },
+      });
+      await posthog.shutdown();
 
       return res.status(201).json(newTodo);
     } catch (error) {
