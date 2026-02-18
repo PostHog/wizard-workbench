@@ -1,0 +1,62 @@
+[
+  {
+    "event_name": "user_logged_in",
+    "description": "User successfully logged in to the application",
+    "file_path": "src/app/auth/login/login.component.ts"
+  },
+  {
+    "event_name": "user_logged_out",
+    "description": "User logged out of the application",
+    "file_path": "src/app/auth/logout/logout.component.ts"
+  },
+  {
+    "event_name": "login_failed",
+    "description": "User login attempt failed",
+    "file_path": "src/app/auth/login/login.component.ts"
+  },
+  {
+    "event_name": "profile_updated",
+    "description": "User updated their profile information",
+    "file_path": "src/app/pages/profile/profile.component.ts"
+  },
+  {
+    "event_name": "project_created",
+    "description": "User created a new project",
+    "file_path": "src/app/shared/components/create-project-modal/create-project-modal.component.ts"
+  },
+  {
+    "event_name": "member_added",
+    "description": "User added a new team member",
+    "file_path": "src/app/shared/components/add-member-modal/add-member-modal.component.ts"
+  },
+  {
+    "event_name": "plan_upgrade_clicked",
+    "description": "User clicked to upgrade their subscription plan",
+    "file_path": "src/app/pages/billing/billing.component.ts"
+  },
+  {
+    "event_name": "two_factor_toggled",
+    "description": "User enabled or disabled two-factor authentication",
+    "file_path": "src/app/pages/settings/components/security-settings/security-settings.component.ts"
+  },
+  {
+    "event_name": "session_revoked",
+    "description": "User revoked an active session",
+    "file_path": "src/app/pages/settings/components/security-settings/security-settings.component.ts"
+  },
+  {
+    "event_name": "account_settings_saved",
+    "description": "User saved account settings changes",
+    "file_path": "src/app/pages/settings/components/account-settings/account-settings.component.ts"
+  },
+  {
+    "event_name": "quick_action_clicked",
+    "description": "User clicked a quick action button on dashboard",
+    "file_path": "src/app/pages/dashboard/components/quick-actions/quick-actions.component.ts"
+  },
+  {
+    "event_name": "api_error",
+    "description": "An API request error occurred",
+    "file_path": "src/app/@core/interceptors/error-handler.interceptor.ts"
+  }
+]

@@ -1,3 +1,5 @@
 export const env: { [s: string]: string | null } = {
   npm_package_version: '0.0.0',
+  NG_APP_POSTHOG_KEY: process.env['NG_APP_POSTHOG_KEY'] || null,
+  NG_APP_POSTHOG_HOST: process.env['NG_APP_POSTHOG_HOST'] || null,
 };

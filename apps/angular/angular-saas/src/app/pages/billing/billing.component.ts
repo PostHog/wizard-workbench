@@ -1,5 +1,6 @@
-import { Component, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, ChangeDetectionStrategy, inject } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
+import { PosthogService } from '@core/services';
 
 interface Plan {
   id: string;
@@ -25,6 +26,8 @@ interface Invoice {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BillingComponent {
+  private readonly posthogService = inject(PosthogService);
+
   readonly currentPlan = signal('starter');
 
   readonly plans: Plan[] = [
@@ -62,4 +65,15 @@ export class BillingComponent {
   ];
 
   readonly currentPlanDetails = computed(() => this.plans.find((p) => p.id === this.currentPlan()));
+
+  onUpgradeClick(plan: Plan): void {
+    if (plan.id === this.currentPlan()) return;
+
+    // Track plan upgrade click event
+    this.posthogService.posthog.capture('plan_upgrade_clicked', {
+      current_plan: this.currentPlan(),
+      target_plan: plan.id,
+      target_plan_price: plan.price,
+    });
+  }
 }

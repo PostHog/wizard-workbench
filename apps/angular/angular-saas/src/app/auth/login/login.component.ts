@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { environment } from '@env/environment';
 import { AuthenticationService } from '@app/auth/services/authentication.service';
+import { PosthogService } from '@core/services';
 
 @Component({
   selector: 'app-login',
@@ -18,6 +19,7 @@ export class LoginComponent {
   private readonly authService = inject(AuthenticationService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly posthogService = inject(PosthogService);
 
   version: string | null = environment.version;
 
@@ -40,13 +42,31 @@ export class LoginComponent {
         next: (res) => {
           if (res) {
             console.log('Login successful');
+
+            // Identify user in PostHog
+            this.posthogService.posthog.identify(res.id, {
+              email: res.email,
+              name: `${res.firstName} ${res.lastName}`.trim(),
+              username: res.username,
+            });
+
+            // Track login event
+            this.posthogService.posthog.capture('user_logged_in', {
+              username: res.username,
+              email: res.email,
+            });
+
             this.router.navigate([this.route.snapshot.queryParams['redirect'] || '/dashboard'], { replaceUrl: true }).then(() => {
               console.log('Navigated to dashboard');
             });
           }
         },
         error: (error) => {
-          // Handle the error here
+          // Track login failure
+          this.posthogService.posthog.capture('login_failed', {
+            username,
+            error_message: error?.message || 'Unknown error',
+          });
         },
       });
   }
