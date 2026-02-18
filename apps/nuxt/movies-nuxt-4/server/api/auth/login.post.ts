@@ -1,4 +1,14 @@
+import process from 'node:process'
+import { getHeader } from 'h3'
+import { PostHog } from 'posthog-node'
+
 export default defineEventHandler(async (event) => {
+  const runtimeConfig = useRuntimeConfig()
+
+  // Relies on __add_tracing_headers being set in the client-side SDK
+  const sessionId = getHeader(event, 'x-posthog-session-id')
+  const distinctId = getHeader(event, 'x-posthog-distinct-id')
+
   try {
     const body = await readBody(event)
     const { username, password } = body
@@ -13,7 +23,7 @@ export default defineEventHandler(async (event) => {
 
     // Demo auth: accepts any username and password
     const sanitizedUsername = username.trim()
-    
+
     setCookie(event, 'auth-user', sanitizedUsername, {
       httpOnly: false, // Allow client-side access for SSR
       secure: process.env.NODE_ENV === 'production',
@@ -21,11 +31,49 @@ export default defineEventHandler(async (event) => {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
+    const posthog = new PostHog(runtimeConfig.public.posthog.publicKey, {
+      host: runtimeConfig.public.posthog.host,
+    })
+
+    await posthog.withContext(
+      { sessionId: sessionId ?? undefined, distinctId: distinctId ?? undefined },
+      async () => {
+        posthog.capture({
+          event: 'server_login_succeeded',
+          distinctId: distinctId ?? sanitizedUsername,
+          properties: { username: sanitizedUsername },
+        })
+      },
+    )
+
+    await posthog.shutdown()
+
     return {
       success: true,
       user: sanitizedUsername,
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
+    const posthog = new PostHog(runtimeConfig.public.posthog.publicKey, {
+      host: runtimeConfig.public.posthog.host,
+    })
+
+    await posthog.withContext(
+      { sessionId: sessionId ?? undefined, distinctId: distinctId ?? undefined },
+      async () => {
+        posthog.capture({
+          event: 'server_login_failed',
+          distinctId: distinctId ?? 'anonymous',
+          properties: {
+            status_code: error.statusCode,
+            error_message: error.message,
+          },
+        })
+      },
+    )
+
+    await posthog.shutdown()
+
     if (error.statusCode) {
       throw error
     }

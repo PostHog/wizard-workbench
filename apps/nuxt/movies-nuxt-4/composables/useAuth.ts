@@ -33,6 +33,9 @@ export const useAuth = () => {
   }
 
   const logout = async () => {
+    const { $posthog: posthog } = useNuxtApp()
+    posthog?.capture('user_logged_out')
+    posthog?.reset()
     try {
       await $fetch('/api/auth/logout', { method: 'POST' })
     } catch (error) {

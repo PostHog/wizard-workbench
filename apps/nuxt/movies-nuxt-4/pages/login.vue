@@ -4,6 +4,7 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 const { login } = useAuth()
+const { $posthog: posthog } = useNuxtApp()
 
 const handleLogin = async () => {
   error.value = ''
@@ -11,8 +12,13 @@ const handleLogin = async () => {
 
   try {
     await login(username.value, password.value)
+    // Identify the user and capture login event on success
+    posthog?.identify(username.value)
+    posthog?.capture('user_logged_in', { username: username.value })
   } catch (e: any) {
     error.value = e.message || 'Login failed'
+    posthog?.capture('login_failed', { error_message: error.value })
+    posthog?.captureException(e)
   } finally {
     loading.value = false
   }
