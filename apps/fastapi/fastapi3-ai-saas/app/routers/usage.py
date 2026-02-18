@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Query
+from posthog import capture
 from pydantic import BaseModel
 
 from app.dependencies import DbSession, RequiredUser
@@ -46,6 +47,9 @@ async def get_usage(
     days: int = Query(30, ge=1, le=90),
 ):
     """Get usage statistics and recent generations."""
+    # Track usage view
+    capture("usage_viewed", properties={"days_range": days})
+
     # All generations for this user
     all_gens = db.query(Generation).filter(
         Generation.user_id == current_user.id

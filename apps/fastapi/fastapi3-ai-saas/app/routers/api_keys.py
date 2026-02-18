@@ -3,6 +3,7 @@
 from typing import List
 
 from fastapi import APIRouter, HTTPException, status
+from posthog import capture
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
@@ -66,12 +67,30 @@ async def create_api_key(
     ).count()
 
     if active_count >= 5:
+        # Track when user hits API key limit
+        capture(
+            "api_key_limit_reached",
+            properties={
+                "active_key_count": active_count,
+                "limit": 5,
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Maximum of 5 active API keys allowed",
         )
 
     api_key = APIKey.create(db, user_id=current_user.id, name=request.name)
+
+    # Track API key creation
+    capture(
+        "api_key_created",
+        properties={
+            "key_id": api_key.id,
+            "key_name": api_key.name,
+            "active_key_count": active_count + 1,
+        },
+    )
 
     return APIKeyCreated(
         id=api_key.id,
@@ -103,5 +122,14 @@ async def revoke_api_key(
 
     api_key.is_active = False
     db.commit()
+
+    # Track API key revocation
+    capture(
+        "api_key_revoked",
+        properties={
+            "key_id": api_key.id,
+            "key_name": api_key.name,
+        },
+    )
 
     return None
