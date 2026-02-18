@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { usePostHog } from 'posthog-js/react'
 
 export const Route = createFileRoute('/')({
   component: IndexComponent,
 })
 
 function IndexComponent() {
+  const posthog = usePostHog()
+
   return (
     <div className={`p-8`}>
       <div className={`max-w-4xl mx-auto`}>
@@ -19,6 +22,11 @@ function IndexComponent() {
             <Link
               to="/dashboard"
               className={`px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors`}
+              onClick={() => {
+                posthog.capture('dashboard_cta_clicked', {
+                  location: 'homepage_hero',
+                })
+              }}
             >
               Go to Dashboard
             </Link>
@@ -75,6 +83,12 @@ function IndexComponent() {
               to="/dashboard/invoices/$invoiceId"
               params={{ invoiceId: 3 }}
               className={`px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors`}
+              onClick={() => {
+                posthog.capture('pending_invoice_viewed', {
+                  invoice_id: 3,
+                  location: 'homepage_notification',
+                })
+              }}
             >
               View Invoice
             </Link>
