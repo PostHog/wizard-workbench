@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -39,6 +40,8 @@ new #[Layout('layouts.guest')] class extends Component
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $resetEmail = $this->email;
+
         // Here we will attempt to reset the user's password. If it is successful we
         // will update the password on an actual user model and persist it to the
         // database. Otherwise we will parse the error and return the response.
@@ -62,6 +65,10 @@ new #[Layout('layouts.guest')] class extends Component
 
             return;
         }
+
+        // PostHog: Track password reset completed
+        $posthog = app(PostHogService::class);
+        $posthog->capture($resetEmail, 'password_reset_completed');
 
         Session::flash('status', __($status));
 

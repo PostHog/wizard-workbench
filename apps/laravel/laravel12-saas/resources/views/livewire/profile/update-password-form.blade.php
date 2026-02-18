@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -28,9 +29,14 @@ new class extends Component
             throw $e;
         }
 
-        Auth::user()->update([
+        $user = Auth::user();
+        $user->update([
             'password' => Hash::make($validated['password']),
         ]);
+
+        // PostHog: Track password change
+        $posthog = app(PostHogService::class);
+        $posthog->capture($user->email, 'password_changed');
 
         $this->reset('current_password', 'password', 'password_confirmation');
 

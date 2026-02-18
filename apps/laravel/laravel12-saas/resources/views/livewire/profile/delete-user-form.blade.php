@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
@@ -17,7 +18,15 @@ new class extends Component
             'password' => ['required', 'string', 'current_password'],
         ]);
 
-        tap(Auth::user(), $logout(...))->delete();
+        $user = Auth::user();
+
+        // PostHog: Track account deletion (churn event) before logout
+        $posthog = app(PostHogService::class);
+        $posthog->capture($user->email, 'account_deleted', [
+            'account_age_days' => $user->created_at ? now()->diffInDays($user->created_at) : 0,
+        ]);
+
+        tap($user, $logout(...))->delete();
 
         $this->redirect('/', navigate: true);
     }

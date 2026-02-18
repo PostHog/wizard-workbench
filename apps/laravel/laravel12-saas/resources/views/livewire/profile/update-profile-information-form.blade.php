@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -32,6 +33,9 @@ new class extends Component
             'email' => ['required', 'string', 'indisposable', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user->id)],
         ]);
 
+        $emailChanged = $user->isDirty('email') || $user->email !== $validated['email'];
+        $nameChanged = $user->name !== $validated['name'];
+
         $user->fill($validated);
 
         if ($user->isDirty('email')) {
@@ -39,6 +43,14 @@ new class extends Component
         }
 
         $user->save();
+
+        // PostHog: Track profile update
+        $posthog = app(PostHogService::class);
+        $posthog->identify($user->email, $user->getPostHogProperties());
+        $posthog->capture($user->email, 'profile_updated', [
+            'email_changed' => $emailChanged,
+            'name_changed' => $nameChanged,
+        ]);
 
         $this->dispatch('profile-updated', name: $user->name);
     }

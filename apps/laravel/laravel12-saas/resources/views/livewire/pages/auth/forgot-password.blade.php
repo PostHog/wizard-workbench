@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Password;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -29,6 +30,10 @@ new #[Layout('layouts.guest')] class extends Component
 
             return;
         }
+
+        // PostHog: Track password reset request
+        $posthog = app(PostHogService::class);
+        $posthog->capture($this->email, 'password_reset_requested');
 
         $this->reset('email');
 

@@ -15,7 +15,7 @@ class Plan extends Model
         'stripe_plan_id',
         'price',
         'description',
-        'features'
+        'features',
     ];
 
     protected $casts = [
