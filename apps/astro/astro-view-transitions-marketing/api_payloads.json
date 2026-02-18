@@ -1,0 +1,201 @@
+{
+  "description": "API payloads for creating NeuralFlow AI Marketing Dashboard in PostHog",
+  "base_url": "https://us.posthog.com",
+  "authentication": "Add header: Authorization: Bearer {your_personal_api_key}",
+
+  "dashboard": {
+    "endpoint": "POST /api/projects/{project_id}/dashboards/",
+    "payload": {
+      "name": "Analytics basics",
+      "description": "Core analytics dashboard for NeuralFlow AI - tracking CTAs, pricing funnel, feature discovery, and docs engagement",
+      "pinned": true
+    }
+  },
+
+  "insights": [
+    {
+      "name": "Insight 1: Conversion Funnel",
+      "endpoint": "POST /api/projects/{project_id}/insights/",
+      "payload": {
+        "name": "Conversion Funnel: Features → Pricing → CTA",
+        "description": "Tracks top-of-funnel progression from features page through pricing to CTA clicks",
+        "query": {
+          "kind": "FunnelsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "event": "features_viewed",
+              "name": "Features Viewed"
+            },
+            {
+              "kind": "EventsNode",
+              "event": "pricing_viewed",
+              "name": "Pricing Viewed"
+            },
+            {
+              "kind": "EventsNode",
+              "event": null,
+              "name": "CTA or Plan Selected",
+              "custom_name": "CTA or Plan Selected",
+              "properties": [],
+              "math": "total",
+              "actions": [
+                {
+                  "kind": "EventsNode",
+                  "event": "cta_clicked"
+                },
+                {
+                  "kind": "EventsNode",
+                  "event": "pricing_plan_selected"
+                }
+              ]
+            }
+          ],
+          "funnelsFilter": {
+            "funnelWindowInterval": 14,
+            "funnelWindowIntervalUnit": "day"
+          }
+        },
+        "dashboards": ["<DASHBOARD_ID_FROM_STEP_1>"]
+      }
+    },
+    {
+      "name": "Insight 2: CTA Clicks by Location",
+      "endpoint": "POST /api/projects/{project_id}/insights/",
+      "payload": {
+        "name": "CTA Clicks by Location",
+        "description": "Shows which CTAs drive the most engagement across the site",
+        "query": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "event": "cta_clicked",
+              "name": "Hero CTA Clicked"
+            },
+            {
+              "kind": "EventsNode",
+              "event": "nav_get_started_clicked",
+              "name": "Nav Get Started Clicked"
+            },
+            {
+              "kind": "EventsNode",
+              "event": "docs_cta_clicked",
+              "name": "Docs CTA Clicked"
+            }
+          ],
+          "interval": "day",
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "dateRange": {
+            "date_from": "-30d"
+          }
+        },
+        "dashboards": ["<DASHBOARD_ID_FROM_STEP_1>"]
+      }
+    },
+    {
+      "name": "Insight 3: Pricing Plan Selection Breakdown",
+      "endpoint": "POST /api/projects/{project_id}/insights/",
+      "payload": {
+        "name": "Pricing Plan Selection Breakdown",
+        "description": "Shows which pricing tier (Starter/Pro) is most popular",
+        "query": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "event": "pricing_plan_selected",
+              "name": "Pricing Plan Selected"
+            }
+          ],
+          "breakdownFilter": {
+            "breakdown": "plan",
+            "breakdown_type": "event"
+          },
+          "interval": "day",
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "dateRange": {
+            "date_from": "-30d"
+          }
+        },
+        "dashboards": ["<DASHBOARD_ID_FROM_STEP_1>"]
+      }
+    },
+    {
+      "name": "Insight 4: Docs Section Engagement",
+      "endpoint": "POST /api/projects/{project_id}/insights/",
+      "payload": {
+        "name": "Docs Section Engagement",
+        "description": "Shows which docs sections users explore most",
+        "query": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "event": "docs_section_clicked",
+              "name": "Docs Section Clicked"
+            }
+          ],
+          "breakdownFilter": {
+            "breakdown": "section",
+            "breakdown_type": "event"
+          },
+          "interval": "day",
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "dateRange": {
+            "date_from": "-30d"
+          }
+        },
+        "dashboards": ["<DASHBOARD_ID_FROM_STEP_1>"]
+      }
+    },
+    {
+      "name": "Insight 5: Daily Active Visitors",
+      "endpoint": "POST /api/projects/{project_id}/insights/",
+      "payload": {
+        "name": "Daily Active Visitors (Pageviews)",
+        "description": "Shows overall daily traffic trend",
+        "query": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "event": "$pageview",
+              "name": "Pageviews"
+            }
+          ],
+          "interval": "day",
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "dateRange": {
+            "date_from": "-30d"
+          }
+        },
+        "dashboards": ["<DASHBOARD_ID_FROM_STEP_1>"]
+      }
+    }
+  ],
+
+  "curl_examples": {
+    "create_dashboard": "curl -X POST 'https://us.posthog.com/api/projects/{project_id}/dashboards/' -H 'Authorization: Bearer {api_key}' -H 'Content-Type: application/json' -d '{\"name\":\"Analytics basics\",\"description\":\"Core analytics dashboard for NeuralFlow AI\",\"pinned\":true}'",
+
+    "create_insight": "curl -X POST 'https://us.posthog.com/api/projects/{project_id}/insights/' -H 'Authorization: Bearer {api_key}' -H 'Content-Type: application/json' -d @insight_payload.json"
+  },
+
+  "notes": [
+    "Replace {project_id} with your actual PostHog project ID",
+    "Replace {api_key} with your Personal API Key that has dashboard:write and insight:write scopes",
+    "After creating the dashboard, replace <DASHBOARD_ID_FROM_STEP_1> with the returned dashboard ID",
+    "All insights will be automatically added to the dashboard when dashboards array is provided",
+    "Event names are case-sensitive and must match exactly",
+    "Date ranges use relative format: -30d = last 30 days, -1w = last week, etc.",
+    "Breakdown properties must exist on the event to show data"
+  ]
+}
