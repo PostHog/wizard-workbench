@@ -9,6 +9,7 @@ const count = ref<undefined | number>()
 
 const items = ref<Media[]>([])
 const currentSearch = ref(input.value)
+const { $posthog: posthog } = useNuxtApp()
 
 function search() {
   if (currentSearch.value === input.value)
@@ -27,6 +28,13 @@ async function fetch(page: number) {
     const data = await searchShows(currentSearch.value, page)
     count.value = data.total_results ?? count.value
     items.value.push(...data.results)
+    // Capture search event on first page with result count
+    if (page === 1) {
+      posthog?.capture('media_searched', {
+        query: currentSearch.value,
+        result_count: data.total_results ?? 0,
+      })
+    }
   }
   catch (e: any) {
     error.value = e

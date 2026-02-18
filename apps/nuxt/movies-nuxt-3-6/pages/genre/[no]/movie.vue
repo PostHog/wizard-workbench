@@ -9,6 +9,17 @@ const items: Media[] = reactive([])
 
 const list = await getGenreList(type)
 const name = list.find(item => item.id === +no.value)?.name
+
+// Track genre browse on the client side
+if (import.meta.client) {
+  const { $posthog: posthog } = useNuxtApp()
+  posthog?.capture('genre_browsed', {
+    media_type: type,
+    genre_id: no.value,
+    genre_name: name,
+  })
+}
+
 async function fetch(page: number) {
   const data = await getMediaByGenre(type, no.value, page)
   items.push(...data.results)
