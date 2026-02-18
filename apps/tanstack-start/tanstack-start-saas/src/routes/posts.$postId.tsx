@@ -1,4 +1,5 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 import { NotFound } from '~/components/NotFound'
 import { PostErrorComponent } from '~/components/PostError'
 import { fetchInvoice, markInvoicePaid } from '~/utils/invoices'
@@ -15,10 +16,25 @@ export const Route = createFileRoute('/posts/$postId')({
 function PostComponent() {
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
 
   const handleMarkAsPaid = async () => {
+    posthog.capture('invoice_mark_paid_clicked', {
+      invoice_id: invoice.id,
+      invoice_title: invoice.title,
+      invoice_amount: invoice.amount,
+    })
     await markInvoicePaid({ data: String(invoice.id) })
     router.invalidate()
+  }
+
+  const handleViewFullDetails = () => {
+    posthog.capture('invoice_details_viewed', {
+      invoice_id: invoice.id,
+      invoice_title: invoice.title,
+      invoice_amount: invoice.amount,
+      invoice_status: invoice.status,
+    })
   }
 
   if (!invoice) {
@@ -81,6 +97,7 @@ function PostComponent() {
           params={{
             postId: String(invoice.id),
           }}
+          onClick={handleViewFullDetails}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           View Full Details

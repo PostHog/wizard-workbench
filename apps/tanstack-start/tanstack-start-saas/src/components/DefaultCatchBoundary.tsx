@@ -5,16 +5,36 @@ import {
   useMatch,
   useRouter,
 } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
+import { useEffect } from 'react'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter()
+  const posthog = usePostHog()
   const isRoot = useMatch({
     strict: false,
     select: (state) => state.id === rootRouteId,
   })
 
   console.error('DefaultCatchBoundary Error:', error)
+
+  // Capture exception and error boundary shown event
+  useEffect(() => {
+    posthog.captureException(error)
+    posthog.capture('error_boundary_shown', {
+      error_message: error instanceof Error ? error.message : String(error),
+      error_name: error instanceof Error ? error.name : 'Unknown',
+      is_root: isRoot,
+    })
+  }, [error, isRoot, posthog])
+
+  const handleRetryClick = () => {
+    posthog.capture('error_retry_clicked', {
+      error_message: error instanceof Error ? error.message : String(error),
+    })
+    router.invalidate()
+  }
 
   return (
     <div className="min-w-0 flex-1 p-8 flex flex-col items-center justify-center">
@@ -27,9 +47,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
       </div>
       <div className="flex gap-3 items-center">
         <button
-          onClick={() => {
-            router.invalidate()
-          }}
+          onClick={handleRetryClick}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           Try Again
