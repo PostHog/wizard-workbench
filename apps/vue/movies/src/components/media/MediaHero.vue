@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import type { Media } from '../../types'
 import { formatTime, formatVote, getTrailer } from '../../composables/utils'
+import posthog from 'posthog-js'
 
 const props = defineProps<{
   item: Media
@@ -18,6 +19,11 @@ onMounted(() => {
 function playTrailer() {
   if (trailerUrl.value) {
     showModal.value = true
+    posthog.capture('hero_trailer_played', {
+      media_id: props.item.id,
+      media_type: props.item.media_type,
+      media_title: props.item.title || props.item.name,
+    })
   }
 }
 
