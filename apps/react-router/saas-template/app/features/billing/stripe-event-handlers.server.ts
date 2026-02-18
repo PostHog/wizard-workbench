@@ -1,3 +1,4 @@
+import { PostHog } from "posthog-node";
 import type { Stripe } from "stripe";
 
 import { updateOrganizationInDatabaseById } from "../organizations/organizations-model.server";
@@ -98,6 +99,12 @@ export const handleStripeChargeDisputeClosedEvent = async (
 export const handleStripeCheckoutSessionCompletedEvent = async (
   event: Stripe.CheckoutSessionCompletedEvent,
 ) => {
+  const posthog = new PostHog(process.env.VITE_PUBLIC_POSTHOG_KEY!, {
+    flushAt: 1,
+    flushInterval: 0,
+    host: process.env.VITE_PUBLIC_POSTHOG_HOST!,
+  });
+
   try {
     if (event.data.object.metadata?.organizationId) {
       const organization = await updateOrganizationInDatabaseById({
@@ -121,6 +128,17 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
           organizationId: organization.id,
         });
       }
+
+      // Track checkout session completed
+      const purchasedById = event.data.object.metadata?.purchasedById;
+      posthog.capture({
+        distinctId: purchasedById ?? "unknown",
+        event: "checkout_session_completed",
+        properties: {
+          customer_id: event.data.object.customer,
+          organization_id: event.data.object.metadata.organizationId,
+        },
+      });
     } else {
       console.error("No organization ID found in checkout session metadata");
       prettyPrint(event);
@@ -132,6 +150,8 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
       "Error handling Stripe checkout session completed event",
       message,
     );
+  } finally {
+    await posthog.shutdown().catch(() => {});
   }
 
   return ok();
