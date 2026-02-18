@@ -41,6 +41,9 @@ export {
   getPRUrl,
   isGhAuthenticated,
   extractPRNumber,
+  EXCLUDED_PATH_PATTERNS,
+  isExcludedPath,
+  filterDiff,
   type CreatePROptions,
 } from "./gh-cli.js";
 
