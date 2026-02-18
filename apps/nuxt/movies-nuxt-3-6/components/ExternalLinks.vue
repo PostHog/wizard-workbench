@@ -4,6 +4,15 @@ import type { ExternalIds } from '~/types'
 defineProps<{
   links: ExternalIds
 }>()
+
+const { $posthog: posthog } = useNuxtApp()
+
+function trackExternalLinkClick(platform: string, url: string) {
+  posthog?.capture('external_link_clicked', {
+    platform,
+    url,
+  })
+}
 </script>
 
 <template>
@@ -15,6 +24,7 @@ defineProps<{
       aria-label="Link to Twitter account"
       rel="noopener"
       n-link
+      @click="trackExternalLinkClick('twitter', `https://twitter.com/${links.twitter_id}`)"
     >
       <div i-simple-icons:twitter />
     </a>
@@ -25,6 +35,7 @@ defineProps<{
       aria-label="Link to Facebook account"
       rel="noopener"
       n-link
+      @click="trackExternalLinkClick('facebook', `https://www.facebook.com/${links.facebook_id}`)"
     >
       <div i-simple-icons:facebook />
     </a>
@@ -35,6 +46,7 @@ defineProps<{
       aria-label="Link to Instagram account"
       rel="noopener"
       n-link
+      @click="trackExternalLinkClick('instagram', `https://instagram.com/${links.instagram_id}`)"
     >
       <div i-simple-icons:instagram />
     </a>
@@ -45,6 +57,7 @@ defineProps<{
       aria-label="Link to IMDb account"
       rel="noopener"
       n-link
+      @click="trackExternalLinkClick('imdb', `https://www.imdb.com/movie/${links.imdb_id}`)"
     >
       <div i-cib:imdb />
     </a>
@@ -55,6 +68,7 @@ defineProps<{
       aria-label="Link to GitHub account"
       rel="noopener"
       n-link
+      @click="trackExternalLinkClick('github', `https://github.com/${links.github_id}`)"
     >
       <div i-simple-icons:github />
     </a>
@@ -65,6 +79,7 @@ defineProps<{
       aria-label="Link to LinkedIn account"
       rel="noopener"
       n-link
+      @click="trackExternalLinkClick('linkedin', `https://www.linkedin.com/in/${links.linkedin_id}`)"
     >
       <div i-simple-icons:linkedin />
     </a>
@@ -74,6 +89,7 @@ defineProps<{
       aria-label="Link to Email"
       rel="noopener" scale-120
       n-link
+      @click="trackExternalLinkClick('email', links.email)"
     >
       <div i-ph-envelope-simple />
     </a>
@@ -83,6 +99,7 @@ defineProps<{
       aria-label="Link to Homepage"
       rel="noopener" scale-120
       n-link
+      @click="trackExternalLinkClick('homepage', links.homepage)"
     >
       <div i-ph-link-simple />
     </a>

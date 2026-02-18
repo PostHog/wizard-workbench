@@ -1,8 +1,17 @@
 <script setup lang="ts">
 const id = useRouteParam<string>('id')
 const person = await getPerson(id.value)
+const { $posthog: posthog } = useNuxtApp()
 
 const $img = useImage()
+
+// Track person viewed event
+onMounted(() => {
+  posthog?.capture('person_viewed', {
+    person_id: id.value,
+    person_name: person.name,
+  })
+})
 
 useHead({
   title: person.name,
