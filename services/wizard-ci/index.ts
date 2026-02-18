@@ -11,7 +11,9 @@
  */
 import "dotenv/config";
 import { createInterface } from "readline";
+import { writeFileSync, mkdirSync } from "fs";
 import { join, relative } from "path";
+import { formatBenchmarkConsole, formatBenchmarkMarkdown, type BenchmarkData } from "./benchmark.js";
 import {
   findApps,
   resetApp,
@@ -71,6 +73,7 @@ interface PRMetadata {
   posthogRef?: string;
   source?: string;
   sourceUrl?: string;
+  benchmarkMarkdown?: string;
 }
 
 function getDependencyRefs(): Pick<PRMetadata, "wizardRef" | "contextMillRef" | "posthogRef"> {
@@ -124,6 +127,9 @@ function buildPRBody(meta: PRMetadata): string {
   ];
   if (meta.duration !== undefined) {
     lines.push(`Duration: ${formatMs(meta.duration)}`);
+  }
+  if (meta.benchmarkMarkdown) {
+    lines.push("", meta.benchmarkMarkdown);
   }
   return lines.join("\n");
 }
@@ -523,6 +529,11 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
   }
   console.log(`      Completed in ${formatMs(result.duration)}\n`);
 
+  // Log benchmark data if available
+  if (result.benchmark) {
+    console.log("\n" + formatBenchmarkConsole(result.benchmark) + "\n");
+  }
+
   // 3. Check changes in app directory only
   console.log("[3/5] Checking changes...");
   if (!hasChangesInPath(repoRoot, appRelativePath)) {
@@ -561,6 +572,11 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
       console.log("[5/5] Running local evaluation (test-run mode)...");
       const testRunName = `local-${triggerId}-${app.name.replace(/\//g, "-")}`;
       const evalInfo = await runLocalEvaluation(branchName, opts.base, testRunName);
+
+      // Save benchmark data to evaluation directory if available
+      if (result.benchmark && testRunName) {
+        saveBenchmarkToEvalDir(testRunName, result.benchmark);
+      }
 
       // Return to original branch
       checkout(repoRoot, originalBranch);
@@ -623,6 +639,7 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
     shortId: triggerId,
     branch: branchName,
     duration: result.duration,
+    benchmarkMarkdown: result.benchmark ? formatBenchmarkMarkdown(result.benchmark) : undefined,
     ...getDependencyRefs(),
     ...getSourceInfo(),
   };
@@ -672,6 +689,22 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
   }
 
   return true;
+}
+
+// ============================================================================
+// Benchmark helpers
+// ============================================================================
+
+function saveBenchmarkToEvalDir(testRunName: string, benchmark: BenchmarkData): void {
+  try {
+    const evalDir = join(process.cwd(), "test-evaluations", testRunName);
+    mkdirSync(evalDir, { recursive: true });
+    const benchmarkPath = join(evalDir, "benchmark.json");
+    writeFileSync(benchmarkPath, JSON.stringify(benchmark, null, 2));
+    console.log(`      Benchmark saved: ${benchmarkPath}\n`);
+  } catch (e) {
+    console.warn(`      Failed to save benchmark data: ${e}\n`);
+  }
 }
 
 // ============================================================================
