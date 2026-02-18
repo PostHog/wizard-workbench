@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -284,7 +285,11 @@ private fun UserInputSelector(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.EMOJI) },
+            onClick = {
+                // PostHog: Track emoji selector opened
+                PostHog.capture("emoji_selector_opened")
+                onSelectorChange(InputSelector.EMOJI)
+            },
             icon = painterResource(id = R.drawable.ic_mood),
             selected = currentInputSelector == InputSelector.EMOJI,
             description = stringResource(id = R.string.emoji_selector_bt_desc),
@@ -446,9 +451,18 @@ private fun UserInputText(
             onStartRecording = {
                 val consumed = !isRecordingMessage
                 isRecordingMessage = true
+
+                // PostHog: Track voice recording started
+                if (consumed) {
+                    PostHog.capture("voice_recording_started")
+                }
+
                 consumed
             },
             onFinishRecording = {
+                // PostHog: Track voice recording completed
+                PostHog.capture("voice_recording_completed")
+
                 // handle end of recording
                 isRecordingMessage = false
             },

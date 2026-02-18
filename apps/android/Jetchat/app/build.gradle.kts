@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose)
 }
 
@@ -35,6 +36,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         vectorDrawables.useSupportLibrary = true
+
+        // PostHog configuration - loaded from local.properties
+        val localProperties = java.util.Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localProperties.load(localPropertiesFile.inputStream())
+        }
+        buildConfigField(
+            "String",
+            "POSTHOG_API_KEY",
+            "\"${localProperties.getProperty("posthog.apiKey", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "POSTHOG_HOST",
+            "\"${localProperties.getProperty("posthog.host", "https://us.i.posthog.com")}\""
+        )
     }
 
     signingConfigs {
@@ -77,6 +95,7 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
+        buildConfig = true
     }
 
     packaging.resources {
@@ -125,4 +144,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+
+    // PostHog Android SDK
+    implementation(libs.posthog.android)
 }

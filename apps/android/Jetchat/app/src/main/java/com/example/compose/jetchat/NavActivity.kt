@@ -40,6 +40,7 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.compose.jetchat.auth.LoginScreen
 import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -90,20 +91,32 @@ class NavActivity : AppCompatActivity() {
                             drawerState = drawerState,
                             selectedMenu = selectedMenu,
                             username = loggedInUsername,
-                            onChatClicked = {
+                            onChatClicked = { chatId ->
+                                // PostHog: Track chat selection
+                                PostHog.capture(
+                                    event = "chat_selected",
+                                    properties = mapOf("chat_id" to chatId)
+                                )
+
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
                                     drawerState.close()
                                 }
-                                selectedMenu = it
+                                selectedMenu = chatId
                             },
-                            onProfileClicked = {
-                                val bundle = bundleOf("userId" to it)
+                            onProfileClicked = { userId ->
+                                // PostHog: Track profile view
+                                PostHog.capture(
+                                    event = "profile_viewed",
+                                    properties = mapOf("profile_user_id" to userId)
+                                )
+
+                                val bundle = bundleOf("userId" to userId)
                                 findNavController().navigate(R.id.nav_profile, bundle)
                                 scope.launch {
                                     drawerState.close()
                                 }
-                                selectedMenu = it
+                                selectedMenu = userId
                             },
                             onLogoutClicked = {
                                 viewModel.logout()

@@ -68,6 +68,7 @@ import com.example.compose.jetchat.components.baselineHeight
 import com.example.compose.jetchat.data.colleagueProfile
 import com.example.compose.jetchat.data.meProfile
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -231,7 +232,16 @@ fun ProfileFab(extended: Boolean, userIsMe: Boolean, modifier: Modifier = Modifi
     key(userIsMe) {
         // Prevent multiple invocations to execute during composition
         FloatingActionButton(
-            onClick = onFabClicked,
+            onClick = {
+                // PostHog: Track profile FAB click
+                PostHog.capture(
+                    event = "profile_fab_clicked",
+                    properties = mapOf(
+                        "action_type" to if (userIsMe) "edit_profile" else "send_message"
+                    )
+                )
+                onFabClicked()
+            },
             modifier = modifier
                 .padding(16.dp)
                 .navigationBarsPadding()
