@@ -1,10 +1,25 @@
+import { useEffect } from 'react'
 import { Navigate } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
 import { getAllUsers, getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
 import type { Route } from './+types/stats'
 
 export default function Stats() {
+  const posthog = usePostHog()
   const { user } = useAuth()
+
+  // Track stats page view - this is an exception for a "viewed" event at top of funnel
+  useEffect(() => {
+    if (user) {
+      posthog?.capture('stats_viewed', {
+        total_points: user.totalPoints,
+        claimed_countries_count: user.claimedCountries?.length || 0,
+        liked_countries_count: user.likedCountries?.length || 0,
+        visited_countries_count: user.visitedCountries?.length || 0,
+      })
+    }
+  }, []) // Only fire once on mount
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -12,7 +27,7 @@ export default function Stats() {
 
   const currentUser = getCurrentUser() || user
   const allUsers = getAllUsers()
-  
+
   // Sort users by points for leaderboard
   const leaderboard = [...allUsers]
     .sort((a, b) => b.totalPoints - a.totalPoints)
