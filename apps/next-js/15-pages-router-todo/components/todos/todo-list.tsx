@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -42,9 +43,17 @@ export function TodoList() {
       if (response.ok) {
         const newTodo = await response.json();
         setTodos([...todos, newTodo]);
+
+        // Track todo creation event
+        posthog.capture('todo_created', {
+          todo_id: newTodo.id,
+          title: newTodo.title,
+          has_description: !!newTodo.description,
+        });
       }
     } catch (error) {
       console.error('Failed to add todo:', error);
+      posthog.captureException(error);
     }
   };
 
@@ -61,13 +70,30 @@ export function TodoList() {
       if (response.ok) {
         const updatedTodo = await response.json();
         setTodos(todos.map((todo) => (todo.id === id ? updatedTodo : todo)));
+
+        // Track todo completion/uncompletion event
+        if (completed) {
+          posthog.capture('todo_completed', {
+            todo_id: id,
+            title: updatedTodo.title,
+          });
+        } else {
+          posthog.capture('todo_uncompleted', {
+            todo_id: id,
+            title: updatedTodo.title,
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to update todo:', error);
+      posthog.captureException(error);
     }
   };
 
   const handleDeleteTodo = async (id: number) => {
+    // Get the todo before deletion for tracking
+    const todoToDelete = todos.find((todo) => todo.id === id);
+
     try {
       const response = await fetch(`/api/todos/${id}`, {
         method: 'DELETE',
@@ -75,9 +101,17 @@ export function TodoList() {
 
       if (response.ok) {
         setTodos(todos.filter((todo) => todo.id !== id));
+
+        // Track todo deletion event
+        posthog.capture('todo_deleted', {
+          todo_id: id,
+          title: todoToDelete?.title,
+          was_completed: todoToDelete?.completed,
+        });
       }
     } catch (error) {
       console.error('Failed to delete todo:', error);
+      posthog.captureException(error);
     }
   };
 
