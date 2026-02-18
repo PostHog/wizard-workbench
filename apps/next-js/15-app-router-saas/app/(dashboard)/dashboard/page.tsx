@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -39,6 +40,14 @@ function SubscriptionSkeleton() {
 
 function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
+
+  const handleManageSubscriptionClick = () => {
+    // Track manage subscription clicked event
+    posthog.capture('manage_subscription_clicked', {
+      current_plan: teamData?.planName || 'Free',
+      subscription_status: teamData?.subscriptionStatus,
+    });
+  };
 
   return (
     <Card className="mb-8">
@@ -61,7 +70,11 @@ function ManageSubscription() {
               </p>
             </div>
             <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={handleManageSubscriptionClick}
+              >
                 Manage Subscription
               </Button>
             </form>
