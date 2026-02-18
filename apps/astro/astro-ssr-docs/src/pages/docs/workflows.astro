@@ -14,7 +14,7 @@ const renderTime = new Date().toISOString();
     via the API.
   </p>
 
-  <pre><code>const workflow = await client.workflows.create({'{'}
+  <pre class="code-block" data-code-label="create-workflow"><code>const workflow = await client.workflows.create({'{'}
   name: 'Invoice Processing',
   trigger: {'{'}
     type: 'document.uploaded',
@@ -60,3 +60,33 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Track code block copy events
+    document.querySelectorAll('.code-block').forEach((block) => {
+      block.addEventListener('click', async () => {
+        const codeLabel = block.getAttribute('data-code-label');
+        const codeElement = block.querySelector('code');
+        const codeContent = codeElement?.textContent || '';
+
+        try {
+          await navigator.clipboard.writeText(codeContent);
+          window.posthog?.capture('code_block_copied', {
+            code_label: codeLabel,
+            page: 'workflows',
+            code_length: codeContent.length
+          });
+        } catch (err) {
+          // Clipboard API not available, track the click attempt anyway
+          window.posthog?.capture('code_block_copied', {
+            code_label: codeLabel,
+            page: 'workflows',
+            code_length: codeContent.length,
+            clipboard_failed: true
+          });
+        }
+      });
+    });
+  });
+</script>

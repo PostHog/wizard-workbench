@@ -14,7 +14,7 @@ const renderTime = new Date().toISOString();
     and include them in the Authorization header.
   </p>
 
-  <pre><code>curl -X POST https://api.neuralflow.io/v1/documents \
+  <pre class="code-block" data-code-label="api-key-curl"><code>curl -X POST https://api.neuralflow.io/v1/documents \
   -H "Authorization: Bearer nf_sk_live_abc123..." \
   -H "Content-Type: application/json" \
   -d '{'{'}...{'}'}'</code></pre>
@@ -32,14 +32,14 @@ const renderTime = new Date().toISOString();
   </p>
 
   <h3>Authorization URL</h3>
-  <pre><code>https://neuralflow.io/oauth/authorize
+  <pre class="code-block" data-code-label="oauth-authorize-url"><code>https://neuralflow.io/oauth/authorize
   ?client_id=your_client_id
   &redirect_uri=https://your-app.com/callback
   &response_type=code
   &scope=read write</code></pre>
 
   <h3>Token Exchange</h3>
-  <pre><code>POST https://api.neuralflow.io/oauth/token
+  <pre class="code-block" data-code-label="oauth-token-exchange"><code>POST https://api.neuralflow.io/oauth/token
 {'{'}
   "grant_type": "authorization_code",
   "code": "auth_code_from_callback",
@@ -56,3 +56,33 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Track code block copy events
+    document.querySelectorAll('.code-block').forEach((block) => {
+      block.addEventListener('click', async () => {
+        const codeLabel = block.getAttribute('data-code-label');
+        const codeElement = block.querySelector('code');
+        const codeContent = codeElement?.textContent || '';
+
+        try {
+          await navigator.clipboard.writeText(codeContent);
+          window.posthog?.capture('code_block_copied', {
+            code_label: codeLabel,
+            page: 'authentication',
+            code_length: codeContent.length
+          });
+        } catch (err) {
+          // Clipboard API not available, track the click attempt anyway
+          window.posthog?.capture('code_block_copied', {
+            code_label: codeLabel,
+            page: 'authentication',
+            code_length: codeContent.length,
+            clipboard_failed: true
+          });
+        }
+      });
+    });
+  });
+</script>

@@ -16,11 +16,11 @@ const renderTime = new Date().toISOString();
 
   <h2>Step 2: Install the SDK</h2>
 
-  <pre><code>npm install @neuralflow/sdk</code></pre>
+  <pre class="code-block" data-code-label="install-sdk"><code>npm install @neuralflow/sdk</code></pre>
 
   <h2>Step 3: Process a Document</h2>
 
-  <pre><code>import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
+  <pre class="code-block" data-code-label="process-document"><code>import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
 import fs from 'fs';
 
 const client = new NeuralFlow({'{'}
@@ -38,7 +38,7 @@ console.log('Extracted data:', document.data);</code></pre>
   <h2>Step 4: View Results</h2>
   <p>The extracted data will be returned as structured JSON:</p>
 
-  <pre><code>{'{'}
+  <pre class="code-block" data-code-label="view-results"><code>{'{'}
   "date": "2024-01-15",
   "total": 1250.00,
   "vendor": "Acme Corp",
@@ -59,3 +59,33 @@ console.log('Extracted data:', document.data);</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Track code block copy events
+    document.querySelectorAll('.code-block').forEach((block) => {
+      block.addEventListener('click', async () => {
+        const codeLabel = block.getAttribute('data-code-label');
+        const codeElement = block.querySelector('code');
+        const codeContent = codeElement?.textContent || '';
+
+        try {
+          await navigator.clipboard.writeText(codeContent);
+          window.posthog?.capture('code_block_copied', {
+            code_label: codeLabel,
+            page: 'quickstart',
+            code_length: codeContent.length
+          });
+        } catch (err) {
+          // Clipboard API not available, track the click attempt anyway
+          window.posthog?.capture('code_block_copied', {
+            code_label: codeLabel,
+            page: 'quickstart',
+            code_length: codeContent.length,
+            clipboard_failed: true
+          });
+        }
+      });
+    });
+  });
+</script>

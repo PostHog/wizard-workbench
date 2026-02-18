@@ -11,16 +11,16 @@ const renderTime = new Date().toISOString();
   <h2>Node.js / JavaScript</h2>
   <p>Install the NeuralFlow SDK using your preferred package manager:</p>
 
-  <pre><code>npm install @neuralflow/sdk</code></pre>
+  <pre class="code-block" data-code-label="npm-install"><code>npm install @neuralflow/sdk</code></pre>
 
   <p>Or with yarn:</p>
 
-  <pre><code>yarn add @neuralflow/sdk</code></pre>
+  <pre class="code-block" data-code-label="yarn-install"><code>yarn add @neuralflow/sdk</code></pre>
 
   <h3>Basic Setup</h3>
   <p>Initialize the client with your API key:</p>
 
-  <pre><code>import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
+  <pre class="code-block" data-code-label="js-setup"><code>import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
 
 const client = new NeuralFlow({'{'}
   apiKey: process.env.NEURALFLOW_API_KEY,
@@ -29,18 +29,18 @@ const client = new NeuralFlow({'{'}
   <h2>Python</h2>
   <p>Install with pip:</p>
 
-  <pre><code>pip install neuralflow</code></pre>
+  <pre class="code-block" data-code-label="pip-install"><code>pip install neuralflow</code></pre>
 
   <h3>Basic Setup</h3>
 
-  <pre><code>from neuralflow import NeuralFlow
+  <pre class="code-block" data-code-label="python-setup"><code>from neuralflow import NeuralFlow
 
 client = NeuralFlow(api_key=os.environ['NEURALFLOW_API_KEY'])</code></pre>
 
   <h2>Environment Variables</h2>
   <p>We recommend storing your API key in an environment variable:</p>
 
-  <pre><code># .env
+  <pre class="code-block" data-code-label="env-setup"><code># .env
 NEURALFLOW_API_KEY=your_api_key_here</code></pre>
 
   <div class="callout">
@@ -57,3 +57,33 @@ NEURALFLOW_API_KEY=your_api_key_here</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Track code block copy events
+    document.querySelectorAll('.code-block').forEach((block) => {
+      block.addEventListener('click', async () => {
+        const codeLabel = block.getAttribute('data-code-label');
+        const codeElement = block.querySelector('code');
+        const codeContent = codeElement?.textContent || '';
+
+        try {
+          await navigator.clipboard.writeText(codeContent);
+          window.posthog?.capture('code_block_copied', {
+            code_label: codeLabel,
+            page: 'installation',
+            code_length: codeContent.length
+          });
+        } catch (err) {
+          // Clipboard API not available, track the click attempt anyway
+          window.posthog?.capture('code_block_copied', {
+            code_label: codeLabel,
+            page: 'installation',
+            code_length: codeContent.length,
+            clipboard_failed: true
+          });
+        }
+      });
+    });
+  });
+</script>
