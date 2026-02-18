@@ -43,6 +43,8 @@ const sections = [
             <a
               href={link.href}
               class:list={["sidebar-link", { active: currentPath === link.href }]}
+              data-sidebar-label={link.label}
+              data-sidebar-section={section.title}
             >
               {link.label}
             </a>
@@ -52,3 +54,20 @@ const sections = [
     </div>
   ))}
 </aside>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.sidebar-link').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        var label = e.currentTarget.getAttribute('data-sidebar-label');
+        var section = e.currentTarget.getAttribute('data-sidebar-section');
+        var href = e.currentTarget.getAttribute('href');
+        window.posthog?.capture('sidebar_link_clicked', {
+          link_label: label,
+          section: section,
+          href: href
+        });
+      });
+    });
+  });
+</script>
