@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -173,7 +174,13 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                 focusState = textFieldFocusState,
             )
             UserInputSelector(
-                onSelectorChange = { currentInputSelector = it },
+                onSelectorChange = {
+                    PostHog.capture(
+                        event = "attachment selector opened",
+                        properties = mapOf("selector_type" to it.name.lowercase()),
+                    )
+                    currentInputSelector = it
+                },
                 sendMessageEnabled = textState.text.isNotBlank(),
                 onMessageSent = {
                     onMessageSent(textState.text)
@@ -446,11 +453,15 @@ private fun UserInputText(
             onStartRecording = {
                 val consumed = !isRecordingMessage
                 isRecordingMessage = true
+                if (consumed) {
+                    PostHog.capture(event = "voice recording started")
+                }
                 consumed
             },
             onFinishRecording = {
                 // handle end of recording
                 isRecordingMessage = false
+                PostHog.capture(event = "voice recording finished")
             },
             onCancelRecording = {
                 isRecordingMessage = false
@@ -648,7 +659,13 @@ fun EmojiTable(onTextAdded: (String) -> Unit, modifier: Modifier = Modifier) {
                     val emoji = emojis[x * EMOJI_COLUMNS + y]
                     Text(
                         modifier = Modifier
-                            .clickable(onClick = { onTextAdded(emoji) })
+                            .clickable(onClick = {
+                                PostHog.capture(
+                                    event = "emoji selected",
+                                    properties = mapOf("emoji" to emoji),
+                                )
+                                onTextAdded(emoji)
+                            })
                             .sizeIn(minWidth = 42.dp, minHeight = 42.dp)
                             .padding(8.dp),
                         text = emoji,
