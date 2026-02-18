@@ -11,6 +11,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -107,6 +108,22 @@ export default async function handler(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+
+    // PostHog: Capture team member invited event
+    const posthog = getPostHogClient();
+    const distinctId = req.headers['x-posthog-distinct-id'] as string || user.id.toString();
+
+    posthog.capture({
+      distinctId,
+      event: 'team_member_invited',
+      properties: {
+        invitedEmail: email,
+        invitedRole: role,
+        teamId: userWithTeam.teamId,
+        invitedByUserId: user.id,
+        source: 'api'
+      }
+    });
 
     return res.status(200).json({ success: 'Invitation sent successfully' });
   } catch (error) {
