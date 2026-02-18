@@ -8,6 +8,7 @@ definePageMeta({
   },
 })
 
+const { $posthog: posthog } = useNuxtApp()
 const route = useRoute()
 const type = computed(() => route.params.type as MediaType || 'movie')
 const id = computed(() => route.params.id as string)
@@ -24,6 +25,16 @@ useHead({
     { name: 'description', content: item.overview },
     { property: 'og:image', content: $img(`/tmdb${item.poster_path}`, { width: 1200, height: 630 }) },
   ],
+})
+
+// Track media viewed event
+onMounted(() => {
+  posthog?.capture('media_viewed', {
+    media_id: id.value,
+    media_type: type.value,
+    media_title: item.name || item.title,
+    media_vote_average: item.vote_average,
+  })
 })
 </script>
 

@@ -1,11 +1,13 @@
-export const useAuth = () => {
+export function useAuth() {
+  const { $posthog: posthog } = useNuxtApp()
+
   const cookie = useCookie<string | null>('auth-user', {
     httpOnly: false,
     secure: true,
     sameSite: 'strict',
     maxAge: 60 * 60 * 24 * 7, // 7 days
   })
-  
+
   const user = useState<string | null>('auth-user', () => cookie.value)
   const isAuthenticated = computed(() => !!user.value)
 
@@ -15,30 +17,44 @@ export const useAuth = () => {
     }
 
     try {
-      const response = await $fetch<{ success: boolean; user: string }>('/api/auth/login', {
+      const response = await $fetch<{ success: boolean, user: string }>('/api/auth/login', {
         method: 'POST',
         body: { username: username.trim(), password },
       })
-      
+
       if (response.success) {
         user.value = response.user
         cookie.value = response.user
+
+        // Identify user and capture login event
+        posthog?.identify(response.user)
+        posthog?.capture('user_logged_in', {
+          username: response.user,
+        })
+
         await navigateTo('/')
       }
-      
+
       return response
-    } catch (error: any) {
+    }
+    catch (error: any) {
       throw new Error(error.data?.message || error.message || 'Login failed')
     }
   }
 
   const logout = async () => {
     try {
+      // Capture logout event before resetting
+      posthog?.capture('user_logged_out')
+      posthog?.reset()
+
       await $fetch('/api/auth/logout', { method: 'POST' })
-    } catch (error) {
+    }
+    catch (error) {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error)
-    } finally {
+    }
+    finally {
       user.value = null
       cookie.value = null
       await navigateTo('/login')

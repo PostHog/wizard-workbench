@@ -5,6 +5,7 @@ definePageMeta({
   pageTransition: false,
 })
 
+const { $posthog: posthog } = useNuxtApp()
 const route = useRoute()
 const router = useRouter()
 const input = ref((route.query.s || '').toString())
@@ -22,6 +23,11 @@ function search() {
   count.value = undefined
   items.value = []
   router.replace({ query: { s: input.value } })
+
+  // Track search event
+  posthog?.capture('search_performed', {
+    search_query: currentSearch.value,
+  })
 }
 
 async function fetch(page: number) {
@@ -34,6 +40,7 @@ async function fetch(page: number) {
   }
   catch (e: any) {
     error.value = e
+    posthog?.captureException(e)
   }
 }
 
