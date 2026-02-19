@@ -1,0 +1,3 @@
+[submodule "apps/rails/fizzy"]
+	path = apps/rails/fizzy
+	url = git@github.com:basecamp/fizzy.git

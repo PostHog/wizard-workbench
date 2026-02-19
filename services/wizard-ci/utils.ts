@@ -106,8 +106,9 @@ export function findApps(appsDir: string): App[] {
       const isDjangoProject = existsSync(join(fullPath, "manage.py"));
       const isPythonProject = existsSync(join(fullPath, "requirements.txt")) || existsSync(join(fullPath, "pyproject.toml"));
       const isAndroidProject = existsSync(join(fullPath, "build.gradle")) || existsSync(join(fullPath, "build.gradle.kts"));
+      const isRailsProject = existsSync(join(fullPath, "Gemfile")) && existsSync(join(fullPath, "config.ru"));
 
-      if (isJsProject || isDjangoProject || isPythonProject || isAndroidProject) {
+      if (isJsProject || isDjangoProject || isPythonProject || isAndroidProject || isRailsProject) {
         apps.push({ name: relativePath, path: fullPath });
       } else {
         scan(fullPath, relativePath);
