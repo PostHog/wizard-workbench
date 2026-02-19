@@ -1,0 +1,244 @@
+{
+  "dashboard": {
+    "name": "Analytics basics",
+    "description": "Core analytics for Nuxt Movies: user authentication, content engagement, and search behavior",
+    "pinned": true,
+    "project_id": 2
+  },
+  "insights": [
+    {
+      "name": "Login to First Media View Funnel",
+      "description": "Conversion funnel showing users who log in and then view media content",
+      "saved": true,
+      "query": {
+        "kind": "FunnelsQuery",
+        "series": [
+          {
+            "kind": "EventsNode",
+            "event": "user_logged_in",
+            "name": "User Logged In"
+          },
+          {
+            "kind": "EventsNode",
+            "event": "media_viewed",
+            "name": "Media Viewed"
+          }
+        ],
+        "funnelsFilter": {
+          "funnelWindowInterval": 1,
+          "funnelWindowIntervalUnit": "day"
+        },
+        "dateRange": {
+          "date_from": "-30d"
+        }
+      }
+    },
+    {
+      "name": "Daily Active Users",
+      "description": "Unique users logging in each day",
+      "saved": true,
+      "query": {
+        "kind": "TrendsQuery",
+        "series": [
+          {
+            "kind": "EventsNode",
+            "event": "user_logged_in",
+            "name": "User Logged In",
+            "math": "dau"
+          }
+        ],
+        "interval": "day",
+        "dateRange": {
+          "date_from": "-30d"
+        },
+        "trendsFilter": {
+          "display": "ActionsLineGraph"
+        }
+      }
+    },
+    {
+      "name": "Top Search Queries",
+      "description": "Most popular search queries performed by users",
+      "saved": true,
+      "query": {
+        "kind": "TrendsQuery",
+        "series": [
+          {
+            "kind": "EventsNode",
+            "event": "search_performed",
+            "name": "Search Performed",
+            "math": "total"
+          }
+        ],
+        "breakdownFilter": {
+          "breakdown": "search_query",
+          "breakdown_type": "event"
+        },
+        "trendsFilter": {
+          "display": "ActionsTable"
+        },
+        "dateRange": {
+          "date_from": "-30d"
+        }
+      }
+    },
+    {
+      "name": "Media Views by Type",
+      "description": "Trend of media views broken down by media type (movie vs TV show)",
+      "saved": true,
+      "query": {
+        "kind": "TrendsQuery",
+        "series": [
+          {
+            "kind": "EventsNode",
+            "event": "media_viewed",
+            "name": "Media Viewed",
+            "math": "total"
+          }
+        ],
+        "breakdownFilter": {
+          "breakdown": "media_type",
+          "breakdown_type": "event"
+        },
+        "interval": "day",
+        "dateRange": {
+          "date_from": "-30d"
+        },
+        "trendsFilter": {
+          "display": "ActionsLineGraph"
+        }
+      }
+    },
+    {
+      "name": "Error Rate Trend",
+      "description": "Daily trend of error page displays",
+      "saved": true,
+      "query": {
+        "kind": "TrendsQuery",
+        "series": [
+          {
+            "kind": "EventsNode",
+            "event": "error_displayed",
+            "name": "Error Displayed",
+            "math": "total"
+          }
+        ],
+        "interval": "day",
+        "dateRange": {
+          "date_from": "-30d"
+        },
+        "trendsFilter": {
+          "display": "ActionsLineGraph"
+        }
+      }
+    }
+  ],
+  "additional_insights": [
+    {
+      "name": "Login Failure Rate",
+      "description": "Track failed login attempts over time",
+      "query": {
+        "kind": "TrendsQuery",
+        "series": [
+          {
+            "kind": "EventsNode",
+            "event": "login_failed",
+            "name": "Login Failed",
+            "math": "total"
+          }
+        ],
+        "interval": "day",
+        "dateRange": {
+          "date_from": "-30d"
+        }
+      }
+    },
+    {
+      "name": "Most Viewed Actors/Directors",
+      "description": "Top viewed person pages",
+      "query": {
+        "kind": "TrendsQuery",
+        "series": [
+          {
+            "kind": "EventsNode",
+            "event": "person_viewed",
+            "name": "Person Viewed",
+            "math": "total"
+          }
+        ],
+        "breakdownFilter": {
+          "breakdown": "person_name",
+          "breakdown_type": "event"
+        },
+        "trendsFilter": {
+          "display": "ActionsTable"
+        },
+        "dateRange": {
+          "date_from": "-30d"
+        }
+      }
+    },
+    {
+      "name": "Error Breakdown by Status Code",
+      "description": "Errors categorized by HTTP status code",
+      "query": {
+        "kind": "TrendsQuery",
+        "series": [
+          {
+            "kind": "EventsNode",
+            "event": "error_displayed",
+            "name": "Error Displayed",
+            "math": "total"
+          }
+        ],
+        "breakdownFilter": {
+          "breakdown": "status_code",
+          "breakdown_type": "event"
+        },
+        "interval": "day",
+        "dateRange": {
+          "date_from": "-30d"
+        }
+      }
+    },
+    {
+      "name": "User Engagement Funnel",
+      "description": "Complete user journey from login to content engagement",
+      "query": {
+        "kind": "FunnelsQuery",
+        "series": [
+          {
+            "kind": "EventsNode",
+            "event": "user_logged_in",
+            "name": "User Logged In"
+          },
+          {
+            "kind": "EventsNode",
+            "event": "search_performed",
+            "name": "Search Performed"
+          },
+          {
+            "kind": "EventsNode",
+            "event": "media_viewed",
+            "name": "Media Viewed"
+          }
+        ],
+        "funnelsFilter": {
+          "funnelWindowInterval": 1,
+          "funnelWindowIntervalUnit": "day"
+        },
+        "dateRange": {
+          "date_from": "-30d"
+        }
+      }
+    }
+  ],
+  "notes": [
+    "This configuration file contains all insight definitions for the Nuxt Movies Analytics basics dashboard.",
+    "To use this file programmatically, you need an API key with 'insight:write' and 'dashboard:write' permissions.",
+    "Each insight can be created via POST to https://us.posthog.com/api/projects/2/insights/",
+    "The dashboard can be created via POST to https://us.posthog.com/api/projects/2/dashboards/",
+    "Current API key limitations require manual creation through the PostHog UI.",
+    "See posthog-dashboard-setup.md for detailed step-by-step instructions."
+  ]
+}
