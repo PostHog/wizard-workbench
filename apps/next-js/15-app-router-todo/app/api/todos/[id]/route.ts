@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
 import { z } from 'zod';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 const updateTodoSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -59,6 +60,19 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    if (validatedData.completed !== undefined) {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: 'anonymous',
+        event: 'server_todo_completed',
+        properties: {
+          todo_id: todoId,
+          todo_title: updatedTodo.title,
+          completed: updatedTodo.completed,
+        },
+      });
+    }
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -88,11 +102,23 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid todo ID' }, { status: 400 });
     }
 
+    const todoToDelete = getTodoById(todoId);
     const deleted = deleteTodo(todoId);
 
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: 'anonymous',
+      event: 'server_todo_deleted',
+      properties: {
+        todo_id: todoId,
+        todo_title: todoToDelete?.title,
+        was_completed: todoToDelete?.completed,
+      },
+    });
 
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
