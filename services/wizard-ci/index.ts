@@ -34,6 +34,7 @@ import {
   runEvaluator,
   runEvaluatorOnBranch,
   createBranch,
+  redactApiKeys,
   type App,
 } from "./utils.js";
 
@@ -534,6 +535,16 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
   // Stop here if local mode (unless --evaluate is also set)
   if (opts.local) {
     if (opts.evaluate) {
+      // Redact any hardcoded API keys before committing
+      const localRedactResult = redactApiKeys(repoRoot, appRelativePath);
+      if (localRedactResult.keysRedacted > 0) {
+        console.log(`      Redacted ${localRedactResult.keysRedacted} API key(s) in ${localRedactResult.filesModified.length} file(s):`);
+        for (const file of localRedactResult.filesModified) {
+          console.log(`        ${file}`);
+        }
+        console.log();
+      }
+
       // Create a branch and commit changes for evaluation
       console.log("[4/5] Creating branch and committing for local evaluation...");
       const originalBranch = getCurrentBranch(repoRoot);
@@ -575,6 +586,16 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
       console.log("[LOCAL] Skipping branch/PR creation\n");
     }
     return true;
+  }
+
+  // 3.5 Redact any hardcoded API keys before committing
+  const redactResult = redactApiKeys(repoRoot, appRelativePath);
+  if (redactResult.keysRedacted > 0) {
+    console.log(`      Redacted ${redactResult.keysRedacted} API key(s) in ${redactResult.filesModified.length} file(s):`);
+    for (const file of redactResult.filesModified) {
+      console.log(`        ${file}`);
+    }
+    console.log();
   }
 
   // 4. Create branch and commit only app files
