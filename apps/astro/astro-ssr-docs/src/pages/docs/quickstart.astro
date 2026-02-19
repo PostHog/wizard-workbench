@@ -48,7 +48,7 @@ console.log('Extracted data:', document.data);</code></pre>
   ]
 {'}'}</code></pre>
 
-  <h2>What's Next?</h2>
+  <h2 id="whats-next">What's Next?</h2>
   <ul>
     <li>Learn about <a href="/docs/workflows">Workflow Automation</a></li>
     <li>Explore the full <a href="/docs/api">API Reference</a></li>
@@ -59,3 +59,34 @@ console.log('Extracted data:', document.data);</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Track when user reaches the "What's Next" section — indicates quickstart completion
+    var whatsNext = document.getElementById('whats-next');
+    if (whatsNext && 'IntersectionObserver' in window) {
+      var observed = false;
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting && !observed) {
+            observed = true;
+            window.posthog?.capture('quickstart_next_steps_viewed');
+            observer.disconnect();
+          }
+        });
+      }, { threshold: 0.5 });
+      observer.observe(whatsNext);
+    }
+
+    // Also track install command copies on quickstart page
+    document.querySelectorAll('pre code').forEach(function (codeBlock) {
+      codeBlock.addEventListener('copy', function () {
+        var text = codeBlock.textContent || '';
+        window.posthog?.capture('install_command_copied', {
+          command: text.trim().split('\n')[0],
+          page: 'quickstart',
+        });
+      });
+    });
+  });
+</script>

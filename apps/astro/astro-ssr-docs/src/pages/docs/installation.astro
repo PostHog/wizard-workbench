@@ -57,3 +57,18 @@ NEURALFLOW_API_KEY=your_api_key_here</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Track when users copy install commands — strong signal of SDK integration intent
+    document.querySelectorAll('pre code').forEach(function (codeBlock) {
+      codeBlock.addEventListener('copy', function () {
+        var text = codeBlock.textContent || '';
+        window.posthog?.capture('install_command_copied', {
+          command: text.trim().split('\n')[0],
+          page: 'installation',
+        });
+      });
+    });
+  });
+</script>

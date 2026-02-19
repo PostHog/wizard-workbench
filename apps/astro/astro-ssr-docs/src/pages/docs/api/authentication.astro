@@ -56,3 +56,10 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Track users who view authentication docs — high-intent signal for integration
+    window.posthog?.capture('api_key_docs_viewed');
+  });
+</script>

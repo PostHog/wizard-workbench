@@ -60,3 +60,10 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Track users who view workflow docs — indicates deeper product engagement
+    window.posthog?.capture('workflow_docs_viewed');
+  });
+</script>
