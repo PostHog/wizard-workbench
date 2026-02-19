@@ -1,0 +1,37 @@
+[
+  {
+    "event_name": "user_logged_in",
+    "event_description": "Fires when a user successfully logs in with their username and password",
+    "file_path": "app/src/main/java/com/example/compose/jetchat/MainViewModel.kt"
+  },
+  {
+    "event_name": "user_logged_out",
+    "event_description": "Fires when a user taps the Logout button from the drawer",
+    "file_path": "app/src/main/java/com/example/compose/jetchat/MainViewModel.kt"
+  },
+  {
+    "event_name": "message_sent",
+    "event_description": "Fires when a user sends a chat message in a conversation channel",
+    "file_path": "app/src/main/java/com/example/compose/jetchat/conversation/Conversation.kt"
+  },
+  {
+    "event_name": "channel_selected",
+    "event_description": "Fires when a user selects a chat channel from the drawer",
+    "file_path": "app/src/main/java/com/example/compose/jetchat/components/JetchatDrawer.kt"
+  },
+  {
+    "event_name": "profile_viewed",
+    "event_description": "Fires when a user navigates to a profile screen (clicking author avatar or selecting from drawer)",
+    "file_path": "app/src/main/java/com/example/compose/jetchat/profile/ProfileFragment.kt"
+  },
+  {
+    "event_name": "emoji_selector_opened",
+    "event_description": "Fires when a user opens the emoji/attachment selector panel in the chat input",
+    "file_path": "app/src/main/java/com/example/compose/jetchat/conversation/UserInput.kt"
+  },
+  {
+    "event_name": "message_author_clicked",
+    "event_description": "Fires when a user clicks on a message author name or avatar to view their profile",
+    "file_path": "app/src/main/java/com/example/compose/jetchat/conversation/Conversation.kt"
+  }
+]
