@@ -1,9 +1,11 @@
 import { NavLink, Link } from "react-router";
 import { useAuth } from "~/context/AuthContext";
 import { getAvatarUrl } from "~/lib/utils/auth";
+import { usePostHog } from '@posthog/react';
 
 export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
+  const posthog = usePostHog();
 
   return (
     <header className="w-full px-8 text-gray-700 bg-white shadow-sm sticky top-0 z-50">
