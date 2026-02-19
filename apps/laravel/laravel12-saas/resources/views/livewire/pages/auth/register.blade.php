@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -29,6 +30,13 @@ new #[Layout('layouts.guest')] class extends Component
         $validated['password'] = Hash::make($validated['password']);
 
         event(new Registered($user = User::create($validated)));
+
+        // PostHog: Identify new user and track signup
+        $posthog = app(PostHogService::class);
+        $posthog->identify($user->email, $user->getPostHogProperties());
+        $posthog->capture($user->email, 'user_signed_up', [
+            'signup_method' => 'form',
+        ]);
 
         Auth::login($user);
 
