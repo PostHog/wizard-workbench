@@ -1,8 +1,19 @@
 <script lang="ts">
   import { Auth } from "@supabase/auth-ui-svelte"
   import { sharedAppearance, oauthProviders } from "../login_config"
+  import { onMount } from "svelte"
+  import posthog from "posthog-js"
 
   let { data } = $props()
+
+  onMount(() => {
+    // Capture when a PASSWORD_RECOVERY event is sent (user submitted the form)
+    data.supabase.auth.onAuthStateChange((event: string) => {
+      if (event === "PASSWORD_RECOVERY") {
+        posthog.capture("forgot_password_submitted")
+      }
+    })
+  })
 </script>
 
 <svelte:head>
