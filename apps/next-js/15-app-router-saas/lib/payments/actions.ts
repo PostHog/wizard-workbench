@@ -3,9 +3,28 @@
 import { redirect } from 'next/navigation';
 import { createCheckoutSession, createCustomerPortalSession } from './stripe';
 import { withTeam } from '@/lib/auth/middleware';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { getUser } from '@/lib/db/queries';
 
 export const checkoutAction = withTeam(async (formData, team) => {
   const priceId = formData.get('priceId') as string;
+
+  const user = await getUser();
+  if (user) {
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.email,
+      event: 'checkout_started',
+      properties: {
+        email: user.email,
+        price_id: priceId,
+        team_id: team.id,
+        team_name: team.name,
+        current_plan: team.planName,
+      },
+    });
+  }
+
   await createCheckoutSession({ team: team, priceId });
 });
 
