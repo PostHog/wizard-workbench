@@ -6,6 +6,7 @@ import { QUERY_LIST } from '../constants/lists'
 import { listMedia, getMedia } from '../composables/useTMDB'
 import MediaHero from '../components/media/MediaHero.vue'
 import CarouselAutoQuery from '../components/carousel/CarouselAutoQuery.vue'
+import posthog from 'posthog-js'
 
 const props = defineProps<{
   type?: MediaType
@@ -33,6 +34,10 @@ const heroItem = ref<any>({
 const queries = computed(() => QUERY_LIST[mediaType.value] || [])
 
 onMounted(async () => {
+  posthog.capture('media_browsed', {
+    media_type: mediaType.value,
+  })
+
   try {
     if (queries.value.length > 0) {
       const list = await listMedia(mediaType.value, queries.value[0].query, 1)
