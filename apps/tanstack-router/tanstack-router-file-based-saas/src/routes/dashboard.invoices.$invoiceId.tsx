@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
 import { fetchInvoiceById, patchInvoice } from '../utils/mockTodos'
+import { usePostHog } from 'posthog-js/react'
 
 export const Route = createFileRoute('/dashboard/invoices/$invoiceId')({
   params: {
@@ -28,9 +29,18 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data }) => {
+      if (data) {
+        posthog.capture('invoice_updated', {
+          invoice_id: data.id,
+          invoice_title: data.title,
+        })
+      }
+      router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
 
@@ -117,6 +127,10 @@ function InvoiceComponent() {
                 })}
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 params={true}
+                onClick={() => posthog.capture('invoice_notes_toggled', {
+                  invoice_id: invoice.id,
+                  action: search.showNotes ? 'hide' : 'show',
+                })}
               >
                 {search.showNotes ? 'Hide Notes' : 'Add Notes'}
               </Link>
