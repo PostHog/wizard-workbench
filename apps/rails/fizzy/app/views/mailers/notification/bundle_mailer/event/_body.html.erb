@@ -1,0 +1,8 @@
+<% event = notification.source %>
+
+<p class="notification__author">
+  <%= notification.creator.familiar_name %>
+</p>
+<p class="notification__details">
+  <%= event_notification_body(event) %>
+</p>

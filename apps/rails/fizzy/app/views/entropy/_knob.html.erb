@@ -1,0 +1,35 @@
+<%
+  period = form.object.send(name)
+  current_index = knob_options.index(period.to_i / 1.day)
+%>
+
+<fieldset class="knob" data-controller="knob" data-knob-target="field" style="--knob-options: <%= knob_options.length %>; --knob-index: <%= current_index %>">
+  <div class="position-relative" role="radiogroup" aria-labelledby="<%= dom_id(form.object, name) %>">
+    <% knob_options.each_with_index do |value, index| %>
+      <label class="knob__option" style="--i: <%= index %>">
+        <%= form.radio_button name,
+              value.days,
+              data: {
+                action: "change->knob#optionChanged change->form#submit",
+                index: index,
+                knob_target: "option"
+              },
+              disabled: disabled %>
+        <span><%= value %></span>
+      </label>
+    <% end %>
+
+    <%= form.range_field :slider,
+          class: "knob__slider",
+          data: { action: "input->knob#sliderChanged change->form#submit", knob_target: "slider" },
+          "aria-hidden": true,
+          max: knob_options.length - 1,
+          min: 0,
+          disabled: disabled
+    %>
+
+    <div class="knob__knob" aria-hidden></div>
+  </div>
+
+  <div id="<%= dom_id(form.object, name) %>" class="knob__label">Days</div>
+</fieldset>

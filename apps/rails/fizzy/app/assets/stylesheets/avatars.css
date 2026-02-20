@@ -1,0 +1,31 @@
+@layer components {
+  .avatar {
+    --avatar-border-radius: 50%;
+    --avatar-size-default: 5ch;
+    --btn-border-size: 0;
+
+    aspect-ratio: 1;
+    block-size: var(--avatar-size, var(--avatar-size-default));
+    border-radius: var(--avatar-border-radius);
+    display: grid;
+    flex-shrink: 0;
+    inline-size: var(--avatar-size, var(--avatar-size-default));
+    margin: 0;
+    place-items: center;
+
+    :is(img, .icon) {
+      aspect-ratio: 1;
+      block-size: 100%;
+      border-radius: var(--avatar-border-radius);
+      grid-area: 1/1;
+      inline-size: 100%;
+      max-inline-size: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .avatar__form {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+  }
+}

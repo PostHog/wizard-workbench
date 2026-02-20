@@ -1,0 +1,7 @@
+<% if filter.boards.any? %>
+  <% filter.boards.each do |board| %>
+    <%= turbo_stream_from board %>
+  <% end %>
+<% else %>
+  <%= turbo_stream_from [ Current.account, :all_boards ] %>
+<% end %>

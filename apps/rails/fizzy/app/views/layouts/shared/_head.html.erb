@@ -1,0 +1,31 @@
+<head>
+  <%= page_title_tag %>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+  <% unless @disable_view_transition %>
+    <meta name="view-transition" content="same-origin">
+  <% end %>
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d181d" media="(prefers-color-scheme: dark)">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <%= tag.meta name: "current-user-id", content: Current.user.id if Current.user %>
+  <%= tag.meta name: "vapid-public-key", content: Rails.configuration.x.vapid.public_key %>
+
+  <% turbo_refreshes_with method: :morph, scroll: :preserve %>
+
+  <%= render "layouts/theme_preference" %>
+  <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+  <%= stylesheet_link_tag "fizzy/saas", "data-turbo-track": "reload" if Fizzy.saas? %>
+  <%= javascript_importmap_tags %>
+
+  <%= tenanted_action_cable_meta_tag %>
+  <%= render "layouts/shared/user_css" %>
+
+  <%= yield :head %>
+
+  <link rel="manifest" href="<%= pwa_manifest_path(format: :json) %>">
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>

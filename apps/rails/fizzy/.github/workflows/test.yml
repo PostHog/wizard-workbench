@@ -1,0 +1,70 @@
+name: Test
+
+on:
+  workflow_call:
+    inputs:
+      saas:
+        type: boolean
+        required: true
+    secrets:
+      FIZZY_GH_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (${{ matrix.mode }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - mode: SQLite
+            db_adapter: sqlite
+          - mode: MySQL
+            db_adapter: mysql
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_DATABASE: fizzy_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    env:
+      RAILS_ENV: test
+      DATABASE_ADAPTER: ${{ matrix.db_adapter }}
+      ${{ inputs.saas && 'SAAS' || 'SAAS_DISABLED' }}: ${{ inputs.saas && '1' || '' }}
+      BUNDLE_GEMFILE: ${{ inputs.saas && 'Gemfile.saas' || 'Gemfile' }}
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      FIZZY_DB_HOST: 127.0.0.1
+      FIZZY_DB_PORT: 3306
+      BUNDLE_GITHUB__COM: ${{ inputs.saas && format('x-access-token:{0}', secrets.FIZZY_GH_TOKEN) || '' }}
+
+    steps:
+      - name: Install system packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libsqlite3-0 libvips curl ffmpeg
+
+      - uses: actions/checkout@v6
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Run tests
+        run: bin/rails db:setup test
+
+      - name: Run system tests
+        run: bin/rails test:system

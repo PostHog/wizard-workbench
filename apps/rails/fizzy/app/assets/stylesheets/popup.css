@@ -1,0 +1,235 @@
+@layer components {
+  .popup {
+    --btn-background: transparent;
+    --panel-border-radius: 0.5em;
+    --panel-padding: var(--block-space);
+    --panel-size: auto;
+    --popup-icon-size: 24px;
+    --popup-item-padding-inline: 0.4rem;
+    --popup-display: flex;
+
+    inset: 0 auto auto 50%;
+    max-block-size: 70dvh;
+    max-inline-size: min(55ch, calc(100vw - (var(--panel-padding))));
+    min-inline-size: min(25ch, calc(100vw - (var(--panel-padding))));
+    overflow: auto;
+    position: absolute;
+    transform: translateX(-50%);
+    z-index: var(--z-popup);
+
+    &[open] {
+      display: var(--popup-display);
+    }
+
+    /* The .pop-up--align-<drection> classes are used for initial alignment.
+     * The orient JS helper layers on the .orient-<direction> to avoid running
+     * off the edge of the screen and will override .popup--align */
+    &:where(.popup--align-left),
+    &.orient-left {
+      inset-inline: auto 0;
+      transform: translateX(var(--orient-offset, 0px));
+    }
+
+    &:where(.popup--align-right),
+    &.orient-right {
+      inset-inline: 0 auto;
+      transform: translateX(var(--orient-offset, 0px));
+    }
+
+    form {
+      display: contents;
+    }
+  }
+
+  .popup__footer {
+    border-block-start: 1px solid var(--color-ink-lightest);
+    color: var(--card-color);
+    margin-block-start: var(--popup-item-padding-inline);
+    padding: var(--popup-item-padding-inline) var(--popup-item-padding-inline) 0;
+    text-align: center;
+    text-transform: initial;
+  }
+
+  .popup__title {
+    font-weight: 800;
+    white-space: nowrap;
+
+    &[tabindex="-1"]:focus-visible {
+      outline: unset;
+    }
+  }
+
+  /* Hide lists when all the items within are hidden */
+  .popup__section {
+    &:not(:has(.popup__list)),
+    &:not(:has(.popup__list > *)),
+    &:has(.popup__item[hidden]):not(:has(.popup__item:not([hidden]))) {
+      display: none;
+    }
+  }
+
+  .popup__section-title {
+    background: var(--color-canvas);
+    font-size: var(--text-small);
+    font-weight: 600;
+    inset-block-start: 0;
+    list-style: none;
+    padding: 0.75ch var(--inline-space-half);
+    position: sticky;
+    text-transform: uppercase;
+    z-index: 1;
+
+    &:is(summary) {
+      align-items: center;
+      cursor: pointer;
+      display: flex;
+      gap: 0.5ch;
+    }
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    .icon--caret-down {
+      font-size: 1ch;
+      margin-inline-start: -0.5ch;
+      transition: rotate 150ms ease-out;
+    }
+
+    .popup__section:not([open]) & {
+      .icon--caret-down {
+        rotate: -90deg;
+      }
+    }
+  }
+
+  .popup__list {
+    display: flex;
+    flex-direction: column;
+    inline-size: 100%;
+    list-style: none;
+    margin: 0;
+    max-inline-size: 100%;
+    padding: 0;
+    row-gap: 1px;
+
+    details & {
+      margin-inline-start: 0.75ch;
+    }
+  }
+
+  .popup__item {
+    align-items: center;
+    background: transparent;
+    border-radius: 0.3em;
+    display: flex;
+    inline-size: 100%;
+    max-inline-size: 100%;
+
+    @media (any-hover: hover) {
+      &:hover {
+        background: var(--color-ink-lightest);
+      }
+    }
+
+    &:has(.popup__btn[disabled]) {
+      pointer-events: none;
+    }
+
+    .checked {
+      display: none;
+    }
+
+    &[aria-checked="true"] .checked {
+      display: block;
+    }
+
+    &[aria-selected] {
+      background-color: var(--color-selected);
+
+      @media (any-hover: hover) {
+        &:hover {
+          background-color: var(--color-selected);
+        }
+      }
+    }
+  }
+
+  /* The actionable thing with padding within popup__item */
+  .popup__btn {
+    --btn-border-radius: 0.3em;
+    --btn-border-size: 0;
+
+    flex: 1 1 auto;
+    font-weight: 500;
+    justify-content: start;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    padding: var(--inline-space-half) var(--popup-item-padding-inline);
+    text-align: start;
+
+    &:focus-visible {
+      z-index: 1;
+    }
+  }
+
+  .popup__icon {
+    --icon-size: 1em;
+
+    inline-size: var(--popup-icon-size);
+    margin-inline-start: var(--popup-item-padding-inline);
+  }
+
+  .popup__radio {
+    --icon-size: var(--text-x-small);
+
+    block-size: var(--popup-icon-size);
+    inline-size: var(--popup-icon-size);
+    margin-inline-start: var(--popup-item-padding-inline);
+    flex-shrink: 0;
+
+    &:hover {
+      --btn-border-color: var(--color-ink);
+    }
+  }
+
+  /* Animated
+  /* -------------------------------------------------------------------------- */
+
+  .popup--animated {
+    opacity: 0;
+    transform: scale(0.2) translateX(-50%);
+    transform-origin: top left;
+    transition: var(--dialog-duration) allow-discrete;
+    transition-property: display, opacity, overlay, transform;
+
+    &::backdrop {
+      background-color: var(--color-always-black);
+      opacity: 0;
+      transform: scale(1);
+      transition: var(--dialog-duration) allow-discrete;
+      transition-property: display, opacity, overlay;
+    }
+
+    &[open] {
+      opacity: 1;
+      transform: scale(1) translateX(-50%);
+
+      &::backdrop {
+        opacity: 0.5;
+      }
+    }
+
+    @starting-style {
+      &[open] {
+        opacity: 0;
+        transform: scale(0.2) translateX(-50%);
+      }
+
+      &[open]::backdrop {
+        opacity: 0;
+      }
+    }
+  }
+}

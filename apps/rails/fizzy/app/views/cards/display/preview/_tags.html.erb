@@ -1,0 +1,12 @@
+<% if card.tags.any?  %>
+  <div class="card__tags">
+    <%= icon_tag "tag-outline", class: "translucent" %>
+    <div class="min-width overflow-ellipsis">
+      <% card.tags.each_with_index do |tag, index| %>
+        <span class="card__tag btn btn--plain overflow-ellipsis">
+          <%= tag.title %><%= "," unless index == card.tags.size - 1 %>
+        </span>
+      <% end %>
+    </div>
+  </div>
+<% end %>

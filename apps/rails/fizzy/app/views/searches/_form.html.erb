@@ -1,0 +1,16 @@
+<%= form_with url: search_path, method: :get, class: "search__form flex align-center justify-center gap-half", data: { bar_target: "form", turbo_frame: defined?(target_turbo_frame) ? target_turbo_frame : nil } do |form| %>
+  <%= form.label :q, "Search Fizzy", class: "font-weight-black txt-nowrap" %>
+  <%= text_field_tag :q, query_terms,
+        class: "search__input input",
+        type: "search",
+        placeholder: "Find something…",
+        autocomplete: "off",
+        autofocus: true,
+        data: {
+          bar_target: "searchInput",
+          action: "keydown.enter->bar#showModalAndSubmit:prevent keydown.esc->bar#reset" } %>
+  <button class="search__reset btn btn--circle borderless" data-action="bar#clearInput">
+    <%= icon_tag "close" %>
+    <span class="for-screen-reader">Close search</span>
+  </button>
+<% end %>

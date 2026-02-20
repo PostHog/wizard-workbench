@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# Example usage: bin/notify_dash_of_deployment $MESSAGE $KAMAL_VERSION $KAMAL_PERFORMER $CURRENT_BRANCH $KAMAL_DESTINATION $KAMAL_RUNTIME
+
+if [ -n "$DASH_BASIC_AUTH_SECRET" ]; then
+  jq -n -c --arg message "${1}" \
+    --arg commit "${2}" \
+    --arg author "${3}" \
+    --arg branch "${4}" \
+    --arg env "${5}" \
+    --arg duration "${6}" \
+    '{
+      "application":"fizzy",
+      "rails_env": $env,
+      "branch": $branch,
+      "deployer": $author,
+      "message": $message,
+      "rev": $commit,
+      "duration": $duration
+      }' |
+    curl --user "$DASH_BASIC_AUTH_SECRET" -H "Content-Type: application/json" --data-binary @- \
+      https://dash.37signals.com/deploy
+else
+  echo "WARNING: Dash deploy notification not sent."
+fi

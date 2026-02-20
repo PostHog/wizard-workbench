@@ -1,0 +1,25 @@
+<% variant = Attachments::VARIANTS[local_assigns[:in_gallery] ? :small : :large] %>
+<% width = blob.metadata["width"] %>
+<% height = blob.metadata["height"] %>
+
+<% if blob.video? %>
+  <%= tag.video \
+        src: rails_blob_path(blob),
+        controls: true,
+        preload: :none,
+        style: "aspect-ratio: #{width} / #{height};",
+        width: width,
+        height: height %>
+<% elsif blob.audio? %>
+  <audio controls="true" width="100%" preload="metadata">
+    <source src="<%= rails_blob_path(blob) %>" type="<%= blob.content_type %>">
+  </audio>
+<% elsif blob.variable? %>
+  <%= link_to rails_representation_path(blob.variant(variant)), data: { lightbox_target: "image", lightbox_caption_value: blob.filename.to_s } do %>
+    <%= image_tag rails_representation_path(blob.variant(variant)), width: width, height: height %>
+  <% end %>
+<% elsif blob.previewable? %>
+  <%= image_tag rails_representation_path(blob.preview(variant)), width: width, height: height %>
+<% else %>
+  <span class="attachment__icon"><%= blob.filename.extension&.downcase.presence || "unknown" %></span>
+<% end %>

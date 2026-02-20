@@ -1,0 +1,31 @@
+<section class="notifications__status settings__section panel fill-shade center hide-on-native" data-controller="notifications" data-notifications-subscriptions-url-value="<%= user_push_subscriptions_path(Current.user) %>" data-notifications-enabled-class="notifications--on">
+  <heading>
+    <h2 class="txt-medium">
+      Push notifications are
+      <span class="notifications__on-message">ON</span>
+      <span class="notifications__off-message">OFF</span>
+    </h2>
+  </heading>
+
+  <div class="margin-block-start-half" data-notifications-target="subscribeButton" hidden>
+    <button class="btn txt-small" data-action="notifications#attemptToSubscribe">
+      <%= icon_tag "bell" %>
+      <span>Turn ON push notifications on this device</span>
+    </button>
+  </div>
+
+  <details class="margin-block-start-half" data-notifications-target="explainer">
+    <summary class="btn txt-x-small">
+      <%= icon_tag "lifebuoy" %>
+      <span class="notifications__off-message">Help me fix this</span>
+      <span class="notifications__on-message">Not receiving notifications?</span>
+    </summary>
+
+    <div class="notifications-help__explainer fill-white margin-block-start border-radius border txt-align-start">
+      <p class="margin-none-block-start notifications__on-message">When push notifications aren’t working, this can usually be fixed by checking your notification settings to make sure they’re allowed.</p>
+      <%= render partial: "notifications/settings/browser" %>
+      <%= render partial: "notifications/settings/system" %>
+      <%= render partial: "notifications/settings/install" %>
+    </div>
+  </details>
+</section>

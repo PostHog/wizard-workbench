@@ -1,0 +1,21 @@
+<li>
+  <%= link_to result.source, class: "search__result", data: { turbo_frame: "_top", action: "bar#reset" } do %>
+    <div>
+      <h3 class="search__title txt--medium margin-none">
+        # <%= result.card.number %> <%= result.card_title %>
+      </h3>
+
+      <% if result.comment.present? %>
+        <div class="search__excerpt search__excerpt--comment">
+          <%= avatar_preview_tag result.card.creator %>
+          <div><%= result.comment_body %></div>
+        </div>
+      <% elsif result.card_id.present? %>
+        <div class="search__excerpt"><%= result.card_description %></div>
+      <% end %>
+    </div>
+    <div class="overflow-ellipsis translucent txt-ink">
+      <%= result.card.board.name %> · <%= local_datetime_tag(result.created_at, style: :timeordate) %>
+    </div>
+  <% end %>
+</li>

@@ -1,0 +1,132 @@
+summary {
+
+  &::-webkit-details-marker {
+    display: none !important;
+  }
+
+  &::marker {
+    display: none !important;
+  }
+
+  &::marker {
+    content: "";
+  }
+}
+
+@layer components {
+
+  .search {
+    --gap: 4vmin;
+    --width: 80ch;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+    margin-inline: auto;
+    max-block-size: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--block-space);
+  }
+
+  /* Form
+  /* ------------------------------------------------------------------------ */
+
+  .search__input {
+    --clear-icon-size: 1em;
+
+    max-inline-size: 50ch;
+    position: relative;
+
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+
+    .bar__input & {
+      --focus-ring-size: 0;
+      --input-border-color: var(--color-ink-light);
+      --input-border-radius: 0;
+      --input-padding: 0.1em;
+
+      border-width: 0 0 1px;
+    }
+  }
+
+  .search__reset {
+    --btn-background: var(--color-terminal-bg);
+    --btn-size: 1.5lh;
+  }
+
+
+  /* Content
+  /* ------------------------------------------------------------------------ */
+
+  .search__list {
+    display: grid;
+    gap: var(--block-space);
+    list-style: none;
+    margin: 0 auto;
+    max-inline-size: min(80ch, 100%);
+    padding: 0;
+    text-align: start;
+  }
+
+  .search__blank-slate {
+    margin-block: 3em;
+    margin-inline: auto;
+    inline-size: fit-content;
+  }
+
+  .search__excerpt {
+    color: var(--color-ink);
+    font-size: var(--text-small);
+  }
+
+  .search__excerpt--comment {
+    --avatar-size: var(--comment-avatar-size);
+    --comment-avatar-size: 32px;
+    --padding: 1ch;
+
+    align-items: center;
+    background-color: var(--color-ink-lightest);
+    border-radius: 1ch;
+    display: flex;
+    gap: 1ch;
+    margin-inline-start: calc(var(--comment-avatar-size) / 2);
+    padding-block: 0.5ch;
+
+    .avatar {
+      margin-inline-start: calc(-0.5 * var(--comment-avatar-size));
+    }
+  }
+
+  .search__result {
+    color: var(--color-link);
+
+    &:not(&:hover) {
+      box-shadow: 0 0 0 1px var(--color-ink-lighter);
+    }
+  }
+
+  .search__title {
+    text-decoration: underline;
+  }
+
+  /* Perma
+  /* ------------------------------------------------------------------------ */
+
+  .search-perma {
+    .search__form > label,
+    .search__reset {
+      display: none;
+    }
+
+    .search__input {
+      max-inline-size: min(80ch, 100%);
+    }
+
+    .search {
+      padding-inline: 0;
+    }
+  }
+}

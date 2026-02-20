@@ -1,0 +1,13 @@
+<% @page_title = @column.base_title %>
+
+<% content_for :header do %>
+  <div class="header__actions header__actions--start">
+    <%= back_link_to "Activity", root_path, "keydown.left@document->hotkey#click keydown.esc@document->hotkey#click" %>
+  </div>
+
+  <h1 class="header__title" data-bridge--title-target="header">
+    <%= @column.title %>
+  </h1>
+<% end %>
+
+<%= render "events/day_timeline/columns/events", column: @column %>

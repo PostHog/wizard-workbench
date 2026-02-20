@@ -1,0 +1,2 @@
+<%= turbo_stream.append :notifications_list_read, partial: "notifications/notification", collection: @page.records %>
+<%= turbo_stream.replace :next_page, notifications_next_page_link(@page) %>

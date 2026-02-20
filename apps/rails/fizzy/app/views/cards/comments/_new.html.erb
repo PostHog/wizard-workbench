@@ -1,0 +1,27 @@
+<div id="<%= dom_id(card, :new_comment) %>" class="comment comment--new flex-inline align-start full-width">
+  <figure class="comment__avatar flex-item-no-shrink" aria-hidden="true">
+    <%= avatar_tag Current.user, hidden_for_screen_reader: true %>
+  </figure>
+
+  <div class="comment__content flex-inline flex-column full-width">
+    <div class="comment__body lexxy-content" data-turbo-permanent>
+      <%= form_with model: Comment.new, url: card_comments_path(card), class: "flex flex-column gap full-width",
+            data: { controller: "form local-save",
+                  local_save_key_value: "comment-#{card.id}",
+                  action: "turbo:submit-end->local-save#submit turbo:submit-end->form#blurActiveInput keydown.ctrl+enter->form#debouncedSubmit:prevent keydown.meta+enter->form#debouncedSubmit:prevent keydown.esc->form#cancel:stop" } do |form| %>
+        <%= form.rich_textarea :body, required: true, placeholder: new_comment_placeholder(card),
+              data: { local_save_target: "input", action: "lexxy:change->form#disableSubmitWhenInvalid lexxy:change->local-save#save turbo:morph-element->local-save#restoreContent" } do %>
+          <%= general_prompts(@card.board) %>
+        <% end %>
+
+        <span class="flex-inline align-center gap">
+          <%= form.button class: "comment__submit btn btn--reversed",
+              title: "Post this comment (#{ hotkey_label(["ctrl", "enter"]) })",
+              data: { form_target: "submit" }, disabled: true do %>
+            <span>Post</span>
+          <% end %>
+        </span>
+      <% end %>
+    </div>
+  </div>
+</div>

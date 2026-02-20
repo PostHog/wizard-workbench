@@ -1,0 +1,20 @@
+<%= turbo_stream_from Current.user, :pins_tray %>
+
+<section class="tray tray--pins" data-controller="dialog">
+  <%= tag.dialog id: "pin-tray", class: "tray__dialog", data: {
+        action: "keydown->navigable-list#navigate dialog:show@document->navigable-list#reset keydown.esc->dialog#close:stop click@document->dialog#closeOnClickOutside",
+        controller: "navigable-list",
+        dialog_target: "dialog",
+        navigable_list_actionable_items_value: "true",
+        navigable_list_reverse_navigation_value: "true" },
+        turbo_permanent: true do %>
+    <%= turbo_frame_tag "pins", src: my_pins_path, data: { controller: "frame", action: "turbo:morph@document->frame#reload" } %>
+  <% end %>
+
+  <button class="tray__toggle" data-action="dialog#toggle keydown.p@document->hotkey#click" data-controller="hotkey" aria-label="Toggle pins stack" aria-haspopup="true">
+    <div class="tray__toggle-btn txt-uppercase btn btn--reversed txt-x-small center full-width">
+      <%= icon_tag "pinned" %>
+      <span class="tray__toggle-text">Pinned <kbd class="hide-on-touch">P</kbd></span>
+    </div>
+  </button>
+</section>

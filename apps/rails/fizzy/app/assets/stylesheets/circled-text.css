@@ -1,0 +1,47 @@
+@layer components {
+  .circled-text {
+    --circled-color: oklch(var(--lch-blue-dark));
+    --circled-padding: -0.5ch;
+
+    background: none;
+    color: var(--circled-color);
+    position: relative;
+    white-space: nowrap;
+
+    span {
+      opacity: 0.5;
+      mix-blend-mode: multiply;
+
+      html[data-theme="dark"] & {
+        mix-blend-mode: screen;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme]) & {
+          mix-blend-mode: screen;
+        }
+      }
+    }
+
+    span::before,
+    span::after {
+      border: 2px solid var(--circled-color);
+      content: "";
+      inset: var(--circled-padding);
+      position: absolute;
+    }
+
+    span::before {
+      border-inline-end: none;
+      border-radius: 100% 0 0 75% / 50% 0 0 50%;
+      inset-block-start: calc(var(--circled-padding) / 2);
+      inset-inline-end: 50%;
+    }
+
+    span::after {
+      border-inline-start: none;
+      border-radius: 0 100% 75% 0 / 0 50% 50% 0;
+      inset-inline-start: 30%;
+    }
+  }
+}

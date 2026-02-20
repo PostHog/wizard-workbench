@@ -1,0 +1,13 @@
+<%= form_with url: events_path,
+      method: :get, class: "display-inline position-relative",
+      data: { controller: "form", turbo_frame: "cards_container", turbo_action: "advance" } do |form| %>
+
+  <% unless user_filtering.boards.one? %>
+    <%= render "events/index/filter/board", user_filtering: %>
+  <% end %>
+
+  <% unless user_filtering.users.one? %>
+    <span>by</span>
+    <%= render "events/index/filter/user", user_filtering: %>
+  <% end %>
+<% end %>

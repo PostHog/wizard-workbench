@@ -1,0 +1,8 @@
+<% if card.steps.any? %>
+  <div class="card__steps align-center gap-half flex-item-justify-end flex-item-no-shrink">
+    <span class="steps__icon">
+      <%= icon_tag "check" %>
+    </span>
+    <strong><%= "#{card.steps.completed.count}/#{card.steps.count}" %></strong>
+  </div>
+<% end %>

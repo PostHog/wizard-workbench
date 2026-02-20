@@ -1,0 +1,35 @@
+<% filter = user_filtering.filter %>
+
+<%= tag.div class: class_names("quick-filter"),
+      data: {
+        controller: "dialog filter combobox",
+        action: "keydown.esc->dialog#close click@document->dialog#closeOnClickOutside dialog:close@document->filter#clearInput",
+        filter_show: user_filtering.show_sorted_by?,
+        combobox_default_value_value: "latest",
+        combobox_with_default_class: "quick-filter--with-default" } do %>
+    <button type="button" class="btn input input--select flex-inline txt-x-small" data-action="click->dialog#toggle:stop">
+      <span class="overflow-ellipsis" data-combobox-target="label">
+      </span>
+    </button>
+
+    <template data-combobox-target="hiddenFieldTemplate">
+      <%= hidden_field_tag :sorted_by, nil, data: { filter_settings_target: "field" } %>
+    </template>
+
+    <%= filter_dialog "Sort by…" do %>
+      <strong class="popup__title">Sort by…</strong>
+
+      <ul class="popup__list" data-filter-target="list" role="listbox">
+        <% Filter::SORTED_BY.each do |sort| %>
+          <%= tag.li class: "popup__item", data: {
+                navigable_list_target: "item", combobox_target: "item", combobox_value: sort, combobox_label: sorted_by_label(sort) },
+                role: "checkbox", aria: { checked: filter.sorted_by == sort } do %>
+            <button type="button" class="btn popup__btn" data-action="dialog#close combobox#change filter-settings#change form#submit">
+              <span class="overflow-ellipsis flex-item-grow"><%= sorted_by_label(sort) %></span>
+              <%= icon_tag "check", class: "checked flex-item-justify-end" %>
+            </button>
+          <% end %>
+        <% end %>
+      </ul>
+    <% end %>
+<% end %>
