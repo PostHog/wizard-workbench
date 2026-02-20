@@ -5,6 +5,13 @@ class Cards::TriagesController < ApplicationController
     column = @card.board.columns.find(params[:column_id])
     @card.triage_into(column)
 
+    # PostHog: Track card triaged into a column
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_triaged",
+      properties: { card_number: @card.number, card_id: @card.id, column_id: column.id, column_name: column.name, board_id: @board.id }
+    )
+
     respond_to do |format|
       format.html { redirect_to @card }
       format.json { head :no_content }

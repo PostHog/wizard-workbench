@@ -4,6 +4,13 @@ class Cards::GoldnessesController < ApplicationController
   def create
     @card.gild
 
+    # PostHog: Track card gilded (marked as high priority)
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_gilded",
+      properties: { card_number: @card.number, card_id: @card.id, board_id: @board.id }
+    )
+
     respond_to do |format|
       format.turbo_stream { render_card_replacement }
       format.json { head :no_content }
