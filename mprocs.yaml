@@ -44,6 +44,21 @@ procs:
     autostart: false
 
   # ═══════════════════════════════════════════════════════════════════════════
+  # WIZARD BENCHMARK - Run wizard with benchmark tracking
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  wizard-benchmark:
+    # Interactive app selector + benchmark config, runs wizard with --benchmark
+    shell: "pnpm benchmark"
+    autostart: false
+    env_file: .env
+
+  wizard-benchmark-tail:
+    # Tail the benchmark JSON output
+    shell: "tail -f /tmp/posthog-wizard-benchmark.json"
+    autostart: false
+
+  # ═══════════════════════════════════════════════════════════════════════════
   # WIZARD CI - Run wizard and optionally create PR
   # ═══════════════════════════════════════════════════════════════════════════
 
