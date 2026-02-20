@@ -1,0 +1,123 @@
+@layer base {
+  html {
+    font-size: 100%;
+
+    @media (min-width: 100ch) {
+      font-size: 1.1875rem;
+    }
+  }
+
+  body {
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: none;
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    interpolate-size: allow-keywords;
+    line-height: 1.375;
+    max-inline-size: 100vw;
+    scroll-behavior: auto;
+    text-rendering: optimizeLegibility;
+    text-size-adjust: none;
+  }
+
+  a {
+    text-decoration: none;
+
+    &:not([class]) {
+      color: var(--color-link);
+      text-decoration: underline;
+      text-decoration-skip-ink: auto;
+    }
+  }
+
+  :is(a, button, input, textarea, .switch, .btn) {
+    transition: 100ms ease-out;
+    transition-property: background-color, border-color, box-shadow, outline;
+    touch-action: manipulation;
+
+    /* Keyboard navigation */
+    &:where(:focus-visible) {
+      border-radius: 0.25ch;
+      outline: var(--focus-ring-size) solid var(--focus-ring-color);
+      outline-offset: var(--focus-ring-offset);
+    }
+
+    /* Default disabled styles */
+    &:where([disabled]) {
+      cursor: not-allowed;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  ::selection {
+    background: var(--color-selected);
+
+    html[data-theme="dark"] & {
+      background-color: var(--color-selected-dark);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme]) & {
+        background-color: var(--color-selected-dark);
+      }
+    }
+  }
+
+  :where(ul, ol):where([role="list"]) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  kbd {
+    border: 1px solid;
+    border-radius: 0.3em;
+    box-shadow: 0 0.1em 0 currentColor;
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+    font-weight: 600;
+    opacity: 0.7;
+    padding: 0 0.4em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  video {
+    max-inline-size: 100%;
+  }
+
+  /* Printing */
+  @page {
+    margin: 1in;
+  }
+
+  @media print {
+    .no-print {
+      display: none;
+    }
+  }
+
+  /* Turbo */
+  turbo-frame,
+  turbo-cable-stream-source {
+    display: contents;
+  }
+
+  .turbo-progress-bar {
+    visibility: hidden;
+  }
+
+  /* Nicer scrollbars on Chrome 29+. This is intended for Windows machines, but */
+  /* there's not a way to target Windows using CSS, so Chrome on Mac will have */
+  /* slightly thinner scrollbars than normal. #C1C1C1 is the default color on Macs. */
+  @media screen and (-webkit-min-device-pixel-ratio:0) and (min-resolution:.001dpcm) {
+    * {
+      scrollbar-color: #C1C1C1 transparent;
+      scrollbar-width: thin;
+    }
+  }
+}

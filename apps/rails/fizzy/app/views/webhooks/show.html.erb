@@ -1,0 +1,62 @@
+<% @page_title = @webhook.name %>
+
+<% content_for :header do %>
+  <div class="header__actions header__actions--start">
+    <div class="header__actions header__actions--start">
+      <%= back_link_to "Webhooks", board_webhooks_path, "keydown.left@document->hotkey#click keydown.esc@document->hotkey#click" %>
+    </div>
+  </div>
+
+  <div class="header__actions header__actions--end">
+    <%= link_to edit_board_webhook_path(@webhook.board_id, @webhook), class: "btn" do %>
+      <%= icon_tag "pencil" %>
+      <span class="for-screen-reader">Edit</span>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="panel panel--wide shadow center flex flex-column gap txt-align-start">
+  <header>
+    <h1 class="txt-x-large margin-none"><%= @webhook.name %></h1>
+    <span class="txt-medium txt-break"><%= @webhook.url %></span>
+  </header>
+  <% unless @webhook.active? %>
+    <div>
+      <%= button_to "Reactivate", board_webhook_activation_path(@webhook.board_id, @webhook), method: :post %>
+    </div>
+  <% end %>
+
+  <div>
+    <h2 class="margin-none txt-uppercase txt-medium">Secret</h2>
+    <strong><code><%= @webhook.signing_secret %></code></strong>
+    <p class="txt-small txt-subtle margin-none">
+      We'll send a <code>X-Webhook-Signature</code> header with each request.
+      You can generate a <code>HMAC</code> using <code>SHA256</code> of the request body with this secret
+      to verify that the request came from us.
+    </p>
+  </div>
+
+    <div class="flex flex-column">
+      <h2 class="margin-none txt-uppercase txt-medium">Subscribed to</h2>
+      <% if @webhook.subscribed_actions.empty? %>
+        <p class="margin-none txt-subtle">This Webhook isn't subscribed to any events. It will never trigger.</p>
+      <% else %>
+        <ul class="margin-none unpad-block">
+          <% @webhook.subscribed_actions.each do |action| %>
+            <li><%= webhook_action_label(action) %></li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
+
+    <div class="flex flex-column">
+      <h2 class="margin-none txt-uppercase txt-medium">Deliveries</h2>
+      <% if @webhook.deliveries.empty? %>
+        <p class="margin-none txt-subtle">This Webhook hasn't been triggered yet</p>
+      <% else %>
+        <ul class="margin-none unpad-block">
+          <%= render partial: "webhooks/delivery", collection: @webhook.deliveries.ordered.limit(20), as: :delivery %>
+        </ul>
+      <% end %>
+    </div>
+</div>

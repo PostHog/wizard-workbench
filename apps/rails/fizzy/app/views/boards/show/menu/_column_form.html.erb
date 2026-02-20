@@ -1,0 +1,16 @@
+<%= form_with model: [board, column], data: { controller: "form", action: "turbo:submit-end->dialog#close turbo:submit-end->form#reset keydown->dialog#captureKey" } do |form| %>
+  <%= form.text_field :name, class: "input", placeholder: "Name this column", value: column.name,
+        required: true, autocomplete: "off", pattern: ".*\\S.*", title: "Column name cannot be blank", data: { action: "focus->form#select" } %>
+
+  <div class="color-picker__colors">
+    <% Color::COLORS.each do |color| %>
+      <label class="btn txt-small borderless" style="--btn-background: <%= color %>" title="<%= color.name %>">
+        <%= form.radio_button :color, color.value, checked: (column.color == color || (column.new_record? && color == Column::Colored::DEFAULT_COLOR)) %>
+        <%= icon_tag "check", class: "checked" %>
+        <span class="for-screen-reader"><%= color.name %></span>
+      </label>
+    <% end %>
+  </div>
+
+  <%= form.submit label, class: "btn btn--link" %>
+<% end %>

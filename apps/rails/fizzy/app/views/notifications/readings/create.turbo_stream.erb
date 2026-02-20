@@ -1,0 +1,2 @@
+<%= turbo_stream.remove @notification %>
+<%= turbo_stream.prepend :notifications_list_read, partial: "notifications/notification", locals: { notification: @notification } %>

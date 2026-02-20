@@ -1,0 +1,241 @@
+@layer components {
+  /* Trigger
+  /* ------------------------------------------------------------------------ */
+
+  .nav__trigger {
+    --input-background: transparent;
+    --input-border-color: transparent;
+    --input-padding: 0.3em 2em 0.3em 0.75em;
+
+    font-weight: 600;
+    inline-size: auto;
+    margin-block-start: 0.1em;
+
+    ::-webkit-search-cancel-button {
+      -webkit-appearance: none;
+    }
+
+    @media (any-hover: hover) {
+      &:hover {
+        --input-background: var(--color-ink-lighter);
+
+        span {
+          background: var(--color-ink-lighter);
+        }
+      }
+    }
+
+    span {
+      background: var(--color-ink-lightest);
+      block-size: auto;
+      border-radius: 0.3125em;
+      box-shadow:
+        0 0 0 1px oklch(var(--lch-ink-darkest) / 0.1),
+        0 0.1em 0.2em -0.1em oklch(var(--lch-ink-darkest) / 0.05),
+        0 0.2em 0.4em -0.2em oklch(var(--lch-ink-darkest) / 0.05),
+        0 0.3em 0.6em -0.3em oklch(var(--lch-ink-darkest) / 0.05)
+      ;
+      display: grid;
+      height: 1.5em;
+      inline-size: 1.5em;
+      padding: 0.325em 0.275em 0.225em 0.275em;
+      place-content: center;
+      width: 1.5em;
+    }
+
+    svg {
+      height: 100%;
+      margin-inline-start: 0.4125em;
+      margin-inline-end: 0.5375em;
+      max-height: 0.8625em;
+      overflow: visible;
+      width: auto;
+    }
+  }
+
+  /* Dialog
+  /* ------------------------------------------------------------------------ */
+
+  .nav__menu.popup {
+    --panel-border-color: var(--color-selected-dark);
+    --panel-border-radius: 1.4em;
+    --panel-padding: var(--block-space);
+    --panel-size: 45ch;
+    --popup-display: grid;
+    --nav-section-gap: 2px;
+
+    block-size: auto;
+    box-shadow: 0 0 0 1px oklch(var(--lch-blue-medium) / 5%),
+                0 0.2em 0.2em oklch(var(--lch-blue-medium) / 5%),
+                0 0.4em 0.4em oklch(var(--lch-blue-medium) / 5%),
+                0 0.8em 0.8em oklch(var(--lch-blue-medium) / 5%);
+    grid-template-rows: auto 1fr auto;
+    gap: var(--nav-section-gap);
+    max-block-size: calc(100vh - var(--block-space) - var(--footer-height));
+    overflow: hidden;
+    padding-block-end: 0;
+    scrollbar-gutter: stable both-edges;
+    z-index: var(--z-nav);
+
+    @media (max-height: 668px) {
+      max-block-size: calc(100vh - var(--block-space));
+    }
+  }
+
+  .nav__scroll-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nav-section-gap);
+    margin-inline: calc(-1 * var(--block-space)); /* space for scrollbar */
+    overflow: auto;
+    padding-block-end: var(--nav-section-gap);
+    padding-inline: var(--block-space);
+  }
+
+  .nav__close {
+    @media (any-hover: hover) {
+      display: none !important;
+    }
+  }
+
+  .nav__section {
+    border-block-start: 1px solid var(--color-ink-lighter);
+    font-size: var(--text-small);
+
+    &[open] {
+      padding-block-end: 0.4rem;
+    }
+  }
+
+  .nav__section--secret:not([data-is-filtering]) {
+    display: none;
+  }
+
+  .nav__header {
+    --actions-width: 2rem;
+
+    display: grid;
+    grid-template-columns: var(--actions-width) 1fr var(--actions-width);
+    grid-template-areas:
+      "actions-start title actions-end";
+    justify-items: center;
+  }
+
+  .nav__header-actions {
+    display: flex;
+    font-size: var(--text-x-small);
+    gap: var(--inline-space);
+    inline-size: var(--actions-width);
+    min-inline-size: fit-content;
+  }
+
+  .nav__header-actions--end {
+    grid-area: actions-end;
+    justify-content: flex-end;
+    margin-inline-start: auto;
+  }
+
+  .nav__header-actions--start {
+    grid-area: actions-start;
+    margin-inline-end: auto;
+  }
+
+  .nav__header-title {
+    color: inherit;
+    grid-area: title;
+    justify-content: center;
+    margin: auto;
+    min-inline-size: 0;
+    text-align: center;
+  }
+
+  .nav__hotkeys {
+    --gap: 8px;
+
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap);
+    inline-size: 100%;
+    list-style: none;
+    justify-content: center;
+    margin: var(--block-space) auto calc(var(--block-space-half) / 2);
+    max-inline-size: 100%;
+
+    /* When all its children are hidden, hide this as well so it doesn't take up space */
+    &:has(.popup__item[hidden]):not(:has(.popup__item:not([hidden]))) {
+      display: none;
+    }
+
+    .btn {
+      --btn-border-radius: 0.4em;
+
+      align-content: end;
+      aspect-ratio: 5/3;
+      background-color: var(--color-ink-lightest);
+      border-radius: 0.5em;
+      container-type: inline-size;
+      flex-basis: calc((100% - var(--gap) * 2) / 3);
+      flex-direction: column;
+      font-size: var(--text-small);
+      line-height: 1;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      row-gap: 0.3lh;
+      text-align: center;
+
+      kbd {
+        inset: 0.66em 0.33em auto auto;
+        line-height: 1.4;
+        opacity: 0.5;
+        position: absolute;
+
+        @media (any-hover: none) {
+          /* This is a reasonable way to assert touch devices. any-pointer would seem */
+          /* to be a better fit but it is incorrectly reported on many devices */
+          display: none;
+        }
+      }
+
+      .icon {
+        --icon-size: 2em !important;
+      }
+
+      span {
+        display: flex;
+        text-wrap: nowrap;
+      }
+
+      @media (max-width: 639px) {
+        font-size: var(--text-x-small);
+        font-size: clamp(var(--text-xx-small), 3.15cqi, var(--text-small));
+        font-weight: 500;
+      }
+    }
+  }
+
+  .nav__blank-slate {
+    font-size: var(--text-small);
+    margin: 2rem auto;
+
+    .nav:has(.popup__item:not([hidden])) & {
+      display: none;
+    }
+  }
+
+  .nav__footer {
+    background-color: var(--color-canvas);
+    border-block-start: 1px solid var(--color-ink-lighter);
+    font-size: var(--text-small);
+    line-height: 1.6;
+    margin-block-start: calc(-1 * var(--nav-section-gap));
+    padding: 1.5ch;
+    text-align: center;
+    z-index: 1;
+
+    @media (max-height: 668px) {
+      font-size: var(--text-x-small);
+    }
+  }
+}

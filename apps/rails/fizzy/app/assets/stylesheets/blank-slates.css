@@ -1,0 +1,21 @@
+/* Styles for the blank slate. To manage when they are shown/hidden, do so in context */
+
+@layer components {
+  .blank-slate {
+    border-radius: 0.5ch;
+    border: 2px dashed var(--color-ink-lighter);
+    color: var(--color-ink-dark);
+    font-weight: 500;
+    margin-block-start: 2dvh;
+    padding: 1.5ch 2ch;
+    rotate: -3deg;
+  }
+
+  .blank-slate--drag {
+    background-color: color-mix(in srgb, transparent, var(--card-color) 5%);
+    border-color: color-mix(in srgb, transparent, var(--card-color) 10%);
+    color: color-mix(in srgb, transparent, var(--card-color) 75%);
+    margin-block-start: 0;
+    rotate: 0deg;
+  }
+}

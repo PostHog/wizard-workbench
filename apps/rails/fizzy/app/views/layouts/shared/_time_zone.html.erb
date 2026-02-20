@@ -1,0 +1,5 @@
+<% if timezone_from_cookie.present? && timezone_from_cookie != Current.user.timezone %>
+  <%= auto_submit_form_with url: my_timezone_path, method: :put do %>
+    <%= hidden_field_tag :timezone_name, timezone_from_cookie.name %>
+  <% end %>
+<% end %>

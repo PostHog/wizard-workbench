@@ -1,0 +1,106 @@
+@layer components {
+  .step {
+    display: grid;
+    grid-template-columns: 1em auto auto;
+    gap: calc(var(--inline-space) * 2/3);
+    inline-size: auto;
+  }
+
+  .step__checkbox {
+    --hover-color: var(--card-color);
+
+    appearance: none;
+    background-color: var(--color-canvas);
+    block-size: 1.1em;
+    border: 1px solid currentColor;
+    border-radius: 0.15em;
+    color: currentColor;
+    display: grid;
+    font: inherit;
+    inline-size: 1.1em;
+    margin: 0;
+    place-content: center;
+    transform: translateY(0.1em);
+
+    &::before {
+      background-color: CanvasText;
+      block-size: 0.65em;
+      box-shadow: inset 1em 1em currentColor;
+      clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+      content: "";
+      inline-size: 0.65em;
+      transform: scale(0);
+      transform-origin: center;
+      transition: 150ms transform ease-in-out;
+    }
+
+    &:checked::before {
+      transform: scale(1) rotate(10deg);
+    }
+
+    &:where([disabled]):not(:hover):not(:active) {
+      filter: none;
+      opacity: 0.5;
+    }
+  }
+
+  .step__content {
+    --input-border-radius: 0;
+    --input-border-size: 0;
+    --input-padding: 0;
+
+    border-bottom: 1px solid transparent;
+    color: currentColor;
+    font-weight: 500;
+    margin-block-end: calc(var(--block-space) * 1/3);
+
+    &:is(a, input[type=text]) {
+      --hover-size: 0;
+    }
+
+    .step:has(:checked) & {
+      opacity: 0.7;
+      text-decoration: line-through;
+    }
+
+    &::placeholder {
+      color: var(--card-color);
+    }
+
+    &:is(input) {
+      max-inline-size: 70ch;
+      min-inline-size: 30ch;
+
+      @supports (field-sizing: content) {
+        field-sizing: content;
+        max-inline-size: 100%;
+        min-inline-size: 15ch;
+      }
+    }
+  }
+
+  .step__content--edit {
+    border-bottom-color: currentColor;
+  }
+
+  .steps {
+    contain: inline-size;
+    display: grid;
+    list-style: none;
+    margin: 0;
+    max-inline-size: 100%;
+    padding: 0;
+  }
+
+  .steps__icon {
+    --icon-size: 0.875em;
+
+    background-color: var(--card-color);
+    block-size: 1.3em;
+    border-radius: 50%;
+    color: var(--color-ink-inverted);
+    display: grid;
+    inline-size: 1.3em;
+    place-content: center;
+  }
+}

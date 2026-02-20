@@ -1,0 +1,37 @@
+<% filter = user_filtering.filter %>
+
+<%= tag.div class: "quick-filter",
+      data: {
+        controller: "dialog filter multi-selection-combobox",
+        action: "keydown.esc->dialog#close click@document->dialog#closeOnClickOutside dialog:close@document->filter#clearInput",
+        filter_show: user_filtering.show_tags?,
+        multi_selection_combobox_no_selection_label_value: "Tagged…" } do %>
+  <button type="button" class="btn input input--select flex-inline txt-x-small" data-action="click->dialog#toggle:stop">
+    <span class="overflow-ellipsis" data-multi-selection-combobox-target="label"></span>
+  </button>
+
+  <template data-multi-selection-combobox-target="hiddenFieldTemplate">
+    <%= hidden_field_tag "tag_ids[]", nil, data: { filter_settings_target: "field" } %>
+  </template>
+
+  <%= filter_dialog "Tagged…" do %>
+    <%= filter_title "Tagged…" %>
+    <% if user_filtering.tags.many? %>
+      <%= text_field_tag nil, nil, id: nil, placeholder: "Filter…", class: "input input--transparent txt-small", autofocus: true,
+            type: "search", autocorrect: "off", autocomplete: "off", data: { "1p-ignore": "true", filter_target: "input", dialog_target: "focusMouse", action: "input->filter#filter" } %>
+    <% end %>
+
+    <ul class="popup__list" data-filter-target="list" role="listbox">
+      <% user_filtering.tags.each do |tag| %>
+        <%= content_tag(:li, class: "popup__item", data: {
+              filter_target: "item", navigable_list_target: "item", multi_selection_combobox_target: "item", multi_selection_combobox_value: tag.id, multi_selection_combobox_label: tag.hashtag },
+              role: "checkbox", aria: { checked: filter.tags.include?(tag) }) do %>
+          <button type="button" class="btn popup__btn" data-action="dialog#close multi-selection-combobox#change filter-settings#change form#submit">
+            <span class="overflow-ellipsis flex-item-grow"><%= tag.hashtag %></span>
+            <%= icon_tag "check", class: "checked flex-item-justify-end" %>
+          </button>
+        <% end %>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>

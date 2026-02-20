@@ -1,0 +1,6 @@
+@layer components {
+  .user-edit-link {
+    inset: 0 0 auto auto;
+    position: absolute;
+  }
+}

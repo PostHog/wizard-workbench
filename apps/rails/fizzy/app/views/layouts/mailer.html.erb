@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <style>
+      html {
+        -ms-text-size-adjust: 100%;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        color: #17233C;
+        font-family: system-ui, sans-serif;
+        font-size: 16px;
+        line-height: 1.3;
+        margin: 0;
+        padding: 16px;
+      }
+
+      img {
+        border: 0 none;
+        height: auto;
+        line-height: 100%;
+        outline: none;
+        text-decoration: none;
+      }
+
+      a {
+        color: #2d71e5;
+      }
+
+      a img {
+        border: 0 none;
+      }
+
+      table, td {
+        border-collapse: collapse;
+      }
+
+      #body {
+        height: 100% !important;
+        margin: 0;
+        padding: 0;
+        width: 100% !important;
+      }
+
+      .avatar__container {
+        vertical-align: top;
+        width: 3em;
+      }
+
+      .avatar {
+        aspect-ratio: 1;
+        border-radius: 2.5em;
+        color: white;
+        display: block;
+        font-weight: 600;
+        height: 2.5em;
+        line-height: 2.5em;
+        mso-line-height-rule: exactly;
+        object-fit: cover;
+        overflow: hidden;
+        text-align: center;
+        width: 2.5em;
+      }
+
+      .card__title {
+        font-size: 1.1em;
+        font-weight: 900;
+        margin-bottom: 0;
+        margin-top: 0;
+      }
+
+      .footer {
+        border-top: 1px solid #ccc;
+        margin-top: 32px;
+        padding-top: 1em;
+      }
+
+      .notification {
+        margin-top: 16px;
+        margin-bottom: 16px;
+      }
+
+      .notification__author {
+        font-size: 0.8em;
+        opacity: 0.66;
+        margin: 0;
+      }
+
+      .notification__board {
+        font-size: 1.4em;
+        font-weight: 900;
+        margin-bottom: 16px;
+        margin-top: 0;
+      }
+
+      .notification__board a {
+        color: #17233C;
+        text-decoration: none;
+      }
+
+      .notification__board a:hover {
+        text-decoration: underline;
+      }
+
+      .notification__board-separator {
+        border: none;
+        border-top: 1px solid #ddd;
+        margin: 2em 0 1em;
+      }
+
+      .notification__details {
+        margin-bottom: 0;
+        margin-top: 0;
+      }
+
+      .notificaton__mention {
+        background-color: #f8e3ab;
+        border-radius: 0.7em 0.2em 0.7em 0.2em;
+        color: inherit;
+        display: inline-flex;
+        padding: 0.1em 0.3em;
+      }
+
+      .margin-block-end-double {
+        margin-bottom: 2em;
+      }
+
+      .margin-block-start-double {
+        margin-top: 2em;
+      }
+
+      .subtitle {
+        font-size: 1.2em;
+        font-weight: normal;
+        margin-bottom: 1em;
+        margin-top: 0.1em;
+      }
+
+      .title {
+        font-size: 1.4em;
+        font-weight: 900;
+        margin-bottom: 0;
+      }
+
+      .txt-large {
+        font-size: 1.2em;
+      }
+    </style>
+  </head>
+
+  <body>
+    <table id="body">
+      <%= yield %>
+    </table>
+  </body>
+</html>

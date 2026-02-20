@@ -1,0 +1,34 @@
+<%= turbo_frame_tag @comment, :container do %>
+  <div id="<%= dom_id(@comment) %>" class="comment flex align-start full-width">
+    <figure class="comment__avatar flex-item-no-shrink" aria-hidden="true">
+      <%= avatar_tag @comment.creator, hidden_for_screen_reader: true %>
+    </figure>
+
+    <div class="comment__content flex flex-column flex-item-grow full-width">
+      <div class="comment__body lexxy-content" data-turbo-permanent>
+        <%= form_with model: [ @card, @comment ], class: "flex flex-column gap full-width",
+              data: { controller: "form", action: "keydown.ctrl+enter->form#submit:prevent keydown.meta+enter->form#submit:prevent keydown.esc->form#cancel:stop" } do |form| %>
+          <%= form.rich_textarea :body, required: true, autofocus: true, placeholder: new_comment_placeholder(@card) do %>
+            <%= general_prompts(@card.board) %>
+          <% end %>
+          <div class="flex gap-half justify-start align-center">
+            <%= form.button class: "btn btn--reversed", type: :submit, title: "Save changes (#{ hotkey_label(["ctrl", "enter"]) })" do %>
+              <span>Save</span>
+            <% end %>
+            <%= link_to card_comment_path(@card, @comment), class: "btn", data: { form_target: "cancel" },title: "Cancel (#{ hotkey_label(["esc"]) })" do %>
+              <span>Cancel</span>
+            <% end %>
+
+            <%= tag.button type: :submit, class: "btn btn--negative flex-item-justify-end", form: dom_id(@comment, :delete_form),
+                  data: { turbo_confirm: "Are you sure you want to delete this comment?" } do %>
+              <%= icon_tag "trash" %>
+              <span class="for-screen-reader">Delete</span>
+            <% end %>
+          </div>
+        <% end %>
+
+        <%= form_with url: card_comment_path(@card, @comment), method: :delete, id: dom_id(@comment, :delete_form), data: { turbo_frame: "_top" } %>
+      </div>
+    </div>
+  </div>
+<% end %>

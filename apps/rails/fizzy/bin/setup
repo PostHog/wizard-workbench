@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+# Prefer app executables
+app_root="$(
+  cd "$(dirname "$0")/.."
+  pwd
+)"
+export PATH="$app_root/bin:$PATH"
+
+if [ -e tmp/saas.txt ]; then
+  export SAAS=1
+fi
+
+if [ -n "$SAAS" ]; then
+  export BUNDLE_GEMFILE="Gemfile.saas"
+fi
+
+# Install gum if needed
+if ! command -v gum &>/dev/null; then
+  echo
+  echo "▸ Installing gum"
+  if command -v pacman &>/dev/null; then
+    sudo pacman -S --noconfirm gum
+  elif command -v brew &>/dev/null; then
+    brew install gum
+  else
+    echo "Please install gum: https://github.com/charmbracelet/gum"
+    exit 1
+  fi
+  echo
+fi
+
+# Install mise if needed
+if ! command -v mise &>/dev/null; then
+  echo
+  echo "▸ Installing mise"
+  if command -v pacman &>/dev/null; then
+    sudo pacman -S --noconfirm mise
+  elif command -v brew &>/dev/null; then
+    brew install mise
+  else
+    echo "Please install mise: https://mise.jdx.dev/installing-mise.html#installation-methods"
+    exit 1
+  fi
+  echo
+fi
+
+# Install gh if needed
+if ! command -v gh &>/dev/null; then
+  echo
+  echo "▸ Installing GitHub CLI"
+  if command -v pacman &>/dev/null; then
+    sudo pacman -S --noconfirm github-cli
+  elif command -v brew &>/dev/null; then
+    brew install gh
+  else
+    echo "Please install GitHub CLI: https://github.com/cli/cli#installation"
+    exit 1
+  fi
+  echo
+fi
+
+step() {
+  local step_name="$1"
+  shift
+
+  gum style --foreground 135 --bold "▸ $step_name"
+  gum style --foreground 240 "$*"
+
+  "$@"
+
+  local exit_code=$?
+  echo
+  return $exit_code
+}
+
+needs_seeding() {
+  if [ "$CI" != "" ]; then
+    return 1
+  fi
+
+  has_data=$(bin/rails runner "pp Account.all.any?" 2>/dev/null)
+  if [ "$has_data" = "true" ] ; then
+    return 1
+  else
+    return 0
+  fi
+}
+
+oss_mysql_setup() {
+  if ! nc -z localhost 3306 2>/dev/null; then
+    if docker ps -aq -f name=fizzy-mysql | grep -q .; then
+      step "Starting MySQL" docker start fizzy-mysql
+    else
+      step "Setting up MySQL" bash -c '
+        docker pull mysql:8.4
+        docker run -d \
+          --name fizzy-mysql \
+          -e MYSQL_ALLOW_EMPTY_PASSWORD=yes \
+          -p 3306:3306 \
+          mysql:8.4
+        echo "MySQL is starting… (it may take a few seconds)"
+      '
+    fi
+  fi
+}
+
+echo
+gum style --foreground 153 "   ˚ ∘             ∘ ˚   "
+gum style --foreground 111 --bold "  ∘˚˳°∘°  𝒻𝒾𝓏𝓏𝓎  °∘°˳˚∘  "
+echo
+
+step "Installing Ruby" mise install --yes
+eval "$(mise hook-env -s bash)"
+
+if which pacman >/dev/null 2>&1; then
+  packages=(imagemagick mariadb-libs openslide libvips libheif libwebp libjxl libraw poppler-glib libcgif ffmpeg rav1e svt-av1 gitleaks)
+  if ! pacman -Q "${packages[@]}" >/dev/null 2>&1; then
+    step "Installing packages" sudo pacman -S --noconfirm --needed "${packages[@]}"
+  fi
+elif which brew >/dev/null 2>&1; then
+  packages=(imagemagick openslide vips gitleaks)
+  missing_packages=()
+  for pkg in "${packages[@]}"; do
+    if ! brew list "$pkg" &>/dev/null; then
+      missing_packages+=("$pkg")
+    fi
+  done
+  if [ ${#missing_packages[@]} -gt 0 ]; then
+    step "Installing packages" brew install "${missing_packages[@]}"
+  fi
+fi
+
+bundle config set --local auto_install true
+step "Installing RubyGems" bundle install
+
+if [ -n "$SAAS" ]; then
+  source "$app_root/saas/bin/setup"
+else
+  if [ "$DATABASE_ADAPTER" = "mysql" ]; then
+    oss_mysql_setup
+  fi
+fi
+
+if [[ $* == *--reset* ]]; then
+  step "Resetting the database" rails db:reset
+else
+  step "Preparing the database" rails db:prepare
+
+  if needs_seeding; then
+    step "Seeding the database" rails db:seed
+  fi
+fi
+
+step "Cleaning up logs and tempfiles" rails log:clear tmp:clear
+
+gum style --foreground 46 "✓ Done (${SECONDS} sec)"

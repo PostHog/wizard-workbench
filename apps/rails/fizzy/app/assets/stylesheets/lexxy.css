@@ -1,0 +1,191 @@
+@import url("lexxy-variables.css") layer(base);
+@import url("lexxy-content.css") layer(base);
+@import url("lexxy-editor.css") layer(base);
+
+:root {
+  --lexxy-color-ink: var(--color-ink);
+  --lexxy-color-ink-medium: var(--color-ink-dark);
+  --lexxy-color-ink-light: var(--color-ink-medium);
+  --lexxy-color-ink-lighter: var(--color-ink-light);
+  --lexxy-color-ink-lightest: var(--color-ink-lighter);
+  --lexxy-color-ink-inverted: var(--color-ink-inverted);
+
+  --lexxy-color-canvas: var(--color-canvas);
+
+  --lexxy-color-accent-dark: var(--color-ink-dark);
+  --lexxy-color-accent-medium: var(--color-ink-medium);
+  --lexxy-color-accent-light: var(--color-ink-light);
+  --lexxy-color-accent-lightest: var(--color-ink-lighter);
+
+  --lexxy-color-red: oklch(var(--lch-red-medium));
+  --lexxy-color-green: oklch(var(--lch-green-medium));
+  --lexxy-color-blue: oklch(var(--lch-blue-medium));
+  --lexxy-color-purple: oklch(var(--lch-purple-medium));
+
+  --lexxy-color-code-token-att: var(--color-code-token__att);
+  --lexxy-color-code-token-comment: var(--color-code-token__comment);
+  --lexxy-color-code-token-function: var(--color-code-token__function);
+  --lexxy-color-code-token-operator: var(--color-code-token__operator);
+  --lexxy-color-code-token-property: var(--color-code-token__property);
+  --lexxy-color-code-token-punctuation: var(--color-code-token__punctuation);
+  --lexxy-color-code-token-selector: var(--color-code-token__selector);
+  --lexxy-color-code-token-variable: var(--color-code-token__variable);
+
+  --lexxy-color-selected: oklch(var(--lch-blue-light));
+  --lexxy-color-selected-dark: oklch(var(--lch-blue-medium));
+
+  --lexxy-color-table-cell-border: var(--color-ink-ligher);
+  --lexxy-color-table-cell-selected-bg: var(--lexxy-color-selected);
+  --lexxy-color-table-cell-toggle: var(--lexxy-color-selected);
+  --lexxy-color-table-cell-remove: oklch(var(--lch-red-medium) / 20%);
+
+  --lexxy-focus-ring-offset: 2px;
+}
+
+@layer components {
+  /* Editor
+  /* ------------------------------------------------------------------------ */
+
+  lexxy-editor {
+    --lexxy-border-color: oklch(var(--lch-ink-darkest) / 20%);
+    --lexxy-editor-padding: 0;
+    --lexxy-toolbar-button-size: 2rem;
+
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+  }
+
+  lexxy-toolbar {
+    border-color: var(--lexxy-border-color);
+    gap: 0;
+  }
+
+  .lexxy-editor__toolbar-button {
+    background: transparent;
+
+    &[aria-pressed="true"],
+    [open] > & {
+      background-color: oklch(var(--lch-blue-medium) / 20%);
+    }
+
+    @media(any-hover: hover) {
+      &:hover:not([aria-pressed="true"]) {
+        background-color: oklch(var(--lch-ink-dark) / 20%);
+      }
+    }
+  }
+
+  lexxy-link-dropdown {
+    --lexxy-toolbar-spacing: 1.5ch;
+
+    .lexxy-editor__toolbar-button {
+      border-radius: 99rem;
+
+      @media(any-hover: hover) {
+        &:hover {
+          filter: brightness(0.9);
+          opacity: 1;
+        }
+      }
+
+      &[type="submit"],
+      &[type="submit"]:hover {
+        background-color: var(--color-link);
+      }
+
+      &[type="button"] {
+        border: 1px solid var(--color-ink-light);
+      }
+    }
+  }
+
+  .lexxy-editor__content {
+    margin-block-start: 0.5lh;
+  }
+
+  .lexxy-code-language-picker {
+    border-radius: 99rem;
+  }
+
+  lexxy-table-tools {
+    font-size: var(--text-x-small);
+  }
+
+  [data-lexical-cursor] {
+    animation: blink 1s step-end infinite;
+    block-size: 1lh;
+    border-inline-start: 1px solid currentColor;
+    line-height: inherit;
+    margin-block: 1em;
+  }
+
+  /* Content
+  /* ------------------------------------------------------------------------ */
+
+  .lexxy-content {
+    --lexxy-content-margin: 0.5lh;
+
+    color: currentColor;
+
+    h1, h2, h3, h4, h5, h6 {
+      font-weight: 800;
+      letter-spacing: -0.02ch;
+      line-height: 1.1;
+      overflow-wrap: break-word;
+      text-wrap: balance;
+    }
+
+    p:has(+ p) {
+      margin: 0;
+    }
+
+    ol, ul {
+      &:not(.lexxy-prompt-menu) {
+        padding-inline-start: 1ch;
+      }
+    }
+
+    blockquote {
+      border-inline-start: 0.25em solid var(--color-ink-lighter);
+      padding-block: 0;
+    }
+
+    code {
+      background: var(--color-canvas);
+      border: 1px solid var(--color-ink-lighter);
+    }
+
+    .horizontal-divider {
+      padding-block: var(--lexxy-content-margin);
+      hr { margin: 0; }
+    }
+
+    hr {
+      border: 0;
+      border-block-end: 2px solid currentColor;
+      color: currentColor;
+      inline-size: 20%;
+      margin: calc(var(--lexxy-content-margin) * 2) 0;
+    }
+
+    table {
+      th, td {
+        font-size: var(--text-small);
+        padding-block: 0.75ch;
+      }
+      tr:not([data-action="delete"]) {
+        th:not([class*="selected"], [data-action="delete"], [data-action="toggle"]) { background-color: var(--color-ink-lightest); }
+        td:not([class*="selected"], [data-action="delete"], [data-action="toggle"]) { background-color: var(--color-canvas); }
+      }
+    }
+
+    .attachment {
+      margin-inline: auto;
+    }
+  }
+
+  .attachment {
+    margin-inline: 0;
+  }
+}

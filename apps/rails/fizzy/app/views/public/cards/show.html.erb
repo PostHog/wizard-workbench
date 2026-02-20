@@ -1,0 +1,50 @@
+<% @page_title = @card.title %>
+
+<% content_for :head do %>
+  <%= tag.meta property: "og:title", content: "#{@card.title} | #{@card.board.name}" %>
+  <%= tag.meta property: "og:description", content: format_excerpt(@card&.description, length: 200) %>
+  <%= tag.meta property: "og:image", content: @card.image.attached? ? "#{request.base_url}#{url_for(@card.image)}" : "#{request.base_url}/app-icon.png" %>
+  <%= tag.meta property: "og:url", content: published_card_url(@card) %>
+
+  <%= tag.meta property: "twitter:title", content: "#{@card.title} | #{@card.board.name}" %>
+  <%= tag.meta property: "twitter:description", content: format_excerpt(@card&.description, length: 200) %>
+  <%= tag.meta property: "twitter:image", content: @card.image.attached? ? "#{request.base_url}#{url_for(@card.image)}" : "#{request.base_url}/app-icon.png" %>
+  <%= tag.meta property: "twitter:card", content: "summary_large_image" %>
+<% end %>
+
+<% content_for :header do %>
+  <div class="header__actions header__actions--start">
+    <%= back_link_to @card.board.name, published_board_url(@card.board), "keydown.left@document->hotkey#click keydown.esc@document->hotkey#click" %>
+  </div>
+<% end %>
+
+<section id="<%= dom_id(@card, :card_container) %>"
+  class="card-perma card-perma--public" data-controller="lightbox" style="--card-color: <%= @card.color %>;">
+  <div class="card-perma__bg">
+    <%= card_article_tag @card, class: "card" do %>
+      <header class="card__header">
+        <%= render "cards/display/preview/board", card: @card %>
+        <%= render "cards/display/preview/tags", card: @card %>
+      </header>
+
+      <div class="card__body justify-space-between">
+        <%= render "public/cards/show/content", card: @card %>
+        <%= render "cards/display/public_preview/columns", card: @card if @card.open? %>
+        <%= render "cards/display/common/stamp", card: @card %>
+      </div>
+
+      <%= render "public/cards/show/steps", card: @card %>
+
+      <footer class="card__footer">
+        <%= render "cards/display/public_preview/meta", card: @card %>
+        <%= render "cards/display/perma/background", card: @card %>
+      </footer>
+    <% end %>
+  </div>
+
+  <%= render "layouts/lightbox" %>
+</section>
+
+<% content_for :footer do %>
+  <%= render "public/footer" %>
+<% end %>

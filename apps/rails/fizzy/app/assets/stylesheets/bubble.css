@@ -1,0 +1,55 @@
+@layer components {
+  .bubble {
+    --bubble-color: var(--card-color, oklch(var(--lch-blue-medium)));
+    --bubble-number-max: 26px;
+    --bubble-shape: 54% 46% 61% 39% / 57% 49% 51% 43%;
+    --bubble-rotate: 0deg;
+    --bubble-size-default: 4rem;
+
+    block-size: var(--bubble-size, var(--bubble-size-default));
+    color: var(--card-content-color);
+    container-type: inline-size;
+    font-size: 1.4rem;
+    font-weight: bold;
+    inline-size: var(--bubble-size, var(--bubble-size-default));
+    inset-block-start: 20%;
+    padding: 0.5cqi;
+    position: absolute;
+    z-index: 1;
+
+    &:before {
+      background: radial-gradient(
+        color-mix(in srgb, var(--bubble-color) 8%, var(--color-canvas)) 50%,
+        color-mix(in srgb, var(--bubble-color) 48%, var(--color-canvas)) 100%
+      );
+      border-radius: var(--bubble-shape);
+      content: "";
+      inset: 0;
+      position: absolute;
+      transform: rotate(var(--bubble-rotate));
+      z-index: -1;
+    }
+
+    @media (any-hover: hover) {
+      &:hover:before {
+        animation: wobble 1200ms;
+      }
+    }
+
+    svg {
+      display: block;
+      letter-spacing: 0.2ch;
+      text-transform: uppercase;
+    }
+  }
+
+  .bubble__number {
+    display: grid;
+    font-size: clamp(10px, 50cqi, var(--bubble-number-max)); /* FF bug: https://app.fizzy.do/5986089/boards/2/cards/1373 */
+    font-weight: 900;
+    inset: 0;
+    place-content: center;
+    position: absolute;
+    text-align: center;
+  }
+}

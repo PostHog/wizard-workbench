@@ -1,0 +1,19 @@
+<% earliest, latest = day_timeline.earliest_time, day_timeline.latest_time %>
+
+<% if earliest.present? %>
+  <% if earliest == latest %>
+    <div class="events__none">
+      <h2 class="txt-medium margin-none"><%= local_datetime_tag earliest, style: :agoorweekday, class: "txt-ink txt-capitalize" %></h2>
+      <p class="margin-none">No activity</p>
+    </div>
+  <% elsif earliest < latest %>
+    <div class="events__none">
+      <h2 class="txt-medium margin-none"><%= local_datetime_tag earliest, style: :agoorweekday, class: "txt-ink txt-capitalize" %> – <%= local_datetime_tag latest, style: :agoorweekday, class: "txt-ink txt-capitalize" %></h2>
+      <p class="margin-none">No activity for <%= (latest - earliest).seconds.in_days.round + 1 %> days</p>
+    </div>
+  <% end %>
+<% else %>
+  <div class="events__none">
+    <p class="margin-none"> <%= day_timeline.has_activity? ? "No more activity" : "No activity" %></p>
+  </div>
+<% end %>

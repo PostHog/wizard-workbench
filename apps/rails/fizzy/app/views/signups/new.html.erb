@@ -1,0 +1,24 @@
+<% @page_title = "Signup for Fizzy" %>
+
+<div class="panel panel--centered flex flex-column gap-half">
+  <h1 class="txt-x-large font-weight-black margin-block-end">Sign up</h1>
+
+  <%= form_with model: @signup, url: signup_path, scope: "signup", class: "flex flex-column gap", data: { turbo: false, controller: "form" } do |form| %>
+    <div class="flex align-center gap">
+      <label class="flex align-center gap input input--actor">
+        <%= form.email_field :email_address, required: true, class: "input txt-large full-width", autofocus: true, autocomplete: "username", placeholder: "Enter your email address…" %>
+      </label>
+    </div>
+
+    <p>Enter your email to create an account.</p>
+
+    <button type="submit" id="log_in" class="btn btn--link center txt-medium">
+      <span>Let’s go</span>
+      <%= icon_tag "arrow-right" %>
+    </button>
+  <% end %>
+</div>
+
+<% content_for :footer do %>
+  <%= render "sessions/footer" %>
+<% end %>

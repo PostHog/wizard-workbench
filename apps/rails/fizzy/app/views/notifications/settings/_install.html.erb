@@ -1,0 +1,35 @@
+<% unless (platform.chrome? && !platform.ios?) || (platform.firefox? && !platform.android?) %>
+  <div class="notifications-help pwa__instructions hide-in-pwa">
+    <h3><%= platform.safari? && platform.desktop? ? "…or install" : "Install " -%> Fizzy as a web app.</h3>
+    <% case
+      when platform.edge? %>
+        <ol>
+          <li>Click <em><%= icon_tag "install-edge", alt: "the app available - install Fizzy button" %></em>in the address bar.</li>
+          <li>Click <em>Install</em>.</li>
+        </ol>
+      <% when platform.chrome? && platform.android? %>
+        <ol>
+          <li>Tap the <em><%= icon_tag "menu-dots-vertical", alt: "More options" %></em> menu button.</li>
+          <li>Tap <em>Install app</em> in the menu.</li>
+        </ol>
+      <% when platform.firefox? && platform.android? %>
+        <ol>
+          <li>Tap the <em><%= icon_tag "menu-dots-vertical", alt: "More options" %></em> menu button.</li>
+          <li>Tap <em>Install</em> in the menu.</li>
+        </ol>
+      <% when platform.safari? && platform.desktop? %>
+        <ol>
+          <li>Click <em>File</em> in the top left.</li>
+          <li>Click <em>Add to Dock…</em></li>
+        </ol>
+      <% when (platform.safari? || platform.chrome?) && platform.ios? %>
+        <p>To receive push notifications in <%= platform.browser.capitalize %> for <%= platform.operating_system %>, you must first install Fizzy as a web app.</p>
+        <ol>
+          <li>Tap <em><%= icon_tag "share", alt: "the share button" %></em></li>
+          <li>Tap <em>Add to Home Screen</em>.</li>
+        </ol>
+      <% else %>
+        <p>Some platforms require you to install Fizzy as a web app to receive push notifications.</p>
+    <% end %>
+  </div>
+<% end %>

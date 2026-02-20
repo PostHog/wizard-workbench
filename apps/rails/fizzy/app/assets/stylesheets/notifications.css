@@ -1,0 +1,114 @@
+@layer components {
+  /* Notifications list
+  /* ------------------------------------------------------------------------ */
+
+  .notifications-list {
+    --panel-size: 45ch;
+
+    .tray__item {
+      position: relative;
+
+      &[aria-selected] {
+        outline: 0;
+
+        .card {
+          border-radius: 0.25ch;
+          outline: var(--focus-ring-size) solid var(--focus-ring-color);
+          outline-offset: var(--focus-ring-offset);
+        }
+      }
+    }
+
+    .card {
+      @media (prefers-color-scheme: dark) {
+        box-shadow: 0 0 0 1px var(--color-ink-lighter);
+      }
+    }
+
+    .card__header {
+      column-gap: var(--inline-space-half);
+    }
+
+    &:has(.card--notification) {
+      .notifications-list__blank-slate {
+        display: none;
+      }
+    }
+  }
+
+  /* Read items
+  /* ------------------------------------------------------------------------ */
+
+  .notifications-list--read {
+    &:not(:has(.card--notification)) {
+      display: none;
+    }
+
+    .card {
+      box-shadow: 0 0 0 1px var(--color-ink-lighter);
+    }
+
+    .card__notification-unread-indicator {
+      --btn-background: transparent;
+      --btn-size: 1.8em;
+
+      margin: 2px;
+
+      .icon {
+        block-size: 1.7em;
+        color: var(--color-ink);
+        inline-size: 1.7em;
+        opacity: 1;
+      }
+    }
+  }
+
+
+ /* Help
+ /* ------------------------------------------------------------------------ */
+  .notifications-help {
+    h3 {
+      font-size: var(--text-medium);
+      margin: 0;
+    }
+
+    .icon {
+      --icon-size: 1.2em;
+
+      vertical-align: text-top;
+    }
+
+    ol {
+      margin-block: var(--block-space-half) var(--block-space);
+
+      &:last-of-type {
+        margin-block-end: var(--block-space-half);
+      }
+    }
+  }
+
+  .notifications-help__explainer {
+    padding: var(--block-space);
+  }
+
+  .notifications__on-message {
+    display: none;
+
+    .notifications--on & {
+      display: revert;
+    }
+  }
+
+  .notifications__off-message {
+    display: revert;
+
+    .notifications--on & {
+      display: none;
+    }
+  }
+
+  .notifications__status {
+    --panel-border-radius: 0.5em;
+    --panel-padding: var(--block-space);
+  }
+}

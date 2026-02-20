@@ -1,0 +1,8 @@
+<div class="card__id">
+  <span class="for-screen-reader">Card number</span>
+  <%= card.number %>
+</div>
+<div class="card__board-name">
+  <span class="overflow-ellipsis"><%= card.board.name %></span>
+  <%= yield %>
+</div>

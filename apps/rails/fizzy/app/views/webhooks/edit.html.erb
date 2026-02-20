@@ -1,0 +1,29 @@
+<% @page_title = @webhook.name %>
+
+<% content_for :header do %>
+  <div class="header__actions header__actions--start">
+    <%= back_link_to @page_title, @webhook, "keydown.left@document->hotkey#click keydown.esc@document->hotkey#click" %>
+  </div>
+<% end %>
+
+<article class="panel panel--wide center txt-align-start" style="view-transition-name: <%= dom_id(@webhook) %>">
+  <%= form_with model: @webhook, url: @webhook, method: :put, data: { controller: "form" }, html: { class: "flex flex-column gap" } do |form| %>
+    <h2 class="txt-large margin-none">
+      <%= form.text_field :name, required: true, autofocus: true, class: "input full-width", placeholder: "Name your Webhook…", data: { action: "keydown.esc@document->form#cancel" } %>
+    </h2>
+
+    <div class="flex flex-column gap-half">
+      <%= form.label :actions do %>
+        <strong>Events</strong><br>
+        <p class="margin-none txt-x-small txt-subtle">Trigger a call to the Payload URL when:</p>
+      <% end %>
+      <%= render "webhooks/form/actions", form: form %>
+    </div>
+
+    <%= form.button type: :submit, class: "btn btn--link center txt-medium" do %>
+      <span>Save Changes</span>
+    <% end %>
+
+    <%= link_to "Go back", board_webhooks_path, data: { form_target: "cancel" }, hidden: true %>
+  <% end %>
+</article>

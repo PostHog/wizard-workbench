@@ -1,0 +1,60 @@
+<% draggable = local_assigns.fetch(:draggable, false) && card.published? %>
+
+<% card_data = {
+  id: card.number,
+  drag_and_drop_target: "item",
+  navigable_list_target: "item",
+  css_variable_counter_target: "item"
+} %>
+
+<% if card.open? %>
+  <% card_data[:card_not_now_url] = card_not_now_path(card) %>
+  <% card_data[:card_closure_url] = card_closure_path(card) %>
+  <% card_data[:action] = "mouseenter->navigable-list#hoverSelect" %>
+  <% card_data[:card_assign_to_self_url] = card_self_assignment_path(card) %>
+<% end %>
+
+<%= card_article_tag card, class: "card", draggable: draggable, data: card_data, tabindex: 0 do %>
+  <div class="flex flex-column flex-item-grow max-inline-size">
+    <%= link_to card_path(card), draggable: false, class: "card__link", title: card_title_tag(card), data: { action: "dialog#close", turbo_frame: "_top" } do %>
+      <span class="for-screen-reader"><%= card.title %></span>
+    <% end %>
+
+    <header class="card__header">
+      <%= render "cards/display/preview/board", card: card %>
+      <%= render "cards/display/preview/tags", card: card %>
+      <%= render "cards/display/preview/steps", card: card %>
+      <%= icon_tag "attachment", class: "card__attachments-indicator translucent" if card.has_attachments? %>
+
+      <% if card.triaged? %>
+        <span class="btn justify-start card__column-name card__column-name--current txt-uppercase min-width max-width">
+          <span class="overflow-ellipsis "><%= card.column.name %></span>
+        </span>
+      <% end %>
+    </header>
+
+    <div class="card__body justify-space-between">
+      <div class="card__content">
+        <h3 class="card__title overflow-line-clamp">
+          <%= card_html_title(card) %>
+        </h3>
+      </div>
+
+      <%= render "cards/display/preview/columns", card: card %>
+      <%= render "cards/display/common/stamp", card: card %>
+    </div>
+  </div>
+
+  <footer class="card__footer flex gap-half">
+    <%= render "cards/display/preview/meta", card: card, preview: true %>
+    <div class="card__counts">
+      <%= render "cards/display/preview/boosts", card: card %>
+      <%= render "cards/display/preview/comments", card: card %>
+    </div>
+    <%= render "cards/display/common/background", card: card %>
+  </footer>
+
+  <% if card.entropic? %>
+    <%= render "cards/display/preview/bubble", card: card %>
+  <% end %>
+<% end %>

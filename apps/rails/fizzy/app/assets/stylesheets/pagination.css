@@ -1,0 +1,33 @@
+@layer components {
+  .pagination-link {
+    display: block;
+    flex: 1;
+    min-block-size: 1.5rem;
+    pointer-events: none;
+    text-decoration: none;
+
+    &.pagination-link--active-when-observed {
+      block-size: 0;
+      inline-size: 0;
+      overflow: hidden;
+      visibility: hidden;
+
+      turbo-frame:has(&):has(~ turbo-frame) & {
+        display: none;
+      }
+    }
+
+    &[aria-busy="true"] {
+      .spinner {
+        display: block;
+      }
+    }
+  }
+
+  .day-timeline-pagination-link {
+    block-size: 1px;
+    display: block;
+    inline-size: 1px;
+    overflow: clip;
+  }
+}

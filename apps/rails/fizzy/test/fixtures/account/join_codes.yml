@@ -1,0 +1,13 @@
+37s:
+  id: <%= ActiveRecord::FixtureSet.identify("37s_join_code", :uuid) %>
+  code: 37S0-5678-9XYZ
+  usage_count: 0
+  usage_limit: 10
+  account: 37s_uuid
+
+initech:
+  id: <%= ActiveRecord::FixtureSet.identify("initech_join_code", :uuid) %>
+  code: INIT-5678-9XYZ
+  usage_count: 10
+  usage_limit: 10
+  account: initech_uuid
