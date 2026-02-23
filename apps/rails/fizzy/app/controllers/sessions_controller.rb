@@ -19,6 +19,14 @@ class SessionsController < ApplicationController
   end
 
   def destroy
+    # PostHog: Track logout before session ends
+    if Current.identity
+      PostHog.capture(
+        distinct_id: Current.identity.email_address,
+        event: "user_logged_out"
+      )
+    end
+
     terminate_session
 
     respond_to do |format|

@@ -5,6 +5,16 @@ class Boards::PublicationsController < ApplicationController
 
   def create
     @board.publish
+
+    # PostHog: Track board publication — measures adoption of public sharing
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "board_published",
+      properties: {
+        board_id: @board.id,
+        board_name: @board.name
+      }
+    )
   end
 
   def destroy

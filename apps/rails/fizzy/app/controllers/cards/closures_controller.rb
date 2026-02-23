@@ -6,6 +6,18 @@ class Cards::ClosuresController < ApplicationController
     @card.close
     refresh_stream_if_needed
 
+    # PostHog: Track card closure — key completion event
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_closed",
+      properties: {
+        card_id: @card.id,
+        card_number: @card.number,
+        board_id: @board.id,
+        board_name: @board.name
+      }
+    )
+
     respond_to do |format|
       format.turbo_stream
       format.json { head :no_content }
@@ -15,6 +27,18 @@ class Cards::ClosuresController < ApplicationController
   def destroy
     @card.reopen
     refresh_stream_after_reopen
+
+    # PostHog: Track card reopen
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_reopened",
+      properties: {
+        card_id: @card.id,
+        card_number: @card.number,
+        board_id: @board.id,
+        board_name: @board.name
+      }
+    )
 
     respond_to do |format|
       format.turbo_stream
