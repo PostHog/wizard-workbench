@@ -1,0 +1,220 @@
+{
+  "dashboard": {
+    "name": "Analytics basics",
+    "description": "Key business metrics for the SaaS app: conversions, churn, and user engagement",
+    "pinned": true
+  },
+  "insights": [
+    {
+      "id": 1,
+      "name": "User Signup Funnel",
+      "description": "Tracks the complete user signup flow from registration through onboarding steps",
+      "type": "funnel",
+      "query": {
+        "kind": "InsightVizNode",
+        "source": {
+          "kind": "FunnelsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "event": "user_registered",
+              "custom_name": "User Registered"
+            },
+            {
+              "kind": "EventsNode",
+              "event": "user_signed_up_completed",
+              "custom_name": "Signup Completed"
+            },
+            {
+              "kind": "EventsNode",
+              "event": "onboarding_user_account_completed",
+              "custom_name": "Account Setup Completed"
+            },
+            {
+              "kind": "EventsNode",
+              "event": "onboarding_organization_created",
+              "custom_name": "Organization Created"
+            }
+          ],
+          "dateRange": {
+            "date_from": "-30d"
+          },
+          "funnelsFilter": {
+            "funnelWindowInterval": 7,
+            "funnelWindowIntervalUnit": "day"
+          }
+        }
+      },
+      "hogql_alternative": "SELECT funnel_step, count() as users FROM (SELECT person_id, arrayJoin([1, 2, 3, 4]) as funnel_step FROM events WHERE timestamp >= now() - INTERVAL 30 DAY AND event IN ['user_registered', 'user_signed_up_completed', 'onboarding_user_account_completed', 'onboarding_organization_created'] GROUP BY person_id) GROUP BY funnel_step"
+    },
+    {
+      "id": 2,
+      "name": "Subscription Conversion Rate",
+      "description": "Daily trend comparing users who start checkout vs those who complete it",
+      "type": "trend",
+      "query": {
+        "kind": "InsightVizNode",
+        "source": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "math": "total",
+              "event": "subscription_checkout_started",
+              "custom_name": "Checkout Started"
+            },
+            {
+              "kind": "EventsNode",
+              "math": "total",
+              "event": "checkout_session_completed",
+              "custom_name": "Checkout Completed"
+            }
+          ],
+          "interval": "day",
+          "dateRange": {
+            "date_from": "-30d"
+          },
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "version": 2
+        }
+      },
+      "hogql_query": "SELECT toDate(timestamp) as date, event, count() as count FROM events WHERE timestamp >= now() - INTERVAL 30 DAY AND event IN ['subscription_checkout_started', 'checkout_session_completed'] GROUP BY date, event ORDER BY date, event"
+    },
+    {
+      "id": 3,
+      "name": "Subscription Churn",
+      "description": "Weekly comparison of subscription cancellations vs resumptions",
+      "type": "trend",
+      "query": {
+        "kind": "InsightVizNode",
+        "source": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "math": "total",
+              "event": "subscription_cancelled",
+              "custom_name": "Subscriptions Cancelled"
+            },
+            {
+              "kind": "EventsNode",
+              "math": "total",
+              "event": "subscription_resumed",
+              "custom_name": "Subscriptions Resumed"
+            }
+          ],
+          "interval": "week",
+          "dateRange": {
+            "date_from": "-90d"
+          },
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "version": 2
+        }
+      },
+      "hogql_query": "SELECT toStartOfWeek(timestamp) as week, event, count() as count FROM events WHERE timestamp >= now() - INTERVAL 90 DAY AND event IN ['subscription_cancelled', 'subscription_resumed'] GROUP BY week, event ORDER BY week, event"
+    },
+    {
+      "id": 4,
+      "name": "Daily Active Users (Logins)",
+      "description": "Daily count of unique users logging into the application",
+      "type": "trend",
+      "query": {
+        "kind": "InsightVizNode",
+        "source": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "math": "dau",
+              "event": "user_logged_in",
+              "custom_name": "Daily Active Users"
+            }
+          ],
+          "interval": "day",
+          "dateRange": {
+            "date_from": "-30d"
+          },
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "version": 2
+        }
+      },
+      "hogql_query": "SELECT toDate(timestamp) as date, uniq(person_id) as daily_active_users FROM events WHERE timestamp >= now() - INTERVAL 30 DAY AND event = 'user_logged_in' GROUP BY date ORDER BY date"
+    },
+    {
+      "id": 5,
+      "name": "Contact Sales Submissions",
+      "description": "Daily trend of contact sales form submissions over the past 90 days",
+      "type": "trend",
+      "query": {
+        "kind": "InsightVizNode",
+        "source": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "math": "total",
+              "event": "contact_sales_submitted",
+              "custom_name": "Sales Inquiries"
+            }
+          ],
+          "interval": "day",
+          "dateRange": {
+            "date_from": "-90d"
+          },
+          "trendsFilter": {
+            "display": "ActionsBarValue"
+          },
+          "version": 2
+        }
+      },
+      "hogql_query": "SELECT toDate(timestamp) as date, count() as submissions FROM events WHERE timestamp >= now() - INTERVAL 90 DAY AND event = 'contact_sales_submitted' GROUP BY date ORDER BY date"
+    }
+  ],
+  "api_instructions": {
+    "note": "These are the API calls you would need to make with an API key that has the following scopes: dashboard:write, insight:write",
+    "base_url": "https://us.posthog.com",
+    "endpoints": {
+      "create_dashboard": {
+        "method": "POST",
+        "url": "/api/projects/@current/dashboards/",
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY",
+          "Content-Type": "application/json"
+        },
+        "payload_reference": "dashboard object above"
+      },
+      "create_insight": {
+        "method": "POST",
+        "url": "/api/projects/@current/insights/",
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY",
+          "Content-Type": "application/json"
+        },
+        "payload_structure": {
+          "name": "Insight name",
+          "description": "Insight description",
+          "query": "Query object from insights array above"
+        }
+      },
+      "add_insight_to_dashboard": {
+        "method": "PATCH",
+        "url": "/api/projects/@current/dashboards/{dashboard_id}/",
+        "note": "Add insight IDs to the dashboard's tiles array"
+      }
+    }
+  },
+  "manual_setup_instructions": {
+    "step_1": "Go to https://us.posthog.com/project/2/dashboard",
+    "step_2": "Click 'New dashboard' button",
+    "step_3": "Enter name: 'Analytics basics' and description: 'Key business metrics for the SaaS app: conversions, churn, and user engagement'",
+    "step_4": "For each insight, click 'New insight' and select the appropriate type (Funnel or Trend)",
+    "step_5": "Copy the query JSON from the insights array above into the PostHog query editor (switch to JSON mode)",
+    "step_6": "Save each insight and add it to the dashboard"
+  }
+}

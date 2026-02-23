@@ -7,7 +7,7 @@ import { prisma } from "~/utils/database.server";
 export function getPasteLimitForTier(tier: Tier | null): number {
   switch (tier) {
     case "high":
-      return Infinity; // Unlimited for business plan
+      return Number.POSITIVE_INFINITY; // Unlimited for business plan
     case "mid":
       return 500; // Startup plan: 500 pastes
     case "low":
@@ -27,12 +27,13 @@ export async function canCreatePaste(organizationId: string): Promise<{
   tier: Tier | null;
 }> {
   const organization = await prisma.organization.findUnique({
-    where: { id: organizationId },
     include: {
-      stripeSubscriptions: {
-        where: {
-          status: "active",
+      _count: {
+        select: {
+          pastes: true,
         },
+      },
+      stripeSubscriptions: {
         include: {
           items: {
             include: {
@@ -44,13 +45,12 @@ export async function canCreatePaste(organizationId: string): Promise<{
             },
           },
         },
-      },
-      _count: {
-        select: {
-          pastes: true,
+        where: {
+          status: "active",
         },
       },
     },
+    where: { id: organizationId },
   });
 
   if (!organization) {
@@ -60,7 +60,7 @@ export async function canCreatePaste(organizationId: string): Promise<{
   // Determine tier from subscription
   let tier: Tier | null = null;
   const subscription = organization.stripeSubscriptions[0];
-  
+
   if (subscription) {
     const price = subscription.items[0]?.price;
     if (price) {
@@ -77,7 +77,7 @@ export async function canCreatePaste(organizationId: string): Promise<{
 
   const limit = getPasteLimitForTier(tier);
   const currentCount = organization._count.pastes;
-  const canCreate = limit === Infinity || currentCount < limit;
+  const canCreate = limit === Number.POSITIVE_INFINITY || currentCount < limit;
 
   return {
     canCreate,
@@ -86,4 +86,3 @@ export async function canCreatePaste(organizationId: string): Promise<{
     tier,
   };
 }
-
