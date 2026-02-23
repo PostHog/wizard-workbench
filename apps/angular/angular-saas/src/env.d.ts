@@ -1,0 +1,8 @@
+// Type declarations for environment variables accessed via import.meta.env
+declare interface ImportMeta {
+  readonly env: {
+    readonly NG_APP_POSTHOG_KEY: string;
+    readonly NG_APP_POSTHOG_HOST: string;
+    readonly [key: string]: string | undefined;
+  };
+}
