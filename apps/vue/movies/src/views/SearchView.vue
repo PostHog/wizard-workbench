@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { searchShows } from '../composables/useTMDB'
 import type { Media } from '../types'
 import MediaCard from '../components/media/MediaCard.vue'
+import posthog from 'posthog-js'
 
 const route = useRoute()
 const query = ref('')
@@ -19,15 +20,30 @@ const search = async () => {
   loading.value = true
   try {
     const response = await searchShows(query.value, 1)
-    results.value = response.results.filter((item: Media) => 
+    results.value = response.results.filter((item: Media) =>
       item.media_type === 'movie' || item.media_type === 'tv'
     ) as Media[]
+    posthog.capture('media_searched', {
+      query: query.value,
+      result_count: results.value.length,
+    })
   } catch (error) {
     console.error('Search error:', error)
+    posthog.captureException(error)
     results.value = []
   } finally {
     loading.value = false
   }
+}
+
+const handleResultClick = (item: Media, index: number) => {
+  posthog.capture('search_result_clicked', {
+    media_id: item.id,
+    media_title: item.title || item.name,
+    media_type: item.media_type || 'movie',
+    position: index,
+    query: query.value,
+  })
 }
 
 watch(() => route.query.q, (newQuery) => {
@@ -67,13 +83,17 @@ watch(() => route.query.q, (newQuery) => {
       </div>
 
       <div v-else-if="results.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        <MediaCard
-          v-for="item in results"
+        <div
+          v-for="(item, index) in results"
           :key="item.id"
-          :item="item"
-          :type="(item.media_type || 'movie') as any"
-          class="w-full"
-        />
+          @click="handleResultClick(item, index)"
+        >
+          <MediaCard
+            :item="item"
+            :type="(item.media_type || 'movie') as any"
+            class="w-full"
+          />
+        </div>
       </div>
 
       <div v-else-if="query && !loading" class="text-center py-10 text-gray-400">
