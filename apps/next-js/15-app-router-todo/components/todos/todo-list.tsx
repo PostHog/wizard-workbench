@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -31,10 +32,12 @@ export function TodoList() {
 
   const handleAddTodo = async (title: string, description: string) => {
     try {
+      const distinctId = posthog.get_distinct_id();
       const response = await fetch('/api/todos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(distinctId ? { 'x-posthog-distinct-id': distinctId } : {}),
         },
         body: JSON.stringify({ title, description }),
       });
@@ -50,10 +53,12 @@ export function TodoList() {
 
   const handleToggleTodo = async (id: number, completed: boolean) => {
     try {
+      const distinctId = posthog.get_distinct_id();
       const response = await fetch(`/api/todos/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          ...(distinctId ? { 'x-posthog-distinct-id': distinctId } : {}),
         },
         body: JSON.stringify({ completed }),
       });
@@ -69,8 +74,12 @@ export function TodoList() {
 
   const handleDeleteTodo = async (id: number) => {
     try {
+      const distinctId = posthog.get_distinct_id();
       const response = await fetch(`/api/todos/${id}`, {
         method: 'DELETE',
+        headers: {
+          ...(distinctId ? { 'x-posthog-distinct-id': distinctId } : {}),
+        },
       });
 
       if (response.ok) {
