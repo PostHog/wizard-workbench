@@ -4,6 +4,7 @@ import { Spinner } from '../components/Spinner'
 import { useMutation } from '../hooks/useMutation'
 import { postInvoice } from '../utils/mockTodos'
 import type { Invoice } from '../utils/mockTodos'
+import { usePostHog } from '@posthog/react'
 
 export const Route = createFileRoute('/dashboard/invoices/')({
   component: InvoicesIndexComponent,
@@ -11,10 +12,14 @@ export const Route = createFileRoute('/dashboard/invoices/')({
 
 function InvoicesIndexComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
 
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: invoice }) => {
+      posthog.capture('invoice_created', { invoice_id: invoice?.id, invoice_title: invoice?.title })
+      router.invalidate()
+    },
   })
 
   return (
@@ -28,14 +33,19 @@ function InvoicesIndexComponent() {
         </div>
 
         <form
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
-            createInvoiceMutation.mutate({
-              title: formData.get('title') as string,
-              body: formData.get('body') as string,
-            })
+            try {
+              await createInvoiceMutation.mutate({
+                title: formData.get('title') as string,
+                body: formData.get('body') as string,
+              })
+            } catch (err) {
+              posthog.capture('invoice_creation_failed', { error: String(err) })
+              posthog.captureException(err)
+            }
           }}
           className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-4"
         >

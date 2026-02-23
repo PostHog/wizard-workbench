@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
 import { fetchInvoiceById, patchInvoice } from '../utils/mockTodos'
+import { usePostHog } from '@posthog/react'
 
 export const Route = createFileRoute('/dashboard/invoices/$invoiceId')({
   params: {
@@ -28,9 +29,13 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: updatedInvoice }) => {
+      posthog.capture('invoice_updated', { invoice_id: updatedInvoice?.id, invoice_title: updatedInvoice?.title })
+      router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
 
@@ -86,15 +91,20 @@ function InvoiceComponent() {
 
         <form
           key={invoice.id}
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
-            updateInvoiceMutation.mutate({
-              id: invoice.id,
-              title: formData.get('title') as string,
-              body: formData.get('body') as string,
-            })
+            try {
+              await updateInvoiceMutation.mutate({
+                id: invoice.id,
+                title: formData.get('title') as string,
+                body: formData.get('body') as string,
+              })
+            } catch (err) {
+              posthog.capture('invoice_update_failed', { invoice_id: invoice.id, error: String(err) })
+              posthog.captureException(err)
+            }
           }}
           className="space-y-4"
         >
@@ -117,6 +127,7 @@ function InvoiceComponent() {
                 })}
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 params={true}
+                onClick={() => posthog.capture('invoice_notes_toggled', { invoice_id: invoice.id, action: search.showNotes ? 'hide' : 'show' })}
               >
                 {search.showNotes ? 'Hide Notes' : 'Add Notes'}
               </Link>
