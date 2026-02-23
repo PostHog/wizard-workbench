@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 // Disable body parsing, need raw body for Stripe webhook signature verification
 export const config = {
@@ -36,15 +37,45 @@ export default async function handler(
     return res.status(400).json({ error: 'Webhook signature verification failed.' });
   }
 
+  const posthog = getPostHogClient();
+
   switch (event.type) {
-    case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
+    case 'customer.subscription.updated': {
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+      if (subscription.status === 'active' || subscription.status === 'trialing') {
+        const plan = subscription.items.data[0]?.plan;
+        posthog.capture({
+          distinctId: subscription.customer as string,
+          event: 'checkout_completed',
+          properties: {
+            subscription_id: subscription.id,
+            subscription_status: subscription.status,
+            plan_name: (plan?.product as Stripe.Product)?.name,
+            stripe_customer_id: subscription.customer as string,
+          },
+        });
+      }
       break;
+    }
+    case 'customer.subscription.deleted': {
+      const subscription = event.data.object as Stripe.Subscription;
+      await handleSubscriptionChange(subscription);
+      posthog.capture({
+        distinctId: subscription.customer as string,
+        event: 'subscription_cancelled',
+        properties: {
+          subscription_id: subscription.id,
+          stripe_customer_id: subscription.customer as string,
+        },
+      });
+      break;
+    }
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
+
+  await posthog.shutdown();
 
   return res.status(200).json({ received: true });
 }
