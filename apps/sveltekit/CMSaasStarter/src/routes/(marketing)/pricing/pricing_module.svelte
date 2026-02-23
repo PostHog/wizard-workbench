@@ -1,5 +1,7 @@
 <script lang="ts">
   import { pricingPlans } from "./pricing_plans"
+  import posthog from "posthog-js"
+  import { onMount } from "svelte"
 
   interface Props {
     // Module context
@@ -15,6 +17,21 @@
     currentPlanId = "",
     center = true,
   }: Props = $props()
+
+  onMount(() => {
+    posthog.capture("pricing_page_viewed", {
+      plan_count: pricingPlans.length,
+      highlighted_plan_id: highlightedPlanId || undefined,
+    })
+  })
+
+  function handlePlanSelected(planId: string, planName: string) {
+    posthog.capture("plan_selected", {
+      plan_id: planId,
+      plan_name: planName,
+      call_to_action: callToAction,
+    })
+  }
 </script>
 
 <div
@@ -57,6 +74,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() => handlePlanSelected(plan.id, plan.name)}
               >
                 {callToAction}
               </a>
