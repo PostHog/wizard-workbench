@@ -2,16 +2,17 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoMembers } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import { getMembersSuccess, inviteMemberSuccess } from './actions';
 
 export function* getMembers() {
-  const token = yield select(state => state.auth.token);
-  const team = yield select(state => state.teams.active);
+  const token = yield select((state) => state.auth.token);
+  const team = yield select((state) => state.teams.active);
 
   // Demo mode
   if (isDemoMode(token)) {
-    const members = team ? (demoMembers[team.slug] || []) : [];
+    const members = team ? demoMembers[team.slug] || [] : [];
     yield put(getMembersSuccess(members));
     return;
   }
@@ -23,18 +24,29 @@ export function* getMembers() {
 
 export function* updateMember({ payload }) {
   const { id, roles } = payload;
-  const token = yield select(state => state.auth.token);
+  const token = yield select((state) => state.auth.token);
 
   try {
     // Demo mode
     if (isDemoMode(token)) {
       toast.showSuccess('Member updated');
+      posthog.capture('member_role_updated', {
+        member_id: id,
+        role_count: roles.length,
+        mode: 'demo',
+      });
       return;
     }
 
-    yield call(api.put, `members/${id}`, { roles: roles.map(role => role.id) });
+    yield call(api.put, `members/${id}`, {
+      roles: roles.map((role) => role.id),
+    });
 
     toast.showSuccess('Member updated');
+    posthog.capture('member_role_updated', {
+      member_id: id,
+      role_count: roles.length,
+    });
   } catch (err) {
     toast.showError('Error updating member');
   }
@@ -42,7 +54,7 @@ export function* updateMember({ payload }) {
 
 export function* inviteMember({ payload }) {
   const { email } = payload;
-  const token = yield select(state => state.auth.token);
+  const token = yield select((state) => state.auth.token);
 
   try {
     // Demo mode - add member directly to the list
@@ -55,14 +67,21 @@ export function* inviteMember({ payload }) {
       };
       yield put(inviteMemberSuccess(newMember));
       toast.showSuccess('Member added');
+      posthog.capture('member_invited', { email, mode: 'demo' });
       return;
     }
 
     yield call(api.post, 'invites', { invites: [email] });
 
     toast.showSuccess('Invite sent');
+    posthog.capture('member_invited', { email });
   } catch (err) {
     toast.showError('Error sending invite');
+    posthog.capture('member_invite_failed', {
+      email,
+      $exception_type: err?.name,
+      $exception_message: err?.message,
+    });
   }
 }
 
