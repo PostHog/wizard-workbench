@@ -1,0 +1,14 @@
+{
+  "name": "fastify-blog",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A Fastify blog API for testing the javascript_node wizard skill",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0"
+  }
+}
