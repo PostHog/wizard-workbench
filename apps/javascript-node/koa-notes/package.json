@@ -1,0 +1,16 @@
+{
+  "name": "koa-notes",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A Koa notes API for testing the javascript_node wizard skill",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "koa": "^2.15.0",
+    "koa-router": "^13.0.0",
+    "koa-bodyparser": "^4.4.0"
+  }
+}

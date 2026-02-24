@@ -206,8 +206,8 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
 // API key redaction
 // ============================================================================
 
-/** PostHog API keys match phx_ followed by 20+ alphanumeric characters */
-const PHX_KEY_PATTERN = /phx_[A-Za-z0-9]{20,}/g;
+/** PostHog API keys match phc_ or phx_ followed by 20+ alphanumeric characters */
+const PHX_KEY_PATTERN = /ph[cx]_[A-Za-z0-9]{20,}/g;
 const PHX_REDACTED = "phx_API_KEY_IS_HARDCODED";
 
 /** Binary file extensions to skip during redaction */
