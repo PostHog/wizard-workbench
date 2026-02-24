@@ -1,0 +1,22 @@
+@layer components {
+  .divider {
+    --divider-color: var(--color-ink-light);
+
+    align-items: center;
+    display: flex;
+    gap: var(--inline-space);
+
+    &:before,
+    &:after {
+      background: var(--divider-color);
+      block-size: var(--divider-size, 1px);
+      content: "";
+      flex: 1;
+    }
+  }
+
+  .divider--fade {
+    &:before { background: linear-gradient(to right, transparent, var(--divider-color) 50%); }
+    &:after  { background: linear-gradient(to left, transparent, var(--divider-color) 50%); }
+  }
+}

@@ -1,0 +1,40 @@
+<% if blob.representable? %>
+  <figure class="attachment attachment--preview attachment--<%= blob.filename.extension %>">
+    <%= render "active_storage/blobs/web/representation", blob: blob %>
+
+    <figcaption class="attachment__caption">
+      <% if caption = blob.try(:caption) %>
+        <span><%= caption %></span>
+      <% else %>
+        <span class="attachment__name"><%= blob.filename %></span>
+      <% end %>
+      <span> · </span>
+      <span class="attachment__size"><%= number_to_human_size blob.byte_size %></span>
+      <span> · </span>
+      <%= link_to rails_blob_path(blob, disposition: :attachment), class: "attachment__link", download: blob.filename, title: "Download #{blob.filename}" do %>
+        <span>Download</span>
+      <% end %>
+    </figcaption>
+  </figure>
+<% else %>
+  <div class="attachment attachment--file attachment--<%= blob.filename.extension -%>">
+    <%= render "active_storage/blobs/web/representation", blob: blob %>
+
+    <div class="attachment__caption">
+      <div>
+        <% if caption = blob.try(:caption) %>
+          <strong><%= caption %></strong>
+        <% else %>
+          <strong class="attachment__name"><%= blob.filename %></strong>
+        <% end %>
+      </div>
+      <div>
+        <span class="attachment__size"><%= number_to_human_size blob.byte_size %></span>
+        <span> · </span>
+        <%= link_to rails_blob_path(blob, disposition: :attachment), class: "attachment__link", download: blob.filename, title: "Download #{blob.filename}" do %>
+          <span>Download</span>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>

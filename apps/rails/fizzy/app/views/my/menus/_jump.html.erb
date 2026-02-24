@@ -1,0 +1,32 @@
+<div class="flex gap">
+  <div class="flex flex-column full-width justify-center gap-half">
+    <div class="nav__header">
+      <% if Current.identity.accounts.many? %>
+        <div class="nav__header-title max-width">
+          <div class="overflow-ellipsis"><strong><%= Current.account.name %></strong></div>
+        </div>
+      <% end %>
+      <div class="nav__header-actions nav__header-actions--end nav__close">
+        <button class="btn txt-xx-small" data-action="dialog#close">
+          <%= icon_tag "close" %>
+          <span class="for-screen-reader">Close menu</span>
+        </button>
+      </div>
+    </div>
+    <%= jump_field_tag %>
+  </div>
+</div>
+
+<div class="nav__scroll-container">
+  <div class="nav__hotkeys margin-block-end-half" role="list">
+    <%= filter_hotkey_link "Home", root_path, 1, "home" %>
+    <%= filter_hotkey_link "Assigned to me", cards_path(assignee_ids: [Current.user.id]), 2, "clipboard" %>
+    <%= filter_hotkey_link "Added by me", cards_path(creator_ids: [Current.user.id]), 3, "person-add" %>
+  </div>
+
+  <%= yield %>
+
+  <div class="nav__blank-slate blank-slate">
+    Nothing matches that filter
+  </div>
+</div>

@@ -1,0 +1,27 @@
+<%= tag.div \
+      id: dom_id(card, "bubble"),
+      hidden: true,
+      class: "bubble",
+      data: {
+        controller: "bubble",
+        action: "turbo:morph-element->bubble#update:self",
+        bubble_entropy_value: entropy_bubble_options_for(card).to_json,
+        bubble_stalled_value: stalled_bubble_options_for(card)&.to_json
+      } do %>
+
+  <svg viewBox="0 0 200 100">
+    <path id="<%= dom_id(card, "bubble-top-half") %>" fill="transparent" d="M 20,100 A 80,80 0 0,1 180,100"/>
+    <text text-anchor="middle" fill="currentColor">
+      <textPath href="#<%= dom_id(card, "bubble-top-half") %>" startOffset="50%" dominant-baseline="middle" data-bubble-target="top"></textPath>
+    </text>
+  </svg>
+
+  <span class="bubble__number" data-bubble-target="center"></span>
+
+  <svg viewBox="0 0 200 100">
+    <path id="<%= dom_id(card, "bubble-bottom-half") %>" d="M 20,0 A 80,80 0 0,0 180,0" fill="transparent"/>
+    <text text-anchor="middle" fill="currentColor">
+      <textPath href="#<%= dom_id(card, "bubble-bottom-half") %>" startOffset="50%" dominant-baseline="middle" data-bubble-target="bottom"></textPath>
+    </text>
+  </svg>
+<% end %>

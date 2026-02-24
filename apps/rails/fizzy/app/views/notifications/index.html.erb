@@ -1,0 +1,24 @@
+<% @page_title = "Notifications" %>
+<% @hide_footer_frames = true %>
+
+<% content_for :header do %>
+  <div class="header__actions header__actions--start">
+    <%= back_link_to "Home", root_path, "keydown.left@document->hotkey#click keydown.esc@document->hotkey#click" %>
+  </div>
+
+  <h1 class="header__title" data-bridge--title-target="header"><%= @page_title %></h1>
+
+  <div class="header__actions header__actions--end">
+    <%= link_to notifications_settings_path, class: "btn btn--circle-mobile", data: { bridge__overflow_menu_target: "item", bridge_title: "Notification settings" } do %>
+      <%= icon_tag "settings" %> <span class="for-screen-reader">Notification settings</span>
+    <% end %>
+  </div>
+<% end %>
+
+<div data-controller="badge navigable-list" data-badge-unread-class="unread" data-action="keydown@document->navigable-list#navigate" data-navigable-list-actionable-items-value="true"
+      data-navigable-list-focus-on-selection-value="false">
+  <%= render "notifications/index/unread_notifications", unread: @unread if @unread %>
+  <%= render "notifications/index/read_notifications", page: @page %>
+</div>
+
+<%= notifications_next_page_link(@page) if @page.records.any? %>

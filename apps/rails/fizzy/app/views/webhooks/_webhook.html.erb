@@ -1,0 +1,13 @@
+<li class="list-style-none margin-none flex align-center gap full-width">
+  <%= link_to webhook, class: "txt-ink flex gap-half align-center min-width txt-medium" do %>
+    <strong class="overflow-ellipsis"><%= webhook.name %></strong>
+  <% end %>
+
+  <hr class="separator--horizontal flex-item-grow" style="--border-color: var(--color-ink-medium); --border-style: dashed" aria-hidden="true">
+
+  <%= button_to webhook, method: :delete, class: "btn btn--circle btn--negative txt-xx-small flex-item-no-shrink",
+        data: { turbo_confirm: "Are you sure you want to permanently remove this webhook?" } do %>
+    <%= icon_tag "minus" %>
+    <span class="for-screen-reader">Remove <%= webhook.name %></span>
+  <% end %>
+</li>

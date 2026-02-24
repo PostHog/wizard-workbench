@@ -1,0 +1,8 @@
+<li class="popup__item" data-filter-target="item" data-navigable-list-target="item" aria-checked="<%= card.tagged_with?(tag) %>">
+  <%= button_to card_taggings_path(card, params: { tag_title: tag.title }), method: :post,
+      class: "popup__btn btn",
+      form_class: "max-width flex-item-grow" do %>
+    <span class="overflow-ellipsis flex-item-grow"><%= tag.hashtag %></span>
+    <%= icon_tag "check", size: 18, class: "checked flex-item-no-shrink flex-item-justify-end", style: "--icon-size: 1em" %>
+  <% end %>
+</li>

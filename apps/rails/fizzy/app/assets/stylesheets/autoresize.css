@@ -1,0 +1,28 @@
+@layer components {
+  @supports not (field-sizing: content) {
+    .autoresize__wrapper {
+      display: grid !important;
+      position: relative;
+
+      > *, &::after {
+        grid-area: 1 / 1 / 2 / 2;
+      }
+
+      &::after {
+        content: attr(data-autoresize-clone-value) " ";
+        font: inherit;
+        line-height: inherit;
+        padding-block: var(--autosize-block-padding, 0);
+        visibility: hidden;
+        white-space: pre-wrap;
+      }
+    }
+
+    .autoresize__textarea {
+      inset: 0;
+      overflow: hidden;
+      position: absolute;
+      resize: none;
+    }
+  }
+}

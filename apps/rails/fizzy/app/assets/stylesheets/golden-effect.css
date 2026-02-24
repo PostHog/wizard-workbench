@@ -1,0 +1,22 @@
+@layer components {
+  .golden-effect {
+    /* Uncomment below to use the card color for golden effect */
+    /* --color-golden: color-mix(in srgb, var(--card-color) 35%, transparent); */
+
+    background-color: color-mix(in srgb, var(--color-golden) 4%, var(--color-canvas));
+    background-image: linear-gradient(60deg,
+      color-mix(in srgb, var(--color-golden) 45%, transparent) 0%,
+      color-mix(in srgb, var(--color-golden) 10%, transparent) 33%,
+      color-mix(in srgb, var(--color-golden) 5%, transparent) 66%,
+      color-mix(in srgb, var(--color-golden) 45%, transparent) 100%
+    );
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--color-golden) 100%, transparent),
+      0 0 0.2em 0.2em color-mix(in oklch, var(--color-golden) 25%, transparent),
+      0 0 1em 0.5em color-mix(in oklch, var(--color-golden) 25%, transparent);
+
+    lexxy-toolbar {
+      --lexxy-bg-color: transparent;
+    }
+  }
+}

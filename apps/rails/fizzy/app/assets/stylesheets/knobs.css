@@ -1,0 +1,153 @@
+@layer components {
+  .knob {
+    --knob-angle-reserve: 120deg;
+    --knob-option-angle: calc((360deg - var(--knob-angle-reserve)) / (var(--knob-options) - 1));
+    --knob-option-size: 3ch;
+    --knob-chamfer-size: 1ch;
+    --knob-color: oklch(var(--lch-ink-light));
+    --knob-color-accent: oklch(var(--lch-blue-medium));
+    --knob-tick-size: 1ch;
+    --knob-radius: calc(var(--knob-size) / 2);
+    --knob-size: 96px;
+
+    border: none;
+    display: block;
+    font-weight: 500;
+    padding: var(--knob-option-size) 0 0;
+    position: relative;
+    text-align: center;
+  }
+
+  .knob__slider {
+    appearance: none;
+    background-color: transparent;
+    block-size: var(--knob-size);
+    inline-size: var(--knob-size);
+    inset: 50% auto auto 50%;
+    opacity: 0;
+    position: absolute;
+    translate: -50% -50%;
+    z-index: 1;
+
+    &::-moz-range-track {
+      block-size: var(--knob-size);
+      cursor: grab;
+    }
+
+    &::-webkit-slider-runnable-track {
+      block-size: var(--knob-size);
+      cursor: grab;
+    }
+
+    &::-moz-range-thumb {
+      background-color: transparent;
+      border: none;
+      border-radius: 0;
+    }
+
+    &::-webkit-slider-thumb {
+      appearance: none;
+      background-color: transparent;
+      height: 1px;
+      width: 1px;
+    }
+  }
+
+  .knob__option {
+    block-size: var(--knob-option-size);
+    border-radius: 50%;
+    cursor: pointer;
+    display: grid;
+    inline-size: var(--knob-option-size);
+    inset: 50% auto auto 50%;
+    place-content: center;
+    position: absolute;
+    transform:
+      translate(-50%, -50%)
+      rotate(calc(-1 * ((360deg - var(--knob-angle-reserve)) / 2) + (var(--knob-option-angle) * var(--i))))
+      translateY(calc(-1 * var(--knob-radius) - 50% - var(--knob-tick-size)));
+    z-index: 1;
+
+    &:hover,
+    &:has(input:checked) {
+      color: var(--knob-color-accent);
+    }
+
+    &:has(:focus-visible) {
+      outline: var(--focus-ring-size) solid var(--focus-ring-color);
+      outline-offset: 0;
+    }
+
+    /* Tick marks */
+    &:before {
+      background-color: var(--knob-color);
+      block-size: var(--knob-tick-size);
+      content: "";
+      inline-size: 2px;
+      inset: 100% auto auto 50%;
+      position: absolute;
+      translate: -50% 0;
+    }
+
+    /* The value text */
+    span {
+      rotate: calc(((360deg - var(--knob-angle-reserve)) / 2) - (var(--knob-option-angle) * var(--i)));
+    }
+
+    input {
+      opacity: 0;
+      position: absolute;
+    }
+  }
+
+  .knob__knob {
+    background: linear-gradient(to top, var(--knob-color), color-mix(in oklch, var(--knob-color) 50%, var(--color-canvas) 50%));
+    block-size: var(--knob-size);
+    border-radius: 50%;
+    box-shadow:
+      0 0 2px 1px rgba(0,0,0,0.10),
+      0 2px 4px rgba(0,0,0,0.15),
+      0 2px 8px rgba(0,0,0,0.20);
+    inline-size: var(--knob-size);
+    margin-inline: auto;
+    position: relative;
+
+    &:before,
+    &:after {
+      content: "";
+      position: absolute;
+    }
+
+    /* Indent */
+    &:before {
+      background: linear-gradient(to bottom, var(--knob-color), color-mix(in oklch, var(--knob-color) 50%, var(--color-canvas) 50%));
+      block-size: calc(var(--knob-size) - var(--knob-chamfer-size));
+      border-radius: 50%;
+      box-shadow:
+        0 -1px 0 rgba(255, 255, 255, 0.25),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.25);
+      inline-size: calc(var(--knob-size) - var(--knob-chamfer-size));
+      inset: 50% auto auto 50%;
+      translate: -50% -50%;
+    }
+
+    /* Indicator */
+    &:after {
+      background-color: var(--color-ink);
+      block-size: calc(var(--knob-radius) - var(--knob-chamfer-size) / 2);
+      border-radius: 50% 50% 2px 2px;
+      inline-size: 4px;
+      inset: auto auto 50% 50%;
+      rotate: calc(-1 * ((360deg - var(--knob-angle-reserve)) / 2) + (var(--knob-option-angle) * var(--knob-index)));
+      transform-origin: center bottom;
+      transition: rotate 100ms;
+      translate: -50% 0;
+    }
+  }
+
+  .knob__label {
+    font-weight: bold;
+    margin-block-start: 1ch;
+    text-transform: uppercase;
+  }
+}

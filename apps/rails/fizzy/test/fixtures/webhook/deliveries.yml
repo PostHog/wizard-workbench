@@ -1,0 +1,51 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+successfully_completed:
+  id: <%= ActiveRecord::FixtureSet.identify("successfully_completed_delivery", :uuid) %>
+  account: 37s_uuid
+  webhook: active_uuid
+  event: logo_published_uuid
+  state: completed
+  request: '<%= { headers: {} }.to_json %>'
+  response: '<%= { code: 200, headers: {} }.to_json %>'
+  created_at: <%= 1.week.ago %>
+
+unsuccessfully_completed:
+  id: <%= ActiveRecord::FixtureSet.identify("unsuccessfully_completed_delivery", :uuid) %>
+  account: 37s_uuid
+  webhook: active_uuid
+  event: logo_assignment_jz_uuid
+  state: completed
+  request: '<%= { headers: {} }.to_json %>'
+  response: '<%= { code: 422, headers: {} }.to_json %>'
+  created_at: <%= 1.week.ago + 1.hour %>
+
+errored:
+  id: <%= ActiveRecord::FixtureSet.identify("errored_delivery", :uuid) %>
+  account: 37s_uuid
+  webhook: active_uuid
+  event: layout_published_uuid
+  state: errored
+  request: '<%= { headers: {} }.to_json %>'
+  response: '<%= { error: "destination_unreachable" }.to_json %>'
+  created_at: <%= 1.week.ago %>
+
+pending:
+  id: <%= ActiveRecord::FixtureSet.identify("pending_delivery", :uuid) %>
+  account: 37s_uuid
+  webhook: active_uuid
+  event: shipping_closed_uuid
+  state: pending
+  request: null
+  response: null
+  created_at: <%= 2.day.ago %>
+
+in_progress:
+  id: <%= ActiveRecord::FixtureSet.identify("in_progress_delivery", :uuid) %>
+  account: 37s_uuid
+  webhook: active_uuid
+  event: logo_assignment_km_uuid
+  state: in_progress
+  request: null
+  response: null
+  created_at: <%= 1.day.ago %>

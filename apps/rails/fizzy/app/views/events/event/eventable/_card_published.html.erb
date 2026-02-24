@@ -1,0 +1,7 @@
+<%= render "events/event/layout", card: event.eventable, event: event do %>
+  <span class="txt-break overflow-line-clamp txt-tight-lines">
+    <%= format_excerpt(event&.eventable.description, length: 200) -%>
+  </span>
+
+  <%= render "events/event/attachments", eventable: event.eventable %>
+<% end %> 

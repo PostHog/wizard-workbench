@@ -1,0 +1,7 @@
+<% if card.image.present? %>
+  <div class="card__background">
+    <%= image_tag card.image.presence || "", size: 120, data: { upload_preview_target: "image" } %>
+  </div>
+
+  <%= yield %>
+<% end %>

@@ -1,0 +1,19 @@
+@layer components {
+  .drag-and-drop__dragged-item {
+    box-shadow: none;
+    filter: grayscale(1) brightness(0.97);
+    opacity: 0.6;
+    outline: 2px dashed var(--color-selected-dark);
+  }
+
+  .drag-and-drop__hover-container {
+    --dnd-bg-color: var(--color-selected-light);
+    --dnd-border-color: var(--color-selected-dark);
+
+    background-color: var(--dnd-bg-color);
+    outline: 2px dashed var(--dnd-border-color);
+    outline-offset: -2px;
+    transition: background-color 200ms;
+    z-index: 1;
+  }
+}

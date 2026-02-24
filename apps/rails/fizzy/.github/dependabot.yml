@@ -1,0 +1,32 @@
+version: 2
+
+registries:
+  github-basecamp:
+    type: git
+    url: https://github.com
+    username: x-access-token
+    password: ${{secrets.FIZZY_GH_TOKEN}}
+
+updates:
+  - package-ecosystem: bundler
+    registries:
+      - github-basecamp
+    directory: "/"
+    insecure-external-code-execution: allow
+    open-pull-requests-limit: 10
+    vendor: false
+    groups:
+      development-dependencies:
+        dependency-type: "development"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7

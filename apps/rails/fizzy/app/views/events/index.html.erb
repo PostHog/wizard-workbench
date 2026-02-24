@@ -1,0 +1,28 @@
+<% @page_title = "Home" %>
+<% @header_class = "header--events" %>
+
+<%= render "cards/broadcasts", filter: @filter %>
+
+<% content_for :header do %>
+  <%= render "events/index/add_card_button", user_filtering: @user_filtering %>
+
+  <h1 class="header__title" data-controller="dialog-manager" data-bridge--title-target="header">
+    <% if @user_filtering.boards.many? %>
+      <span>Activity <%= @user_filtering.filter.boards.any? ? "in" : "across" %></span>
+    <% else %>
+      <span>Latest Activity</span>
+    <% end %>
+
+    <%= render "events/index/filter", user_filtering: @user_filtering %>
+  </h1>
+
+  <%= render "events/index/add_board_button", user_filtering: @user_filtering %>
+<% end %>
+
+<%= tag.div id: "activity", class: "events", data: { controller: "pagination", pagination_paginate_on_intersection_value: true } do %>
+  <%= day_timeline_pagination_frame_tag @day_timeline do %>
+    <%= render "events/day", day_timeline: @day_timeline %>
+
+    <%= day_timeline_pagination_link(@day_timeline, @filter) %>
+  <% end %>
+<% end %>

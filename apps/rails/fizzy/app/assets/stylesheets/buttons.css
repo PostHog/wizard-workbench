@@ -1,0 +1,274 @@
+@layer components {
+  .btn {
+    --icon-size: var(--btn-icon-size, 1.3em);
+    --btn-border-radius: 99rem;
+    --btn-hover-brightness: 0.9;
+
+    align-items: center;
+    background-color: var(--btn-background, var(--color-canvas));
+    border-radius: var(--btn-border-radius);
+    border: var(--btn-border-size, 1px) solid var(--btn-border-color, var(--color-ink-light));
+    color: var(--btn-color, var(--color-ink));
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 1em;
+    font-weight: var(--btn-font-weight, 600);
+    gap: var(--btn-gap, 0.5em);
+    justify-content: center;
+    padding: var(--btn-padding, 0.5em 1.1em);
+    pointer-events: auto;
+    position: relative;
+    transition: 100ms ease-out;
+    transition-property: background-color, border, box-shadow, color, opacity, scale;
+
+    @media (any-hover: hover) {
+      &:hover {
+        filter: brightness(var(--btn-hover-brightness));
+      }
+    }
+
+    html[data-theme="dark"] & {
+      --btn-hover-brightness: 1.25;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme]) & {
+        --btn-hover-brightness: 1.25;
+      }
+    }
+
+    &[disabled],
+    &:has([disabled]),
+    [disabled] &[type=submit],
+    &[type=submit]:disabled {
+      cursor: not-allowed;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    form[aria-busy] &:disabled {
+      position: relative;
+
+      > * {
+        visibility: hidden;
+      }
+
+      &::after {
+        --mask: no-repeat radial-gradient(#000 68%,#0000 71%);
+        --size: 1.25em;
+
+        -webkit-mask: var(--mask), var(--mask), var(--mask);
+        -webkit-mask-size: 28% 45%;
+        animation: submitting 1s infinite linear;
+        aspect-ratio: 8/5;
+        background: currentColor;
+        content: "";
+        inline-size: var(--size);
+        inset: 50%;
+        margin-block: calc((var(--size) / 3) * -1);
+        margin-inline: calc((var(--size) / 2) * -1);
+        position: absolute;
+      }
+    }
+  }
+
+  /* Variants
+  /* ------------------------------------------------------------------------ */
+
+  .btn--plain {
+    --btn-background: transparent;
+    --btn-border-radius: 0;
+    --btn-border-size: 0;
+    --btn-color: inherit;
+    --btn-icon-size: 100%;
+    --btn-padding: 0;
+  }
+
+  .btn--link {
+    --btn-background: var(--color-link);
+    --btn-border-color: var(--color-canvas);
+    --btn-color: var(--color-ink-inverted);
+    --focus-ring-color: var(--color-link);
+  }
+
+  .btn--circle,
+  .btn[aria-label]:where(:has(.icon)),
+  .btn:where(:has(.for-screen-reader):has(.icon)) {
+    --btn-padding: 0;
+    --icon-size: 75%;
+
+    aspect-ratio: 1;
+    block-size: var(--btn-size);
+    display: grid;
+    inline-size: var(--btn-size);
+    justify-content: normal; /* FF fix */
+    place-items: center;
+
+    > * {
+      grid-area: 1/1;
+    }
+  }
+
+  /* Make a normal button circular on mobile */
+  @media (max-width: 639px) {
+    .btn--circle-mobile {
+      --btn-size: 3em;
+      --btn-padding: 0;
+      --icon-size: 75%;
+
+      aspect-ratio: 1;
+      inline-size: var(--btn-size);
+
+      kbd,
+      span:last-of-type:not(.icon) {
+        display: none;
+      }
+    }
+  }
+
+  @media (min-width: 640px) {
+    .btn--circle-mobile .icon--mobile-only {
+      display: none !important;
+    }
+  }
+
+  .btn--negative {
+    --btn-background: var(--color-negative);
+    --btn-border-color: var(--color-negative);
+    --btn-color: var(--color-ink-inverted);
+    --focus-ring-color: var(--color-negative);
+  }
+
+  .btn--positive {
+    --btn-background: var(--color-positive);
+    --btn-border-color: var(--color-canvas);
+    --btn-color: var(--color-ink-inverted);
+    --focus-ring-color: var(--color-positive);
+  }
+
+  .btn--success {
+    --success-timing-function: cubic-bezier(0.25, 1.25, 0.5, 1);
+    animation: success 1s var(--success-timing-function);
+
+    .icon {
+      animation: zoom-fade 500ms var(--success-timing-function);
+    }
+  }
+
+  /* Fake button used to help space things out */
+  .btn--placeholder {
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .btn--remove {
+    --btn-icon-size: 0.7em;
+  }
+
+  .btn--reversed {
+    --btn-background: var(--color-ink);
+    --btn-border-color: var(--color-canvas);
+    --btn-color: var(--color-canvas);
+    --focus-ring-color: var(--color-ink);
+  }
+
+  /* Toggleable buttons
+  /* ------------------------------------------------------------------------ */
+
+  .btn {
+    &:has(input[type=radio], input[type=checkbox]) {
+      position: relative;
+
+      :is(input[type=radio], input[type=checkbox]) {
+        appearance: none;
+        border-radius: var(--btn-border-radius);
+        cursor: pointer;
+        display: flex;
+        inset: 0;
+        margin: 0;
+        padding: 0;
+        position: absolute;
+
+        &:focus-visible {
+          outline: none;
+        }
+      }
+
+      .checked {
+        display: none;
+      }
+    }
+
+    &:has(input:checked)  {
+      --btn-background: var(--color-ink);
+      --btn-border-color: var(--color-ink);
+      --btn-color: var(--color-ink-inverted);
+      --focus-ring-color: var(--color-ink);
+
+      .checked {
+        display: block;
+      }
+    }
+
+    &:has(input:focus-visible)  {
+      outline: var(--focus-ring-size) solid var(--focus-ring-color);
+      outline-offset: var(--focus-ring-offset);
+    }
+  }
+
+  .btn--back {
+    --btn-border-size: 0;
+
+    @media (max-width: 639px) {
+      strong, kbd {
+        display: none;
+      }
+    }
+
+    @media (min-width: 640px) {
+      font-size: var(--text-medium);
+
+      .icon--arrow-left {
+        display: none;
+      }
+    }
+  }
+
+
+  /* Button groups
+  /* ------------------------------------------------------------------------ */
+
+  .btn__group {
+    .btn {
+      --btn-border-radius: 0;
+      --radius: 0.3em;
+
+      flex: 1 0 33%;
+      inline-size: 100%;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    form {
+      flex: 1 1 0%;
+    }
+
+    :first-of-type .btn {
+      border-end-start-radius: var(--radius);
+      border-inline-end: 0;
+      border-start-start-radius: var(--radius);
+      padding-inline-end: 0.8em;
+    }
+
+    :last-of-type .btn {
+      border-end-end-radius: var(--radius);
+      border-inline-start: 0;
+      border-start-end-radius: var(--radius);
+      padding-inline-start: 0.8em;
+    }
+
+    span {
+      inline-size: 100%;
+    }
+  }
+}
