@@ -53,11 +53,6 @@ procs:
     autostart: false
     env_file: .env
 
-  wizard-benchmark-tail:
-    # Tail the benchmark JSON output
-    shell: "tail -f /tmp/posthog-wizard-benchmark.json"
-    autostart: false
-
   # ═══════════════════════════════════════════════════════════════════════════
   # WIZARD CI - Run wizard and optionally create PR
   # ═══════════════════════════════════════════════════════════════════════════
