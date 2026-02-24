@@ -1,0 +1,20 @@
+{
+  "plugins": {
+    "tokens": true,
+    "cache": true,
+    "turns": true,
+    "compactions": true,
+    "contextSize": true,
+    "cost": true,
+    "duration": true,
+    "summary": true,
+    "jsonWriter": true
+  },
+  "output": {
+    "benchmarkPath": "/tmp/posthog-wizard-benchmark.json",
+    "benchmarkEnabled": true,
+    "logPath": "/tmp/posthog-wizard.log",
+    "logEnabled": true,
+    "suppressWizardLogs": false
+  }
+}
