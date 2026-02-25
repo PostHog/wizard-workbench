@@ -19,6 +19,13 @@ class SessionsController < ApplicationController
   end
 
   def destroy
+    if Current.user
+      PostHog.capture(
+        distinct_id: Current.user.posthog_distinct_id,
+        event: "user_signed_out"
+      )
+    end
+
     terminate_session
 
     respond_to do |format|
@@ -59,6 +66,13 @@ class SessionsController < ApplicationController
 
       if signup.valid?(:identity_creation)
         magic_link = signup.create_identity
+
+        PostHog.capture(
+          distinct_id: email_address,
+          event: "user_signed_up",
+          properties: { signup_method: "magic_link" }
+        )
+
         redirect_to_session_magic_link magic_link
       else
         respond_to do |format|

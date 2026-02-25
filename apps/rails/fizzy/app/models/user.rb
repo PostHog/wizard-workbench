@@ -36,6 +36,22 @@ class User < ApplicationRecord
     update!(verified_at: Time.current) unless verified?
   end
 
+  # Called by posthog-rails for automatic user association in error reports.
+  # posthog-rails auto-detects this method by name.
+  def posthog_distinct_id
+    identity&.email_address || id
+  end
+
+  def posthog_properties
+    {
+      email: identity&.email_address,
+      name: name,
+      role: role,
+      account_id: account_id,
+      date_joined: created_at&.iso8601
+    }
+  end
+
   private
     def close_remote_connections
       ActionCable.server.remote_connections.where(current_user: self).disconnect(reconnect: false)
