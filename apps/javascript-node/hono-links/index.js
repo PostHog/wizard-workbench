@@ -1,10 +1,49 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { PostHog } from 'posthog-node';
 
 const app = new Hono();
 
 const links = [];
 let nextId = 1;
+
+// --- PostHog Setup ---
+
+function initializePosthog() {
+  const apiKey = process.env.POSTHOG_API_KEY;
+
+  if (!apiKey) {
+    console.log('WARNING: PostHog not configured (POSTHOG_API_KEY not set)');
+    console.log("         App will work but analytics won't be tracked");
+    return null;
+  }
+
+  const client = new PostHog(apiKey, {
+    host: process.env.POSTHOG_HOST || 'https://us.i.posthog.com',
+    enableExceptionAutocapture: true,
+  });
+
+  return client;
+}
+
+const posthog = initializePosthog();
+
+function trackEvent(distinctId, event, properties = {}) {
+  if (!posthog) return;
+
+  posthog.capture({
+    distinctId,
+    event,
+    properties,
+  });
+}
+
+// Helper to get distinct ID from request headers or fall back to 'anonymous'
+function getDistinctId(c) {
+  return c.req.header('x-posthog-distinct-id') || 'anonymous';
+}
+
+// --- Routes ---
 
 // List links (with optional tag filter and search)
 app.get('/api/links', (c) => {
@@ -12,6 +51,7 @@ app.get('/api/links', (c) => {
   const tag = c.req.query('tag');
   const search = c.req.query('search');
   const favoritesOnly = c.req.query('favorites');
+  const distinctId = getDistinctId(c);
 
   if (tag) {
     result = result.filter((l) => l.tags.includes(tag));
@@ -24,6 +64,22 @@ app.get('/api/links', (c) => {
   }
   if (favoritesOnly === 'true') {
     result = result.filter((l) => l.favorite);
+  }
+
+  if (search) {
+    trackEvent(distinctId, 'links_searched', {
+      search_query: search,
+      results_count: result.length,
+      total_links: links.length,
+    });
+  }
+
+  if (tag) {
+    trackEvent(distinctId, 'links_filtered_by_tag', {
+      tag,
+      results_count: result.length,
+      total_links: links.length,
+    });
   }
 
   return c.json({ links: result, total: result.length });
@@ -47,6 +103,15 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  const distinctId = getDistinctId(c);
+  trackEvent(distinctId, 'link_saved', {
+    link_id: link.id,
+    tags_count: tags.length,
+    has_description: description.length > 0,
+    total_links: links.length,
+  });
+
   return c.json(link, 201);
 });
 
@@ -70,11 +135,28 @@ app.patch('/api/links/:id', async (c) => {
   }
 
   const body = await c.req.json();
+  const wasFavorite = link.favorite;
+
   if (body.url !== undefined) link.url = body.url;
   if (body.title !== undefined) link.title = body.title;
   if (body.description !== undefined) link.description = body.description;
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
+
+  const distinctId = getDistinctId(c);
+
+  // Track favoriting separately as a conversion event
+  if (body.favorite === true && !wasFavorite) {
+    trackEvent(distinctId, 'link_favorited', {
+      link_id: link.id,
+    });
+  }
+
+  trackEvent(distinctId, 'link_updated', {
+    link_id: link.id,
+    updated_fields: Object.keys(body),
+    is_favorite: link.favorite,
+  });
 
   return c.json(link);
 });
@@ -87,7 +169,16 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [link] = links.splice(index, 1);
+  const distinctId = getDistinctId(c);
+
+  trackEvent(distinctId, 'link_deleted', {
+    link_id: link.id,
+    was_favorite: link.favorite,
+    tags_count: link.tags.length,
+    age_hours: (Date.now() - new Date(link.created_at)) / 3600000,
+  });
+
   return c.body(null, 204);
 });
 
@@ -102,8 +193,37 @@ app.get('/api/tags', (c) => {
   return c.json({ tags: tagCounts });
 });
 
+// --- Error Handling ---
+
+// Global error handler — capture exceptions to PostHog
+app.onError((err, c) => {
+  const distinctId = getDistinctId(c);
+
+  if (posthog) {
+    posthog.captureException(err, distinctId);
+  }
+
+  console.error('Unhandled error:', err.message);
+  return c.json({ error: 'Internal server error' }, 500);
+});
+
+// --- Server ---
+
 const PORT = process.env.PORT || 3002;
 
-serve({ fetch: app.fetch, port: PORT }, () => {
+const server = serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Hono links API running on http://localhost:${PORT}`);
 });
+
+// Graceful shutdown, flush PostHog events before exiting
+async function shutdown() {
+  console.log('\nShutting down...');
+  server.close();
+  if (posthog) {
+    await posthog.shutdown();
+  }
+  process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
