@@ -22,3 +22,18 @@ const currentPath = Astro.url.pathname;
     color: var(--color-text);
   }
 </style>
+
+<script is:inline>
+  function handleNavGetStarted(event) {
+    window.posthog?.capture('nav_get_started_clicked');
+  }
+
+  function setupNavTracking() {
+    const navCta = document.querySelector('.nav-cta');
+    navCta?.removeEventListener('click', handleNavGetStarted);
+    navCta?.addEventListener('click', handleNavGetStarted);
+  }
+
+  document.addEventListener('DOMContentLoaded', setupNavTracking);
+  document.addEventListener('astro:page-load', setupNavTracking);
+</script>
