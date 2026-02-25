@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -14,8 +15,21 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const data: ContactFormData = await request.json();
 
+    const posthog = getPostHogServer();
+    const sessionId = request.headers.get('X-PostHog-Session-Id');
+    const clientDistinctId = request.headers.get('X-PostHog-Distinct-Id');
+
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
+      posthog.capture({
+        distinctId: clientDistinctId || data.email || 'anonymous',
+        event: 'contact_form_validation_failed',
+        properties: {
+          $session_id: sessionId || undefined,
+          reason: 'missing_required_fields',
+          source: 'api',
+        },
+      });
       return new Response(
         JSON.stringify({ error: 'Please fill in all required fields.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -25,6 +39,15 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
+      posthog.capture({
+        distinctId: clientDistinctId || data.email || 'anonymous',
+        event: 'contact_form_validation_failed',
+        properties: {
+          $session_id: sessionId || undefined,
+          reason: 'invalid_email',
+          source: 'api',
+        },
+      });
       return new Response(
         JSON.stringify({ error: 'Please enter a valid email address.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -43,6 +66,28 @@ export const POST: APIRoute = async ({ request }) => {
       interest: data.interest,
       message: data.message,
       timestamp: new Date().toISOString(),
+    });
+
+    // Identify the user server-side to link properties to their profile
+    posthog.identify({
+      distinctId: data.email,
+      properties: {
+        name: data.name,
+        email: data.email,
+        company: data.company || undefined,
+      },
+    });
+
+    // Capture server-side confirmed lead event
+    posthog.capture({
+      distinctId: data.email,
+      event: 'contact_form_received',
+      properties: {
+        $session_id: sessionId || undefined,
+        interest: data.interest,
+        has_company: Boolean(data.company),
+        source: 'api',
+      },
     });
 
     return new Response(

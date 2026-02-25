@@ -65,11 +65,17 @@ import Layout from '../layouts/Layout.astro';
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
+    // Capture session ID for server-side correlation
+    const sessionId = (window as any).posthog?.get_session_id?.() ?? null;
+    const distinctId = (window as any).posthog?.get_distinct_id?.() ?? null;
+
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(sessionId ? { 'X-PostHog-Session-Id': sessionId } : {}),
+          ...(distinctId ? { 'X-PostHog-Distinct-Id': distinctId } : {}),
         },
         body: JSON.stringify(data),
       });
@@ -79,14 +85,42 @@ import Layout from '../layouts/Layout.astro';
       if (response.ok) {
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
+
+        // Identify the user by email so future events are linked to them
+        (window as any).posthog?.identify(data.email as string, {
+          name: data.name as string,
+          email: data.email as string,
+          company: data.company as string || undefined,
+        });
+
+        // Track successful form submission
+        (window as any).posthog?.capture('contact_form_submitted', {
+          interest: data.interest,
+          has_company: Boolean(data.company),
+        });
+
         form.reset();
       } else {
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
+
+        // Track client-side error response
+        (window as any).posthog?.capture('contact_form_error', {
+          error_type: 'server_error',
+          status: response.status,
+          error_message: result.error || 'Unknown error',
+        });
       }
     } catch (error) {
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
+
+      // Track network/unexpected errors
+      (window as any).posthog?.capture('contact_form_error', {
+        error_type: 'network_error',
+        error_message: (error as Error)?.message || 'Network error',
+      });
+      (window as any).posthog?.captureException(error);
     }
   });
 </script>
