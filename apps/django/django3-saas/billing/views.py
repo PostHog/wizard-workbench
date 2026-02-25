@@ -1,4 +1,6 @@
 import uuid
+import posthog
+from posthog import new_context, identify_context, capture
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -70,6 +72,17 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+
+            # PostHog: Track subscription started (demo mode)
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('subscription_started', properties={
+                    'plan_name': plan.name,
+                    'plan_slug': plan.slug,
+                    'plan_interval': plan.interval,
+                    'mode': 'demo',
+                })
+
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -119,6 +132,7 @@ def change_plan(request, plan_slug):
         if STRIPE_CONFIGURED and subscription.stripe_subscription_id and not subscription.stripe_subscription_id.startswith('sub_demo_'):
             # Update Stripe subscription
             try:
+                old_plan_name = subscription.plan.name
                 stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
                 stripe.Subscription.modify(
                     subscription.stripe_subscription_id,
@@ -130,13 +144,38 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+
+                # PostHog: Track plan change
+                with new_context():
+                    identify_context(str(request.user.id))
+                    capture('plan_changed', properties={
+                        'old_plan': old_plan_name,
+                        'new_plan': plan.name,
+                        'new_plan_slug': plan.slug,
+                        'new_plan_interval': plan.interval,
+                    })
+
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
+                posthog.capture_exception(e)
                 messages.error(request, f'Error changing plan: {str(e)}')
         else:
             # Demo mode
+            old_plan_name = subscription.plan.name
             subscription.plan = plan
             subscription.save()
+
+            # PostHog: Track plan change (demo mode)
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('plan_changed', properties={
+                    'old_plan': old_plan_name,
+                    'new_plan': plan.name,
+                    'new_plan_slug': plan.slug,
+                    'new_plan_interval': plan.interval,
+                    'mode': 'demo',
+                })
+
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -171,6 +210,16 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+
+        # PostHog: Track subscription cancellation
+        with new_context():
+            identify_context(str(request.user.id))
+            capture('subscription_canceled', properties={
+                'plan_name': subscription.plan.name,
+                'plan_slug': subscription.plan.slug,
+                'plan_interval': subscription.plan.interval,
+            })
+
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -269,6 +318,22 @@ def _handle_checkout_completed(session):
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
     )
+
+    # PostHog: Track checkout completion and subscription start (server-side, from webhook)
+    with new_context():
+        identify_context(str(user.id))
+        capture('checkout_completed', properties={
+            'plan_name': plan.name,
+            'plan_slug': plan.slug,
+            'plan_interval': plan.interval,
+            'stripe_subscription_id': stripe_sub['id'],
+        })
+        capture('subscription_started', properties={
+            'plan_name': plan.name,
+            'plan_slug': plan.slug,
+            'plan_interval': plan.interval,
+            'mode': 'stripe',
+        })
 
 
 def _handle_subscription_updated(subscription_data):
