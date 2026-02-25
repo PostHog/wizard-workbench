@@ -1,9 +1,47 @@
 import { createServer } from 'node:http';
+import { PostHog } from 'posthog-node';
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
 let nextContactId = 1;
 let nextGroupId = 2;
+
+// --- PostHog Setup ---
+
+function initializePosthog() {
+  const apiKey = process.env.POSTHOG_API_KEY;
+
+  if (!apiKey) {
+    console.log("WARNING: PostHog not configured (POSTHOG_API_KEY not set)");
+    console.log("         App will work but analytics won't be tracked");
+    return null;
+  }
+
+  return new PostHog(apiKey, {
+    host: process.env.POSTHOG_HOST || 'https://us.i.posthog.com',
+    enableExceptionAutocapture: true,
+  });
+}
+
+const posthog = initializePosthog();
+
+function trackEvent(distinctId, event, properties = {}) {
+  if (!posthog) return;
+
+  posthog.capture({
+    distinctId,
+    event,
+    properties,
+  });
+}
+
+// Extract distinct ID from request headers (supports X-PostHog-Distinct-ID from a
+// frontend client) or falls back to 'anonymous'.
+function getDistinctId(req) {
+  return req.headers['x-posthog-distinct-id'] || 'anonymous';
+}
+
+// --- Helpers ---
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -47,6 +85,13 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+
+      trackEvent(getDistinctId(req), 'group_created', {
+        group_id: group.id,
+        group_name: group.name,
+        total_groups: groups.length,
+      });
+
       return json(res, 201, group);
     }
 
@@ -70,6 +115,14 @@ const server = createServer(async (req, res) => {
         );
       }
 
+      if (search || groupId) {
+        trackEvent(getDistinctId(req), 'contacts_searched', {
+          search_query: search || null,
+          group_id_filter: groupId ? parseInt(groupId, 10) : null,
+          results_count: result.length,
+        });
+      }
+
       return json(res, 200, { contacts: result, total: result.length });
     }
 
@@ -90,6 +143,15 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+
+      trackEvent(getDistinctId(req), 'contact_created', {
+        contact_id: contact.id,
+        has_phone: !!contact.phone,
+        has_company: !!contact.company,
+        group_id: contact.group_id,
+        total_contacts: contacts.length,
+      });
+
       return json(res, 201, contact);
     }
 
@@ -108,11 +170,18 @@ const server = createServer(async (req, res) => {
       if (!contact) return json(res, 404, { error: 'Contact not found' });
 
       const body = await parseBody(req);
-      if (body.name !== undefined) contact.name = body.name;
-      if (body.email !== undefined) contact.email = body.email;
-      if (body.phone !== undefined) contact.phone = body.phone;
-      if (body.company !== undefined) contact.company = body.company;
-      if (body.group_id !== undefined) contact.group_id = body.group_id;
+      const updatedFields = [];
+      if (body.name !== undefined) { contact.name = body.name; updatedFields.push('name'); }
+      if (body.email !== undefined) { contact.email = body.email; updatedFields.push('email'); }
+      if (body.phone !== undefined) { contact.phone = body.phone; updatedFields.push('phone'); }
+      if (body.company !== undefined) { contact.company = body.company; updatedFields.push('company'); }
+      if (body.group_id !== undefined) { contact.group_id = body.group_id; updatedFields.push('group_id'); }
+
+      trackEvent(getDistinctId(req), 'contact_updated', {
+        contact_id: contact.id,
+        updated_fields: updatedFields,
+        fields_count: updatedFields.length,
+      });
 
       return json(res, 200, contact);
     }
@@ -123,13 +192,25 @@ const server = createServer(async (req, res) => {
       const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
-      contacts.splice(index, 1);
+      const [contact] = contacts.splice(index, 1);
+
+      trackEvent(getDistinctId(req), 'contact_deleted', {
+        contact_id: contact.id,
+        had_phone: !!contact.phone,
+        had_company: !!contact.company,
+        group_id: contact.group_id,
+        total_contacts: contacts.length,
+      });
+
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    if (posthog) {
+      posthog.captureException(err, getDistinctId(req));
+    }
     json(res, 500, { error: 'Internal server error' });
   }
 });
@@ -139,3 +220,16 @@ const PORT = process.env.PORT || 3004;
 server.listen(PORT, () => {
   console.log(`Native HTTP contacts API running on http://localhost:${PORT}`);
 });
+
+// Graceful shutdown — flush pending PostHog events before exiting
+async function shutdown() {
+  console.log('\nShutting down...');
+  server.close();
+  if (posthog) {
+    await posthog.shutdown();
+  }
+  process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
