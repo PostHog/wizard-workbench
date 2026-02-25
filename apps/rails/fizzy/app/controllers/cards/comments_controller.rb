@@ -12,6 +12,16 @@ class Cards::CommentsController < ApplicationController
   def create
     @comment = @card.comments.create!(comment_params)
 
+    # PostHog: Track comment creation — collaboration engagement signal
+    PostHog.capture(
+      distinct_id: Current.identity.email_address,
+      event: "comment_created",
+      properties: {
+        card_id: @card.id.to_s,
+        board_id: @board.id.to_s
+      }
+    )
+
     respond_to do |format|
       format.turbo_stream
       format.json { head :created, location: card_comment_path(@card, @comment, format: :json) }

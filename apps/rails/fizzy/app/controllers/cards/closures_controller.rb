@@ -6,6 +6,16 @@ class Cards::ClosuresController < ApplicationController
     @card.close
     refresh_stream_if_needed
 
+    # PostHog: Track card closure — key workflow completion signal
+    PostHog.capture(
+      distinct_id: Current.identity.email_address,
+      event: "card_closed",
+      properties: {
+        card_id: @card.id.to_s,
+        board_id: @board.id.to_s
+      }
+    )
+
     respond_to do |format|
       format.turbo_stream
       format.json { head :no_content }
