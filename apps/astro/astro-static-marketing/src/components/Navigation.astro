@@ -8,11 +8,11 @@ const currentPath = Astro.url.pathname;
       <span>NeuralFlow</span> AI
     </a>
     <ul class="nav-links">
-      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]}>Features</a></li>
-      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
-      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
-      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]} data-nav-dest="features">Features</a></li>
+      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]} data-nav-dest="pricing">Pricing</a></li>
+      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]} data-nav-dest="about">About</a></li>
+      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]} data-nav-dest="docs">Docs</a></li>
+      <li><a href="#" class="nav-cta" id="nav-get-started-btn">Get Started</a></li>
     </ul>
   </div>
 </nav>
@@ -22,3 +22,20 @@ const currentPath = Astro.url.pathname;
     color: var(--color-text);
   }
 </style>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('nav-get-started-btn')?.addEventListener('click', function () {
+      window.posthog?.capture('nav_get_started_clicked');
+    });
+
+    document.querySelectorAll('[data-nav-dest]').forEach(function (link) {
+      link.addEventListener('click', function () {
+        var dest = link.getAttribute('data-nav-dest');
+        window.posthog?.capture('nav_link_clicked', {
+          destination: dest
+        });
+      });
+    });
+  });
+</script>
