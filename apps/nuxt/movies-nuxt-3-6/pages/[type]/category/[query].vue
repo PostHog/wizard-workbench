@@ -6,10 +6,18 @@ const query = computed(() => route.params.query as string)
 const type = computed(() => route.params.type as MediaType || 'movie')
 
 const items: Media[] = reactive([])
+const { $posthog: posthog } = useNuxtApp()
 
 async function fetch(page: number) {
   items.push(...(await listMedia(type.value, query.value, page)).results)
 }
+
+onMounted(() => {
+  posthog?.capture('category_browsed', {
+    category: query.value,
+    media_type: type.value,
+  })
+})
 </script>
 
 <template>
