@@ -1,6 +1,7 @@
 import { createFileRoute, Link, MatchRoute, Outlet, retainSearchParams, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
+import { usePostHog } from '@posthog/react'
 import { Spinner } from '../components/Spinner'
 import { fetchUsers } from '../utils/mockTodos'
 
@@ -33,6 +34,7 @@ const roles = ['Admin', 'Member', 'Viewer', 'Editor', 'Manager']
 
 function UsersComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
+  const posthog = usePostHog()
   const { usersView } = Route.useSearch()
   const { users } = Route.useLoaderData()
   const sortBy = usersView?.sortBy ?? 'name'
@@ -44,7 +46,8 @@ function UsersComponent() {
     setFilterDraft(filterBy ?? '')
   }, [filterBy])
 
-  const setSortBy = (sortBy: UsersViewSortBy) =>
+  const setSortBy = (sortBy: UsersViewSortBy) => {
+    posthog.capture('team_members_sorted', { sort_by: sortBy })
     navigate({
       search: (old) => {
         return {
@@ -57,6 +60,7 @@ function UsersComponent() {
       },
       replace: true,
     })
+  }
 
   React.useEffect(() => {
     navigate({
