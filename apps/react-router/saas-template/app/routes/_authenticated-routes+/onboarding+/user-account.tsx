@@ -1,5 +1,6 @@
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { usePostHog } from "@posthog/react";
 import { IconUser } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { data, Form, useNavigation } from "react-router";
@@ -65,6 +66,7 @@ export default function UserAccountOnboardingRoute({
   loaderData,
 }: Route.ComponentProps) {
   const { t } = useTranslation("onboarding", { keyPrefix: "userAccount" });
+  const posthog = usePostHog();
   const { form, fields } = useForm(
     coerceFormValue(onboardingUserAccountSchema),
     {
@@ -74,8 +76,21 @@ export default function UserAccountOnboardingRoute({
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
+  const handleOnboardingSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string | null;
+    posthog?.capture("onboarding_user_account_completed", {
+      has_name: Boolean(name),
+    });
+  };
+
   return (
-    <Form encType="multipart/form-data" method="POST" {...form.props}>
+    <Form
+      encType="multipart/form-data"
+      method="POST"
+      onSubmit={handleOnboardingSubmit}
+      {...form.props}
+    >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>
           <div className="flex flex-col gap-1">

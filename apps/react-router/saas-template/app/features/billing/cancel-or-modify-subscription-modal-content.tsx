@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
@@ -53,7 +54,18 @@ export function CancelOrModifySubscriptionModalContent({
   const { t: tModal } = useTranslation("billing", {
     keyPrefix: "billingPage.pricingModal",
   });
+  const posthog = usePostHog();
   const [billingPeriod, setBillingPeriod] = useState("annual");
+
+  const handlePlanSwitchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const lookupKey = formData.get("lookupKey") as string | null;
+    posthog?.capture("subscription_plan_switched", {
+      from_interval: currentTierInterval,
+      from_tier: currentTier,
+      lookup_key: lookupKey ?? undefined,
+    });
+  };
 
   const isSubmitting =
     isSwitchingToLow || isSwitchingToMid || isSwitchingToHigh;
@@ -119,7 +131,7 @@ export function CancelOrModifySubscriptionModalContent({
 
   return (
     <>
-      <Form method="post" replace>
+      <Form method="post" onSubmit={handlePlanSwitchSubmit} replace>
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"
