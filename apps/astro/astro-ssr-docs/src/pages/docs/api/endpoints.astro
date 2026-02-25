@@ -58,3 +58,11 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    window.posthog?.capture('docs_api_endpoints_viewed', {
+      page: 'api/endpoints'
+    });
+  });
+</script>
