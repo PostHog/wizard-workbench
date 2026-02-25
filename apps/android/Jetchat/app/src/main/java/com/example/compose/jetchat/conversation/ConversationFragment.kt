@@ -31,6 +31,7 @@ import com.example.compose.jetchat.MainViewModel
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 
 class ConversationFragment : Fragment() {
 
@@ -39,6 +40,11 @@ class ConversationFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         ComposeView(inflater.context).apply {
             layoutParams = LayoutParams(MATCH_PARENT, MATCH_PARENT)
+
+            PostHog.capture(
+                event = "conversation_viewed",
+                properties = mapOf("channel" to exampleUiState.channelName),
+            )
 
             setContent {
                 JetchatTheme {
