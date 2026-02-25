@@ -19,3 +19,16 @@ const currentPath = Astro.url.pathname;
     </main>
   </div>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Track code snippet copies via the copy event on pre/code elements
+    document.querySelectorAll('pre').forEach(function (pre) {
+      pre.addEventListener('copy', function () {
+        window.posthog?.capture('code_snippet_copied', {
+          page: window.location.pathname
+        });
+      });
+    });
+  });
+</script>

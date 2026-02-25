@@ -52,3 +52,27 @@ const sections = [
     </div>
   ))}
 </aside>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    var sidebar = document.querySelector('.docs-sidebar');
+    if (!sidebar) return;
+
+    sidebar.addEventListener('click', function (event) {
+      var link = event.target.closest('.sidebar-link');
+      if (!link) return;
+
+      var destination = link.getAttribute('href') || '';
+      // Find which section this link belongs to
+      var sectionEl = link.closest('.sidebar-section');
+      var section = sectionEl ? (sectionEl.querySelector('.sidebar-title')?.textContent?.trim() || '') : '';
+      var label = link.textContent?.trim() || '';
+
+      window.posthog?.capture('sidebar_link_clicked', {
+        destination: destination,
+        section: section,
+        label: label
+      });
+    });
+  });
+</script>
