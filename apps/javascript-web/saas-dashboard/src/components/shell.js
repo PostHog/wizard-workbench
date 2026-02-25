@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { router } from '../router.js';
 import { store } from '../store.js';
+import { trackEvent } from '../posthog.js';
 
 /**
  * Renders the app shell: sidebar + header + content area.
@@ -53,6 +54,8 @@ export function renderShell(activeSection) {
   `;
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
+    const userId = user?.id;
+    trackEvent(userId || 'anonymous', 'user_signed_out');
     await api.logout();
     router.navigate('/login');
   });

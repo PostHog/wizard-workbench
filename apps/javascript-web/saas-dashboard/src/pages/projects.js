@@ -2,6 +2,8 @@ import { api } from '../api.js';
 import { router } from '../router.js';
 import { renderShell } from '../components/shell.js';
 import { showModal } from '../components/modal.js';
+import { trackEvent, captureException } from '../posthog.js';
+import { store } from '../store.js';
 
 export async function renderProjects() {
   renderShell('projects');
@@ -75,8 +77,14 @@ export async function renderProjects() {
 
           try {
             const project = await api.createProject(name, desc);
+            const userId = store.state.currentUser?.id || 'anonymous';
+            trackEvent(userId, 'project_created', {
+              project_id: project.id,
+              project_name: project.name,
+            });
             router.navigate(`/projects/${project.id}`);
           } catch (err) {
+            captureException(err, store.state.currentUser?.id || 'anonymous', { action: 'create_project' });
             alert(err.message);
           }
         });
@@ -89,7 +97,9 @@ export async function renderProjects() {
         e.stopPropagation();
         const id = btn.dataset.id;
         if (confirm('Delete this project and all its tasks?')) {
+          const userId = store.state.currentUser?.id || 'anonymous';
           await api.deleteProject(id);
+          trackEvent(userId, 'project_deleted', { project_id: id });
           renderProjects();
         }
       });
