@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -27,6 +28,21 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    // Track email subscription toggle
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_subscription_toggled",
+      properties: {
+        unsubscribed: newUnsubscribedStatus,
+        $set: {
+          email: session.user.email,
+          unsubscribed: newUnsubscribedStatus,
+        },
+      },
+    })
+    await posthog.flush()
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -70,6 +86,17 @@ export const actions = {
         email,
       })
     }
+
+    // Track email update request
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_update_requested",
+      properties: {
+        $set: { email: session.user.email },
+      },
+    })
+    await posthog.flush()
 
     return {
       email,
@@ -172,6 +199,18 @@ export const actions = {
       })
     }
 
+    // Track password update
+    const posthogPw = getPostHogClient()
+    posthogPw.capture({
+      distinctId: user?.id ?? session.user.id,
+      event: "password_updated",
+      properties: {
+        via_recovery: !!isRecoverySession,
+        $set: { email: user?.email ?? session.user.email },
+      },
+    })
+    await posthogPw.flush()
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +259,17 @@ export const actions = {
         currentPassword,
       })
     }
+
+    // Track account deletion before signing out
+    const posthogDel = getPostHogClient()
+    posthogDel.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+      properties: {
+        $set: { email: user?.email },
+      },
+    })
+    await posthogDel.flush()
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -321,6 +371,25 @@ export const actions = {
         },
       })
     }
+
+    // Track profile creation or update
+    const posthogProfile = getPostHogClient()
+    posthogProfile.capture({
+      distinctId: user.id,
+      event: newProfile ? "profile_created" : "profile_updated",
+      properties: {
+        full_name: fullName,
+        company_name: companyName,
+        has_website: website.length > 0,
+        $set: {
+          email: session.user.email,
+          name: fullName,
+          company_name: companyName,
+          website: website,
+        },
+      },
+    })
+    await posthogProfile.flush()
 
     return {
       fullName,
