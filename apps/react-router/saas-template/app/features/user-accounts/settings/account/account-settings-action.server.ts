@@ -22,6 +22,7 @@ import {
   updateUserAccountInDatabaseById,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { supabaseAdminClient } from "~/features/user-authentication/supabase.server";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { badRequest } from "~/utils/http-responses.server";
 import { removeImageFromStorage } from "~/utils/storage-helpers.server";
@@ -45,6 +46,7 @@ export async function accountSettingsAction({
       request,
     });
   const i18n = getInstance(context);
+  const posthog = context.get(posthogContext);
 
   const result = await validateFormData(request, accountSettingsActionSchema, {
     maxFileSize: 1_000_000, // 1MB
@@ -79,6 +81,15 @@ export async function accountSettingsAction({
           user: updates,
         });
       }
+
+      posthog?.capture({
+        event: "user_account_updated",
+        properties: {
+          updated_avatar: !!result.data.avatar,
+          updated_name: !!result.data.name,
+          user_id: user.id,
+        },
+      });
 
       const toastHeaders = await createToastHeaders({
         title: i18n.t("settings:userAccount.toast.userAccountUpdated"),
@@ -152,6 +163,15 @@ export async function accountSettingsAction({
             });
           }),
       );
+
+      // Capture deletion event before signing out (so the distinct ID is still valid)
+      posthog?.capture({
+        event: "user_account_deleted",
+        properties: {
+          organizations_deleted: soleOwnerOrgs.length,
+          user_id: user.id,
+        },
+      });
 
       // Sign out the user before deleting their account
       await supabase.auth.signOut();
