@@ -21,9 +21,7 @@ export default function Feed() {
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="mb-6">
           <h1 className="text-4xl font-bold text-primary mb-2">Your Feed</h1>
-          <p className="text-primary/50">
-            All the fake content you never asked for, but definitely need
-          </p>
+          <p className="text-primary/50">All the fake content you never asked for, but definitely need</p>
         </div>
 
         <div className="space-y-4">
@@ -40,4 +38,3 @@ export default function Feed() {
     </div>
   )
 }
-
