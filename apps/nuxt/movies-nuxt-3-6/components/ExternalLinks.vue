@@ -4,6 +4,12 @@ import type { ExternalIds } from '~/types'
 defineProps<{
   links: ExternalIds
 }>()
+
+const { $posthog: posthog } = useNuxtApp()
+
+function trackExternalLink(platform: string) {
+  posthog?.capture('external_link_clicked', { platform })
+}
 </script>
 
 <template>
@@ -15,6 +21,7 @@ defineProps<{
       aria-label="Link to Twitter account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('twitter')"
     >
       <div i-simple-icons:twitter />
     </a>
@@ -25,6 +32,7 @@ defineProps<{
       aria-label="Link to Facebook account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('facebook')"
     >
       <div i-simple-icons:facebook />
     </a>
@@ -35,6 +43,7 @@ defineProps<{
       aria-label="Link to Instagram account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('instagram')"
     >
       <div i-simple-icons:instagram />
     </a>
@@ -45,6 +54,7 @@ defineProps<{
       aria-label="Link to IMDb account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('imdb')"
     >
       <div i-cib:imdb />
     </a>
@@ -55,6 +65,7 @@ defineProps<{
       aria-label="Link to GitHub account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('github')"
     >
       <div i-simple-icons:github />
     </a>
@@ -65,6 +76,7 @@ defineProps<{
       aria-label="Link to LinkedIn account"
       rel="noopener"
       n-link
+      @click="trackExternalLink('linkedin')"
     >
       <div i-simple-icons:linkedin />
     </a>
@@ -74,6 +86,7 @@ defineProps<{
       aria-label="Link to Email"
       rel="noopener" scale-120
       n-link
+      @click="trackExternalLink('email')"
     >
       <div i-ph-envelope-simple />
     </a>
@@ -83,6 +96,7 @@ defineProps<{
       aria-label="Link to Homepage"
       rel="noopener" scale-120
       n-link
+      @click="trackExternalLink('homepage')"
     >
       <div i-ph-link-simple />
     </a>
