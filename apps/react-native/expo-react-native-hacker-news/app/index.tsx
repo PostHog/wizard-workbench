@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
+import { usePostHog } from "posthog-react-native";
 
 import { Posts } from "@/components/posts/Posts";
 import { Option, StoriesSelect } from "@/components/Select";
@@ -14,6 +15,7 @@ import { Colors } from "@/constants/Colors";
 
 export default function HomeScreen() {
   const [storyType, setStoryType] = useState<StoryType>("topstories");
+  const posthog = usePostHog();
 
   const storyOptions: Option[] = useMemo(() => {
     return storyTypes.map(({ label, type }) => ({
@@ -22,6 +24,23 @@ export default function HomeScreen() {
       icon: MAP_STORY_TYPE_TO_ICON[type],
     }));
   }, []);
+
+  // Track initial story list view
+  useEffect(() => {
+    posthog.capture("story_list_viewed", {
+      story_type: storyType,
+    });
+    // Only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleStoryTypeChange = (newStoryType: StoryType) => {
+    setStoryType(newStoryType);
+    posthog.capture("story_type_changed", {
+      story_type: newStoryType,
+      previous_story_type: storyType,
+    });
+  };
 
   return (
     <>
@@ -41,7 +60,7 @@ export default function HomeScreen() {
       <Posts storyType={storyType} />
       <StoriesSelect
         value={storyType}
-        onChange={setStoryType}
+        onChange={handleStoryTypeChange}
         options={storyOptions}
       />
     </>
