@@ -1,0 +1,205 @@
+{
+  "dashboard": {
+    "name": "Analytics basics",
+    "description": "Core analytics dashboard for the Express Todo API - tracking todo creation, updates, deletions, and completion rates"
+  },
+  "insights": [
+    {
+      "name": "Todos Created Over Time",
+      "description": "Track the trend of todo_created events to monitor new todo creation activity",
+      "query": {
+        "kind": "InsightVizNode",
+        "source": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "event": "todo_created",
+              "custom_name": "Todos Created"
+            }
+          ],
+          "interval": "day",
+          "dateRange": {
+            "date_from": "-30d"
+          },
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "version": 2
+        }
+      },
+      "api_endpoint": "POST https://us.posthog.com/api/projects/238460/insights/"
+    },
+    {
+      "name": "Todo Completion Rate",
+      "description": "Track todo_updated events where completed=true to measure task completion",
+      "query": {
+        "kind": "InsightVizNode",
+        "source": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "event": "todo_updated",
+              "custom_name": "Todos Updated",
+              "properties": []
+            },
+            {
+              "kind": "EventsNode",
+              "event": "todo_updated",
+              "custom_name": "Todos Completed",
+              "properties": [
+                {
+                  "key": "completed",
+                  "value": [
+                    "true"
+                  ],
+                  "operator": "exact",
+                  "type": "event"
+                }
+              ]
+            }
+          ],
+          "interval": "day",
+          "dateRange": {
+            "date_from": "-30d"
+          },
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "version": 2
+        }
+      },
+      "api_endpoint": "POST https://us.posthog.com/api/projects/238460/insights/"
+    },
+    {
+      "name": "Todos Deleted Over Time",
+      "description": "Track the trend of todo_deleted events to monitor deletion activity",
+      "query": {
+        "kind": "InsightVizNode",
+        "source": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "event": "todo_deleted",
+              "custom_name": "Todos Deleted"
+            }
+          ],
+          "interval": "day",
+          "dateRange": {
+            "date_from": "-30d"
+          },
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "version": 2
+        }
+      },
+      "api_endpoint": "POST https://us.posthog.com/api/projects/238460/insights/"
+    },
+    {
+      "name": "Todo Deletion: Completed vs Incomplete",
+      "description": "Breakdown of todo_deleted events by was_completed property to understand what types of todos are being deleted",
+      "query": {
+        "kind": "InsightVizNode",
+        "source": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "event": "todo_deleted",
+              "custom_name": "Todos Deleted"
+            }
+          ],
+          "breakdownFilter": {
+            "breakdown": "was_completed",
+            "breakdown_type": "event"
+          },
+          "interval": "day",
+          "dateRange": {
+            "date_from": "-30d"
+          },
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "version": 2
+        }
+      },
+      "api_endpoint": "POST https://us.posthog.com/api/projects/238460/insights/"
+    },
+    {
+      "name": "Overall Event Volume",
+      "description": "Combined trend of all three todo events (created, updated, deleted) to track overall API activity",
+      "query": {
+        "kind": "InsightVizNode",
+        "source": {
+          "kind": "TrendsQuery",
+          "series": [
+            {
+              "kind": "EventsNode",
+              "event": "todo_created",
+              "custom_name": "Created"
+            },
+            {
+              "kind": "EventsNode",
+              "event": "todo_updated",
+              "custom_name": "Updated"
+            },
+            {
+              "kind": "EventsNode",
+              "event": "todo_deleted",
+              "custom_name": "Deleted"
+            }
+          ],
+          "interval": "day",
+          "dateRange": {
+            "date_from": "-30d"
+          },
+          "trendsFilter": {
+            "display": "ActionsLineGraph"
+          },
+          "version": 2
+        }
+      },
+      "api_endpoint": "POST https://us.posthog.com/api/projects/238460/insights/"
+    }
+  ],
+  "instructions": {
+    "summary": "This specification defines a complete PostHog dashboard for the Express Todo API",
+    "events_tracked": {
+      "todo_created": {
+        "description": "Fired when a new todo is created",
+        "properties": {
+          "todo_id": "Unique identifier of the todo",
+          "title_length": "Length of the todo title",
+          "total_todos": "Total number of todos after creation"
+        },
+        "source": "index.js line 59-63"
+      },
+      "todo_updated": {
+        "description": "Fired when a todo is updated (title or completion status)",
+        "properties": {
+          "todo_id": "Unique identifier of the todo",
+          "completed": "Boolean indicating if the todo is completed"
+        },
+        "source": "index.js line 80-83"
+      },
+      "todo_deleted": {
+        "description": "Fired when a todo is deleted",
+        "properties": {
+          "todo_id": "Unique identifier of the todo",
+          "was_completed": "Boolean indicating if the todo was completed when deleted"
+        },
+        "source": "index.js line 100-103"
+      }
+    },
+    "api_usage": {
+      "create_dashboard": "POST https://us.posthog.com/api/projects/238460/dashboards/",
+      "create_insight": "POST https://us.posthog.com/api/projects/238460/insights/",
+      "add_insight_to_dashboard": "PATCH https://us.posthog.com/api/projects/238460/dashboards/{dashboard_id}/",
+      "required_scope": "dashboard:write, insight:write"
+    },
+    "note": "The current PostHog API key lacks write permissions. To create this dashboard programmatically, you need an API key with 'dashboard:write' and 'insight:write' scopes. Alternatively, you can create these insights manually in the PostHog UI using the query specifications provided above."
+  }
+}
