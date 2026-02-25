@@ -14,8 +14,8 @@ import Layout from '../layouts/Layout.astro';
         and automated insights. Built for teams that move fast.
       </p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Start Free Trial</a>
-        <a href="/docs" class="btn btn-secondary">Read the Docs</a>
+        <a href="#" class="btn btn-primary" id="hero-trial-cta">Start Free Trial</a>
+        <a href="/docs" class="btn btn-secondary" id="hero-docs-cta">Read the Docs</a>
       </div>
     </div>
   </section>
@@ -61,3 +61,32 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupHomePage() {
+    const trialCta = document.getElementById('hero-trial-cta');
+    trialCta?.removeEventListener('click', handleTrialCta);
+    trialCta?.addEventListener('click', handleTrialCta);
+
+    const docsCta = document.getElementById('hero-docs-cta');
+    docsCta?.removeEventListener('click', handleDocsCta);
+    docsCta?.addEventListener('click', handleDocsCta);
+  }
+
+  function handleTrialCta() {
+    window.posthog?.capture('hero_cta_clicked', {
+      label: 'Start Free Trial',
+      location: 'hero'
+    });
+  }
+
+  function handleDocsCta() {
+    window.posthog?.capture('hero_docs_cta_clicked', {
+      label: 'Read the Docs',
+      location: 'hero'
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupHomePage);
+  document.addEventListener('astro:page-load', setupHomePage);
+</script>
