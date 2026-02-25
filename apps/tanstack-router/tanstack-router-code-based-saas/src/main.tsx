@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -86,7 +87,16 @@ function RouterSpinner() {
 
 function RootComponent() {
   return (
-    <>
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY!}
+      options={{
+        api_host: '/ingest',
+        ui_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST || 'https://us.posthog.com',
+        defaults: '2026-01-30',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
@@ -132,7 +142,7 @@ function RootComponent() {
         </div>
       </div>
       <TanStackRouterDevtools position="bottom-right" />
-    </>
+    </PostHogProvider>
   )
 }
 
@@ -277,10 +287,20 @@ const dashboardIndexRoute = createRoute({
 
 function DashboardIndexComponent() {
   const invoices = dashboardIndexRoute.useLoaderData()
+  const posthog = usePostHog()
 
   const totalRevenue = invoices.length * 1250
   const pendingCount = Math.floor(invoices.length * 0.3)
   const paidCount = invoices.length - pendingCount
+
+  React.useEffect(() => {
+    posthog.capture('dashboard_viewed', {
+      total_invoices: invoices.length,
+      total_revenue: totalRevenue,
+      paid_count: paidCount,
+      pending_count: pendingCount,
+    })
+  }, [])
 
   return (
     <div className="p-6">
@@ -433,9 +453,16 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: (ctx) => {
+      posthog.capture('invoice_created', {
+        invoice_id: ctx.data?.id,
+        invoice_title: ctx.data?.title,
+      })
+      router.invalidate()
+    },
   })
 
   return (
@@ -517,9 +544,16 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: (ctx) => {
+      posthog.capture('invoice_updated', {
+        invoice_id: ctx.data?.id,
+        invoice_title: ctx.data?.title,
+      })
+      router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -532,6 +566,13 @@ function InvoiceComponent() {
       replace: true,
     })
   }, [notes])
+
+  React.useEffect(() => {
+    posthog.capture('invoice_viewed', {
+      invoice_id: invoice.id,
+      invoice_title: invoice.title,
+    })
+  }, [invoice.id])
 
   const isPaid = invoice.id % 2 === 0
   const amount = invoice.id * 125
@@ -861,6 +902,17 @@ const userRoute = createRoute({
 
 function UserComponent() {
   const user = userRoute.useLoaderData()
+  const posthog = usePostHog()
+
+  React.useEffect(() => {
+    if (user) {
+      posthog.capture('team_member_viewed', {
+        team_member_id: user.id,
+        team_member_name: user.name,
+        team_member_email: user.email,
+      })
+    }
+  }, [user?.id])
 
   if (!user) {
     return <div className="p-6">User not found</div>
@@ -1003,8 +1055,23 @@ const profileRoute = createRoute({
 
 function ProfileComponent() {
   const { username } = profileRoute.useRouteContext()
+  const posthog = usePostHog()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
+
+  const handleUpgradeClick = () => {
+    posthog.capture('upgrade_plan_clicked', {
+      current_plan: 'free',
+      username: username,
+    })
+  }
+
+  const handleLogout = () => {
+    posthog.capture('user_logged_out', { username: username })
+    posthog.reset()
+    auth.logout()
+    router.invalidate()
+  }
 
   return (
     <div className="p-8">
@@ -1049,7 +1116,10 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={handleUpgradeClick}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Upgrade
             </button>
           </div>
@@ -1066,10 +1136,7 @@ function ProfileComponent() {
               <span className="text-gray-400">→</span>
             </Link>
             <button
-              onClick={() => {
-                auth.logout()
-                router.invalidate()
-              }}
+              onClick={handleLogout}
               className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
             >
               <span>Sign Out</span>
@@ -1094,6 +1161,7 @@ const loginRoute = createRoute({
 
 function LoginComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
   })
@@ -1103,6 +1171,15 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog.identify(username, { username: username })
+    posthog.capture('user_logged_in', { username: username })
+    router.invalidate()
+  }
+
+  const handleLogout = () => {
+    posthog.capture('user_logged_out', { username: auth.username })
+    posthog.reset()
+    auth.logout()
     router.invalidate()
   }
 
@@ -1137,10 +1214,7 @@ function LoginComponent() {
             <p className="text-lg mb-1">Signed in as</p>
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
-              onClick={() => {
-                auth.logout()
-                router.invalidate()
-              }}
+              onClick={handleLogout}
               className="w-full px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
               Sign Out
