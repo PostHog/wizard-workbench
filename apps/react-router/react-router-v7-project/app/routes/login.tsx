@@ -3,10 +3,12 @@ import { useNavigate, Link } from 'react-router'
 import { useAuth } from '~/context/AuthContext'
 import { getCurrentUser } from '~/lib/utils/auth'
 import type { Route } from './+types/login'
+import { usePostHog } from '@posthog/react'
 
 export default function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
+  const posthog = usePostHog()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -23,8 +25,11 @@ export default function Login() {
       setIsLoading(false)
 
       if (success) {
+        posthog?.identify(username, { username })
+        posthog?.capture('user_logged_in', { username })
         navigate('/profile')
       } else {
+        posthog?.capture('user_login_failed', { username })
         setError('Invalid credentials! (But this is fake, so any password works if the username exists)')
       }
     }, 500)
@@ -104,4 +109,3 @@ export default function Login() {
     </div>
   )
 }
-

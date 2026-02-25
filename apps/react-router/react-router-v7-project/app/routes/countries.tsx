@@ -2,7 +2,8 @@ import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
-import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
+import { claimCountry, likeCountry, visitCountry, getCurrentUser } from "~/lib/utils/auth";
+import { usePostHog } from "@posthog/react";
 
 export async function clientLoader() {
   try {
@@ -15,13 +16,13 @@ export async function clientLoader() {
       throw new Error(`Failed to fetch countries: ${res.status} ${res.statusText}`);
     }
     const data = await res.json();
-    
+
     // Check if API returned an error object
     if (data.status === 404 || (data.message && !Array.isArray(data))) {
       console.error("API Error:", data.message || data.status);
       return [];
     }
-    
+
     // Ensure we return an array
     const countries = Array.isArray(data) ? data : [];
     console.log(`Loaded ${countries.length} countries from API`);
@@ -35,6 +36,7 @@ export async function clientLoader() {
 
 export default function Countries({ loaderData }: Route.ComponentProps) {
   const { user } = useAuth();
+  const posthog = usePostHog();
   const [search, setSearch] = useState<string>("");
   const [region, setRegion] = useState<string>("");
 
@@ -48,6 +50,79 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
   const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRegion = e.target.value;
     setRegion(newRegion);
+    posthog?.capture('country_list_filtered', { region: newRegion || 'all' });
+  };
+
+  const handleClaimCountry = (countryName: string, countryRegion: string) => {
+    const prevUser = getCurrentUser();
+    const prevAchievements = prevUser?.achievements || [];
+    claimCountry(countryName);
+    const updatedUser = getCurrentUser();
+    posthog?.capture('country_claimed', {
+      country: countryName,
+      region: countryRegion,
+      total_claimed: updatedUser?.claimedCountries.length,
+      total_points: updatedUser?.totalPoints,
+    });
+    const newAchievements = updatedUser?.achievements.filter(
+      (a) => !prevAchievements.includes(a)
+    ) || [];
+    newAchievements.forEach((achievement) => {
+      posthog?.capture('achievement_unlocked', {
+        achievement,
+        total_achievements: updatedUser?.achievements.length,
+        total_points: updatedUser?.totalPoints,
+      });
+    });
+    window.location.reload();
+  };
+
+  const handleLikeCountry = (countryName: string, countryRegion: string) => {
+    const prevUser = getCurrentUser();
+    const prevAchievements = prevUser?.achievements || [];
+    likeCountry(countryName);
+    const updatedUser = getCurrentUser();
+    posthog?.capture('country_liked', {
+      country: countryName,
+      region: countryRegion,
+      total_liked: updatedUser?.likedCountries.length,
+      total_points: updatedUser?.totalPoints,
+    });
+    const newAchievements = updatedUser?.achievements.filter(
+      (a) => !prevAchievements.includes(a)
+    ) || [];
+    newAchievements.forEach((achievement) => {
+      posthog?.capture('achievement_unlocked', {
+        achievement,
+        total_achievements: updatedUser?.achievements.length,
+        total_points: updatedUser?.totalPoints,
+      });
+    });
+    window.location.reload();
+  };
+
+  const handleVisitCountry = (countryName: string, countryRegion: string) => {
+    const prevUser = getCurrentUser();
+    const prevAchievements = prevUser?.achievements || [];
+    visitCountry(countryName);
+    const updatedUser = getCurrentUser();
+    posthog?.capture('country_visited', {
+      country: countryName,
+      region: countryRegion,
+      total_visited: updatedUser?.visitedCountries.length,
+      total_points: updatedUser?.totalPoints,
+    });
+    const newAchievements = updatedUser?.achievements.filter(
+      (a) => !prevAchievements.includes(a)
+    ) || [];
+    newAchievements.forEach((achievement) => {
+      posthog?.capture('achievement_unlocked', {
+        achievement,
+        total_achievements: updatedUser?.achievements.length,
+        total_points: updatedUser?.totalPoints,
+      });
+    });
+    window.location.reload();
   };
 
   // Ensure loaderData is an array, fallback to empty array
@@ -110,7 +185,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
             const countryName = country.name.common;
             const isClaimed = user?.claimedCountries.includes(countryName);
             const isLiked = user?.likedCountries.includes(countryName);
-            
+
             return (
               <li
                 key={country.cca3}
@@ -127,7 +202,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     {isClaimed && <span className="ml-2 text-yellow-600">👑</span>}
                   </Link>
                 </div>
-                
+
                 <div className="text-gray-600 text-sm mb-3">
                   Region: {country.region} <br />
                   Population: {country.population.toLocaleString()}
@@ -136,10 +211,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
-                        claimCountry(countryName);
-                        window.location.reload();
-                      }}
+                      onClick={() => handleClaimCountry(countryName, country.region)}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isClaimed
                           ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
@@ -149,10 +221,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
-                        likeCountry(countryName);
-                        window.location.reload();
-                      }}
+                      onClick={() => handleLikeCountry(countryName, country.region)}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isLiked
                           ? 'bg-red-100 text-red-700'
@@ -162,10 +231,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
-                        visitCountry(countryName);
-                        window.location.reload();
-                      }}
+                      onClick={() => handleVisitCountry(countryName, country.region)}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
                     >
                       ✈️
