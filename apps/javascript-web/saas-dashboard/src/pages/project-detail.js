@@ -2,6 +2,7 @@ import { api } from '../api.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
 import { showModal } from '../components/modal.js';
+import { trackEvent, captureException } from '../posthog.js';
 
 const STATUS_OPTIONS = ['todo', 'in_progress', 'done'];
 const PRIORITY_OPTIONS = ['low', 'medium', 'high'];
@@ -16,8 +17,17 @@ export async function renderProjectDetail({ id }) {
     const project = await api.getProject(id);
     const members = await api.getTeamMembers();
 
+    const userId = store.state.currentUser?.email || 'anonymous';
+    trackEvent(userId, 'project_viewed', {
+      project_id: project.id,
+      project_name: project.name,
+      project_status: project.status,
+      task_count: project.tasks.length,
+    });
+
     render(project, members);
   } catch (err) {
+    captureException(err, store.state.currentUser?.email || 'anonymous');
     content.innerHTML = `<div class="error-message">${err.message}</div>`;
   }
 }
@@ -104,11 +114,20 @@ function render(project, members) {
         const priority = modalEl.querySelector('#task-priority').value;
 
         try {
-          await api.addTask(project.id, title, priority);
+          const task = await api.addTask(project.id, title, priority);
+          const userId = store.state.currentUser?.email || 'anonymous';
+          trackEvent(userId, 'task_created', {
+            task_id: task.id,
+            task_title: title,
+            priority,
+            project_id: project.id,
+            project_name: project.name,
+          });
           document.getElementById('modal-overlay')?.remove();
           const updated = await api.getProject(project.id);
           render(updated, members);
         } catch (err) {
+          captureException(err, store.state.currentUser?.email || 'anonymous');
           alert(err.message);
         }
       });
@@ -118,7 +137,33 @@ function render(project, members) {
   // Move task status
   content.querySelectorAll('.move-task').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      await api.updateTaskStatus(project.id, btn.dataset.taskId, btn.dataset.status);
+      const newStatus = btn.dataset.status;
+      const taskCard = btn.closest('.task-card');
+      const taskTitle = taskCard?.querySelector('.task-title')?.textContent || '';
+      const previousStatus = taskCard?.closest('.board-column')?.dataset.status || '';
+
+      await api.updateTaskStatus(project.id, btn.dataset.taskId, newStatus);
+
+      const userId = store.state.currentUser?.email || 'anonymous';
+      if (newStatus === 'done') {
+        trackEvent(userId, 'task_completed', {
+          task_id: btn.dataset.taskId,
+          task_title: taskTitle,
+          project_id: project.id,
+          project_name: project.name,
+          previous_status: previousStatus,
+        });
+      } else {
+        trackEvent(userId, 'task_status_updated', {
+          task_id: btn.dataset.taskId,
+          task_title: taskTitle,
+          project_id: project.id,
+          project_name: project.name,
+          previous_status: previousStatus,
+          new_status: newStatus,
+        });
+      }
+
       const updated = await api.getProject(project.id);
       render(updated, members);
     });
@@ -135,7 +180,22 @@ function render(project, members) {
       `, (modalEl) => {
         modalEl.querySelectorAll('.assign-option').forEach((opt) => {
           opt.addEventListener('click', async () => {
-            await api.assignTask(project.id, btn.dataset.taskId, opt.dataset.assignee || null);
+            const assigneeId = opt.dataset.assignee || null;
+            await api.assignTask(project.id, btn.dataset.taskId, assigneeId);
+
+            const userId = store.state.currentUser?.email || 'anonymous';
+            const assigneeName = assigneeId
+              ? members.find((m) => m.id === assigneeId)?.name
+              : null;
+            trackEvent(userId, 'task_assigned', {
+              task_id: btn.dataset.taskId,
+              project_id: project.id,
+              project_name: project.name,
+              assignee_id: assigneeId,
+              assignee_name: assigneeName,
+              unassigned: !assigneeId,
+            });
+
             document.getElementById('modal-overlay')?.remove();
             const updated = await api.getProject(project.id);
             render(updated, members);
@@ -148,7 +208,21 @@ function render(project, members) {
   // Delete task
   content.querySelectorAll('.delete-task').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      const taskCard = btn.closest('.task-card');
+      const taskTitle = taskCard?.querySelector('.task-title')?.textContent || '';
+      const currentStatus = taskCard?.closest('.board-column')?.dataset.status || '';
+
       await api.deleteTask(project.id, btn.dataset.taskId);
+
+      const userId = store.state.currentUser?.email || 'anonymous';
+      trackEvent(userId, 'task_deleted', {
+        task_id: btn.dataset.taskId,
+        task_title: taskTitle,
+        project_id: project.id,
+        project_name: project.name,
+        status_at_deletion: currentStatus,
+      });
+
       const updated = await api.getProject(project.id);
       render(updated, members);
     });

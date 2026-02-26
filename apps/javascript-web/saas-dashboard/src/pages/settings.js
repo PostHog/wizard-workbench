@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
+import { trackEvent, captureException } from '../posthog.js';
 
 export async function renderSettings() {
   renderShell('settings');
@@ -80,30 +81,46 @@ export async function renderSettings() {
       </div>
     `;
 
+    const userId = user?.email || 'anonymous';
+
     // Theme
     document.getElementById('theme-select').addEventListener('change', async (e) => {
       await api.updateSettings({ theme: e.target.value });
       document.body.dataset.theme = e.target.value;
+      trackEvent(userId, 'settings_updated', {
+        setting: 'theme',
+        value: e.target.value,
+      });
     });
 
     // Notifications
     document.getElementById('email-notif').addEventListener('change', async (e) => {
       await api.updateSettings({ emailNotifications: e.target.checked });
+      trackEvent(userId, 'settings_updated', {
+        setting: 'email_notifications',
+        value: e.target.checked,
+      });
     });
 
     document.getElementById('weekly-digest').addEventListener('change', async (e) => {
       await api.updateSettings({ weeklyDigest: e.target.checked });
+      trackEvent(userId, 'settings_updated', {
+        setting: 'weekly_digest',
+        value: e.target.checked,
+      });
     });
 
     // Reset
     document.getElementById('reset-data-btn').addEventListener('click', () => {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
+        trackEvent(userId, 'data_reset');
         store.reset();
         store.login(user.email);
         renderSettings();
       }
     });
   } catch (err) {
+    captureException(err, store.state.currentUser?.email || 'anonymous');
     content.innerHTML = `<div class="error-message">Failed to load settings: ${err.message}</div>`;
   }
 }
