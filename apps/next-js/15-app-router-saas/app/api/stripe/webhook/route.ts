@@ -1,6 +1,10 @@
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { NextRequest, NextResponse } from 'next/server';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { db } from '@/lib/db/drizzle';
+import { teams, teamMembers } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 // Use a dummy webhook secret for stub mode
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_stub_secret';
@@ -23,10 +27,44 @@ export async function POST(request: NextRequest) {
 
   switch (event.type) {
     case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
+    case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+
+      // Track subscription change in PostHog
+      try {
+        const team = await db
+          .select()
+          .from(teams)
+          .where(eq(teams.stripeSubscriptionId, subscription.id))
+          .limit(1);
+
+        if (team.length > 0) {
+          const member = await db
+            .select({ userId: teamMembers.userId })
+            .from(teamMembers)
+            .where(eq(teamMembers.teamId, team[0].id))
+            .limit(1);
+
+          const distinctId = member.length > 0 ? String(member[0].userId) : subscription.customer as string;
+          const posthog = getPostHogClient();
+          posthog.capture({
+            distinctId,
+            event: 'subscription_changed',
+            properties: {
+              team_id: team[0].id,
+              stripe_subscription_id: subscription.id,
+              subscription_status: subscription.status,
+              event_type: event.type,
+            },
+          });
+          await posthog.shutdown();
+        }
+      } catch (err) {
+        console.error('PostHog tracking error on subscription change:', err);
+      }
       break;
+    }
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
