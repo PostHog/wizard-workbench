@@ -1,0 +1,29 @@
+writebook_david:
+  id: <%= ActiveRecord::FixtureSet.identify("writebook_david", :uuid) %>
+  account: 37s_uuid
+  board: writebook_uuid
+  user: david_uuid
+
+writebook_jz:
+  id: <%= ActiveRecord::FixtureSet.identify("writebook_jz", :uuid) %>
+  account: 37s_uuid
+  board: writebook_uuid
+  user: jz_uuid
+
+writebook_kevin:
+  id: <%= ActiveRecord::FixtureSet.identify("writebook_kevin", :uuid) %>
+  account: 37s_uuid
+  board: writebook_uuid
+  user: kevin_uuid
+
+private_kevin:
+  id: <%= ActiveRecord::FixtureSet.identify("private_kevin", :uuid) %>
+  account: 37s_uuid
+  board: private_uuid
+  user: kevin_uuid
+
+miltons_wish_list_mike:
+  id: <%= ActiveRecord::FixtureSet.identify("miltons_wish_list_mike", :uuid) %>
+  account: initech_uuid
+  board: miltons_wish_list_uuid
+  user: mike_uuid

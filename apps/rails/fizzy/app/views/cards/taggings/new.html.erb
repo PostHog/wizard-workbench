@@ -1,0 +1,32 @@
+<%= turbo_frame_tag @card, :tagging do %>
+  <div class="flex-column full-width"
+    data-controller="form filter navigable-list"
+    data-navigable-list-focus-on-selection-value="false"
+    data-navigable-list-actionable-items-value="true"
+    data-action="keydown->navigable-list#navigate filter:changed->navigable-list#reset dialog:show@document->navigable-list#reset"
+  >
+    <div class="flex align-start justify-space-between">
+      <strong class="popup__title">Tag this…</strong><kbd class="txt-xx-small hide-on-touch">t</kbd>
+    </div>
+
+    <%= form_with url: card_taggings_path(@card),
+          id: dom_id(@card, :tags_form),
+          data: { controller: "form", action: "submit->form#preventEmptySubmit submit->form#preventComposingSubmit" },
+          class: "flex flex-column gap-half full-width margin-block-half" do |form| %>
+      <%= form.text_field :tag_title, placeholder: @tags.any? ? "Add a new tag or filter…" : "Name this tag…", class: "input txt-small full-width",
+            autocomplete: "off", autofocus: true, data: { filter_target: "input", form_target: "input", action: "input->filter#filter compositionstart->form#compositionStart compositionend->form#compositionEnd" } %>
+    <% end %>
+
+    <ul class="popup__list" data-filter-target="list">
+      <%= render collection: @tagged_with, partial: "tag", locals: { card: @card } %>
+      <%= render collection: @tags, partial: "tag", locals: { card: @card } %>
+
+      <li class="popup__item" data-navigable-list-target="item">
+        <%= button_tag "Create a new tag", type: "submit", form: dom_id(@card, :tags_form), class: "btn popup__btn", data: { form_target: "submit" } do %>
+          <%= icon_tag "add" %>
+          <span>Create tag</span>
+        <% end %>
+      </li>
+    </ul>
+  </div>
+<% end %>

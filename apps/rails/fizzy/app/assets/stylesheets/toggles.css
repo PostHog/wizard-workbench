@@ -1,0 +1,15 @@
+@layer components {
+  .toggler--toggled {
+    .toggler__visible-when-off {
+      display: none;
+    }
+
+    .toggler__visible-when-on {
+      display: unset;
+    }
+  }
+
+  .toggler__visible-when-on {
+    display: none;
+  }
+}

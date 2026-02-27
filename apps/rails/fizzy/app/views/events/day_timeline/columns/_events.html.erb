@@ -1,0 +1,7 @@
+<div class="events--grid">
+  <% column.events_by_hour.each do |hour, events| %>
+    <% if events.any? %>
+      <%= render partial: "events/event", collection: events, cached: true %>
+    <% end %>
+  <% end %>
+</div>

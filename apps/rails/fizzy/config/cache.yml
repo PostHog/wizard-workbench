@@ -1,0 +1,17 @@
+default_options: &default_options
+  store_options:
+    max_age: <%= 60.days.to_i %>
+    namespace: <%= "#{Rails.env}#{"-#{ENV["CACHE_NAMESPACE"]}" if ENV["CACHE_NAMESPACE"]}" %>
+
+default_connection: &default_connection
+  database: cache
+
+default: &default
+  <<: *default_connection
+  <<: *default_options
+
+development: *default
+test: *default_options
+beta: *default
+staging: *default
+production: *default

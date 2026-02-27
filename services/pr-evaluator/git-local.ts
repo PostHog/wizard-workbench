@@ -16,35 +16,9 @@ import {
   getCommitAuthor,
   getFirstCommitMessage,
   getCommitMessages,
+  isExcludedPath,
+  filterDiff,
 } from "../github/index.js";
-
-// Files to exclude from PR evaluation (skill instructions, not code changes)
-const EXCLUDED_PATH_PATTERNS = [/^.*\/\.claude\//, /^\.claude\//];
-
-function isExcludedPath(filepath: string): boolean {
-  return EXCLUDED_PATH_PATTERNS.some((pattern) => pattern.test(filepath));
-}
-
-function filterDiff(diff: string): string {
-  const lines = diff.split("\n");
-  const filteredLines: string[] = [];
-  let skipCurrentFile = false;
-
-  for (const line of lines) {
-    if (line.startsWith("diff --git ")) {
-      const match = line.match(/diff --git a\/(.+) b\/(.+)/);
-      if (match) {
-        skipCurrentFile = isExcludedPath(match[2]);
-      }
-    }
-
-    if (!skipCurrentFile) {
-      filteredLines.push(line);
-    }
-  }
-
-  return filteredLines.join("\n");
-}
 
 export interface LocalBranchOptions {
   branch: string;

@@ -1,0 +1,8 @@
+<%= tag.li id: dom_id(delivery), class: token_list(delivery.succeeded? && "delivery--succeeded") do %>
+  <strong>
+    <%= delivery.state %>
+  </strong>
+  <div class="txt-subtle">
+    <%= time_tag delivery.created_at, time_ago_in_words(delivery.created_at) %>
+  </div>
+<% end %>

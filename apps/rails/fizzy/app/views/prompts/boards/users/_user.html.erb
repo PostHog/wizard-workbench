@@ -1,0 +1,10 @@
+<lexxy-prompt-item search="<%= "#{user.name} #{user.initials} #{"me" if user == Current.user}" %>" sgid="<%= user.attachable_sgid %>">
+  <template type="menu">
+    <%= avatar_image_tag user %>
+    <%= user.name %>
+  </template>
+  <template type="editor">
+    <%= avatar_image_tag user %>
+    <%= user.first_name %>
+  </template>
+</lexxy-prompt-item>

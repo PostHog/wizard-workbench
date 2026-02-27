@@ -1,0 +1,9 @@
+<%
+  config_path = if Fizzy.saas?
+    gem_path = Gem::Specification.find_by_name("fizzy-saas").gem_dir
+    File.join(gem_path, "config", "storage.yml")
+  else
+    File.join(__dir__, "storage.oss.yml")
+  end
+%>
+<%= ERB.new(File.read(config_path)).result %>

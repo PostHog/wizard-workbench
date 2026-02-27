@@ -1,0 +1,82 @@
+@layer components {
+  .bar {
+    --row-gap: 0.2lh;
+
+    background-color: var(--color-terminal-bg);
+    block-size: calc(var(--footer-height) + env(safe-area-inset-bottom));
+    color: var(--color-terminal-text);
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9em;
+    inset: auto 0 0 0;
+    max-block-size: 100%;
+    padding-block: var(--block-space) calc(var(--block-space) + env(safe-area-inset-bottom));
+    padding-inline:
+      calc(var(--tray-size) + calc(var(--inline-space) * 3) + env(safe-area-inset-left))
+      calc(var(--tray-size) + calc(var(--inline-space) * 3) + env(safe-area-inset-right));
+    place-content: center;
+    position: fixed;
+    view-transition-name: bar;
+    z-index: var(--z-bar);
+
+    html[data-theme="dark"] & {
+      border-block: 1px solid var(--color-ink-lighter);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme]) & {
+        border-block: 1px solid var(--color-ink-lighter);
+      }
+    }
+
+    &:has(.bar__placeholder[hidden]) {
+      padding-inline: 1ch;
+    }
+  }
+
+  ::view-transition-group(bar) {
+    z-index: 99;
+  }
+
+  .bar__input {
+    transform: translateY(50%);
+    transition: transform 350ms cubic-bezier(0.25, 1.25, 0.5, 1);
+
+    .bar:has(.bar__placeholder[hidden]) & {
+      transform: translateY(0);
+    }
+  }
+
+  .bar__modal {
+    background-color: var(--color-terminal-bg);
+    block-size: 75dvh;
+    border-block: 1px solid var(--color-ink-lighter);
+    inline-size: 100vw;
+    inset: auto 0 0 0;
+    max-inline-size: 100vw;
+    margin-block-end: calc(var(--footer-height) - 0.3rem + env(safe-area-inset-bottom));
+    position: fixed;
+    z-index: -1;
+
+    &:has(#bar-content[busy]), &:has(#bar-content:not([complete])), &:has([data-search-redirect]) {
+      display: none;
+    }
+  }
+
+  .bar__placeholder {
+    .btn--plain {
+      color: inherit;
+      font-size: var(--text-x-small);
+      font-weight: 600;
+      opacity: 0.66;
+      padding-inline: 1ch;
+      text-transform: uppercase;
+      white-space: nowrap;
+
+      &:hover {
+        color: oklch(var(--lch-blue-dark));
+        opacity: 1;
+      }
+    }
+  }
+}

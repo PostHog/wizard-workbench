@@ -12,7 +12,7 @@ procs:
   mcp:
     # Use dev:local-resources to read from local context-mill server
     # Runs at http://localhost:8787
-    shell: "source .env && cd $MCP_PATH && pnpm run dev:local-resources"
+    shell: "source .env && cd $MCP_PATH && pnpm build:ui-apps && pnpm run dev:local-resources"
     autostart: true
     stop_signal: SIGTERM
 
@@ -44,6 +44,16 @@ procs:
     autostart: false
 
   # ═══════════════════════════════════════════════════════════════════════════
+  # WIZARD BENCHMARK - Run wizard with benchmark tracking
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  wizard-benchmark:
+    # Interactive app selector + benchmark config, runs wizard with --benchmark
+    shell: "pnpm benchmark"
+    autostart: false
+    env_file: .env
+
+  # ═══════════════════════════════════════════════════════════════════════════
   # WIZARD CI - Run wizard and optionally create PR
   # ═══════════════════════════════════════════════════════════════════════════
 
@@ -72,6 +82,15 @@ procs:
   wizard-ci-evaluate-pr:
     # Agent evaluates a PR or local branch
     shell: "pnpm run evaluate"
+    autostart: false
+    env_file: .env
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # FRAMEWORK DETECT - Lightweight wizard framework/language detection, good for debugging
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  framework-detect:
+    shell: "pnpm framework-detect --verbose"
     autostart: false
     env_file: .env
 

@@ -1,0 +1,10 @@
+<% command, description, editor_version = command %>
+
+<lexxy-prompt-item search="<%= description %> <%= command %>">
+  <template type="menu">
+    <code><%= command %></code> <%= description %>
+  </template>
+  <template type="editor">
+    <%= editor_version.gsub(/ +$/, "&nbsp;").html_safe %>
+  </template>
+</lexxy-prompt-item>

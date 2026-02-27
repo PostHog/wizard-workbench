@@ -1,0 +1,93 @@
+logo_published:
+  id: <%= ActiveRecord::FixtureSet.identify("logo_published", :uuid) %>
+  creator: david_uuid
+  board: writebook_uuid
+  eventable: logo_uuid (Card)
+  action: card_published
+  created_at: <%= 1.week.ago %>
+  account: 37s_uuid
+
+logo_assignment_jz:
+  id: <%= ActiveRecord::FixtureSet.identify("logo_assignment_jz", :uuid) %>
+  creator: david_uuid
+  board: writebook_uuid
+  eventable: logo_uuid (Card)
+  action: card_assigned
+  particulars: <%= { assignee_ids: [ ActiveRecord::FixtureSet.identify("jz", :uuid) ] }.to_json %>
+  created_at: <%= 1.week.ago + 1.hour %>
+  account: 37s_uuid
+
+logo_assignment_david:
+  id: <%= ActiveRecord::FixtureSet.identify("logo_assignment_david", :uuid) %>
+  creator: david_uuid
+  board: writebook_uuid
+  eventable: logo_uuid (Card)
+  action: card_assigned
+  particulars: <%= { assignee_ids: [ ActiveRecord::FixtureSet.identify("david", :uuid) ] }.to_json %>
+  created_at: <%= 1.week.ago + 1.hour %>
+  account: 37s_uuid
+
+logo_assignment_km:
+  id: <%= ActiveRecord::FixtureSet.identify("logo_assignment_km", :uuid) %>
+  creator: david_uuid
+  board: writebook_uuid
+  eventable: logo_uuid (Card)
+  action: card_assigned
+  particulars: <%= { assignee_ids: [ ActiveRecord::FixtureSet.identify("kevin", :uuid) ] }.to_json %>
+  created_at: <%= 1.day.ago %>
+  account: 37s_uuid
+
+layout_published:
+  id: <%= ActiveRecord::FixtureSet.identify("layout_published", :uuid) %>
+  creator: david_uuid
+  board: writebook_uuid
+  eventable: layout_uuid (Card)
+  action: card_published
+  created_at: <%= 1.week.ago %>
+  account: 37s_uuid
+
+layout_commented:
+  id: <%= ActiveRecord::FixtureSet.identify("layout_commented", :uuid) %>
+  creator: david_uuid
+  board: writebook_uuid
+  eventable: layout_overflowing_david_uuid (Comment)
+  action: comment_created
+  created_at: <%= 1.week.ago %>
+  account: 37s_uuid
+
+layout_assignment_jz:
+  id: <%= ActiveRecord::FixtureSet.identify("layout_assignment_jz", :uuid) %>
+  creator: david_uuid
+  board: writebook_uuid
+  eventable: layout_uuid (Card)
+  action: card_assigned
+  particulars: <%= { assignee_ids: [ ActiveRecord::FixtureSet.identify("jz", :uuid) ] }.to_json %>
+  created_at: <%= 1.hour.ago %>
+  account: 37s_uuid
+
+text_published:
+  id: <%= ActiveRecord::FixtureSet.identify("text_published", :uuid) %>
+  creator: kevin_uuid
+  board: writebook_uuid
+  eventable: text_uuid (Card)
+  action: card_published
+  created_at: <%= 1.week.ago %>
+  account: 37s_uuid
+
+shipping_published:
+  id: <%= ActiveRecord::FixtureSet.identify("shipping_published", :uuid) %>
+  creator: kevin_uuid
+  board: writebook_uuid
+  eventable: shipping_uuid (Card)
+  action: card_published
+  created_at: <%= 1.week.ago %>
+  account: 37s_uuid
+
+shipping_closed:
+  id: <%= ActiveRecord::FixtureSet.identify("shipping_closed", :uuid) %>
+  creator: kevin_uuid
+  board: writebook_uuid
+  eventable: shipping_uuid (Card)
+  action: card_closed
+  created_at: <%= 2.days.ago %>
+  account: 37s_uuid

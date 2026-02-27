@@ -1,0 +1,12 @@
+<%= collapsible_nav_section "Boards" do %>
+  <li class="popup__item" data-filter-target="item" data-navigable-list-target="item">
+    <%= icon_tag "add", class: "popup__icon" %>
+    <%= link_to new_board_path, class: "popup__btn btn" do %>
+      <span class="overflow-ellipsis">Add a board</span>
+    <% end %>
+  </li>
+
+  <% boards.each do |board| %>
+    <%= my_menu_board_item(board) %>
+  <% end %>
+<% end %>

@@ -1,0 +1,5 @@
+<% event = notification.source %>
+
+<%= notification.creator.name %>:
+<%= event_notification_body(event).squish %>
+<%= url_for notification %>

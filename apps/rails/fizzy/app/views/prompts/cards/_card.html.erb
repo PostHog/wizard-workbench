@@ -1,0 +1,8 @@
+<lexxy-prompt-item>
+  <template type="menu">
+    #<%= card.number %> <%= card.title %>
+  </template>
+  <template type="editor">
+    <%= link_to "##{card.number} #{card.title}", card_path(card) %>
+  </template>
+</lexxy-prompt-item>

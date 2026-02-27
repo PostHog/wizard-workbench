@@ -1,0 +1,36 @@
+@layer components {
+  .panel {
+    background-color: var(--panel-bg, var(--color-canvas));
+    border: var(--panel-border-size, 1px) solid var(--panel-border-color, var(--color-ink-lighter));
+    border-radius: var(--panel-border-radius, 1em);
+    color: var(--color-ink);
+    inline-size: var(--panel-size, 60ch);
+    max-inline-size: 100%;
+    padding: var(--panel-padding, var(--block-space));
+
+    @media (min-width: 640px) {
+      --panel-size: 100%;
+
+      padding: var(--panel-padding, var(--block-space-double));
+    }
+  }
+
+  .panel--wide {
+    --panel-size: 60ch;
+  }
+
+  .panel--centered {
+    --panel-border-size: 0;
+    --panel-size: 100%;
+
+    @media (min-width: 640px) {
+      --panel-size: 42ch;
+    }
+
+    #main:has(&) {
+      display: grid;
+      justify-content: center;
+      margin: auto;
+    }
+  }
+}

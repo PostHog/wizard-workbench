@@ -1,0 +1,124 @@
+@layer components {
+  .highlight {
+    /* Named color values */
+    --keyword: lch(50.16 68.78 25.97);
+    --entity: lch(39.03 73.26 304.21);
+    --constant: lch(39.68 63.13 279.47);
+    --string: lch(19.22 34.92 275.47);
+    --variable: lch(57.9 81.69 53.33);
+    --comment: lch(47.93 7 254.8);
+    --entity-tag: lch(39.64 68.17 142.85);
+    --markup-heading: lch(39.68 63.13 279.47);
+    --markup-list: lch(40.44 43.36 84.69);
+    --markup-inserted: lch(39.64 68.17 142.85);
+    --markup-deleted: lch(39.64 68.17 31.45);
+
+    /* Redefine named color values for dark mode */
+    html[data-theme="dark"] {
+      --keyword: lch(67.63 58.99 30.64);
+      --entity: lch(75.13 46.73 306.74);
+      --constant: lch(74.9 39.71 255.53);
+      --string: lch(74.9 39.71 255.53);
+      --variable: lch(76.17 61.1 61.97);
+      --comment: lch(60.83 6.66 254.46);
+      --entity-tag: lch(83.65 59.31 141.61);
+      --markup-heading: lch(47.93 71.67 280.72);
+      --markup-list: lch(83.84 57.9 85.03);
+      --markup-inserted: lch(83.65 59.31 141.61);
+      --markup-deleted: lch(73.8% 65 29.18);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html:not([data-theme]) {
+        --keyword: lch(67.63 58.99 30.64);
+        --entity: lch(75.13 46.73 306.74);
+        --constant: lch(74.9 39.71 255.53);
+        --string: lch(74.9 39.71 255.53);
+        --variable: lch(76.17 61.1 61.97);
+        --comment: lch(60.83 6.66 254.46);
+        --entity-tag: lch(83.65 59.31 141.61);
+        --markup-heading: lch(47.93 71.67 280.72);
+        --markup-list: lch(83.84 57.9 85.03);
+        --markup-inserted: lch(83.65 59.31 141.61);
+        --markup-deleted: lch(73.8% 65 29.18);
+      }
+    }
+
+    color: var(--color-ink);
+
+    .w {
+      color: var(--color-ink);
+    }
+
+    .k, .kd, .kn, .kp, .kr, .kt, .kv {
+      color: var(--keyword);
+    }
+
+    .gr {
+      color: var(--color-ink-lightest);
+    }
+
+    .gd {
+      color: var(--markup-deleted);
+      background-color: light-dark(lch(39.64 68.17 31.45 / 0.15), lch(39.64 68.17 31.45 / 0.2));
+    }
+
+    .nb, .nc, .no, .nn {
+      color: var(--variable);
+    }
+
+    .sr, .na, .nt {
+      color: var(--entity-tag);
+    }
+
+    .gi {
+      color: var(--markup-inserted);
+      background-color: light-dark(lch(49.14 52.75 142.85 / 0.15), lch(83.65 59.31 141.61 / 0.15));
+    }
+
+    .kc, .l, .ld, .m, .mb, .mf, .mh, .mi, .il, .mo, .mx, .sb, .bp, .ne, .nl, .py, .nv, .vc, .vg, .vi, .vm, .o, .ow {
+      color: var(--constant);
+    }
+
+    .gh {
+      color: var(--constant);
+      font-weight: bold;
+    }
+
+    .gu {
+      color: var(--constant);
+      font-weight: bold;
+    }
+
+    .s, .sa, .sc, .dl, .sd, .s2, .se, .sh, .sx, .s1, .ss {
+      color: var(--string);
+    }
+
+    .nd, .nf, .fm {
+      color: var(--entity);
+    }
+
+    .err {
+      color: var(--color-ink-inverted);
+      background-color: var(--markup-deleted);
+    }
+
+    .c, .ch, .cd, .cm, .cp, .cpf, .c1, .cs, .gl, .gt {
+      color: var(--comment);
+    }
+
+    .ni, .si {
+      color: var(--storage-modifier-import);
+    }
+
+    .ge {
+      color: var(--storage-modifier-import);
+      font-style: italic;
+    }
+
+    .gs {
+      color: var(--storage-modifier-import);
+      font-weight: bold;
+    }
+  }
+}

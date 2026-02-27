@@ -5,8 +5,8 @@
  * This file contains only wizard-ci specific utilities.
  */
 import { spawn } from "child_process";
-import { existsSync, readdirSync, statSync } from "fs";
-import { join } from "path";
+import { existsSync, readdirSync, readFileSync, writeFileSync, statSync } from "fs";
+import { join, extname } from "path";
 
 // Re-export git operations from shared service
 export {
@@ -53,7 +53,7 @@ export {
 // App-specific git operations
 // ============================================================================
 
-import { restoreWorkingDirectory } from "../github/index.js";
+import { restoreWorkingDirectory, git, getChangedFilesInPath } from "../github/index.js";
 
 /**
  * Reset an app directory to HEAD state (discard all changes).
@@ -106,8 +106,9 @@ export function findApps(appsDir: string): App[] {
       const isDjangoProject = existsSync(join(fullPath, "manage.py"));
       const isPythonProject = existsSync(join(fullPath, "requirements.txt")) || existsSync(join(fullPath, "pyproject.toml"));
       const isAndroidProject = existsSync(join(fullPath, "build.gradle")) || existsSync(join(fullPath, "build.gradle.kts"));
+      const isRailsProject = existsSync(join(fullPath, "Gemfile")) && existsSync(join(fullPath, "config.ru"));
 
-      if (isJsProject || isDjangoProject || isPythonProject || isAndroidProject) {
+      if (isJsProject || isDjangoProject || isPythonProject || isAndroidProject || isRailsProject) {
         apps.push({ name: relativePath, path: fullPath });
       } else {
         scan(fullPath, relativePath);
@@ -199,6 +200,63 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
       });
     });
   });
+}
+
+// ============================================================================
+// API key redaction
+// ============================================================================
+
+/** PostHog API keys match phc_ or phx_ followed by 20+ alphanumeric characters */
+const PHX_KEY_PATTERN = /ph[cx]_[A-Za-z0-9]{20,}/g;
+const PHX_REDACTED = "phx_API_KEY_IS_HARDCODED";
+
+/** Binary file extensions to skip during redaction */
+const BINARY_EXTENSIONS = new Set([
+  ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".webp",
+  ".woff", ".woff2", ".ttf", ".eot", ".otf",
+  ".zip", ".tar", ".gz", ".br",
+  ".pdf", ".mp4", ".mp3", ".wav",
+  ".lock",
+]);
+
+export interface RedactResult {
+  filesModified: string[];
+  keysRedacted: number;
+}
+
+/**
+ * Scan only changed files in a path for hardcoded PostHog API keys (phx_...)
+ * and replace them with a safe placeholder. Re-stages any modified files.
+ */
+export function redactApiKeys(repoRoot: string, relativePath: string): RedactResult {
+  const result: RedactResult = { filesModified: [], keysRedacted: 0 };
+  const changedFiles = getChangedFilesInPath(repoRoot, relativePath);
+
+  for (const statusLine of changedFiles) {
+    // git status --porcelain format: "XY filename" or "XY orig -> renamed"
+    const filePath = statusLine.slice(3).split(" -> ").pop()!;
+    const fullPath = join(repoRoot, filePath);
+
+    if (!existsSync(fullPath)) continue;
+    if (BINARY_EXTENSIONS.has(extname(filePath).toLowerCase())) continue;
+
+    try {
+      const content = readFileSync(fullPath, "utf-8");
+      const matches = content.match(PHX_KEY_PATTERN);
+      if (matches) {
+        const redacted = content.replace(PHX_KEY_PATTERN, PHX_REDACTED);
+        writeFileSync(fullPath, redacted, "utf-8");
+        result.filesModified.push(filePath);
+        result.keysRedacted += matches.length;
+        // Re-stage the file so the redacted version is committed
+        git(`add "${filePath}"`, repoRoot);
+      }
+    } catch {
+      // Skip files that can't be read as text
+    }
+  }
+
+  return result;
 }
 
 // ============================================================================

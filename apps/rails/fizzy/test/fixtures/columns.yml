@@ -1,0 +1,32 @@
+# Columns for writebook board (which has qa workflow)
+writebook_triage:
+  id: <%= ActiveRecord::FixtureSet.identify("writebook_triage", :uuid) %>
+  name: Triage
+  color: "var(--color-card-4)"
+  board: writebook_uuid
+  position: 0
+  account: 37s_uuid
+
+writebook_in_progress:
+  id: <%= ActiveRecord::FixtureSet.identify("writebook_in_progress", :uuid) %>
+  name: In progress
+  color: "var(--color-card-2)"
+  board: writebook_uuid
+  position: 1
+  account: 37s_uuid
+
+writebook_on_hold:
+  id: <%= ActiveRecord::FixtureSet.identify("writebook_on_hold", :uuid) %>
+  name: On Hold
+  color: "var(--color-card-4)"
+  board: writebook_uuid
+  position: 2
+  account: 37s_uuid
+
+writebook_review:
+  id: <%= ActiveRecord::FixtureSet.identify("writebook_review", :uuid) %>
+  name: Review
+  color: "var(--color-card-3)"
+  board: writebook_uuid
+  position: 3
+  account: 37s_uuid

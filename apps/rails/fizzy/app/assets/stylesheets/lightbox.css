@@ -1,0 +1,100 @@
+@layer components {
+  .lightbox {
+    --dialog-duration: 350ms;
+    --lightbox-padding: 3vmin;
+
+    background-color: transparent;
+    block-size: 100dvh;
+    border: 0;
+    inline-size: 100dvw;
+    inset: 0;
+    margin: auto;
+    max-height: unset;
+    max-width: unset;
+    overflow: hidden;
+    padding:
+      calc(var(--lightbox-padding) + var(--custom-safe-inset-top))
+      calc(var(--lightbox-padding) + var(--custom-safe-inset-right))
+      calc(var(--lightbox-padding) + var(--custom-safe-inset-bottom))
+      calc(var(--lightbox-padding) + var(--custom-safe-inset-left));
+    text-align: center;
+
+    &::backdrop {
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      background-color: oklch(var(--lch-black) / 50%);
+    }
+
+    /* Closed state */
+    &,
+    &::backdrop {
+      opacity: 0;
+      transition: var(--dialog-duration) allow-discrete;
+      transition-property: display, opacity, overlay;
+    }
+
+    /* Open state */
+    &[open],
+    &[open]::backdrop {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      opacity: 1;
+
+      @starting-style {
+        opacity: 0;
+      }
+
+      .lightbox__figure {
+        animation: slide-up var(--dialog-duration);
+      }
+    }
+  }
+
+  .lightbox__actions {
+    display: flex;
+    gap: 1ch;
+    inset:
+      calc(var(--lightbox-padding) + var(--custom-safe-inset-top))
+      calc(var(--lightbox-padding) + var(--custom-safe-inset-right))
+      auto
+      auto;
+    position: absolute;
+  }
+
+  .lightbox__figure {
+    animation-fill-mode: forwards;
+    animation: slide-down var(--dialog-duration);
+    display: flex;
+    flex-direction: column;
+    gap: var(--lightbox-padding);
+    margin: 0 auto;
+    max-block-size: 100%;
+
+    img {
+      object-fit: contain;
+    }
+  }
+
+  .lightbox__caption {
+    color: var(--color-white);
+
+    &:empty {
+      display: none;
+    }
+
+    &[tabindex="-1"]:focus-visible {
+      outline: unset;
+    }
+  }
+
+  .lightbox__image {
+    flex: 1;
+    min-block-size: 0;
+  }
+
+  /* Prevent body from scrolling when lightbox is open */
+  html:has(.lightbox[open]) {
+    overflow: clip;
+  }
+}

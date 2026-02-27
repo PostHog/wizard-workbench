@@ -1,0 +1,92 @@
+logo:
+  id: <%= ActiveRecord::FixtureSet.identify("logo", :uuid) %>
+  number: 1
+  board: writebook_uuid
+  creator: david_uuid
+  column: writebook_triage_uuid
+  title: The logo isn't big enough
+  due_on: <%= 3.days.from_now %>
+  created_at: <%= 1.week.ago %>
+  status: published
+  last_active_at: <%= 1.week.ago %>
+  account: 37s_uuid
+
+layout:
+  id: <%= ActiveRecord::FixtureSet.identify("layout", :uuid) %>
+  number: 2
+  board: writebook_uuid
+  creator: david_uuid
+  column: writebook_triage_uuid
+  title: Layout is broken
+  created_at: <%= 1.week.ago %>
+  status: published
+  last_active_at: <%= 1.week.ago %>
+  account: 37s_uuid
+
+text:
+  id: <%= ActiveRecord::FixtureSet.identify("text", :uuid) %>
+  number: 3
+  board: writebook_uuid
+  creator: kevin_uuid
+  column: writebook_in_progress_uuid
+  title: The text is too small
+  created_at: <%= 1.week.ago %>
+  status: published
+  last_active_at: <%= 1.week.ago %>
+  account: 37s_uuid
+
+shipping:
+  id: <%= ActiveRecord::FixtureSet.identify("shipping", :uuid) %>
+  number: 4
+  board: writebook_uuid
+  creator: kevin_uuid
+  column: writebook_triage_uuid
+  title: We need to ship the app
+  created_at: <%= 1.week.ago %>
+  status: published
+  last_active_at: <%= 1.week.ago %>
+  account: 37s_uuid
+
+buy_domain:
+  id: <%= ActiveRecord::FixtureSet.identify("buy_domain", :uuid) %>
+  number: 5
+  board: writebook_uuid
+  creator: david_uuid
+  title: Buy domain
+  created_at: <%= 1.week.ago %>
+  status: published
+  last_active_at: <%= 1.week.ago %>
+  account: 37s_uuid
+
+radio:
+  id: <%= ActiveRecord::FixtureSet.identify("radio", :uuid) %>
+  number: 1
+  board: miltons_wish_list_uuid
+  creator: mike_uuid
+  title: I want to play my radio at a reasonable volume
+  created_at: <%= 1.week.ago %>
+  status: published
+  last_active_at: <%= 1.week.ago %>
+  account: initech_uuid
+
+paycheck:
+  id: <%= ActiveRecord::FixtureSet.identify("paycheck", :uuid) %>
+  number: 2
+  board: miltons_wish_list_uuid
+  creator: mike_uuid
+  title: I haven't received my paycheck
+  created_at: <%= 1.week.ago %>
+  status: published
+  last_active_at: <%= 1.week.ago %>
+  account: initech_uuid
+
+unfinished_thoughts:
+  id: <%= ActiveRecord::FixtureSet.identify("unfinished_thoughts", :uuid) %>
+  number: 3
+  board: miltons_wish_list_uuid
+  creator: mike_uuid
+  title: Some unfinished thoughts
+  created_at: <%= 1.week.ago %>
+  status: drafted
+  last_active_at: <%= 1.week.ago %>
+  account: initech_uuid

@@ -1,0 +1,18 @@
+@layer components {
+  .separator {
+    block-size: 100%;
+    border-block: 0;
+    border-inline-end: 0;
+    border-inline-start: var(--border-size, 1px) var(--border-style, solid) var(--border-color, currentColor);
+    display: inline-flex;
+    inline-size: 0;
+  }
+
+  .separator--horizontal {
+    block-size: 0;
+    border-block-end: 0;
+    border-block-start: var(--border-size, 1px) var(--border-style, solid) var(--border-color, currentColor);
+    border-inline: 0;
+    display: flex;
+  }
+}

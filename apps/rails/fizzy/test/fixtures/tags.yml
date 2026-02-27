@@ -1,0 +1,9 @@
+web:
+  id: <%= ActiveRecord::FixtureSet.identify("web", :uuid) %>
+  title: web
+  account: 37s_uuid
+
+mobile:
+  id: <%= ActiveRecord::FixtureSet.identify("mobile", :uuid) %>
+  title: mobile
+  account: 37s_uuid

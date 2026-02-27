@@ -1,0 +1,189 @@
+@layer components {
+  #header:has(.filters) {
+    position: relative;
+  }
+
+  .filters {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--inline-space-half);
+    justify-content: center;
+    padding-block-start: 2px; /* prevents input focus-ring clipping on mobile */
+    position: relative;
+    view-transition-name: filters;
+    z-index: 1;
+
+    .btn {
+      --btn-border-color: var(--color-ink-medium);
+      --input-background: var(--color-canvas);
+    }
+
+    &:has(dialog[open]),
+    &:has([data-controller~="tooltip"]:hover) {
+      z-index: calc(var(--z-nav) + 1);
+    }
+  }
+
+  .filter {
+    &[aria-selected] {
+      display: flex;
+    }
+  }
+
+  .filter__button {
+    --btn-border-size: 0;
+    --btn-font-weight: 400;
+    --btn-icon-size: 0.7em;
+    --btn-padding: 0.3em 0.7em;
+
+    inline-size: 100%;
+    justify-content: space-between;
+    text-align: start;
+
+    span {
+      overflow: hidden;
+      text-decoration: none;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    img {
+      display: none;
+    }
+
+    &:has(input[type=checkbox]:checked) img {
+      display: block;
+    }
+  }
+
+  .filter__columns {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    max-block-size: 50dvh;
+  }
+
+  .filter__label {
+    display: flex;
+    inline-size: 100%;
+    padding: 0.3em 0.7em;
+
+    strong {
+      overflow: hidden;
+      text-decoration: none;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .filter__menu {
+    display: flex;
+    flex-direction: column;
+    inline-size: 100%;
+    list-style: none;
+    margin: 0;
+    min-inline-size: 0;
+    overflow-x: auto;
+    padding: 0 var(--inline-space);
+    position: relative;
+    row-gap: 0.2em;
+
+    &::before {
+      block-size: 100%;
+      border-block: 0;
+      border-inline-end: 0;
+      border-inline-start: 1px solid var(--color-ink-lighter);
+      content: "";
+      display: inline-flex;
+      inline-size: 0;
+      position: absolute;
+      inset: 0 auto 0 0;
+    }
+
+    &:first-child::before {
+      display: none;
+    }
+
+    li {
+      text-align: start;
+    }
+  }
+
+  .filter__terms:is(.input) {
+    --input-background: var(--color-canvas);
+    --input-border-radius: 5em;
+    --input-padding: 0.5em 1.3em;
+    --input-width: 16em;
+    --collapsed-filter-space: calc(var(--btn-size) + var(--inline-space-half) + 0.25em);
+
+    inline-size: var(--input-width);
+    min-inline-size: var(--input-width);
+
+    .filters:not(.filters--expanded, .filters--has-filters-set) & {
+      --input-padding: 0.5em 2.7em 0.5em 1.3em;
+
+      inline-size: calc(var(--input-width) + (0.25 * var(--collapsed-filter-space)));
+      margin-inline-end: calc((var(--btn-size) + var(--inline-space-half) + 0.25em) * -1);
+      min-inline-size: calc(var(--input-width) + (0.25 * var(--collapsed-filter-space)));
+    }
+  }
+
+  .filter-toggle {
+    .filters:not(.filters--expanded, .filters--has-filters-set) & {
+      --btn-background: transparent;
+      --btn-border-size: 0;
+
+      transform: translateX(calc(var(--inline-space-half) * -1));
+      position: relative;
+    }
+  }
+
+  .quick-filter {
+    position: relative;
+
+    &:has([aria-checked="true"]):not(.quick-filter--with-default) {
+      .input--select {
+        --input-background: var(--color-selected);
+      }
+    }
+
+    /* Hide a quick filter if there's nothing in it to filter by */
+    &:not(:has(.popup__item)) {
+      display: none !important;
+    }
+
+  }
+
+  .filters:not(.filters--expanded) {
+    .quick-filter:not([data-filter-show=true]) {
+      display: none;
+    }
+  }
+
+  .filters.filters--expanded {
+    .quick-filter {
+      display: block;
+    }
+  }
+
+  .filters__manage {
+    display: none;
+  }
+
+  .filters--has-filters-set .filters__manage {
+    display: flex;
+  }
+
+  .filters__show-when-expanded {
+    .filters:not(.filters--expanded) & {
+      display: none;
+    }
+  }
+
+  .filters__show-when-collapsed {
+    .filters--expanded & {
+      display: none;
+    }
+  }
+}
+

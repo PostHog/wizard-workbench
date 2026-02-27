@@ -1,0 +1,12 @@
+{
+  "name": "native-http-contacts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A native Node.js HTTP contacts API for testing the javascript_node wizard skill",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {}
+}

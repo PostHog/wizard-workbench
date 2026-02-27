@@ -1,0 +1,14 @@
+/* PWA install */
+.pwa__instructions {
+  @media (display-mode: standalone) {
+    display: none;
+  }
+}
+
+.pwa__installer {
+  display: none;
+
+  .pwa--can-install & {
+    display: block;
+  }
+}

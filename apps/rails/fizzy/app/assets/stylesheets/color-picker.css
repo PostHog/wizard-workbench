@@ -1,0 +1,16 @@
+@layer components {
+  .color-picker__colors {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--inline-space-half);
+
+    .btn {
+      --btn-border-radius: 0.1em;
+      --btn-size: 2em;
+      --icon-size: 1.3em;
+
+      inline-size: 100%;
+    }
+  }
+}
+

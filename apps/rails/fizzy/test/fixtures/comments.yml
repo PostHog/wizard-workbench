@@ -1,0 +1,58 @@
+logo_1:
+  id: <%= ActiveRecord::FixtureSet.identify("logo_1", :uuid) %>
+  card: logo_uuid
+  creator: system_uuid
+  created_at: <%= 1.week.ago %>
+  account: 37s_uuid
+
+logo_agreement_jz:
+  id: <%= ActiveRecord::FixtureSet.identify("logo_agreement_jz", :uuid) %>
+  card: logo_uuid
+  creator: jz_uuid
+  created_at: <%= 2.days.ago %>
+  account: 37s_uuid
+
+logo_3:
+  id: <%= ActiveRecord::FixtureSet.identify("logo_3", :uuid) %>
+  card: logo_uuid
+  creator: system_uuid
+  created_at: <%= 1.day.ago %>
+  account: 37s_uuid
+
+logo_agreement_kevin:
+  id: <%= ActiveRecord::FixtureSet.identify("logo_agreement_kevin", :uuid) %>
+  card: logo_uuid
+  creator: kevin_uuid
+  created_at: <%= 2.hours.ago %>
+  account: 37s_uuid
+
+logo_5:
+  id: <%= ActiveRecord::FixtureSet.identify("logo_5", :uuid) %>
+  card: logo_uuid
+  creator: system_uuid
+  created_at: <%= 1.hour.ago %>
+  account: 37s_uuid
+
+layout_1:
+  id: <%= ActiveRecord::FixtureSet.identify("layout_1", :uuid) %>
+  card: layout_uuid
+  creator: system_uuid
+  account: 37s_uuid
+
+layout_overflowing_david:
+  id: <%= ActiveRecord::FixtureSet.identify("layout_overflowing_david", :uuid) %>
+  card: layout_uuid
+  creator: david_uuid
+  account: 37s_uuid
+
+text_1:
+  id: <%= ActiveRecord::FixtureSet.identify("text_1", :uuid) %>
+  card: text_uuid
+  creator: system_uuid
+  account: 37s_uuid
+
+shipping_1:
+  id: <%= ActiveRecord::FixtureSet.identify("shipping_1", :uuid) %>
+  card: shipping_uuid
+  creator: system_uuid
+  account: 37s_uuid

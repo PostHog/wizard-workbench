@@ -404,8 +404,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -455,18 +453,24 @@ jobs:
 
       - name: Clone PostHog monorepo and install MCP
         run: |
-          echo "::group::Cloning PostHog monorepo (sparse checkout)"
+          echo "::group::Cloning PostHog monorepo"
           git clone --depth 1 --branch ${{ needs.discover.outputs.input_posthog_ref }} \
-            --filter=blob:none --sparse \
             https://github.com/PostHog/posthog.git $HOME/posthog
+          echo "::endgroup::"
+
+          echo "::group::Installing PostCSS dependencies (required for UI apps build)"
           cd $HOME/posthog
-          git sparse-checkout set services/mcp
+          pnpm add -Dw autoprefixer postcss-preset-env cssnano
           echo "::endgroup::"
 
           echo "::group::Installing MCP dependencies"
-          cd $HOME/posthog/services/mcp/typescript
-          # Use --ignore-workspace to avoid resolving all 45 workspace packages
-          pnpm install --ignore-workspace --no-frozen-lockfile
+          cd $HOME/posthog
+          pnpm install --filter @posthog/mcp --no-frozen-lockfile
+          echo "::endgroup::"
+
+          echo "::group::Building MCP UI apps"
+          cd $HOME/posthog/services/mcp
+          pnpm build
           echo "::endgroup::"
 
           echo "MCP_PATH=$HOME/posthog/services/mcp" >> $GITHUB_ENV
@@ -497,7 +501,7 @@ jobs:
           done
 
           # Start MCP server in background (consumes from local examples server)
-          cd $MCP_PATH/typescript
+          cd $MCP_PATH
           pnpm dev:local-resources &
           MCP_PID=$!
 

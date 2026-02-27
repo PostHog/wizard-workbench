@@ -1,0 +1,17 @@
+37s:
+  id: <%= ActiveRecord::FixtureSet.identify("37s", :uuid) %>
+  name: 37signals
+  external_account_id: <%= ActiveRecord::FixtureSet.identify("37signals") %>
+  cards_count: 5
+
+initech:
+  id: <%= ActiveRecord::FixtureSet.identify("initech", :uuid) %>
+  name: Initech LLC
+  external_account_id: <%= ActiveRecord::FixtureSet.identify("initech") %>
+  cards_count: 0
+
+acme:
+  id: <%= ActiveRecord::FixtureSet.identify("acme", :uuid) %>
+  name: ACME
+  external_account_id: <%= ActiveRecord::FixtureSet.identify("acme") %>
+  cards_count: 0
