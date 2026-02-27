@@ -1,0 +1,9 @@
+{
+  "name": "shared-e2e-utils",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/e2e-utils/src",
+  "projectType": "library",
+  "generators": {},
+  "targets": {},
+  "tags": ["scope:shared", "type:e2e-utils"]
+}

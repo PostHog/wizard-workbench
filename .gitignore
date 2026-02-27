@@ -91,6 +91,9 @@ Desktop.ini
 .claude/*.local.*
 .stripe/
 
+# Cloned repos (used for local testing, too large to commit)
+apps/monorepo/posthog/
+
 # Temporary
 tmp/
 temp/

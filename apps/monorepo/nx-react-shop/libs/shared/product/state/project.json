@@ -1,0 +1,14 @@
+{
+  "name": "shared-product-state",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/shared/product/state/src",
+  "prefix": "nx-example",
+  "targets": {},
+  "generators": {
+    "@nx/angular:component": {
+      "styleext": "scss"
+    }
+  },
+  "tags": ["scope:shared", "type:state"]
+}

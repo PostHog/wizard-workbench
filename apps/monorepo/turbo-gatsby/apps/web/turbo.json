@@ -1,0 +1,18 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "extends": [
+    "//"
+  ],
+  "tasks": {
+    "build": {
+      "outputs": [
+        "public/**",
+        ".cache/**",
+        ".vercel/**"
+      ],
+      "env": [
+        "NODE_ENV"
+      ]
+    }
+  }
+}

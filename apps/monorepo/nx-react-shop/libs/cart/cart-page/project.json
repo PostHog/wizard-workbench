@@ -1,0 +1,9 @@
+{
+  "name": "cart-cart-page",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/cart/cart-page/src",
+  "projectType": "library",
+  "generators": {},
+  "targets": {},
+  "tags": ["scope:cart", "type:feature"]
+}

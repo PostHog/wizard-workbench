@@ -1,0 +1,14 @@
+{
+  "name": "products-home-page",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/products/home-page/src",
+  "prefix": "nx-example",
+  "targets": {},
+  "generators": {
+    "@nx/angular:component": {
+      "styleext": "scss"
+    }
+  },
+  "tags": ["scope:products", "type:feature"]
+}

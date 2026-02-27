@@ -1,0 +1,9 @@
+{
+  "name": "shared-product-data",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/product/data/src",
+  "projectType": "library",
+  "generators": {},
+  "targets": {},
+  "tags": ["type:data", "scope:shared"]
+}
