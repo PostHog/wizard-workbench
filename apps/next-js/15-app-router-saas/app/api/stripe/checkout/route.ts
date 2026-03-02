@@ -5,6 +5,7 @@ import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -87,6 +88,20 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date(),
       })
       .where(eq(teams.id, userTeam[0].teamId));
+
+    const planName = (plan.product as Stripe.Product).name;
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user[0].email,
+      event: 'checkout_completed',
+      properties: {
+        email: user[0].email,
+        subscription_id: subscriptionId,
+        product_id: productId,
+        plan_name: planName,
+        team_id: userTeam[0].teamId,
+      },
+    });
 
     await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
