@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -94,6 +95,23 @@ export default async function handler(
       setSession(foundUser, res),
       logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
     ]);
+
+    const posthog = getPostHogClient();
+    const clientDistinctId = req.headers['x-posthog-distinct-id'] as string | undefined;
+    posthog.identify({
+      distinctId: foundUser.email,
+      properties: { email: foundUser.email, name: foundUser.name },
+    });
+    posthog.capture({
+      distinctId: foundUser.email,
+      event: 'user_signed_in',
+      properties: {
+        user_id: foundUser.id,
+        team_id: foundTeam?.id,
+        $set: { email: foundUser.email, name: foundUser.name },
+        ...(clientDistinctId ? { $anon_distinct_id: clientDistinctId } : {}),
+      },
+    });
 
     if (redirect === 'checkout' && foundTeam) {
       const checkoutResult = await createCheckoutSession({
