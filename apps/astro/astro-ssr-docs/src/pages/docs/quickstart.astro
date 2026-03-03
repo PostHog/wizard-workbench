@@ -59,3 +59,18 @@ console.log('Extracted data:', document.data);</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    window.posthog?.capture('quickstart_viewed');
+
+    document.querySelectorAll('h2 ~ ul a, h2 + ul a').forEach(function (link) {
+      link.addEventListener('click', function () {
+        window.posthog?.capture('whats_next_link_clicked', {
+          destination: link.getAttribute('href'),
+          label: link.textContent?.trim()
+        });
+      });
+    });
+  });
+</script>
