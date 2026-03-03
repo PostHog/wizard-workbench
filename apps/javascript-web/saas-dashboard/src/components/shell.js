@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { router } from '../router.js';
 import { store } from '../store.js';
+import posthog from '../posthog.js';
 
 /**
  * Renders the app shell: sidebar + header + content area.
@@ -53,7 +54,11 @@ export function renderShell(activeSection) {
   `;
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
+    const userId = store.state.currentUser?.id;
     await api.logout();
+    if (userId) {
+      posthog.capture({ distinctId: userId, event: 'user_signed_out' });
+    }
     router.navigate('/login');
   });
 }

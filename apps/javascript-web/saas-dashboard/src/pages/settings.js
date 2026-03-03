@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
+import posthog from '../posthog.js';
 
 export async function renderSettings() {
   renderShell('settings');
@@ -84,20 +85,32 @@ export async function renderSettings() {
     document.getElementById('theme-select').addEventListener('change', async (e) => {
       await api.updateSettings({ theme: e.target.value });
       document.body.dataset.theme = e.target.value;
+      if (user?.id) {
+        posthog.capture({ distinctId: user.id, event: 'settings_updated', properties: { setting: 'theme', value: e.target.value } });
+      }
     });
 
     // Notifications
     document.getElementById('email-notif').addEventListener('change', async (e) => {
       await api.updateSettings({ emailNotifications: e.target.checked });
+      if (user?.id) {
+        posthog.capture({ distinctId: user.id, event: 'settings_updated', properties: { setting: 'email_notifications', value: e.target.checked } });
+      }
     });
 
     document.getElementById('weekly-digest').addEventListener('change', async (e) => {
       await api.updateSettings({ weeklyDigest: e.target.checked });
+      if (user?.id) {
+        posthog.capture({ distinctId: user.id, event: 'settings_updated', properties: { setting: 'weekly_digest', value: e.target.checked } });
+      }
     });
 
     // Reset
     document.getElementById('reset-data-btn').addEventListener('click', () => {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
+        if (user?.id) {
+          posthog.capture({ distinctId: user.id, event: 'data_reset' });
+        }
         store.reset();
         store.login(user.email);
         renderSettings();
