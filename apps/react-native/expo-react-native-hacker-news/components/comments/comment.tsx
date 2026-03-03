@@ -12,6 +12,7 @@ import { router, usePathname } from "expo-router";
 import { formatDistanceToNowStrict } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { MessageSquareText } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import type { Item } from "@/shared/types";
 import { Colors } from "@/constants/Colors";
@@ -19,6 +20,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export const Comment = (item: Item) => {
   const QC = useQueryClient();
+  const posthog = usePostHog();
   const pathname = usePathname();
   const { width: windowWidth } = useWindowDimensions();
 
@@ -33,7 +35,13 @@ export const Comment = (item: Item) => {
       <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
         <Pressable
           disabled={pathname.startsWith(`/users/${item.by}`)}
-          onPress={() => router.push(`/users/${item.by}`)}
+          onPress={() => {
+            posthog.capture("user_profile_viewed", {
+              username: item.by,
+              from_screen: pathname,
+            });
+            router.push(`/users/${item.by}`);
+          }}
         >
           <Text
             style={{
@@ -102,6 +110,11 @@ export const Comment = (item: Item) => {
             await QC.prefetchQuery({
               queryKey: getItemDetailsQueryKey(item.id),
               queryFn: getItemQueryFn,
+            });
+            posthog.capture("comment_thread_opened", {
+              comment_id: item.id,
+              author: item.by,
+              reply_count: item.kids?.length ?? 0,
             });
             router.push({ pathname: `../${item.id.toString()}` });
           }}
