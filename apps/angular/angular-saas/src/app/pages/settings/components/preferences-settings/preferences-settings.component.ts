@@ -2,6 +2,7 @@ import { Component, inject, ChangeDetectionStrategy, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { ThemeService } from '@app/shell/services/theme.service';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { PosthogService } from '@core/services/posthog.service';
 
 interface Preferences {
   isDarkMode: boolean;
@@ -214,6 +215,7 @@ interface Preferences {
 export class PreferencesSettingsComponent {
   private readonly themeService = inject(ThemeService);
   private readonly toast = inject(HotToastService);
+  private readonly posthogService = inject(PosthogService);
 
   readonly preferences = signal<Preferences>({
     isDarkMode: false,
@@ -244,6 +246,14 @@ export class PreferencesSettingsComponent {
   }
 
   savePreferences() {
+    const current = this.preferences();
+    this.posthogService.posthog.capture('preferences_saved', {
+      dark_mode: current.isDarkMode,
+      compact_view: current.isCompactView,
+      date_format: current.dateFormat,
+      timezone: current.timezone,
+      landing_page: current.landingPage,
+    });
     this.toast.success('Preferences saved');
   }
 }
