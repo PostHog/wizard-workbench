@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import posthog from 'posthog-js'
 
 const AUTH_KEY = 'auth-user'
 
@@ -10,6 +11,7 @@ export function useAuth() {
 
   const login = async (username: string, password: string) => {
     if (!username?.trim() || !password?.trim()) {
+      posthog.capture('user_login_failed', { error: 'Username and password are required' })
       throw new Error('Username and password are required')
     }
 
@@ -17,9 +19,12 @@ export function useAuth() {
     const sanitizedUsername = username.trim()
     user.value = sanitizedUsername
     localStorage.setItem(AUTH_KEY, sanitizedUsername)
-    
+
+    posthog.identify(sanitizedUsername)
+    posthog.capture('user_logged_in')
+
     await router.push('/')
-    
+
     return {
       success: true,
       user: sanitizedUsername,
@@ -27,8 +32,10 @@ export function useAuth() {
   }
 
   const logout = async () => {
+    posthog.capture('user_logged_out')
     user.value = null
     localStorage.removeItem(AUTH_KEY)
+    posthog.reset()
     await router.push('/login')
   }
 
