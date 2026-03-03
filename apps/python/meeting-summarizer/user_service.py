@@ -1,12 +1,33 @@
 #!/usr/bin/env python3
 """User Management Service - A pure Python background service for managing users."""
 
+import atexit
+import os
 import uuid
 from datetime import datetime
 from typing import Optional
 
+from dotenv import load_dotenv
+from posthog import Posthog
+
 from database import UserDatabase
 from models import User
+
+load_dotenv()
+
+
+def _init_posthog():
+    """Initialize PostHog analytics client."""
+    api_key = os.getenv('POSTHOG_API_KEY')
+    if not api_key:
+        return None
+    client = Posthog(
+        api_key,
+        host=os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com'),
+        enable_exception_autocapture=True,
+    )
+    atexit.register(client.shutdown)
+    return client
 
 
 class UserService:
@@ -16,6 +37,7 @@ class UserService:
         """Initialize the user service."""
         self.db = UserDatabase()
         self.service_id = str(uuid.uuid4())
+        self.posthog_client = _init_posthog()
         print(f"User service initialized (ID: {self.service_id})")
 
     def register_user(self, email: str, username: str, full_name: Optional[str] = None, metadata: Optional[dict] = None) -> Optional[User]:
@@ -35,6 +57,9 @@ class UserService:
         )
 
         if self.db.create_user(user):
+            if self.posthog_client:
+                self.posthog_client.set(distinct_id=user_id, properties={'username': username})
+                self.posthog_client.capture(distinct_id=user_id, event='user_registered')
             print(f"✓ User registered: {username} ({email})")
             return user
         else:
@@ -62,6 +87,8 @@ class UserService:
         success = self.db.deactivate_user(user_id)
 
         if success:
+            if self.posthog_client:
+                self.posthog_client.capture(distinct_id=user_id, event='user_deactivated')
             print(f"✓ User deactivated: {user_id}")
         else:
             print(f"✗ Failed to deactivate user: {user_id}")
@@ -76,6 +103,8 @@ class UserService:
             success = self.db.delete_user(user_id)
 
             if success:
+                if self.posthog_client:
+                    self.posthog_client.capture(distinct_id=user_id, event='user_deleted')
                 print(f"✓ User deleted: {user_id}")
                 return True
 
