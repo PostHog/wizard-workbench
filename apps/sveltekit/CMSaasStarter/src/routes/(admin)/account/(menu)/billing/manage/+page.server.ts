@@ -3,6 +3,7 @@ import { error, redirect } from "@sveltejs/kit"
 import Stripe from "stripe"
 import { getOrCreateCustomerId } from "../../../subscription_helpers.server"
 import type { PageServerLoad } from "./$types"
+import { getPostHogClient } from "$lib/server/posthog"
 const stripe = new Stripe(PRIVATE_STRIPE_API_KEY, { apiVersion: "2023-08-16" })
 
 export const load: PageServerLoad = async ({
@@ -10,6 +11,7 @@ export const load: PageServerLoad = async ({
   locals: { safeGetSession, supabaseServiceRole },
 }) => {
   const { session, user } = await safeGetSession()
+
   if (!session) {
     redirect(303, "/login")
   }
@@ -36,6 +38,13 @@ export const load: PageServerLoad = async ({
     console.error("Error creating billing portal session", e)
     error(500, "Unknown error (PSE). If issue persists, please contact us.")
   }
+
+  const posthog = getPostHogClient()
+  posthog.capture({
+    distinctId: user?.id ?? "unknown",
+    event: "billing_portal_accessed",
+    properties: { customer_id: customerId },
+  })
 
   redirect(303, portalLink ?? "/account/billing")
 }
