@@ -1,6 +1,7 @@
 import { Component, inject, ChangeDetectionStrategy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { PostHogService } from '@app/shared/services/posthog.service';
 
 interface NotificationSettings {
   productUpdates: boolean;
@@ -210,6 +211,7 @@ interface NotificationSettings {
 })
 export class NotificationSettingsComponent {
   private readonly toast = inject(HotToastService);
+  private readonly posthogService = inject(PostHogService);
 
   readonly notifications = signal<NotificationSettings>({
     productUpdates: true,
@@ -225,6 +227,14 @@ export class NotificationSettingsComponent {
   }
 
   saveNotifications() {
+    const settings = this.notifications();
+    this.posthogService.posthog.capture('notification_preferences_saved', {
+      email_product_updates: settings.productUpdates,
+      email_weekly_digest: settings.weeklyDigest,
+      email_team_activity: settings.teamActivity,
+      desktop_notifications: settings.desktop,
+      sound_notifications: settings.sound,
+    });
     this.toast.success('Notification preferences saved');
   }
 }
