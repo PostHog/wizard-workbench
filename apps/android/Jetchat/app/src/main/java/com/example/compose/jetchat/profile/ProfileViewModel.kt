@@ -23,6 +23,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.compose.jetchat.data.colleagueProfile
 import com.example.compose.jetchat.data.meProfile
+import com.posthog.PostHog
 
 class ProfileViewModel : ViewModel() {
 
@@ -38,6 +39,14 @@ class ProfileViewModel : ViewModel() {
         } else {
             colleagueProfile
         }
+        val isOwnProfile = userId == meProfile.userId || userId == meProfile.displayName
+        PostHog.capture(
+            event = "profile_viewed",
+            properties = mapOf(
+                "viewed_user_id" to userId,
+                "is_own_profile" to isOwnProfile,
+            ),
+        )
     }
 
     private val _userData = MutableLiveData<ProfileScreenState>()

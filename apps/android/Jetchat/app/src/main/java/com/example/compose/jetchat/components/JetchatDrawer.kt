@@ -23,6 +23,7 @@ import android.os.Build
 import androidx.annotation.ChecksSdkIntAtLeast
 import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
+import com.posthog.PostHog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -320,6 +321,7 @@ private fun addWidgetToHomeScreen(context: Context) {
     val myProvider = ComponentName(context, WidgetReceiver::class.java)
     if (widgetAddingIsSupported(context)) {
         appWidgetManager.requestPinAppWidget(myProvider, null, null)
+        PostHog.capture(event = "widget_added")
     }
 }
 
