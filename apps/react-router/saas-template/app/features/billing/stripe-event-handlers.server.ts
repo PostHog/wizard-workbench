@@ -1,3 +1,4 @@
+import { PostHog } from "posthog-node";
 import type { Stripe } from "stripe";
 
 import { updateOrganizationInDatabaseById } from "../organizations/organizations-model.server";
@@ -24,6 +25,22 @@ import { stripeAdmin } from "~/features/billing/stripe-admin.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const ok = () => Response.json({ message: "OK" });
+
+const captureStripeEvent = async (
+  event: string,
+  organizationId: string,
+  properties: Record<string, unknown>,
+) => {
+  // biome-ignore lint/style/noNonNullAssertion: PostHog requires these env vars to be defined
+  const posthog = new PostHog(process.env.VITE_PUBLIC_POSTHOG_KEY!, {
+    flushAt: 1,
+    flushInterval: 0,
+    // biome-ignore lint/style/noNonNullAssertion: PostHog requires these env vars to be defined
+    host: process.env.VITE_PUBLIC_POSTHOG_HOST!,
+  });
+  posthog.capture({ distinctId: organizationId, event, properties });
+  await posthog.shutdown().catch(() => {});
+};
 
 const prettyPrint = (event: Stripe.Event) => {
   console.log(
@@ -121,6 +138,15 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
           organizationId: organization.id,
         });
       }
+
+      await captureStripeEvent("checkout_session_completed", organization.id, {
+        amount_total: event.data.object.amount_total,
+        checkout_session_id: event.data.object.id,
+        currency: event.data.object.currency,
+        organization_id: organization.id,
+        organization_name: organization.name,
+        purchased_by_user_id: event.data.object.metadata?.purchasedById,
+      });
     } else {
       console.error("No organization ID found in checkout session metadata");
       prettyPrint(event);
@@ -163,6 +189,16 @@ export const handleStripeCustomerSubscriptionCreatedEvent = async (
 ) => {
   try {
     await createStripeSubscriptionInDatabase(event.data.object);
+
+    const organizationId = event.data.object.metadata?.organizationId;
+    if (organizationId) {
+      await captureStripeEvent("subscription_created", organizationId, {
+        organization_id: organizationId,
+        status: event.data.object.status,
+        subscription_id: event.data.object.id,
+        trial_end: event.data.object.trial_end,
+      });
+    }
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);
@@ -177,6 +213,15 @@ export const handleStripeCustomerSubscriptionDeletedEvent = async (
 ) => {
   try {
     await updateStripeSubscriptionFromAPIInDatabase(event.data.object);
+
+    const organizationId = event.data.object.metadata?.organizationId;
+    if (organizationId) {
+      await captureStripeEvent("subscription_deleted", organizationId, {
+        canceled_at: event.data.object.canceled_at,
+        organization_id: organizationId,
+        subscription_id: event.data.object.id,
+      });
+    }
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);
