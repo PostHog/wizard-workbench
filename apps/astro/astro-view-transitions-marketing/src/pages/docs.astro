@@ -47,3 +47,24 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function handleDocsSectionClick(event) {
+    const card = event.currentTarget;
+    const section = card.querySelector('h3')?.textContent || '';
+    window.posthog?.capture('docs_section_clicked', {
+      section: section
+    });
+  }
+
+  function setupDocsPage() {
+    const cards = document.querySelectorAll('.features-grid .feature-card');
+    cards.forEach(function(card) {
+      card.removeEventListener('click', handleDocsSectionClick);
+      card.addEventListener('click', handleDocsSectionClick);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupDocsPage);
+  document.addEventListener('astro:page-load', setupDocsPage);
+</script>
