@@ -1,3 +1,4 @@
+import posthog
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -14,6 +15,17 @@ from .forms import RegisterForm, LoginForm, ProfileForm
 class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
+
+    def form_valid(self, form):
+        user = form.get_user()
+        with posthog.new_context():
+            posthog.identify_context(str(user.id))
+            posthog.tag('username', user.username)
+            posthog.tag('is_staff', user.is_staff)
+            posthog.capture('user_logged_in', properties={
+                'login_method': 'email',
+            })
+        return super().form_valid(form)
 
 
 class CustomLogoutView(LogoutView):
@@ -49,6 +61,13 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            with posthog.new_context():
+                posthog.identify_context(str(user.id))
+                posthog.tag('username', user.username)
+                posthog.tag('is_staff', user.is_staff)
+                posthog.capture('user_registered', properties={
+                    'has_company_name': bool(user.company_name),
+                })
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +82,9 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            with posthog.new_context():
+                posthog.identify_context(str(request.user.id))
+                posthog.capture('profile_updated')
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
