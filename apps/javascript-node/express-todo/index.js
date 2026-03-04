@@ -1,7 +1,13 @@
 const express = require('express');
+const { PostHog } = require('posthog-node');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 app.use(express.json());
 
@@ -21,6 +27,14 @@ app.post('/api/todos', (req, res) => {
 
   const todo = { id: nextId++, title, completed: false };
   todos.push(todo);
+
+  const distinctId = req.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'todo_created',
+    properties: { todo_id: todo.id, title: todo.title },
+  });
+
   res.status(201).json(todo);
 });
 
@@ -34,6 +48,17 @@ app.patch('/api/todos/:id', (req, res) => {
   if (req.body.title !== undefined) todo.title = req.body.title;
   if (req.body.completed !== undefined) todo.completed = req.body.completed;
 
+  const distinctId = req.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'todo_updated',
+    properties: {
+      todo_id: todo.id,
+      title: todo.title,
+      completed: todo.completed,
+    },
+  });
+
   res.json(todo);
 });
 
@@ -44,8 +69,23 @@ app.delete('/api/todos/:id', (req, res) => {
     return res.status(404).json({ error: 'Not found' });
   }
 
+  const deletedId = parseInt(req.params.id);
   todos.splice(index, 1);
+
+  const distinctId = req.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'todo_deleted',
+    properties: { todo_id: deletedId },
+  });
+
   res.status(204).send();
+});
+
+app.use((err, req, res, next) => {
+  const distinctId = req.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.captureException(err, distinctId);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 app.listen(PORT, () => {
