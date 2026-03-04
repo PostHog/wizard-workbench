@@ -1,11 +1,16 @@
 <script setup>
 const { locale, locales, setLocale } = useI18n()
+const posthog = usePostHog()
 
 const availableLocales = computed(() => {
   return (locales.value)
 })
 
 function updateLocale(event) {
+  posthog?.capture('language_changed', {
+    from_locale: locale.value,
+    to_locale: event.target.value,
+  })
   setLocale(event.target.value)
   window.location.reload()
 }
@@ -19,7 +24,7 @@ onMounted(() => {
 <template>
   <div flex gap2 items-center mt-5>
     <label for="langSwitcher" class="text-sm">Language:</label>
-    <select id="langSwitcher" rounded-md text-sm p-1 @change="updateLocale" aria-label="Select language">
+    <select id="langSwitcher" rounded-md text-sm p-1 aria-label="Select language" @change="updateLocale">
       <option v-for="loc in availableLocales" :key="loc.code" :value="loc.code" p-1>
         {{ loc.name }}
       </option>
