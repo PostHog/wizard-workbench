@@ -36,7 +36,7 @@ const renderTime = new Date().toISOString();
 
   <h2>Getting Started</h2>
   <p>
-    The fastest way to get started is to follow our <a href="/docs/quickstart">Quick Start guide</a>,
+    The fastest way to get started is to follow our <a href="/docs/quickstart" id="intro-quickstart-link">Quick Start guide</a>,
     which will have you processing your first document in under 5 minutes.
   </p>
 
@@ -58,3 +58,11 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('intro-quickstart-link')?.addEventListener('click', function () {
+      window.posthog?.capture('docs_quickstart_link_clicked', { source_page: '/docs' });
+    });
+  });
+</script>
