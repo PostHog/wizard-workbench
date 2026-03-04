@@ -7,6 +7,7 @@ use App\Actions\Billing\GetSubscriptionSummary;
 use App\Actions\Billing\RedirectToBillingPortal;
 use App\Actions\Billing\SwapPlan;
 use App\Domains\Billing\PlanCatalog;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -27,6 +28,12 @@ class SubscriptionController extends Controller
     {
         $plan = $catalog->findOrFail($request->plan);
         $user = $request->user();
+
+        app(PostHogService::class)->capture($user->email, 'subscription_checkout_started', [
+            'plan_name' => $plan->name,
+            'plan_id' => $plan->id,
+            'plan_price' => $plan->price ?? null,
+        ]);
 
         // Stub out subscription if Stripe isn't configured (for demo/development)
         if (!CheckoutPlan::isStripeConfigured()) {
@@ -70,8 +77,16 @@ class SubscriptionController extends Controller
             try {
                 $swapPlan($user, $plan);
 
+                app(PostHogService::class)->capture($user->email, 'subscription_plan_swapped', [
+                    'new_plan_name' => $plan->name,
+                    'new_plan_id' => $plan->id,
+                    'new_plan_price' => $plan->price ?? null,
+                ]);
+
                 return redirect()->route('subscribe')->with('success', 'Your subscription has been updated to '.$plan->name.'.');
             } catch (Exception $e) {
+                app(PostHogService::class)->captureException($e, $user->email);
+
                 return redirect()->route('subscribe')->with('error', 'There was an error updating your subscription: '.$e->getMessage());
             }
         }

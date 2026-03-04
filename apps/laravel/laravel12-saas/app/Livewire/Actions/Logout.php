@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Actions;
 
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 
@@ -12,6 +13,13 @@ class Logout
      */
     public function __invoke(): void
     {
+        $user = Auth::user();
+        if ($user) {
+            app(PostHogService::class)->capture($user->email, 'user_logged_out', [
+                'email' => $user->email,
+            ]);
+        }
+
         Auth::guard('web')->logout();
 
         Session::invalidate();

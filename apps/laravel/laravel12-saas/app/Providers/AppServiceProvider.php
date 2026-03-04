@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Subscription;
+use App\Services\PostHogService;
 use App\Support\Branding;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -33,5 +34,7 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         View::share('brand', Branding::all());
+
+        app(PostHogService::class);
     }
 }
