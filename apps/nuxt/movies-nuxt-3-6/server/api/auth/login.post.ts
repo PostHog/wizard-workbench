@@ -1,3 +1,6 @@
+import { PostHog } from 'posthog-node'
+import { getHeader } from 'h3'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -13,13 +16,35 @@ export default defineEventHandler(async (event) => {
 
     // Demo auth: accepts any username and password
     const sanitizedUsername = username.trim()
-    
+
     setCookie(event, 'auth-user', sanitizedUsername, {
       httpOnly: false, // Allow client-side access for SSR
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
+
+    const runtimeConfig = useRuntimeConfig()
+    const sessionId = getHeader(event, 'x-posthog-session-id')
+    const distinctId = getHeader(event, 'x-posthog-distinct-id')
+
+    const posthog = new PostHog(
+      runtimeConfig.public.posthog.publicKey,
+      { host: runtimeConfig.public.posthog.host },
+    )
+
+    await posthog.withContext(
+      { sessionId: sessionId ?? undefined, distinctId: distinctId ?? undefined },
+      async () => {
+        posthog.capture({
+          event: 'login_attempted',
+          distinctId: distinctId ?? sanitizedUsername,
+          properties: { username: sanitizedUsername },
+        })
+      },
+    )
+
+    await posthog.shutdown()
 
     return {
       success: true,

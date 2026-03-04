@@ -7,6 +7,13 @@ const message = computed(() => String(props.error?.message || ''))
 const is404 = computed(() => props.error?.statusCode === 404 || message.value?.includes('404'))
 const isDev = process.dev
 
+const { $posthog } = useNuxtApp()
+$posthog?.capture('error_displayed', {
+  status_code: props.error?.statusCode,
+  message: message.value,
+  is_404: is404.value,
+})
+
 function handleError() {
   return clearError({ redirect: '/' })
 }
