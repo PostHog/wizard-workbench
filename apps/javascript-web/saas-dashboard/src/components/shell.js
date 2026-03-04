@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { router } from '../router.js';
 import { store } from '../store.js';
+import posthog from '../posthog.js';
 
 /**
  * Renders the app shell: sidebar + header + content area.
@@ -9,6 +10,11 @@ import { store } from '../store.js';
 export function renderShell(activeSection) {
   const app = document.getElementById('app');
   const user = store.state.currentUser;
+
+  // Re-identify the user on each page load in case of a page refresh
+  if (user) {
+    posthog.identify(user.id, { name: user.name, email: user.email, role: user.role });
+  }
 
   app.innerHTML = `
     <div class="app-layout">
@@ -53,7 +59,9 @@ export function renderShell(activeSection) {
   `;
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
+    posthog.capture('user_signed_out');
     await api.logout();
+    posthog.reset();
     router.navigate('/login');
   });
 }
