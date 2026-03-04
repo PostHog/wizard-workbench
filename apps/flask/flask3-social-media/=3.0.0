@@ -1,0 +1,15 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting posthog
+  Downloading posthog-7.9.6-py3-none-any.whl.metadata (6.4 kB)
+Requirement already satisfied: requests<3.0,>=2.7 in /usr/lib/python3/dist-packages (from posthog) (2.31.0)
+Requirement already satisfied: six>=1.5 in /usr/lib/python3/dist-packages (from posthog) (1.16.0)
+Requirement already satisfied: python-dateutil>=2.2 in /usr/lib/python3/dist-packages (from posthog) (2.8.2)
+Collecting backoff>=1.10.0 (from posthog)
+  Downloading backoff-2.2.1-py3-none-any.whl.metadata (14 kB)
+Requirement already satisfied: distro>=1.5.0 in /usr/lib/python3/dist-packages (from posthog) (1.9.0)
+Requirement already satisfied: typing-extensions>=4.2.0 in /usr/lib/python3/dist-packages (from posthog) (4.10.0)
+Downloading posthog-7.9.6-py3-none-any.whl (201 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 201.1/201.1 kB 12.5 MB/s eta 0:00:00
+Downloading backoff-2.2.1-py3-none-any.whl (15 kB)
+Installing collected packages: backoff, posthog
+Successfully installed backoff-2.2.1 posthog-7.9.6
