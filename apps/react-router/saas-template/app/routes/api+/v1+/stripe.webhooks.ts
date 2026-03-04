@@ -17,6 +17,7 @@ import {
   handleStripeSubscriptionScheduleExpiringEvent,
   handleStripeSubscriptionScheduleUpdatedEvent,
 } from "~/features/billing/stripe-event-handlers.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const json = (payload: unknown, init?: ResponseInit) =>
@@ -33,7 +34,8 @@ const badRequest = (payload?: { message?: string; error?: string }) =>
 
 export const loader = () => notAllowed();
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
+  const posthog = (context as PostHogContext).posthog;
   const method = request.method;
 
   if (method !== "POST") {
@@ -60,12 +62,43 @@ export async function action({ request }: Route.ActionArgs) {
         return handleStripeChargeDisputeClosedEvent(event);
       }
       case "checkout.session.completed": {
+        const session = event.data.object;
+        const checkoutDistinctId =
+          session.customer_details?.email ??
+          session.metadata?.organizationId ??
+          "unknown";
+        posthog?.capture({
+          distinctId: checkoutDistinctId,
+          event: "checkout_completed",
+          properties: {
+            amount_total: session.amount_total,
+            currency: session.currency,
+            organization_id: session.metadata?.organizationId,
+            stripe_customer_id:
+              typeof session.customer === "string"
+                ? session.customer
+                : session.customer?.id,
+          },
+        });
         return handleStripeCheckoutSessionCompletedEvent(event);
       }
       case "customer.deleted": {
         return handleStripeCustomerDeletedEvent(event);
       }
       case "customer.subscription.created": {
+        const subscription = event.data.object;
+        const subscriptionCustomerId =
+          typeof subscription.customer === "string"
+            ? subscription.customer
+            : subscription.customer.id;
+        posthog?.capture({
+          distinctId: subscriptionCustomerId,
+          event: "subscription_created",
+          properties: {
+            stripe_customer_id: subscriptionCustomerId,
+            stripe_subscription_id: subscription.id,
+          },
+        });
         return handleStripeCustomerSubscriptionCreatedEvent(event);
       }
       case "customer.subscription.deleted": {
