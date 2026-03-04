@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -16,6 +17,17 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
+      const posthog = getPostHogServer();
+      const sessionId = request.headers.get('X-PostHog-Session-Id');
+      posthog.capture({
+        distinctId: data.email || 'anonymous',
+        event: 'contact_form_failed',
+        properties: {
+          $session_id: sessionId || undefined,
+          reason: 'missing_required_fields',
+          source: 'api',
+        },
+      });
       return new Response(
         JSON.stringify({ error: 'Please fill in all required fields.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -25,6 +37,17 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
+      const posthog = getPostHogServer();
+      const sessionId = request.headers.get('X-PostHog-Session-Id');
+      posthog.capture({
+        distinctId: data.email,
+        event: 'contact_form_failed',
+        properties: {
+          $session_id: sessionId || undefined,
+          reason: 'invalid_email',
+          source: 'api',
+        },
+      });
       return new Response(
         JSON.stringify({ error: 'Please enter a valid email address.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -45,6 +68,19 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    const posthog = getPostHogServer();
+    const sessionId = request.headers.get('X-PostHog-Session-Id');
+    posthog.capture({
+      distinctId: data.email,
+      event: 'contact_form_completed',
+      properties: {
+        $session_id: sessionId || undefined,
+        interest: data.interest,
+        company: data.company || undefined,
+        source: 'api',
+      },
+    });
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -54,6 +90,8 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contact form error:', error);
+    const posthog = getPostHogServer();
+    posthog.captureException(error instanceof Error ? error : new Error(String(error)), 'anonymous');
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
