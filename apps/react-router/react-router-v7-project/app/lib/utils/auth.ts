@@ -1,5 +1,6 @@
 // Fake authentication utilities using localStorage
 import { nanoid } from 'nanoid'
+import posthog from 'posthog-js'
 
 export interface FakeUser {
   id: string
@@ -137,36 +138,42 @@ export function visitCountry(countryName: string): void {
 
 function checkAchievements(user: FakeUser): void {
   const achievements = [...user.achievements]
-  
+
   if (user.claimedCountries.length >= 1 && !achievements.includes('🌍 First Claim')) {
     achievements.push('🌍 First Claim')
     user.totalPoints += 50
+    posthog?.capture('achievement_unlocked', { achievement: '🌍 First Claim', username: user.username })
   }
-  
+
   if (user.claimedCountries.length >= 10 && !achievements.includes('🏆 Country Collector')) {
     achievements.push('🏆 Country Collector')
     user.totalPoints += 200
+    posthog?.capture('achievement_unlocked', { achievement: '🏆 Country Collector', username: user.username })
   }
-  
+
   if (user.claimedCountries.length >= 50 && !achievements.includes('👑 World Dominator')) {
     achievements.push('👑 World Dominator')
     user.totalPoints += 1000
+    posthog?.capture('achievement_unlocked', { achievement: '👑 World Dominator', username: user.username })
   }
-  
+
   if (user.visitedCountries.length >= 5 && !achievements.includes('✈️ Frequent Flyer')) {
     achievements.push('✈️ Frequent Flyer')
     user.totalPoints += 150
+    posthog?.capture('achievement_unlocked', { achievement: '✈️ Frequent Flyer', username: user.username })
   }
-  
+
   if (user.likedCountries.length >= 20 && !achievements.includes('❤️ Country Lover')) {
     achievements.push('❤️ Country Lover')
     user.totalPoints += 100
+    posthog?.capture('achievement_unlocked', { achievement: '❤️ Country Lover', username: user.username })
   }
-  
+
   if (user.totalPoints >= 1000 && !achievements.includes('⭐ Point Master')) {
     achievements.push('⭐ Point Master')
+    posthog?.capture('achievement_unlocked', { achievement: '⭐ Point Master', username: user.username })
   }
-  
+
   user.achievements = achievements
 }
 
