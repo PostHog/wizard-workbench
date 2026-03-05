@@ -35,7 +35,9 @@ import {
   runEvaluatorOnBranch,
   createBranch,
   redactApiKeys,
+  formatYaraReport,
   type App,
+  type YaraReport,
 } from "./utils.js";
 
 // ============================================================================
@@ -72,6 +74,7 @@ interface PRMetadata {
   posthogRef?: string;
   source?: string;
   sourceUrl?: string;
+  yaraReport?: YaraReport;
 }
 
 function getDependencyRefs(): Pick<PRMetadata, "wizardRef" | "contextMillRef" | "posthogRef"> {
@@ -125,6 +128,12 @@ function buildPRBody(meta: PRMetadata): string {
   ];
   if (meta.duration !== undefined) {
     lines.push(`Duration: ${formatMs(meta.duration)}`);
+  }
+  if (meta.yaraReport) {
+    lines.push("", "### YARA Scanner", "```", formatYaraReport(meta.yaraReport), "```");
+    if (meta.yaraReport.violations.length > 0) {
+      lines.push("", "⚠️ YARA violations detected — see report above");
+    }
   }
   return lines.join("\n");
 }
@@ -524,6 +533,18 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
   }
   console.log(`      Completed in ${formatMs(result.duration)}\n`);
 
+  // Print YARA report if present
+  if (result.yaraReport) {
+    console.log(`\n${"─".repeat(50)}`);
+    console.log("YARA Scanner Report");
+    console.log(`${"─".repeat(50)}`);
+    console.log(formatYaraReport(result.yaraReport));
+    if (result.yaraReport.violations.length > 0) {
+      console.log("\n      ⚠️  YARA violations detected (informational)");
+    }
+    console.log(`${"─".repeat(50)}\n`);
+  }
+
   // 3. Check changes in app directory only
   console.log("[3/5] Checking changes...");
   if (!hasChangesInPath(repoRoot, appRelativePath)) {
@@ -644,6 +665,7 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
     shortId: triggerId,
     branch: branchName,
     duration: result.duration,
+    yaraReport: result.yaraReport,
     ...getDependencyRefs(),
     ...getSourceInfo(),
   };

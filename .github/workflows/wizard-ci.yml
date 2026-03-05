@@ -352,7 +352,7 @@ jobs:
             const marker = '<!-- wizard-ci-results:' + triggerId + ' -->';
 
             const rows = allApps.map(function(a) {
-              return '| `' + a + '` | ⏳ | pending |';
+              return '| `' + a + '` | ⏳ | pending | |';
             }).join('\n');
 
             const body = [
@@ -362,8 +362,8 @@ jobs:
               '**Trigger ID:** `' + triggerId + '`',
               '**Workflow:** [View run](' + workflowUrl + ')',
               '',
-              '| App | Confidence | PR |',
-              '|-----|------------|-----|',
+              '| App | Confidence | PR | YARA |',
+              '|-----|------------|-----|------|',
               rows,
               '',
               '### Configuration',
@@ -569,6 +569,44 @@ jobs:
           echo "confidence_score=$CONFIDENCE" >> $GITHUB_OUTPUT
           echo "Extracted confidence score: '$CONFIDENCE'"
 
+          # Read YARA scanner JSON report (written by wizard to /tmp)
+          YARA_JSON="/tmp/posthog-wizard-yara-report.json"
+          if [ -f "$YARA_JSON" ]; then
+            TOTAL=$(jq -r '.summary.totalScans' "$YARA_JSON")
+            VIOLATIONS=$(jq -r '.summary.violations' "$YARA_JSON")
+            CLEAN=$(jq -r '.summary.clean' "$YARA_JSON")
+
+            # Build human-readable summary
+            YARA_SUMMARY="${TOTAL} tool calls scanned, ${VIOLATIONS} violation(s) detected"
+            if [ "$VIOLATIONS" -gt 0 ]; then
+              # Append violation details
+              VIOLATION_LINES=$(jq -r '.violations[] | "[" + (.action | ascii_upcase) + "] " + .rule + " (" + .severity + ") — " + .phase + ":" + .tool' "$YARA_JSON")
+              YARA_SUMMARY="${YARA_SUMMARY}
+          ${VIOLATION_LINES}"
+            else
+              YARA_SUMMARY="${YARA_SUMMARY}
+          No violations"
+            fi
+
+            echo "yara_report<<EOF" >> $GITHUB_OUTPUT
+            echo "$YARA_SUMMARY" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "yara_total_scans=$TOTAL" >> $GITHUB_OUTPUT
+            echo "yara_violation_count=$VIOLATIONS" >> $GITHUB_OUTPUT
+
+            if [ "$VIOLATIONS" -gt 0 ]; then
+              echo "yara_violations=true" >> $GITHUB_OUTPUT
+              echo "YARA: $VIOLATIONS violation(s) detected (informational)"
+            else
+              echo "yara_violations=false" >> $GITHUB_OUTPUT
+              echo "YARA: $TOTAL scans, all clean"
+            fi
+          else
+            echo "yara_violations=false" >> $GITHUB_OUTPUT
+            echo "yara_violation_count=0" >> $GITHUB_OUTPUT
+            echo "No YARA report file found"
+          fi
+
           exit $WIZARD_EXIT
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -585,6 +623,8 @@ jobs:
           POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
           # Source info (for PR body)
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
+          # Enable YARA security scanner report
+          POSTHOG_WIZARD_YARA_REPORT: 'true'
 
       - name: Prepare artifact name
         # Not used for anything rn
@@ -640,6 +680,18 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -n "${{ steps.run-wizard.outputs.pr_url }}" ]; then
             echo "**PR:** ${{ steps.run-wizard.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          YARA_REPORT='${{ steps.run-wizard.outputs.yara_report }}'
+          if [ -n "$YARA_REPORT" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### YARA Scanner" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$YARA_REPORT" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.run-wizard.outputs.yara_violations }}" = "true" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "> ⚠️ YARA violations detected — see report above" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
       - name: Get job ID
@@ -714,10 +766,13 @@ jobs:
             const prUrl = '${{ steps.run-wizard.outputs.pr_url }}';
             const prNumber = '${{ steps.run-wizard.outputs.pr_number }}';
             const jobUrl = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ steps.job-id.outputs.job_id }}';
+            const yaraReport = `${{ steps.run-wizard.outputs.yara_report }}`;
+            const yaraViolations = '${{ steps.run-wizard.outputs.yara_violations }}' === 'true';
 
             // Build this job's result row
+            const yaraIcon = yaraViolations ? ' ⚠️' : (yaraReport ? ' ✓' : '');
             const prField = prUrl ? '[#' + prNumber + '](' + prUrl + ') ([logs](' + jobUrl + '))' : 'Failed ([logs](' + jobUrl + '))';
-            const thisRow = '| `' + app + '` | ' + confidence + ' | ' + prField + ' |';
+            const thisRow = '| `' + app + '` | ' + confidence + ' | ' + prField + ' |' + yaraIcon + ' |';
 
             // Marker to identify our comment (created by notify-pr-start job)
             const marker = '<!-- wizard-ci-results:' + triggerId + ' -->';
@@ -743,6 +798,17 @@ jobs:
 
             if (body.match(rowPattern)) {
               body = body.replace(rowPattern, thisRow);
+            }
+
+            // Append YARA report section if violations were detected
+            if (yaraViolations && yaraReport) {
+              const yaraMarker = '<!-- yara:' + app + ' -->';
+              if (!body.includes(yaraMarker)) {
+                body += '\n\n' + yaraMarker + '\n';
+                body += '<details><summary>⚠️ YARA Scanner — ' + app + '</summary>\n\n';
+                body += '```\n' + yaraReport + '\n```\n';
+                body += '</details>';
+              }
             }
 
             await github.rest.issues.updateComment({
