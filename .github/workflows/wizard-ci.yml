@@ -89,10 +89,33 @@ jobs:
     steps:
       - name: Resolve inputs
         id: resolve-inputs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CP_APP: ${{ github.event.client_payload.app }}
+          CP_EVALUATE: ${{ github.event.client_payload.evaluate }}
+          CP_BASE_BRANCH: ${{ github.event.client_payload.base_branch }}
+          CP_WIZARD_REF: ${{ github.event.client_payload.wizard_ref }}
+          CP_CONTEXT_MILL_REF: ${{ github.event.client_payload.context_mill_ref }}
+          CP_POSTHOG_REF: ${{ github.event.client_payload.posthog_ref }}
+          CP_POSTHOG_REGION: ${{ github.event.client_payload.posthog_region }}
+          CP_TRIGGER_ID: ${{ github.event.client_payload.trigger_id }}
+          CP_SOURCE: ${{ github.event.client_payload.source }}
+          CP_NOTIFY_SLACK: ${{ github.event.client_payload.notify_slack }}
+          CP_NOTIFY_PR: ${{ github.event.client_payload.notify_pr }}
+          CP_SOURCE_REPO: ${{ github.event.client_payload.source_repo }}
+          CP_SOURCE_PR_NUMBER: ${{ github.event.client_payload.source_pr_number }}
+          CP_SOURCE_PR_URL: ${{ github.event.client_payload.source_pr_url }}
+          INPUT_APP: ${{ inputs.app }}
+          INPUT_EVALUATE: ${{ inputs.evaluate }}
+          INPUT_BASE_BRANCH: ${{ inputs.base_branch }}
+          INPUT_WIZARD_REF: ${{ inputs.wizard_ref }}
+          INPUT_CONTEXT_MILL_REF: ${{ inputs.context_mill_ref }}
+          INPUT_POSTHOG_REF: ${{ inputs.posthog_ref }}
+          INPUT_POSTHOG_REGION: ${{ inputs.posthog_region }}
+          INPUT_TRIGGER_ID: ${{ inputs.trigger_id }}
+          INPUT_NOTIFY_SLACK: ${{ inputs.notify_slack }}
         run: |
-          # Determine source and resolve inputs based on trigger type
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            # Scheduled run - use defaults for all apps with Slack notifications
+          if [ "$EVENT_NAME" = "schedule" ]; then
             APP="all"
             EVALUATE="true"
             BASE_BRANCH="main"
@@ -103,47 +126,41 @@ jobs:
             TRIGGER_ID=""
             SOURCE="scheduled"
             NOTIFY_SLACK="true"
-            # No PR notification for scheduled runs
             NOTIFY_PR="false"
             SOURCE_REPO=""
             SOURCE_PR_NUMBER=""
             SOURCE_PR_URL=""
-          elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            # Webhook trigger - use client_payload with defaults
-            APP="${{ github.event.client_payload.app || 'all' }}"
-            EVALUATE="${{ github.event.client_payload.evaluate || 'true' }}"
-            BASE_BRANCH="${{ github.event.client_payload.base_branch || 'main' }}"
-            WIZARD_REF="${{ github.event.client_payload.wizard_ref || 'main' }}"
-            CONTEXT_MILL_REF="${{ github.event.client_payload.context_mill_ref || 'main' }}"
-            POSTHOG_REF="${{ github.event.client_payload.posthog_ref || 'master' }}"
-            POSTHOG_REGION="${{ github.event.client_payload.posthog_region || 'us' }}"
-            TRIGGER_ID="${{ github.event.client_payload.trigger_id || '' }}"
-            # Map source values to readable labels
-            RAW_SOURCE="${{ github.event.client_payload.source || 'dispatch' }}"
+          elif [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            APP="${CP_APP:-all}"
+            EVALUATE="${CP_EVALUATE:-true}"
+            BASE_BRANCH="${CP_BASE_BRANCH:-main}"
+            WIZARD_REF="${CP_WIZARD_REF:-main}"
+            CONTEXT_MILL_REF="${CP_CONTEXT_MILL_REF:-main}"
+            POSTHOG_REF="${CP_POSTHOG_REF:-master}"
+            POSTHOG_REGION="${CP_POSTHOG_REGION:-us}"
+            TRIGGER_ID="${CP_TRIGGER_ID:-}"
+            RAW_SOURCE="${CP_SOURCE:-dispatch}"
             case "$RAW_SOURCE" in
               wizard) SOURCE="wizard repo" ;;
               context-mill) SOURCE="context-mill repo" ;;
               *) SOURCE="$RAW_SOURCE" ;;
             esac
-            NOTIFY_SLACK="${{ github.event.client_payload.notify_slack || 'false' }}"
-            # PR notification inputs (for upstream PR triggers)
-            NOTIFY_PR="${{ github.event.client_payload.notify_pr || 'false' }}"
-            SOURCE_REPO="${{ github.event.client_payload.source_repo || '' }}"
-            SOURCE_PR_NUMBER="${{ github.event.client_payload.source_pr_number || '' }}"
-            SOURCE_PR_URL="${{ github.event.client_payload.source_pr_url || '' }}"
+            NOTIFY_SLACK="${CP_NOTIFY_SLACK:-false}"
+            NOTIFY_PR="${CP_NOTIFY_PR:-false}"
+            SOURCE_REPO="${CP_SOURCE_REPO:-}"
+            SOURCE_PR_NUMBER="${CP_SOURCE_PR_NUMBER:-}"
+            SOURCE_PR_URL="${CP_SOURCE_PR_URL:-}"
           else
-            # workflow_dispatch - use inputs directly
-            APP="${{ inputs.app || 'all' }}"
-            EVALUATE="${{ inputs.evaluate }}"
-            BASE_BRANCH="${{ inputs.base_branch }}"
-            WIZARD_REF="${{ inputs.wizard_ref }}"
-            CONTEXT_MILL_REF="${{ inputs.context_mill_ref }}"
-            POSTHOG_REF="${{ inputs.posthog_ref }}"
-            POSTHOG_REGION="${{ inputs.posthog_region }}"
-            TRIGGER_ID="${{ inputs.trigger_id }}"
+            APP="${INPUT_APP:-all}"
+            EVALUATE="${INPUT_EVALUATE:-true}"
+            BASE_BRANCH="${INPUT_BASE_BRANCH:-main}"
+            WIZARD_REF="${INPUT_WIZARD_REF:-main}"
+            CONTEXT_MILL_REF="${INPUT_CONTEXT_MILL_REF:-main}"
+            POSTHOG_REF="${INPUT_POSTHOG_REF:-master}"
+            POSTHOG_REGION="${INPUT_POSTHOG_REGION:-us}"
+            TRIGGER_ID="${INPUT_TRIGGER_ID:-}"
             SOURCE="manual"
-            NOTIFY_SLACK="${{ inputs.notify_slack }}"
-            # No PR notification for manual runs
+            NOTIFY_SLACK="${INPUT_NOTIFY_SLACK:-false}"
             NOTIFY_PR="false"
             SOURCE_REPO=""
             SOURCE_PR_NUMBER=""
@@ -182,8 +199,10 @@ jobs:
 
       - name: Generate trigger ID
         id: generate-id
+        env:
+          RESOLVED_TRIGGER_ID: ${{ steps.resolve-inputs.outputs.trigger_id }}
         run: |
-          TRIGGER_ID="${{ steps.resolve-inputs.outputs.trigger_id }}"
+          TRIGGER_ID="$RESOLVED_TRIGGER_ID"
           if [ -n "$TRIGGER_ID" ]; then
             echo "Using provided trigger ID: $TRIGGER_ID"
           else
@@ -193,7 +212,7 @@ jobs:
           echo "trigger_id=$TRIGGER_ID" >> $GITHUB_OUTPUT
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Find available apps
         id: find-apps
@@ -210,10 +229,10 @@ jobs:
 
       - name: Select apps to run
         id: select-apps
+        env:
+          INPUT_APP: ${{ steps.resolve-inputs.outputs.app }}
+          AVAILABLE: ${{ steps.find-apps.outputs.apps }}
         run: |
-          INPUT_APP="${{ steps.resolve-inputs.outputs.app }}"
-          AVAILABLE='${{ steps.find-apps.outputs.apps }}'
-
           if [ -z "$INPUT_APP" ] || [ "$INPUT_APP" = "all" ]; then
             # Run all apps
             SELECTED="$AVAILABLE"
@@ -307,7 +326,7 @@ jobs:
     steps:
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
         with:
           app-id: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_APP_ID }}
           private-key: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_PRIVATE_KEY }}
@@ -315,7 +334,7 @@ jobs:
           repositories: ${{ needs.discover.outputs.input_source_repo }}
 
       - name: Create initial PR comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
@@ -386,24 +405,24 @@ jobs:
     steps:
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
         with:
           app-id: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_APP_ID }}
           private-key: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_PRIVATE_KEY }}
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@41ff726c01e3e594a359e5ebe1e5d6b942a5c0eb # v4.2.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -580,7 +599,7 @@ jobs:
         # Only upload once (from the first matrix job) since the zip is identical across all jobs
         if: always() && !env.ACT && matrix.app == needs.discover.outputs.first_app
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: context-mill-resources-${{ github.run_id }}
           path: context-mill-mcp-resources.zip
@@ -590,7 +609,7 @@ jobs:
         # Only upload once (from the first matrix job) since the zip is identical across all jobs
         if: always() && !env.ACT && matrix.app == needs.discover.outputs.first_app
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: skills-resources-${{ github.run_id }}
           path: skills-mcp-resources.zip
@@ -672,7 +691,7 @@ jobs:
       - name: Generate token for source repo
         if: always() && needs.discover.outputs.input_notify_pr == 'true' && needs.discover.outputs.input_source_pr_number != ''
         id: source-repo-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
         with:
           app-id: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_APP_ID }}
           private-key: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_PRIVATE_KEY }}
@@ -681,7 +700,7 @@ jobs:
 
       - name: Update source PR comment
         if: always() && needs.discover.outputs.input_notify_pr == 'true' && needs.discover.outputs.input_source_pr_number != ''
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           github-token: ${{ steps.source-repo-token.outputs.token }}
           script: |
