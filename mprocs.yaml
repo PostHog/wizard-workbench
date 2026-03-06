@@ -94,3 +94,12 @@ procs:
     autostart: false
     env_file: .env
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # YARA SCAN - Standalone YARA scanner for testing rules against app files
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  yara-scan:
+    shell: "pnpm yara-scan"
+    autostart: false
+    env_file: .env
+
