@@ -89,10 +89,33 @@ jobs:
     steps:
       - name: Resolve inputs
         id: resolve-inputs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CP_APP: ${{ github.event.client_payload.app }}
+          CP_EVALUATE: ${{ github.event.client_payload.evaluate }}
+          CP_BASE_BRANCH: ${{ github.event.client_payload.base_branch }}
+          CP_WIZARD_REF: ${{ github.event.client_payload.wizard_ref }}
+          CP_CONTEXT_MILL_REF: ${{ github.event.client_payload.context_mill_ref }}
+          CP_POSTHOG_REF: ${{ github.event.client_payload.posthog_ref }}
+          CP_POSTHOG_REGION: ${{ github.event.client_payload.posthog_region }}
+          CP_TRIGGER_ID: ${{ github.event.client_payload.trigger_id }}
+          CP_SOURCE: ${{ github.event.client_payload.source }}
+          CP_NOTIFY_SLACK: ${{ github.event.client_payload.notify_slack }}
+          CP_NOTIFY_PR: ${{ github.event.client_payload.notify_pr }}
+          CP_SOURCE_REPO: ${{ github.event.client_payload.source_repo }}
+          CP_SOURCE_PR_NUMBER: ${{ github.event.client_payload.source_pr_number }}
+          CP_SOURCE_PR_URL: ${{ github.event.client_payload.source_pr_url }}
+          INPUT_APP: ${{ inputs.app }}
+          INPUT_EVALUATE: ${{ inputs.evaluate }}
+          INPUT_BASE_BRANCH: ${{ inputs.base_branch }}
+          INPUT_WIZARD_REF: ${{ inputs.wizard_ref }}
+          INPUT_CONTEXT_MILL_REF: ${{ inputs.context_mill_ref }}
+          INPUT_POSTHOG_REF: ${{ inputs.posthog_ref }}
+          INPUT_POSTHOG_REGION: ${{ inputs.posthog_region }}
+          INPUT_TRIGGER_ID: ${{ inputs.trigger_id }}
+          INPUT_NOTIFY_SLACK: ${{ inputs.notify_slack }}
         run: |
-          # Determine source and resolve inputs based on trigger type
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            # Scheduled run - use defaults for all apps with Slack notifications
+          if [ "$EVENT_NAME" = "schedule" ]; then
             APP="all"
             EVALUATE="true"
             BASE_BRANCH="main"
@@ -103,47 +126,41 @@ jobs:
             TRIGGER_ID=""
             SOURCE="scheduled"
             NOTIFY_SLACK="true"
-            # No PR notification for scheduled runs
             NOTIFY_PR="false"
             SOURCE_REPO=""
             SOURCE_PR_NUMBER=""
             SOURCE_PR_URL=""
-          elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            # Webhook trigger - use client_payload with defaults
-            APP="${{ github.event.client_payload.app || 'all' }}"
-            EVALUATE="${{ github.event.client_payload.evaluate || 'true' }}"
-            BASE_BRANCH="${{ github.event.client_payload.base_branch || 'main' }}"
-            WIZARD_REF="${{ github.event.client_payload.wizard_ref || 'main' }}"
-            CONTEXT_MILL_REF="${{ github.event.client_payload.context_mill_ref || 'main' }}"
-            POSTHOG_REF="${{ github.event.client_payload.posthog_ref || 'master' }}"
-            POSTHOG_REGION="${{ github.event.client_payload.posthog_region || 'us' }}"
-            TRIGGER_ID="${{ github.event.client_payload.trigger_id || '' }}"
-            # Map source values to readable labels
-            RAW_SOURCE="${{ github.event.client_payload.source || 'dispatch' }}"
+          elif [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            APP="${CP_APP:-all}"
+            EVALUATE="${CP_EVALUATE:-true}"
+            BASE_BRANCH="${CP_BASE_BRANCH:-main}"
+            WIZARD_REF="${CP_WIZARD_REF:-main}"
+            CONTEXT_MILL_REF="${CP_CONTEXT_MILL_REF:-main}"
+            POSTHOG_REF="${CP_POSTHOG_REF:-master}"
+            POSTHOG_REGION="${CP_POSTHOG_REGION:-us}"
+            TRIGGER_ID="${CP_TRIGGER_ID:-}"
+            RAW_SOURCE="${CP_SOURCE:-dispatch}"
             case "$RAW_SOURCE" in
               wizard) SOURCE="wizard repo" ;;
               context-mill) SOURCE="context-mill repo" ;;
               *) SOURCE="$RAW_SOURCE" ;;
             esac
-            NOTIFY_SLACK="${{ github.event.client_payload.notify_slack || 'false' }}"
-            # PR notification inputs (for upstream PR triggers)
-            NOTIFY_PR="${{ github.event.client_payload.notify_pr || 'false' }}"
-            SOURCE_REPO="${{ github.event.client_payload.source_repo || '' }}"
-            SOURCE_PR_NUMBER="${{ github.event.client_payload.source_pr_number || '' }}"
-            SOURCE_PR_URL="${{ github.event.client_payload.source_pr_url || '' }}"
+            NOTIFY_SLACK="${CP_NOTIFY_SLACK:-false}"
+            NOTIFY_PR="${CP_NOTIFY_PR:-false}"
+            SOURCE_REPO="${CP_SOURCE_REPO:-}"
+            SOURCE_PR_NUMBER="${CP_SOURCE_PR_NUMBER:-}"
+            SOURCE_PR_URL="${CP_SOURCE_PR_URL:-}"
           else
-            # workflow_dispatch - use inputs directly
-            APP="${{ inputs.app || 'all' }}"
-            EVALUATE="${{ inputs.evaluate }}"
-            BASE_BRANCH="${{ inputs.base_branch }}"
-            WIZARD_REF="${{ inputs.wizard_ref }}"
-            CONTEXT_MILL_REF="${{ inputs.context_mill_ref }}"
-            POSTHOG_REF="${{ inputs.posthog_ref }}"
-            POSTHOG_REGION="${{ inputs.posthog_region }}"
-            TRIGGER_ID="${{ inputs.trigger_id }}"
+            APP="${INPUT_APP:-all}"
+            EVALUATE="${INPUT_EVALUATE:-true}"
+            BASE_BRANCH="${INPUT_BASE_BRANCH:-main}"
+            WIZARD_REF="${INPUT_WIZARD_REF:-main}"
+            CONTEXT_MILL_REF="${INPUT_CONTEXT_MILL_REF:-main}"
+            POSTHOG_REF="${INPUT_POSTHOG_REF:-master}"
+            POSTHOG_REGION="${INPUT_POSTHOG_REGION:-us}"
+            TRIGGER_ID="${INPUT_TRIGGER_ID:-}"
             SOURCE="manual"
-            NOTIFY_SLACK="${{ inputs.notify_slack }}"
-            # No PR notification for manual runs
+            NOTIFY_SLACK="${INPUT_NOTIFY_SLACK:-false}"
             NOTIFY_PR="false"
             SOURCE_REPO=""
             SOURCE_PR_NUMBER=""
