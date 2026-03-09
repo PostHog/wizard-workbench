@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { useAuth } from '~/context/AuthContext'
 import type { Route } from './+types/signup'
+import { usePostHog } from '@posthog/react'
 
 export default function Signup() {
   const navigate = useNavigate()
   const { signup } = useAuth()
+  const posthog = usePostHog()
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -24,11 +26,14 @@ export default function Signup() {
         setIsLoading(false)
 
         if (newUser) {
+          posthog?.identify(newUser.id, { username: newUser.username, email: newUser.email })
+          posthog?.capture('user_signed_up', { username: newUser.username, email: newUser.email })
           navigate('/profile')
         } else {
           setError('Signup failed! (But this is fake, so it should always work)')
         }
       } catch (err) {
+        posthog?.captureException(err)
         setIsLoading(false)
         setError('Something went wrong!')
       }
