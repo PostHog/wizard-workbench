@@ -49,3 +49,7 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  window.posthog?.capture('docs_automation_page_viewed');
+</script>
