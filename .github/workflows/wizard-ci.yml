@@ -484,12 +484,13 @@ jobs:
 
           echo "::group::Installing MCP dependencies"
           cd $HOME/posthog
-          pnpm install --filter @posthog/mcp --no-frozen-lockfile
+          # Install packages.
+          pnpm install --frozen-lockfile
           echo "::endgroup::"
 
           echo "::group::Building MCP UI apps"
           cd $HOME/posthog/services/mcp
-          pnpm build
+          pnpm run build:ui-apps
           echo "::endgroup::"
 
           echo "MCP_PATH=$HOME/posthog/services/mcp" >> $GITHUB_ENV
