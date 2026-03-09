@@ -484,7 +484,8 @@ jobs:
 
           echo "::group::Installing MCP dependencies"
           cd $HOME/posthog
-          pnpm install --filter @posthog/mcp --no-frozen-lockfile
+          # Install packages.
+          pnpm install --frozen-lockfile
           echo "::endgroup::"
 
           echo "::group::Building MCP UI apps"
