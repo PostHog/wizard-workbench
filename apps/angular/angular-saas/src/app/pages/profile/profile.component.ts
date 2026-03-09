@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } 
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CredentialsService } from '@app/auth/services/credentials.service';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { PosthogService } from '@app/shared/services/posthog.service';
 
 @Component({
   selector: 'app-profile',
@@ -14,6 +15,7 @@ export class ProfileComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(HotToastService);
   readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PosthogService);
 
   readonly isEditing = signal(false);
 
@@ -61,6 +63,7 @@ export class ProfileComponent implements OnInit {
 
   onSave() {
     if (this.profileForm.valid) {
+      this.posthogService.posthog.capture('profile_updated');
       this.toast.success('Profile updated successfully');
       this.isEditing.set(false);
     } else {
