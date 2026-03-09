@@ -20,3 +20,4 @@ rq
 SQLAlchemy
 Werkzeug
 WTForms
+posthog

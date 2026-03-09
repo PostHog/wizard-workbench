@@ -3,6 +3,8 @@ from urllib.parse import urlsplit
 from flask_login import login_user, logout_user, current_user
 from flask_babel import _
 import sqlalchemy as sa
+import posthog
+from posthog import new_context, identify_context, tag
 from app import db
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, \
@@ -23,6 +25,11 @@ def login():
             flash(_('Invalid username or password'))
             return redirect(url_for('auth.login'))
         login_user(user, remember=form.remember_me.data)
+        with new_context():
+            identify_context(str(user.id))
+            tag('username', user.username)
+            posthog.capture(str(user.id), 'user_logged_in',
+                            {'login_method': 'password'})
         next_page = request.args.get('next')
         if not next_page or urlsplit(next_page).netloc != '':
             next_page = url_for('main.index')
@@ -32,6 +39,10 @@ def login():
 
 @bp.route('/logout')
 def logout():
+    if current_user.is_authenticated:
+        with new_context():
+            identify_context(str(current_user.id))
+            posthog.capture(str(current_user.id), 'user_logged_out')
     logout_user()
     return redirect(url_for('main.index'))
 
@@ -46,6 +57,11 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
+        with new_context():
+            identify_context(str(user.id))
+            tag('username', user.username)
+            posthog.capture(str(user.id), 'user_signed_up',
+                            {'signup_method': 'form'})
         flash(_('Congratulations, you are now a registered user!'))
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html', title=_('Register'),
@@ -62,6 +78,9 @@ def reset_password_request():
             sa.select(User).where(User.email == form.email.data))
         if user:
             send_password_reset_email(user)
+            with new_context():
+                identify_context(str(user.id))
+                posthog.capture(str(user.id), 'password_reset_requested')
         flash(
             _('Check your email for the instructions to reset your password'))
         return redirect(url_for('auth.login'))
@@ -80,6 +99,9 @@ def reset_password(token):
     if form.validate_on_submit():
         user.set_password(form.password.data)
         db.session.commit()
+        with new_context():
+            identify_context(str(user.id))
+            posthog.capture(str(user.id), 'password_reset_completed')
         flash(_('Your password has been reset.'))
         return redirect(url_for('auth.login'))
     return render_template('auth/reset_password.html', form=form)
