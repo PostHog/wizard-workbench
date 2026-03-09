@@ -16,8 +16,10 @@ import { MessageSquareText } from "lucide-react-native";
 import type { Item } from "@/shared/types";
 import { Colors } from "@/constants/Colors";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { usePostHog } from "posthog-react-native";
 
 export const Comment = (item: Item) => {
+  const posthog = usePostHog();
   const QC = useQueryClient();
   const pathname = usePathname();
   const { width: windowWidth } = useWindowDimensions();
@@ -33,7 +35,14 @@ export const Comment = (item: Item) => {
       <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
         <Pressable
           disabled={pathname.startsWith(`/users/${item.by}`)}
-          onPress={() => router.push(`/users/${item.by}`)}
+          onPress={() => {
+            posthog.capture("comment_author_profile_viewed", {
+              username: item.by,
+              comment_id: item.id,
+              source: "comment",
+            });
+            router.push(`/users/${item.by}`);
+          }}
         >
           <Text
             style={{
