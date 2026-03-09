@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
+import { usePostHog } from '@posthog/react'
 import { createInvoiceFn } from '~/utils/invoices'
 
 export const Route = createFileRoute('/posts/')({
@@ -8,6 +9,7 @@ export const Route = createFileRoute('/posts/')({
 
 function PostsIndexComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
   const [isCreating, setIsCreating] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
@@ -29,8 +31,16 @@ function PostsIndexComponent() {
           dueDate: formData.dueDate,
         },
       })
+      posthog.capture('invoice_created', {
+        title: formData.title,
+        amount: Number(formData.amount),
+        due_date: formData.dueDate,
+      })
       setFormData({ title: '', description: '', amount: '', dueDate: '' })
       router.invalidate()
+    } catch (err) {
+      posthog.captureException(err)
+      throw err
     } finally {
       setIsCreating(false)
     }
