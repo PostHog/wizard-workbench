@@ -490,7 +490,7 @@ jobs:
 
           echo "::group::Building MCP UI apps"
           cd $HOME/posthog/services/mcp
-          pnpm run build:ui-apps
+          pnpm build
           echo "::endgroup::"
 
           echo "MCP_PATH=$HOME/posthog/services/mcp" >> $GITHUB_ENV
