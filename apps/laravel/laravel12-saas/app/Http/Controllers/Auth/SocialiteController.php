@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
@@ -28,6 +29,7 @@ class SocialiteController extends Controller
             'provider_id' => $socialUser->getId(),
         ])->first();
 
+        $isNewUser = false;
         if (! $user) {
             $user = User::create([
                 'name' => $socialUser->getName(),
@@ -36,9 +38,22 @@ class SocialiteController extends Controller
                 'provider_id' => $socialUser->getId(),
                 'password' => bcrypt(str()->random(16)),
             ]);
+            $isNewUser = true;
         }
 
         Auth::login($user);
+
+        // PostHog: Identify and track social login
+        $posthog = app(PostHogService::class);
+        $posthog->identify($user->email, [
+            'email' => $user->email,
+            'name' => $user->name,
+            'date_joined' => $user->created_at?->toISOString(),
+        ]);
+        $posthog->capture($user->email, 'user_logged_in_via_social', [
+            'provider' => $provider,
+            'is_new_user' => $isNewUser,
+        ]);
 
         return redirect('/dashboard');
     }
