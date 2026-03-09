@@ -1,5 +1,6 @@
 import { parseSubmission, report } from "@conform-to/react/future";
 import { parseFormData } from "@remix-run/form-data-parser";
+import { PostHog } from "posthog-node";
 import { data } from "react-router";
 
 import { CONTACT_SALES_INTENT } from "./contact-sales-constants";
@@ -33,6 +34,25 @@ export async function contactSalesAction({ request }: Route.ActionArgs) {
     case CONTACT_SALES_INTENT: {
       const { intent: _, ...submissionData } = result.data;
       await saveContactSalesFormSubmissionToDatabase(submissionData);
+
+      const posthog = new PostHog(process.env.VITE_PUBLIC_POSTHOG_KEY ?? "", {
+        flushAt: 1,
+        flushInterval: 0,
+        host:
+          process.env.VITE_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",
+      });
+      const sessionId = request.headers.get("X-POSTHOG-SESSION-ID");
+      const distinctId = request.headers.get("X-POSTHOG-DISTINCT-ID");
+      posthog.capture({
+        distinctId: distinctId ?? submissionData.workEmail,
+        event: "contact_sales_submitted",
+        properties: {
+          ...(sessionId && { $session_id: sessionId }),
+          company_name: submissionData.companyName,
+        },
+      });
+      await posthog.shutdown().catch(() => {});
+
       return data({ result: undefined, success: true });
     }
   }
