@@ -16,9 +16,13 @@ class Stripe::WebhooksController < ApplicationController
     def dispatch_stripe_event(event)
       case event.type
       when "checkout.session.completed"
-        sync_new_subscription(event.data.object.subscription, plan_key: event.data.object.metadata["plan_key"]) if event.data.object.mode == "subscription"
+        if event.data.object.mode == "subscription"
+          sync_new_subscription(event.data.object.subscription, plan_key: event.data.object.metadata["plan_key"])
+          capture_subscription_activated(event.data.object)
+        end
       when "customer.subscription.updated", "customer.subscription.deleted"
         sync_subscription(event.data.object.id)
+        capture_subscription_updated(event.data.object, event.type)
       end
     end
 
@@ -57,6 +61,39 @@ class Stripe::WebhooksController < ApplicationController
         subscription_properties[:stripe_subscription_id] = nil if stripe_subscription.status == "canceled"
 
         subscription.update!(subscription_properties)
+      end
+    end
+
+    def capture_subscription_activated(checkout_session)
+      if subscription = find_subscription_by_stripe_customer(checkout_session.customer)
+        owner = subscription.account.users.owner.first
+        distinct_id = owner&.posthog_distinct_id || checkout_session.customer_email || checkout_session.customer
+        PostHog.capture(
+          distinct_id: distinct_id,
+          event: "subscription_activated",
+          properties: {
+            plan_key: checkout_session.metadata["plan_key"],
+            account_id: checkout_session.metadata["account_id"],
+            stripe_customer_id: checkout_session.customer
+          }
+        )
+      end
+    end
+
+    def capture_subscription_updated(stripe_subscription, event_type)
+      if subscription = find_subscription_by_stripe_customer(stripe_subscription.customer)
+        owner = subscription.account.users.owner.first
+        distinct_id = owner&.posthog_distinct_id || stripe_subscription.customer
+        PostHog.capture(
+          distinct_id: distinct_id,
+          event: "subscription_updated",
+          properties: {
+            stripe_event_type: event_type,
+            status: stripe_subscription.status,
+            plan_key: plan_key_for(stripe_subscription),
+            account_id: subscription.account_id
+          }
+        )
       end
     end
 
