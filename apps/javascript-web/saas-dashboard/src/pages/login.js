@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { router } from '../router.js';
+import { posthog } from '../posthog.js';
 
 export function renderLogin() {
   const app = document.getElementById('app');
@@ -39,9 +40,20 @@ export function renderLogin() {
     btn.textContent = 'Signing in...';
 
     try {
-      await api.login(email);
+      const user = await api.login(email);
+      posthog.identify(user.id, {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      });
+      posthog.capture('user_signed_in', { role: user.role });
       router.navigate('/dashboard');
     } catch (err) {
+      if (err.message === 'Invalid credentials. Use a team member email.') {
+        posthog.capture('login_failed');
+      } else {
+        posthog.captureException(err, { context: 'login' });
+      }
       errorEl.textContent = err.message;
       errorEl.hidden = false;
       btn.disabled = false;
