@@ -585,6 +585,8 @@ jobs:
           POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
           # Source info (for PR body)
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
+          # Log file for artifact upload
+          POSTHOG_WIZARD_LOG_FILE: ${{ github.workspace }}/wizard-logs/${{ matrix.app }}/posthog-wizard.log
 
       - name: Prepare artifact name
         # Not used for anything rn
@@ -615,6 +617,15 @@ jobs:
           name: skills-resources-${{ github.run_id }}
           path: skills-mcp-resources.zip
           if-no-files-found: warn
+
+      - name: Upload wizard logs
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wizard-logs-${{ steps.artifact-name.outputs.safe_name }}
+          path: ${{ github.workspace }}/wizard-logs/${{ matrix.app }}/
+          if-no-files-found: ignore
 
       - name: Label and close PR
         if: steps.run-wizard.outputs.pr_number
