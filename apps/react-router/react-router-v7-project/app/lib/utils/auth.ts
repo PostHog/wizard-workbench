@@ -1,5 +1,6 @@
 // Fake authentication utilities using localStorage
 import { nanoid } from 'nanoid'
+import posthog from 'posthog-js'
 
 export interface FakeUser {
   id: string
@@ -59,12 +60,12 @@ export function fakeLogin(username: string, password: string): FakeUser | null {
   // Fake login - any password works!
   const users = getAllUsers()
   const user = users.find((u) => u.username === username)
-  
+
   if (user) {
     setCurrentUser(user)
     return user
   }
-  
+
   return null
 }
 
@@ -83,7 +84,7 @@ export function fakeSignup(username: string, email: string, password: string): F
     totalPoints: 0,
     achievements: [],
   }
-  
+
   saveUser(newUser)
   setCurrentUser(newUser)
   return newUser
@@ -101,7 +102,7 @@ export function claimCountry(countryName: string): void {
     const previousAchievementsCount = user.achievements.length
     user.claimedCountries.push(countryName)
     user.totalPoints += 100
-    checkAchievements(user)
+    checkAchievements(user, previousAchievementsCount)
     saveUser(user)
     setCurrentUser(user)
   }
@@ -115,7 +116,7 @@ export function likeCountry(countryName: string): void {
     const previousAchievementsCount = user.achievements.length
     user.likedCountries.push(countryName)
     user.totalPoints += 10
-    checkAchievements(user)
+    checkAchievements(user, previousAchievementsCount)
     saveUser(user)
     setCurrentUser(user)
   }
@@ -129,44 +130,54 @@ export function visitCountry(countryName: string): void {
     const previousAchievementsCount = user.achievements.length
     user.visitedCountries.push(countryName)
     user.totalPoints += 50
-    checkAchievements(user)
+    checkAchievements(user, previousAchievementsCount)
     saveUser(user)
     setCurrentUser(user)
   }
 }
 
-function checkAchievements(user: FakeUser): void {
+function checkAchievements(user: FakeUser, previousAchievementsCount: number): void {
   const achievements = [...user.achievements]
-  
+
   if (user.claimedCountries.length >= 1 && !achievements.includes('🌍 First Claim')) {
     achievements.push('🌍 First Claim')
     user.totalPoints += 50
   }
-  
+
   if (user.claimedCountries.length >= 10 && !achievements.includes('🏆 Country Collector')) {
     achievements.push('🏆 Country Collector')
     user.totalPoints += 200
   }
-  
+
   if (user.claimedCountries.length >= 50 && !achievements.includes('👑 World Dominator')) {
     achievements.push('👑 World Dominator')
     user.totalPoints += 1000
   }
-  
+
   if (user.visitedCountries.length >= 5 && !achievements.includes('✈️ Frequent Flyer')) {
     achievements.push('✈️ Frequent Flyer')
     user.totalPoints += 150
   }
-  
+
   if (user.likedCountries.length >= 20 && !achievements.includes('❤️ Country Lover')) {
     achievements.push('❤️ Country Lover')
     user.totalPoints += 100
   }
-  
+
   if (user.totalPoints >= 1000 && !achievements.includes('⭐ Point Master')) {
     achievements.push('⭐ Point Master')
   }
-  
-  user.achievements = achievements
-}
 
+  user.achievements = achievements
+
+  // Capture any newly unlocked achievements
+  const newAchievements = achievements.slice(previousAchievementsCount)
+  for (const achievement of newAchievements) {
+    posthog?.capture('achievement_unlocked', {
+      achievement,
+      username: user.username,
+      total_achievements: achievements.length,
+      total_points: user.totalPoints,
+    })
+  }
+}
