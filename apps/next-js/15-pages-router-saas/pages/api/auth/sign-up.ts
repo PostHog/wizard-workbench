@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -121,6 +122,19 @@ export default async function handler(
 
         await logActivity(teamId, createdUser.id, ActivityType.ACCEPT_INVITATION);
 
+        const posthogInvite = getPostHogClient();
+        const distinctIdInvite = req.headers['x-posthog-distinct-id'] as string | undefined;
+        posthogInvite.capture({
+          distinctId: distinctIdInvite || String(createdUser.id),
+          event: 'invitation_accepted',
+          properties: {
+            email: createdUser.email,
+            team_id: invitation.teamId,
+            role: invitation.role
+          }
+        });
+        await posthogInvite.shutdown();
+
         [createdTeam] = await db
           .select()
           .from(teams)
@@ -165,6 +179,29 @@ export default async function handler(
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
       setSession(createdUser, res)
     ]);
+
+    const posthog = getPostHogClient();
+    const distinctId = req.headers['x-posthog-distinct-id'] as string | undefined;
+    posthog.identify({
+      distinctId: distinctId || String(createdUser.id),
+      properties: {
+        email: createdUser.email,
+        name: createdUser.name
+      }
+    });
+    posthog.capture({
+      distinctId: distinctId || String(createdUser.id),
+      event: 'user_signed_up',
+      properties: {
+        email: createdUser.email,
+        team_id: teamId,
+        team_name: createdTeam?.name,
+        role: userRole,
+        via_invitation: !!inviteId,
+        $set: { email: createdUser.email, name: createdUser.name }
+      }
+    });
+    await posthog.shutdown();
 
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({

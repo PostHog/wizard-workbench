@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { getTeamByStripeCustomerId } from '@/lib/db/queries';
 
 // Disable body parsing, need raw body for Stripe webhook signature verification
 export const config = {
@@ -37,11 +39,45 @@ export default async function handler(
   }
 
   switch (event.type) {
-    case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
+    case 'customer.subscription.updated': {
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+      const team = await getTeamByStripeCustomerId(subscription.customer as string);
+      if (team) {
+        const posthog = getPostHogClient();
+        posthog.capture({
+          distinctId: String(team.id),
+          event: 'subscription_updated',
+          properties: {
+            team_id: team.id,
+            subscription_id: subscription.id,
+            status: subscription.status,
+            plan_name: team.planName
+          }
+        });
+        await posthog.shutdown();
+      }
       break;
+    }
+    case 'customer.subscription.deleted': {
+      const subscription = event.data.object as Stripe.Subscription;
+      const team = await getTeamByStripeCustomerId(subscription.customer as string);
+      await handleSubscriptionChange(subscription);
+      if (team) {
+        const posthog = getPostHogClient();
+        posthog.capture({
+          distinctId: String(team.id),
+          event: 'subscription_cancelled',
+          properties: {
+            team_id: team.id,
+            subscription_id: subscription.id,
+            status: subscription.status
+          }
+        });
+        await posthog.shutdown();
+      }
+      break;
+    }
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
