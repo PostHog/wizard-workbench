@@ -23,3 +23,6 @@ class Config:
     ELASTICSEARCH_URL = os.environ.get('ELASTICSEARCH_URL')
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://'
     POSTS_PER_PAGE = 25
+    POSTHOG_API_KEY = os.environ.get('PH_PROJECT_API_KEY', '')
+    POSTHOG_HOST = os.environ.get('POSTHOG_HOST', 'https://us.i.posthog.com')
+    POSTHOG_DISABLED = os.environ.get('POSTHOG_DISABLED', 'False').lower() == 'true'

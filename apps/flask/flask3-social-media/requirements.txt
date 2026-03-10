@@ -2,6 +2,7 @@ alembic
 Babel
 email-validator
 Flask>=3.0
+posthog
 flask-babel
 Flask-HTTPAuth
 Flask-Login
