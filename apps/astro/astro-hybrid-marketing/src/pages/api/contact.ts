@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -14,8 +15,21 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const data: ContactFormData = await request.json();
 
+    const sessionId = request.headers.get('X-PostHog-Session-Id') || undefined;
+    const distinctId = request.headers.get('X-PostHog-Distinct-Id') || data.email;
+
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
+      const posthog = getPostHogServer();
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_failed',
+        properties: {
+          $session_id: sessionId,
+          reason: 'missing_required_fields',
+          interest: data.interest,
+        },
+      });
       return new Response(
         JSON.stringify({ error: 'Please fill in all required fields.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -25,6 +39,15 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
+      const posthog = getPostHogServer();
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_failed',
+        properties: {
+          $session_id: sessionId,
+          reason: 'invalid_email',
+        },
+      });
       return new Response(
         JSON.stringify({ error: 'Please enter a valid email address.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -43,6 +66,17 @@ export const POST: APIRoute = async ({ request }) => {
       interest: data.interest,
       message: data.message,
       timestamp: new Date().toISOString(),
+    });
+
+    const posthog = getPostHogServer();
+    posthog.capture({
+      distinctId,
+      event: 'contact_form_succeeded',
+      properties: {
+        $session_id: sessionId,
+        interest: data.interest,
+        has_company: Boolean(data.company),
+      },
     });
 
     return new Response(
