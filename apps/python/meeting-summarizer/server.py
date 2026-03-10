@@ -23,6 +23,7 @@ import mimetypes
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+import posthog_client as analytics
 
 
 # Session management
@@ -244,6 +245,8 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             logging.error(f"Error in GET request: {e}\n{traceback.format_exc()}")
+            user = self._get_current_user()
+            analytics.capture_exception(e, user.user_id if user else None)
             self._send_json({'error': 'Internal server error'}, 500)
 
     def do_POST(self):
@@ -274,6 +277,16 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
 
+                    analytics.identify(user.user_id, {
+                        'email': user.email,
+                        'username': user.username,
+                        'name': user.full_name,
+                    })
+                    analytics.capture(user.user_id, 'user logged in', {
+                        'email': user.email,
+                        'username': user.username,
+                    })
+
                     # Send response with session cookie
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
@@ -291,6 +304,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     self.wfile.write(response_data.encode('utf-8'))
                 else:
                     logging.warning(f"Login failed for: {email} (user {'found but inactive' if user else 'not found'})")
+                    analytics.capture(email, 'user login failed', {
+                        'email': email,
+                        'reason': 'user not found or inactive',
+                    })
                     self._send_json({'error': 'User not found or inactive'}, 401)
                 return
 
@@ -298,6 +315,9 @@ class SaaSHandler(BaseHTTPRequestHandler):
             if path == '/api/auth/logout':
                 session_id = self._get_session_id()
                 if session_id:
+                    session = self.sessions.get_session(session_id)
+                    if session:
+                        analytics.capture(session['user_id'], 'user logged out')
                     self.sessions.delete_session(session_id)
 
                 self._set_headers(200, 'application/json')
@@ -332,6 +352,16 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_user(user):
+                    analytics.identify(user.user_id, {
+                        'email': user.email,
+                        'username': user.username,
+                        'name': user.full_name,
+                    })
+                    analytics.capture(current_user.user_id, 'user created', {
+                        'new_user_id': user.user_id,
+                        'new_user_email': user.email,
+                        'new_user_username': user.username,
+                    })
                     self._send_json(user.to_dict(), 201)
                 else:
                     self._send_json({'error': 'User already exists'}, 409)
@@ -370,8 +400,18 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    analytics.capture(current_user.user_id, 'meeting summarized', {
+                        'meeting_id': meeting.meeting_id,
+                        'meeting_title': meeting.title,
+                        'transcript_length': len(transcript),
+                        'participant_count': len(participants),
+                        'action_item_count': len(action_items),
+                        'key_point_count': len(key_points),
+                        'duration_minutes': duration,
+                    })
                     self._send_json(meeting.to_dict(), 201)
                 else:
+                    analytics.capture_exception(Exception('Failed to create meeting'), current_user.user_id)
                     self._send_json({'error': 'Failed to create meeting'}, 500)
                 return
 
@@ -381,6 +421,8 @@ class SaaSHandler(BaseHTTPRequestHandler):
             self._send_json({'error': 'Invalid JSON'}, 400)
         except Exception as e:
             logging.error(f"Error in POST request: {e}\n{traceback.format_exc()}")
+            user = self._get_current_user()
+            analytics.capture_exception(e, user.user_id if user else None)
             self._send_json({'error': 'Internal server error'}, 500)
 
     def do_PUT(self):
@@ -410,6 +452,8 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             logging.error(f"Error in PUT request: {e}\n{traceback.format_exc()}")
+            user = self._get_current_user()
+            analytics.capture_exception(e, user.user_id if user else None)
             self._send_json({'error': 'Internal server error'}, 500)
 
     def do_DELETE(self):
@@ -428,6 +472,9 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 user_id = path.split('/')[-1]
 
                 if self.db.delete_user(user_id):
+                    analytics.capture(current_user.user_id, 'user deleted', {
+                        'deleted_user_id': user_id,
+                    })
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'User not found'}, 404)
@@ -449,6 +496,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    analytics.capture(current_user.user_id, 'meeting deleted', {
+                        'meeting_id': meeting_id,
+                        'meeting_title': meeting.title,
+                    })
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
@@ -458,6 +509,8 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             logging.error(f"Error in DELETE request: {e}\n{traceback.format_exc()}")
+            user = self._get_current_user()
+            analytics.capture_exception(e, user.user_id if user else None)
             self._send_json({'error': 'Internal server error'}, 500)
 
     def log_message(self, format, *args):
@@ -586,6 +639,8 @@ def main():
         logging.info("Server stopped by user")
     finally:
         server.server_close()
+        if analytics.posthog:
+            analytics.posthog.shutdown()
         logging.info("Server shut down")
 
 
