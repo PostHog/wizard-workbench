@@ -2,6 +2,7 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoProjects } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   getProjectsSuccess,
@@ -10,12 +11,12 @@ import {
 } from './actions';
 
 export function* getProjects() {
-  const token = yield select(state => state.auth.token);
-  const team = yield select(state => state.teams.active);
+  const token = yield select((state) => state.auth.token);
+  const team = yield select((state) => state.teams.active);
 
   // Demo mode
   if (isDemoMode(token)) {
-    const projects = team ? (demoProjects[team.slug] || []) : [];
+    const projects = team ? demoProjects[team.slug] || [] : [];
     yield put(getProjectsSuccess(projects));
     return;
   }
@@ -27,7 +28,8 @@ export function* getProjects() {
 
 export function* createProject({ payload }) {
   const { title } = payload;
-  const token = yield select(state => state.auth.token);
+  const token = yield select((state) => state.auth.token);
+  const team = yield select((state) => state.teams.active);
 
   try {
     // Demo mode
@@ -36,6 +38,12 @@ export function* createProject({ payload }) {
       yield put(createProjectSuccess(newProject));
       yield put(closeProjectModal());
       toast.showSuccess('Project created');
+      posthog.capture('project_created', {
+        project_title: title,
+        team_id: team?.id,
+        team_name: team?.name,
+        is_demo: true,
+      });
       return;
     }
 
@@ -45,8 +53,21 @@ export function* createProject({ payload }) {
     yield put(closeProjectModal());
 
     toast.showSuccess('Project created');
+    posthog.capture('project_created', {
+      project_id: response.data.id,
+      project_title: title,
+      team_id: team?.id,
+      team_name: team?.name,
+      is_demo: false,
+    });
   } catch (err) {
     toast.showError('Error creating project');
+    posthog.capture('project_create_failed', {
+      project_title: title,
+      team_id: team?.id,
+      $exception_type: err?.name,
+      $exception_message: err?.message,
+    });
   }
 }
 
