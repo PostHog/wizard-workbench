@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useCart } from "../context/CartContext";
+import { usePostHog } from '@posthog/react';
 
 export default function Checkout() {
   const { cart, getCartTotal, clearCart } = useCart();
   const navigate = useNavigate();
+  const posthog = usePostHog();
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -42,7 +44,28 @@ export default function Checkout() {
     e.preventDefault();
     setIsProcessing(true);
 
+    const orderTotal = getCartTotal() * 1.1;
+    const cartSnapshot = cart.map((item) => ({
+      product_id: item.id,
+      product_name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+    }));
+
     setTimeout(() => {
+      posthog?.capture('order_placed', {
+        order_total: orderTotal,
+        subtotal: getCartTotal(),
+        tax: getCartTotal() * 0.1,
+        item_count: cart.length,
+        items: cartSnapshot,
+        customer_email: formData.email,
+        customer_city: formData.city,
+      });
+      posthog?.identify(formData.email, {
+        email: formData.email,
+        name: formData.fullName,
+      });
       clearCart();
       setIsProcessing(false);
       alert("Order placed successfully! Thank you for your purchase.");
