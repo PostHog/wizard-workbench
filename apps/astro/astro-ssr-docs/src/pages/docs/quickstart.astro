@@ -1,7 +1,17 @@
 ---
 import DocsLayout from '../../layouts/DocsLayout.astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 const renderTime = new Date().toISOString();
+
+const posthog = getPostHogServer();
+posthog.capture({
+  distinctId: 'anonymous',
+  event: 'docs_quickstart_viewed',
+  properties: {
+    path: '/docs/quickstart',
+  },
+});
 ---
 
 <DocsLayout title="Quick Start">
