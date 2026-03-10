@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Form, Request, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from posthog import capture
 from pydantic import BaseModel, EmailStr
 
 from app.dependencies import DbSession, RequiredUser
@@ -67,6 +68,7 @@ async def update_settings(
             current_user.email = email
             db.commit()
             success = "Settings updated successfully"
+            capture("settings_updated", properties={"fields_changed": ["email"]})
     else:
         success = "No changes made"
 
@@ -109,6 +111,7 @@ async def change_password(
         current_user.set_password(new_password)
         db.commit()
         success = "Password changed successfully"
+        capture("password_changed")
 
     api_key_count = db.query(APIKey).filter(
         APIKey.user_id == current_user.id,
