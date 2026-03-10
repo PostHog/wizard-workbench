@@ -31,10 +31,27 @@ import com.example.compose.jetchat.MainViewModel
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 
 class ConversationFragment : Fragment() {
 
     private val activityViewModel: MainViewModel by activityViewModels()
+
+    private val trackedUiState = object : ConversationUiState(
+        channelName = exampleUiState.channelName,
+        channelMembers = exampleUiState.channelMembers,
+        initialMessages = exampleUiState.messages,
+    ) {
+        override fun addMessage(msg: Message) {
+            super.addMessage(msg)
+            if (msg.author == "me") {
+                PostHog.capture(
+                    event = "message_sent",
+                    properties = mapOf("channel" to channelName),
+                )
+            }
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         ComposeView(inflater.context).apply {
@@ -43,7 +60,7 @@ class ConversationFragment : Fragment() {
             setContent {
                 JetchatTheme {
                     ConversationContent(
-                        uiState = exampleUiState,
+                        uiState = trackedUiState,
                         navigateToProfile = { user ->
                             // Click callback
                             val bundle = bundleOf("userId" to user)
