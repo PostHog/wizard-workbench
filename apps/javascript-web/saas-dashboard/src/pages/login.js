@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { router } from '../router.js';
+import { posthog } from '../posthog.js';
 
 export function renderLogin() {
   const app = document.getElementById('app');
@@ -39,9 +40,13 @@ export function renderLogin() {
     btn.textContent = 'Signing in...';
 
     try {
-      await api.login(email);
+      const user = await api.login(email);
+      posthog.identify(user.id, { name: user.name, role: user.role });
+      posthog.capture('user_logged_in', { role: user.role });
       router.navigate('/dashboard');
     } catch (err) {
+      posthog.capture('login_failed');
+      posthog.captureException(err);
       errorEl.textContent = err.message;
       errorEl.hidden = false;
       btn.disabled = false;

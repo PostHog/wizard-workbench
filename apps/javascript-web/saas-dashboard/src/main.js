@@ -1,5 +1,6 @@
 import { router } from './router.js';
 import { store } from './store.js';
+import { posthog } from './posthog.js';
 import { renderLogin } from './pages/login.js';
 import { renderDashboard } from './pages/dashboard.js';
 import { renderProjects } from './pages/projects.js';
@@ -38,5 +39,16 @@ router.notFound(() => {
 });
 
 // --- Start ---
+
+// Re-identify already-logged-in user on page refresh
+if (store.state.currentUser) {
+  const u = store.state.currentUser;
+  posthog.identify(u.id, { name: u.name, role: u.role });
+}
+
+// Capture pageviews on hash-based navigation
+window.addEventListener('hashchange', () => {
+  posthog.capture('$pageview');
+});
 
 router.start();
