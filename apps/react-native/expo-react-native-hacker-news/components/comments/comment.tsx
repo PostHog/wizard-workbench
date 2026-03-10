@@ -12,6 +12,7 @@ import { router, usePathname } from "expo-router";
 import { formatDistanceToNowStrict } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { MessageSquareText } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import type { Item } from "@/shared/types";
 import { Colors } from "@/constants/Colors";
@@ -21,6 +22,7 @@ export const Comment = (item: Item) => {
   const QC = useQueryClient();
   const pathname = usePathname();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
 
   return (
     <View
@@ -33,7 +35,13 @@ export const Comment = (item: Item) => {
       <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
         <Pressable
           disabled={pathname.startsWith(`/users/${item.by}`)}
-          onPress={() => router.push(`/users/${item.by}`)}
+          onPress={() => {
+            posthog.capture("user_profile_viewed", {
+              username: item.by,
+              source: "comment",
+            });
+            router.push(`/users/${item.by}`);
+          }}
         >
           <Text
             style={{
