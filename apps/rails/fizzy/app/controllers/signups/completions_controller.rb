@@ -23,6 +23,8 @@ class Signups::CompletionsController < ApplicationController
     end
 
     def welcome_to_account
+      posthog_track_signup
+
       respond_to do |format|
         format.html do
           flash[:welcome_letter] = true
@@ -31,6 +33,22 @@ class Signups::CompletionsController < ApplicationController
 
         format.json { render json: { account_id: @signup.account.id }, status: :created }
       end
+    end
+
+    def posthog_track_signup
+      user = @signup.user
+      return unless user
+
+      PostHog.identify(
+        distinct_id: user.posthog_distinct_id,
+        properties: user.posthog_properties
+      )
+
+      PostHog.capture(
+        distinct_id: user.posthog_distinct_id,
+        event: "signed_up",
+        properties: { account_id: @signup.account.id }
+      )
     end
 
     def invalid_signup
