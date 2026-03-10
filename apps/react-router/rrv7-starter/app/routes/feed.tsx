@@ -3,6 +3,7 @@ import { fakePosts } from '@/lib/data/fake-data'
 import type { Route } from './+types/feed'
 import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
+import type { PostHogContext } from '@/lib/posthog-middleware'
 
 export const meta: Route.MetaFunction = () => {
   const siteUrl = SITE_URL || 'https://clouthub.fake'
@@ -15,15 +16,19 @@ export const meta: Route.MetaFunction = () => {
   })
 }
 
+export async function loader({ context }: Route.LoaderArgs) {
+  const posthog = (context as PostHogContext).posthog
+  posthog?.capture({ event: 'feed_viewed' })
+  return {}
+}
+
 export default function Feed() {
   return (
     <div className="min-h-screen bg-background pt-header pb-8">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="mb-6">
           <h1 className="text-4xl font-bold text-primary mb-2">Your Feed</h1>
-          <p className="text-primary/50">
-            All the fake content you never asked for, but definitely need
-          </p>
+          <p className="text-primary/50">All the fake content you never asked for, but definitely need</p>
         </div>
 
         <div className="space-y-4">
@@ -40,4 +45,3 @@ export default function Feed() {
     </div>
   )
 }
-
