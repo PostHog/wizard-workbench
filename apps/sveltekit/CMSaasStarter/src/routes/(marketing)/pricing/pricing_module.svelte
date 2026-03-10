@@ -1,5 +1,6 @@
 <script lang="ts">
   import { pricingPlans } from "./pricing_plans"
+  import posthog from "posthog-js"
 
   interface Props {
     // Module context
@@ -15,6 +16,10 @@
     currentPlanId = "",
     center = true,
   }: Props = $props()
+
+  function handlePlanSelected(planId: string, planName: string) {
+    posthog.capture("plan_selected", { plan_id: planId, plan_name: planName })
+  }
 </script>
 
 <div
@@ -57,6 +62,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() => handlePlanSelected(plan.id, plan.name)}
               >
                 {callToAction}
               </a>

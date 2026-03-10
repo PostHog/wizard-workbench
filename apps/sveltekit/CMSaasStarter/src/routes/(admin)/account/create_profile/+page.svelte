@@ -2,6 +2,7 @@
   import { applyAction, enhance } from "$app/forms"
   import type { SubmitFunction } from "@sveltejs/kit"
   import "../../../../app.css"
+  import posthog from "posthog-js"
 
   interface User {
     email: string
@@ -38,6 +39,13 @@
       await update({ reset: false })
       await applyAction(result)
       loading = false
+      if (result.type === "success") {
+        posthog.capture("profile_created", {
+          full_name: fullName,
+          company_name: companyName,
+          website,
+        })
+      }
     }
   }
 </script>

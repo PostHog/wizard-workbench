@@ -1,8 +1,19 @@
 <script lang="ts">
   import { Auth } from "@supabase/auth-ui-svelte"
   import { sharedAppearance, oauthProviders } from "../login_config"
+  import { onMount } from "svelte"
+  import posthog from "posthog-js"
 
   let { data } = $props()
+  let { supabase } = data
+
+  onMount(() => {
+    supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        posthog.capture("password_reset_requested")
+      }
+    })
+  })
 </script>
 
 <svelte:head>
