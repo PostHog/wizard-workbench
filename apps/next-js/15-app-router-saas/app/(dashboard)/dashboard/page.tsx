@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/card';
 import { customerPortalAction } from '@/lib/payments/actions';
 import { useActionState } from 'react';
+import posthog from 'posthog-js';
 import { TeamDataWithMembers, User } from '@/lib/db/schema';
 import { removeTeamMember, inviteTeamMember } from '@/app/(login)/actions';
 import useSWR from 'swr';
@@ -61,7 +62,11 @@ function ManageSubscription() {
               </p>
             </div>
             <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={() => posthog.capture('customer_portal_opened', { plan: teamData?.planName })}
+              >
                 Manage Subscription
               </Button>
             </form>
