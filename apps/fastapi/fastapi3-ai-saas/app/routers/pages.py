@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from posthog import capture
 
 from app.dependencies import CurrentUser, DbSession, RequiredUser
 from app.models import Generation, APIKey, Activity
@@ -23,6 +24,8 @@ async def home(request: Request, current_user: CurrentUser):
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, current_user: RequiredUser, db: DbSession):
     """User dashboard showing credits and recent generations."""
+    capture("dashboard_viewed")
+
     # Get recent generations
     recent = (
         db.query(Generation)
