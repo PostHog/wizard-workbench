@@ -1,6 +1,12 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const app = new Koa();
 const router = new Router();
@@ -34,6 +40,16 @@ router.post('/api/folders', (ctx) => {
   folders.push(folder);
   ctx.status = 201;
   ctx.body = folder;
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'folder_created',
+    properties: {
+      folder_id: folder.id,
+      folder_name: folder.name,
+    },
+  });
 });
 
 router.delete('/api/folders/:id', (ctx) => {
@@ -60,6 +76,15 @@ router.delete('/api/folders/:id', (ctx) => {
 
   folders.splice(index, 1);
   ctx.status = 204;
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'folder_deleted',
+    properties: {
+      folder_id: folderId,
+    },
+  });
 });
 
 // --- Notes ---
@@ -107,6 +132,16 @@ router.post('/api/notes', (ctx) => {
   notes.push(note);
   ctx.status = 201;
   ctx.body = note;
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note_created',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+    },
+  });
 });
 
 router.get('/api/notes/:id', (ctx) => {
@@ -144,10 +179,21 @@ router.patch('/api/notes/:id', (ctx) => {
   note.updated_at = new Date().toISOString();
 
   ctx.body = note;
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note_updated',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+    },
+  });
 });
 
 router.delete('/api/notes/:id', (ctx) => {
-  const index = notes.findIndex((n) => n.id === parseInt(ctx.params.id, 10));
+  const noteId = parseInt(ctx.params.id, 10);
+  const index = notes.findIndex((n) => n.id === noteId);
 
   if (index === -1) {
     ctx.status = 404;
@@ -157,10 +203,29 @@ router.delete('/api/notes/:id', (ctx) => {
 
   notes.splice(index, 1);
   ctx.status = 204;
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note_deleted',
+    properties: {
+      note_id: noteId,
+    },
+  });
 });
 
 app.use(router.routes());
 app.use(router.allowedMethods());
+
+app.on('error', (err, ctx) => {
+  const distinctId = ctx?.headers?.['x-posthog-distinct-id'] || 'anonymous';
+  posthog.captureException(err, distinctId);
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
 
 const PORT = process.env.PORT || 3003;
 
