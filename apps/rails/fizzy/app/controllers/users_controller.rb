@@ -27,6 +27,12 @@ class UsersController < ApplicationController
   end
 
   def destroy
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "user_deactivated",
+      properties: { deactivated_user_id: @user.id, account_id: Current.account.id }
+    )
+
     @user.deactivate
 
     respond_to do |format|

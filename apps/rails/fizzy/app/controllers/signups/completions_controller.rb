@@ -23,6 +23,17 @@ class Signups::CompletionsController < ApplicationController
     end
 
     def welcome_to_account
+      identity = Current.identity
+      PostHog.identify(
+        distinct_id: identity.email_address,
+        properties: { email: identity.email_address, name: @signup.user&.name }
+      )
+      PostHog.capture(
+        distinct_id: identity.email_address,
+        event: "user_signed_up",
+        properties: { account_id: @signup.account.id }
+      )
+
       respond_to do |format|
         format.html do
           flash[:welcome_letter] = true

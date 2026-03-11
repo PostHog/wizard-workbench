@@ -16,6 +16,15 @@ class User < ApplicationRecord
   has_many :pinned_cards, through: :pins, source: :card
   has_many :data_exports, class_name: "User::DataExport", dependent: :destroy
 
+  # Called by posthog-rails for automatic user association in error reports.
+  def posthog_distinct_id
+    identity&.email_address || id
+  end
+
+  def posthog_properties
+    { name: name, account_id: account_id, created_at: created_at&.iso8601 }
+  end
+
   def deactivate
     transaction do
       accesses.destroy_all
