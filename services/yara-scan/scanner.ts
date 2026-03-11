@@ -174,7 +174,7 @@ const prompt_injection_wizard_specific: YaraRule = {
   name: "prompt_injection_wizard_specific",
   description:
     "Detects wizard-specific manipulation or tool abuse attempts in project files",
-  severity: "high",
+  severity: "medium",
   category: "prompt_injection",
   appliesTo: POST_READ_GREP,
   patterns: [
@@ -213,8 +213,8 @@ const secret_exfiltration_via_command: YaraRule = {
   patterns: [
     /curl\s+.*\$\{?[A-Z_]*(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)/i,
     /wget\s+.*\$\{?[A-Z_]*(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)/i,
-    /\|\s*curl/,
-    /\|\s*wget/,
+    /(\$\{?[A-Z_]*(KEY|TOKEN|SECRET|PASSWORD)|\.env|credentials)\S*.*\|\s*curl/i,
+    /(\$\{?[A-Z_]*(KEY|TOKEN|SECRET|PASSWORD)|\.env|credentials)\S*.*\|\s*wget/i,
     /\|\s*nc\s/,
     /\|\s*netcat\s/,
     /base64.*\|\s*(curl|wget|nc\s)/i,
@@ -232,7 +232,13 @@ const destructive_rm: YaraRule = {
   severity: "critical",
   category: "filesystem_safety",
   appliesTo: PRE_BASH,
-  patterns: [/\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*r)\b/],
+  patterns: [
+    // Combined flags: rm -rf, rm -fr, rm -rfi, etc.
+    /\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*r)\b/,
+    // Separated flags: rm -r -f, rm -f -r (with optional other flags)
+    /\brm\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*r[a-zA-Z]*\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*f\b/,
+    /\brm\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*f[a-zA-Z]*\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*r\b/,
+  ],
 };
 
 const git_force_push: YaraRule = {
