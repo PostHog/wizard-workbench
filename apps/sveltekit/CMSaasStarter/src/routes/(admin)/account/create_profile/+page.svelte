@@ -2,6 +2,7 @@
   import { applyAction, enhance } from "$app/forms"
   import type { SubmitFunction } from "@sveltejs/kit"
   import "../../../../app.css"
+  import posthog from "posthog-js"
 
   interface User {
     email: string
@@ -20,12 +21,16 @@
 
   let { data, form }: Props = $props()
 
-  let { user, profile } = data
-
   let loading = $state(false)
-  let fullName: string = profile?.full_name ?? ""
-  let companyName: string = profile?.company_name ?? ""
-  let website: string = profile?.website ?? ""
+  let fullName: string = $state("")
+  let companyName: string = $state("")
+  let website: string = $state("")
+
+  $effect.pre(() => {
+    fullName = data.profile?.full_name ?? ""
+    companyName = data.profile?.company_name ?? ""
+    website = data.profile?.website ?? ""
+  })
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -38,6 +43,13 @@
       await update({ reset: false })
       await applyAction(result)
       loading = false
+      if (result.type === "success") {
+        posthog.capture("profile_created", {
+          full_name: fullName,
+          company_name: companyName,
+          website,
+        })
+      }
     }
   }
 </script>
@@ -125,7 +137,7 @@
       </form>
 
       <div class="text-sm text-slate-800 mt-14">
-        You are logged in as {user?.email}.
+        You are logged in as {data.user?.email}.
         <br />
         <a class="underline" href="/account/sign_out"> Sign out </a>
       </div>

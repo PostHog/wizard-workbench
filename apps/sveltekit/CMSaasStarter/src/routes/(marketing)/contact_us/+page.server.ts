@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { getPostHogClient } from "$lib/server/posthog"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -74,5 +75,20 @@ export const actions = {
       subject: "New contact request",
       body: `New contact request from ${firstName} ${lastName}.\n\nEmail: ${email}\n\nPhone: ${phone}\n\nCompany: ${company}\n\nMessage: ${message}`,
     })
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: email,
+      event: "contact_form_submitted",
+      properties: {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        company,
+        has_phone: phone.length > 0,
+        has_message: message.length > 0,
+      },
+    })
+    await posthog.flush()
   },
 }

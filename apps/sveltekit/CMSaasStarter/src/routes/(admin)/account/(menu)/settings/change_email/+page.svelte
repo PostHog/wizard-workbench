@@ -2,13 +2,27 @@
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
   import SettingsModule from "../settings_module.svelte"
+  import { page } from "$app/stores"
+  import posthog from "posthog-js"
 
   let adminSection: Writable<string> = getContext("adminSection")
   adminSection.set("settings")
 
   let { data } = $props()
 
-  let { user } = data
+  let lastEmailFormState: unknown = null
+  $effect(() => {
+    const form = $page.form as Record<string, unknown> | null
+    if (
+      form &&
+      form !== lastEmailFormState &&
+      !form.errorMessage &&
+      form.email !== undefined
+    ) {
+      lastEmailFormState = form
+      posthog.capture("email_changed", { new_email: form.email })
+    }
+  })
 </script>
 
 <svelte:head>
@@ -27,7 +41,7 @@
     {
       id: "email",
       label: "Email",
-      initialValue: user?.email ?? "",
+      initialValue: data.user?.email ?? "",
       placeholder: "Email address",
     },
   ]}

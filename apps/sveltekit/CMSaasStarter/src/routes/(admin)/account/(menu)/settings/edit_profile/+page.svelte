@@ -2,13 +2,31 @@
   import SettingsModule from "../settings_module.svelte"
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
+  import { page } from "$app/stores"
+  import posthog from "posthog-js"
 
   let adminSection: Writable<string> = getContext("adminSection")
   adminSection.set("settings")
 
   let { data } = $props()
 
-  let { profile } = data
+  let lastFormState: unknown = null
+  $effect(() => {
+    const form = $page.form as Record<string, unknown> | null
+    if (
+      form &&
+      form !== lastFormState &&
+      !form.errorMessage &&
+      form.fullName !== undefined
+    ) {
+      lastFormState = form
+      posthog.capture("profile_updated", {
+        full_name: form.fullName,
+        company_name: form.companyName,
+        website: form.website,
+      })
+    }
+  })
 </script>
 
 <svelte:head>
@@ -26,20 +44,20 @@
     {
       id: "fullName",
       label: "Name",
-      initialValue: profile?.full_name ?? "",
+      initialValue: data.profile?.full_name ?? "",
       placeholder: "Your full name",
       maxlength: 50,
     },
     {
       id: "companyName",
       label: "Company Name",
-      initialValue: profile?.company_name ?? "",
+      initialValue: data.profile?.company_name ?? "",
       maxlength: 50,
     },
     {
       id: "website",
       label: "Company Website",
-      initialValue: profile?.website ?? "",
+      initialValue: data.profile?.website ?? "",
       maxlength: 50,
     },
   ]}
