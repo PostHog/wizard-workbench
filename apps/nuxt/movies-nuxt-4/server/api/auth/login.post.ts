@@ -13,12 +13,26 @@ export default defineEventHandler(async (event) => {
 
     // Demo auth: accepts any username and password
     const sanitizedUsername = username.trim()
-    
+
     setCookie(event, 'auth-user', sanitizedUsername, {
       httpOnly: false, // Allow client-side access for SSR
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
+    })
+
+    const sessionId = getHeader(event, 'x-posthog-session-id')
+    const distinctId = getHeader(event, 'x-posthog-distinct-id')
+
+    const posthog = useServerPostHog()
+    posthog.capture({
+      distinctId: distinctId ?? sanitizedUsername,
+      event: 'server_login',
+      properties: {
+        $session_id: sessionId,
+        username: sanitizedUsername,
+        source: 'api',
+      },
     })
 
     return {

@@ -6,6 +6,15 @@ const props = defineProps({
 const message = computed(() => String(props.error?.message || ''))
 const is404 = computed(() => props.error?.statusCode === 404 || message.value?.includes('404'))
 const isDev = process.dev
+const posthog = usePostHog()
+
+onMounted(() => {
+  posthog?.capture('error_page_viewed', {
+    status_code: props.error?.statusCode,
+    error_message: message.value,
+    is_404: is404.value,
+  })
+})
 
 function handleError() {
   return clearError({ redirect: '/' })
