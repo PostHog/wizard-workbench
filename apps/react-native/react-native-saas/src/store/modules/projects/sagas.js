@@ -2,6 +2,7 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoProjects } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   getProjectsSuccess,
@@ -30,11 +31,14 @@ export function* createProject({ payload }) {
   const token = yield select(state => state.auth.token);
 
   try {
+    const team = yield select(state => state.teams.active);
+
     // Demo mode
     if (isDemoMode(token)) {
       const newProject = { id: Date.now(), title };
       yield put(createProjectSuccess(newProject));
       yield put(closeProjectModal());
+      posthog.capture('project_created', { project_title: title, team_id: team?.id, team_name: team?.name });
       toast.showSuccess('Project created');
       return;
     }
@@ -43,9 +47,15 @@ export function* createProject({ payload }) {
 
     yield put(createProjectSuccess(response.data));
     yield put(closeProjectModal());
+    posthog.capture('project_created', { project_title: title, project_id: response.data.id, team_id: team?.id, team_name: team?.name });
 
     toast.showSuccess('Project created');
   } catch (err) {
+    posthog.capture('$exception', {
+      $exception_type: 'CreateProjectError',
+      $exception_message: err?.message || 'Error creating project',
+      $exception_source: 'projects/sagas.createProject',
+    });
     toast.showError('Error creating project');
   }
 }

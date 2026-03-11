@@ -2,6 +2,7 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoMembers } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import { getMembersSuccess, inviteMemberSuccess } from './actions';
 
@@ -26,16 +27,25 @@ export function* updateMember({ payload }) {
   const token = yield select(state => state.auth.token);
 
   try {
+    const team = yield select(state => state.teams.active);
+
     // Demo mode
     if (isDemoMode(token)) {
+      posthog.capture('member_role_updated', { member_id: id, role_names: roles.map(r => r.name), team_id: team?.id });
       toast.showSuccess('Member updated');
       return;
     }
 
     yield call(api.put, `members/${id}`, { roles: roles.map(role => role.id) });
+    posthog.capture('member_role_updated', { member_id: id, role_names: roles.map(r => r.name), team_id: team?.id });
 
     toast.showSuccess('Member updated');
   } catch (err) {
+    posthog.capture('$exception', {
+      $exception_type: 'UpdateMemberError',
+      $exception_message: err?.message || 'Error updating member',
+      $exception_source: 'members/sagas.updateMember',
+    });
     toast.showError('Error updating member');
   }
 }
@@ -45,6 +55,8 @@ export function* inviteMember({ payload }) {
   const token = yield select(state => state.auth.token);
 
   try {
+    const team = yield select(state => state.teams.active);
+
     // Demo mode - add member directly to the list
     if (isDemoMode(token)) {
       const name = email.split('@')[0].replace(/[._]/g, ' ');
@@ -54,14 +66,21 @@ export function* inviteMember({ payload }) {
         roles: [{ id: 3, name: 'Viewer' }],
       };
       yield put(inviteMemberSuccess(newMember));
+      posthog.capture('member_invited', { invited_email: email, team_id: team?.id, team_name: team?.name });
       toast.showSuccess('Member added');
       return;
     }
 
     yield call(api.post, 'invites', { invites: [email] });
+    posthog.capture('member_invited', { invited_email: email, team_id: team?.id, team_name: team?.name });
 
     toast.showSuccess('Invite sent');
   } catch (err) {
+    posthog.capture('$exception', {
+      $exception_type: 'InviteMemberError',
+      $exception_message: err?.message || 'Error sending invite',
+      $exception_source: 'members/sagas.inviteMember',
+    });
     toast.showError('Error sending invite');
   }
 }
