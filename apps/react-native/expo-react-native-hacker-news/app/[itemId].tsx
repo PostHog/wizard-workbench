@@ -18,10 +18,12 @@ import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { usePostHog } from "posthog-react-native";
 
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -163,6 +165,11 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture("item_link_opened", {
+                    item_id: item.id,
+                    item_title: item.title,
+                    url: item.url,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +201,14 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog.capture("parent_item_navigated", {
+                  from_item_id: item?.id,
+                  to_item_id: parentItem.id,
+                  parent_title: parentItem.title || parentItem.text,
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
