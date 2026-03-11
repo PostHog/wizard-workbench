@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -55,6 +56,13 @@ export function Login({
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
           return;
+        }
+
+        // Identify user client-side upon successful sign-in or sign-up
+        if (result.userId) {
+          posthog.identify(String(result.userId), {
+            email: data.email,
+          });
         }
 
         if (result.success && result.redirectTo) {
