@@ -3,6 +3,7 @@ import type { Route } from "./+types/products";
 import { getProducts, getCategories, type Product } from "../data/products";
 import { useState } from "react";
 import { useCart } from "../context/CartContext";
+import { usePostHog } from '@posthog/react';
 
 export async function clientLoader() {
   return {
@@ -14,11 +15,19 @@ export async function clientLoader() {
 export default function Products({ loaderData }: Route.ComponentProps) {
   const { products, categories } = loaderData;
   const { addToCart } = useCart();
+  const posthog = usePostHog();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+    posthog?.capture('product_added_to_cart', {
+      product_id: product.id,
+      product_name: product.name,
+      product_category: product.category,
+      product_price: product.price,
+      source: 'product_listing',
+    });
   };
 
   const handleSearch = (term: string) => {
