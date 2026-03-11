@@ -1,5 +1,7 @@
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { IconMail } from "@tabler/icons-react";
+import { useEffect, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { data, Form, href, Link, useNavigation } from "react-router";
 import * as z from "zod";
@@ -70,9 +72,27 @@ export default function RegisterRoute({
     keyPrefix: "register",
   });
   const { inviteLinkInfo } = loaderData;
+  const posthog = usePostHog();
 
   const isAwaitingEmailConfirmation =
     getIsAwaitingEmailConfirmation(actionData);
+
+  // Identify and capture signup event once OTP is successfully sent
+  const prevAwaitingRef = useRef(false);
+  useEffect(() => {
+    if (
+      !prevAwaitingRef.current &&
+      isAwaitingEmailConfirmation &&
+      actionData?.email
+    ) {
+      posthog?.identify(actionData.email, { email: actionData.email });
+      posthog?.capture("user_signed_up", {
+        email: actionData.email,
+        method: "email",
+      });
+    }
+    prevAwaitingRef.current = isAwaitingEmailConfirmation;
+  }, [isAwaitingEmailConfirmation, actionData?.email, posthog]);
 
   const { form, fields } = useForm(registerWithEmailSchema, {
     lastResult: actionData?.result,

@@ -108,8 +108,8 @@ export default function OrganizationLayoutRoute({
   );
 
   // Check if we're on a paste detail page
-  const isPasteDetailPage = matches.some(
-    (match) => match.id?.includes("pastes.$pasteId"),
+  const isPasteDetailPage = matches.some((match) =>
+    match.id?.includes("pastes.$pasteId"),
   );
 
   // If it's a paste detail page, render without sidebar

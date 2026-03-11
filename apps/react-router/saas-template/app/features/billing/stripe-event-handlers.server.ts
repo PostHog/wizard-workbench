@@ -1,3 +1,4 @@
+import { PostHog } from "posthog-node";
 import type { Stripe } from "stripe";
 
 import { updateOrganizationInDatabaseById } from "../organizations/organizations-model.server";
@@ -22,6 +23,15 @@ import {
 } from "./stripe-subscription-schedule-model.server";
 import { stripeAdmin } from "~/features/billing/stripe-admin.server";
 import { getErrorMessage } from "~/utils/get-error-message";
+
+function createWebhookPostHog() {
+  if (!process.env.VITE_PUBLIC_POSTHOG_KEY) return null;
+  return new PostHog(process.env.VITE_PUBLIC_POSTHOG_KEY, {
+    flushAt: 1,
+    flushInterval: 0,
+    host: process.env.VITE_PUBLIC_POSTHOG_HOST,
+  });
+}
 
 const ok = () => Response.json({ message: "OK" });
 
@@ -98,6 +108,7 @@ export const handleStripeChargeDisputeClosedEvent = async (
 export const handleStripeCheckoutSessionCompletedEvent = async (
   event: Stripe.CheckoutSessionCompletedEvent,
 ) => {
+  const posthog = createWebhookPostHog();
   try {
     if (event.data.object.metadata?.organizationId) {
       const organization = await updateOrganizationInDatabaseById({
@@ -121,6 +132,23 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
           organizationId: organization.id,
         });
       }
+
+      posthog?.capture({
+        distinctId:
+          event.data.object.metadata.purchasedById ??
+          event.data.object.metadata.organizationId,
+        event: "checkout_session_completed",
+        properties: {
+          amount_total: event.data.object.amount_total,
+          currency: event.data.object.currency,
+          organization_id: organization.id,
+          organization_slug: organization.slug,
+          stripe_customer_id:
+            typeof event.data.object.customer === "string"
+              ? event.data.object.customer
+              : undefined,
+        },
+      });
     } else {
       console.error("No organization ID found in checkout session metadata");
       prettyPrint(event);
@@ -134,6 +162,7 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
     );
   }
 
+  await posthog?.shutdown().catch(() => {});
   return ok();
 };
 
@@ -161,28 +190,62 @@ export const handleStripeCustomerDeletedEvent = async (
 export const handleStripeCustomerSubscriptionCreatedEvent = async (
   event: Stripe.CustomerSubscriptionCreatedEvent,
 ) => {
+  const posthog = createWebhookPostHog();
   try {
     await createStripeSubscriptionInDatabase(event.data.object);
+
+    const customerId =
+      typeof event.data.object.customer === "string"
+        ? event.data.object.customer
+        : event.data.object.customer.id;
+
+    posthog?.capture({
+      distinctId: event.data.object.metadata?.purchasedById ?? customerId,
+      event: "subscription_created",
+      properties: {
+        status: event.data.object.status,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: event.data.object.id,
+      },
+    });
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);
     console.error("Error creating Stripe subscription", message);
   }
 
+  await posthog?.shutdown().catch(() => {});
   return ok();
 };
 
 export const handleStripeCustomerSubscriptionDeletedEvent = async (
   event: Stripe.CustomerSubscriptionDeletedEvent,
 ) => {
+  const posthog = createWebhookPostHog();
   try {
     await updateStripeSubscriptionFromAPIInDatabase(event.data.object);
+
+    const customerId =
+      typeof event.data.object.customer === "string"
+        ? event.data.object.customer
+        : event.data.object.customer.id;
+
+    posthog?.capture({
+      distinctId: event.data.object.metadata?.purchasedById ?? customerId,
+      event: "subscription_deleted",
+      properties: {
+        status: event.data.object.status,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: event.data.object.id,
+      },
+    });
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);
     console.error("Error updating deleted Stripe subscription", message);
   }
 
+  await posthog?.shutdown().catch(() => {});
   return ok();
 };
 

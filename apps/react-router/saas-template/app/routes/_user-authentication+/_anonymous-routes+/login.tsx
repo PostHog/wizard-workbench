@@ -1,5 +1,7 @@
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { IconMail } from "@tabler/icons-react";
+import { useEffect, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { data, Form, href, Link, useNavigation } from "react-router";
 import * as z from "zod";
@@ -68,9 +70,27 @@ export default function LoginRoute({
 }: Route.ComponentProps) {
   const { t } = useTranslation("userAuthentication", { keyPrefix: "login" });
   const { inviteLinkInfo } = loaderData;
+  const posthog = usePostHog();
 
   const isAwaitingEmailConfirmation =
     getIsAwaitingEmailConfirmation(actionData);
+
+  // Identify and capture login event once OTP is successfully sent
+  const prevAwaitingRef = useRef(false);
+  useEffect(() => {
+    if (
+      !prevAwaitingRef.current &&
+      isAwaitingEmailConfirmation &&
+      actionData?.email
+    ) {
+      posthog?.identify(actionData.email, { email: actionData.email });
+      posthog?.capture("user_logged_in", {
+        email: actionData.email,
+        method: "email",
+      });
+    }
+    prevAwaitingRef.current = isAwaitingEmailConfirmation;
+  }, [isAwaitingEmailConfirmation, actionData?.email, posthog]);
 
   const { form, fields } = useForm(loginWithEmailSchema, {
     lastResult: actionData?.result,

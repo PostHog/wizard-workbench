@@ -16,6 +16,8 @@ const schema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string(),
   SUPABASE_PROJECT_ID: z.string(),
   SUPABASE_SERVICE_ROLE_KEY: z.string(),
+  VITE_PUBLIC_POSTHOG_HOST: z.url().optional(),
+  VITE_PUBLIC_POSTHOG_KEY: z.string().optional(),
   VITE_SUPABASE_ANON_KEY: z.string(),
   VITE_SUPABASE_URL: z.url(),
 });
@@ -52,6 +54,8 @@ export function getEnv() {
   return {
     ALLOW_INDEXING: process.env.ALLOW_INDEXING,
     MODE: process.env.NODE_ENV,
+    VITE_PUBLIC_POSTHOG_HOST: process.env.VITE_PUBLIC_POSTHOG_HOST,
+    VITE_PUBLIC_POSTHOG_KEY: process.env.VITE_PUBLIC_POSTHOG_KEY,
   };
 }
 
