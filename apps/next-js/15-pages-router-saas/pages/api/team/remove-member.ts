@@ -9,6 +9,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -70,6 +71,16 @@ export default async function handler(
           eq(teamMembers.teamId, userWithTeam.teamId)
         )
       );
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.email,
+      event: 'team_member_removed',
+      properties: {
+        memberId,
+        teamId: userWithTeam.teamId
+      }
+    });
 
     await logActivity(
       userWithTeam.teamId,
