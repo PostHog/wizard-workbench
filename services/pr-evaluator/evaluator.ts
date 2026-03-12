@@ -143,6 +143,29 @@ export function validateAndCorrectScores(raw: EvaluateScores): EvaluateScores {
   return scores;
 }
 
+// ── Score injection ──────────────────────────────────────────────────────────
+
+/** Inject computed scores into the review comment, replacing placeholder 0s and updating the confidence header */
+export function injectScoresIntoComment(comment: string, scores: EvaluateScores): string {
+  let result = comment;
+
+  // Replace the SCORES block with real computed values
+  result = result.replace(
+    /<!-- SCORES\s*\{[\s\S]*?\}\s*SCORES -->/,
+    `<!-- SCORES\n${JSON.stringify(scores, null, 2)}\nSCORES -->`
+  );
+
+  // Update the confidence header to match computed score
+  const emojis: Record<number, string> = { 5: "\u{1F9D9}", 4: "\u{1F44D}", 3: "\u{1F914}", 2: "\u274C", 1: "\u274C" };
+  const emoji = emojis[scores.confidence] ?? "";
+  result = result.replace(
+    /### Confidence score: \d\/5\s*(?:\u{1F9D9}|\u{1F44D}|\u{1F914}|\u274C)?/u,
+    `### Confidence score: ${scores.confidence}/5 ${emoji}`
+  );
+
+  return result;
+}
+
 // ── Gateway configuration ────────────────────────────────────────────────────
 
 /**
@@ -263,7 +286,7 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
   }
 
   // The agent outputs markdown directly - use it as the review comment
-  const reviewComment = resultText.trim();
+  let reviewComment = resultText.trim();
 
   // Check evaluation completeness — warn if less than half of changed files are mentioned
   const changedFiles = options.prData.files.map((f) => f.filename);
@@ -321,6 +344,11 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
       console.warn(`Warning: Failed to parse SCORES JSON block: ${e instanceof Error ? e.message : e}`);
       console.warn(`Raw SCORES content: ${scoresMatch[1].substring(0, 200)}`);
     }
+  }
+
+  // Inject computed scores back into the review comment
+  if (scores) {
+    reviewComment = injectScoresIntoComment(reviewComment, scores);
   }
 
   // Fallback: extract confidence from header text

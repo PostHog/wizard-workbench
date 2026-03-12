@@ -11,6 +11,7 @@ import {
   validateAndCorrectScores,
   computeScoreFromRubric,
   computeScoresFromRubric,
+  injectScoresIntoComment,
   RubricSchema,
   type EvaluateScores,
   type RubricDimension,
@@ -421,5 +422,63 @@ describe("RubricSchema", () => {
     };
     const result = RubricSchema.safeParse(data);
     assert.ok(!result.success);
+  });
+});
+
+// ── injectScoresIntoComment ──────────────────────────────────────────────────
+
+describe("injectScoresIntoComment", () => {
+  const scores = makeScores({
+    file_analysis: 3,
+    app_sanity: 4,
+    posthog_implementation: 5,
+    event_quality: 4,
+    confidence: 4,
+    framework: "nextjs",
+    arch_type: "full-stack",
+  });
+
+  const comment = [
+    "### Confidence score: 2/5 \u274C",
+    "",
+    "Some review content",
+    "",
+    '<!-- SCORES\n{\n  "file_analysis": 0,\n  "app_sanity": 0,\n  "posthog_implementation": 0,\n  "event_quality": 0,\n  "confidence": 0,\n  "framework": "nextjs",\n  "arch_type": "full-stack"\n}\nSCORES -->',
+  ].join("\n");
+
+  it("replaces SCORES block 0s with computed values", () => {
+    const result = injectScoresIntoComment(comment, scores);
+    assert.ok(result.includes('"file_analysis": 3'));
+    assert.ok(result.includes('"confidence": 4'));
+    assert.ok(!result.includes('"file_analysis": 0'));
+  });
+
+  it("updates confidence header to match computed score", () => {
+    const result = injectScoresIntoComment(comment, scores);
+    assert.ok(result.includes("### Confidence score: 4/5"));
+    assert.ok(!result.includes("### Confidence score: 2/5"));
+  });
+
+  it("returns comment unchanged if no SCORES block exists", () => {
+    const plain = "### Confidence score: 3/5 \u{1F914}\n\nNo scores block here";
+    const result = injectScoresIntoComment(plain, scores);
+    // Confidence header should still be updated
+    assert.ok(result.includes("### Confidence score: 4/5"));
+    assert.ok(!result.includes("SCORES"));
+  });
+
+  it("returns comment unchanged if no confidence header exists", () => {
+    const noHeader = '<!-- SCORES\n{\n  "file_analysis": 0\n}\nSCORES -->';
+    const result = injectScoresIntoComment(noHeader, scores);
+    assert.ok(result.includes('"file_analysis": 3'));
+    assert.ok(!result.includes("Confidence score:"));
+  });
+
+  it("uses correct emoji for each confidence level", () => {
+    for (const [level, emoji] of [[5, "\u{1F9D9}"], [4, "\u{1F44D}"], [3, "\u{1F914}"], [2, "\u274C"], [1, "\u274C"]] as [number, string][]) {
+      const s = makeScores({ confidence: level });
+      const result = injectScoresIntoComment(comment, s);
+      assert.ok(result.includes(`${level}/5 ${emoji}`), `Expected emoji ${emoji} for confidence ${level}`);
+    }
   });
 });
