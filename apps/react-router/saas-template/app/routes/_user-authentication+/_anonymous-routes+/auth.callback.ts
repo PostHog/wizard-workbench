@@ -17,6 +17,7 @@ import {
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
+import { getPostHogFromContext } from "~/utils/posthog-middleware.server";
 import { redirectWithToast } from "~/utils/toast.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -56,7 +57,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const maybeUser =
       await retrieveUserAccountWithActiveMembershipsFromDatabaseByEmail(email);
 
+    const posthog = getPostHogFromContext(context);
+
     if (maybeUser) {
+      posthog?.capture({
+        distinctId: email,
+        event: "user_logged_in",
+        properties: { email },
+      });
+
       if (inviteLinkInfo || emailInviteInfo) {
         const organizationId =
           // biome-ignore lint/style/noNonNullAssertion: The is checked above
@@ -181,6 +190,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const userProfile = await saveUserAccountToDatabase({
       email,
       supabaseUserId: user.id,
+    });
+
+    posthog?.capture({
+      distinctId: email,
+      event: "user_signed_up",
+      properties: { email },
     });
 
     if (emailInviteInfo) {

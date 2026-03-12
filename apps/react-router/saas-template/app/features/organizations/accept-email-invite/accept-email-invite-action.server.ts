@@ -17,6 +17,7 @@ import { combineHeaders } from "~/utils/combine-headers.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { badRequest } from "~/utils/http-responses.server";
+import { getPostHogFromContext } from "~/utils/posthog-middleware.server";
 import { createToastHeaders, redirectWithToast } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -93,6 +94,17 @@ export async function acceptEmailInviteAction({
               request,
               role: link.role,
               userAccountId: userAccount.id,
+            });
+
+            const posthog = getPostHogFromContext(context);
+            posthog?.capture({
+              distinctId: user.email ?? userAccount.id,
+              event: "email_invite_accepted",
+              properties: {
+                organization_name: link.organization.name,
+                organization_slug: link.organization.slug,
+                role: link.role,
+              },
             });
 
             return redirectWithToast(

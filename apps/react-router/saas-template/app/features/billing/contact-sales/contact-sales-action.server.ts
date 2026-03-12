@@ -8,8 +8,12 @@ import { contactSalesFormSchema } from "./contact-sales-schemas";
 import type { Route } from ".react-router/types/app/routes/+types/contact-sales";
 import { checkHoneypot } from "~/utils/honeypot.server";
 import { badRequest } from "~/utils/http-responses.server";
+import { getPostHogFromContext } from "~/utils/posthog-middleware.server";
 
-export async function contactSalesAction({ request }: Route.ActionArgs) {
+export async function contactSalesAction({
+  request,
+  context,
+}: Route.ActionArgs) {
   const formData = await parseFormData(request);
 
   // Check honeypot before validation (honeypot fields won't be in validated data)
@@ -33,6 +37,17 @@ export async function contactSalesAction({ request }: Route.ActionArgs) {
     case CONTACT_SALES_INTENT: {
       const { intent: _, ...submissionData } = result.data;
       await saveContactSalesFormSubmissionToDatabase(submissionData);
+
+      const posthog = getPostHogFromContext(context);
+      posthog?.capture({
+        distinctId: submissionData.email,
+        event: "contact_sales_submitted",
+        properties: {
+          company_name: submissionData.companyName,
+          email: submissionData.email,
+        },
+      });
+
       return data({ result: undefined, success: true });
     }
   }

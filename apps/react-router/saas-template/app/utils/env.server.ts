@@ -18,6 +18,8 @@ const schema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string(),
   VITE_SUPABASE_ANON_KEY: z.string(),
   VITE_SUPABASE_URL: z.url(),
+  VITE_PUBLIC_POSTHOG_PROJECT_TOKEN: z.string().optional(),
+  VITE_PUBLIC_POSTHOG_HOST: z.string().optional(),
 });
 
 declare global {
