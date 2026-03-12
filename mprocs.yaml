@@ -38,6 +38,16 @@ procs:
     autostart: false
     env_file: .env
 
+  wizard-run-proxy:
+    # Same as wizard-run but routes requests through a proxy (e.g. Charles on :8888)
+    # Requires Charles (or similar) running on :8888 with SSL proxying enabled
+    shell: "PROXY_PRELOAD=\"$(pwd)/proxy/proxy-fetch-preload.cjs\" && export NODE_OPTIONS=\"-r $PROXY_PRELOAD\" && npx tsx services/wizard-run/index.ts"
+    autostart: false
+    env_file: .env
+    env:
+      HTTPS_PROXY: "http://127.0.0.1:8888"
+      HTTP_PROXY: "http://127.0.0.1:8888"
+
   wizard-tail-run:
     # Tail the wizard's verbose output
     shell: "tail -f /tmp/posthog-wizard.log"

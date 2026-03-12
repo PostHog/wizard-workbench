@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+DIR="$(cd "$(dirname "$0")" && pwd)"
+export HTTPS_PROXY="${HTTPS_PROXY:-http://127.0.0.1:8888}"
+export HTTP_PROXY="${HTTP_PROXY:-$HTTPS_PROXY}"
+exec node -r "$DIR/proxy-fetch-preload.cjs" "$@"
