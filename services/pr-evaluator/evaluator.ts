@@ -1,4 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { z } from "zod";
 import { postPRComment, type PRData } from "../github/index.js";
 import { buildSystemPrompt, buildUserPrompt } from "./prompt-builder.js";
 
@@ -8,10 +9,141 @@ export interface EvaluateOptions {
   testRunDir?: string;
 }
 
+export interface EvaluateScores {
+  file_analysis: number;
+  app_sanity: number;
+  posthog_implementation: number;
+  event_quality: number;
+  confidence: number;
+  framework: string;
+  arch_type: string;
+}
+
 export interface EvaluateResult {
   reviewComment: string;
   commentUrl?: string;
+  scores?: EvaluateScores;
+  rubric?: RubricData;
 }
+
+// ── Rubric types & scoring ───────────────────────────────────────────────────
+
+export type RubricValue = "yes" | "no" | "n/a";
+
+export interface RubricDimension {
+  [itemId: string]: RubricValue;
+}
+
+export interface RubricData {
+  file_analysis: RubricDimension;
+  app_sanity: RubricDimension;
+  posthog_implementation: RubricDimension;
+  event_quality: RubricDimension;
+}
+
+const RubricValueSchema = z.enum(["yes", "no", "n/a"]);
+
+export const RubricSchema = z.object({
+  file_analysis: z.record(RubricValueSchema),
+  app_sanity: z.record(RubricValueSchema),
+  posthog_implementation: z.record(RubricValueSchema),
+  event_quality: z.record(RubricValueSchema),
+});
+
+/** Compute a 1-5 score from a rubric dimension's pass rate */
+export function computeScoreFromRubric(dimension: RubricDimension): number {
+  const applicable = Object.values(dimension).filter((v) => v !== "n/a");
+  if (applicable.length === 0) return 3; // default if everything is N/A
+  const passed = applicable.filter((v) => v === "yes").length;
+  const rate = passed / applicable.length;
+  return Math.max(1, Math.ceil(rate * 5));
+}
+
+/** Compute all scores deterministically from rubric data */
+export function computeScoresFromRubric(
+  rubric: RubricData,
+  framework: string,
+  archType: string
+): EvaluateScores {
+  const file_analysis = computeScoreFromRubric(rubric.file_analysis);
+  const app_sanity = computeScoreFromRubric(rubric.app_sanity);
+  const posthog_implementation = computeScoreFromRubric(rubric.posthog_implementation);
+  const event_quality = computeScoreFromRubric(rubric.event_quality);
+  const avg = (file_analysis + app_sanity + posthog_implementation + event_quality) / 4;
+  const confidence = Math.min(app_sanity, Math.round(avg));
+
+  return {
+    file_analysis,
+    app_sanity,
+    posthog_implementation,
+    event_quality,
+    confidence,
+    framework,
+    arch_type: archType,
+  };
+}
+
+// ── Score extraction & validation helpers ────────────────────────────────────
+
+const ScoresSchema = z.object({
+  file_analysis: z.number().min(1).max(5),
+  app_sanity: z.number().min(1).max(5),
+  posthog_implementation: z.number().min(1).max(5),
+  event_quality: z.number().min(1).max(5),
+  confidence: z.number().min(1).max(5),
+  framework: z.string(),
+  arch_type: z.enum(["server-only", "client-only", "full-stack"]),
+});
+
+/** Attempt to fix common JSON issues before parsing */
+export function repairAndParseJSON(raw: string): unknown {
+  let cleaned = raw;
+  // Remove trailing commas before } or ]
+  cleaned = cleaned.replace(/,\s*([\]}])/g, "$1");
+  // Remove JS-style // comments (only outside quoted strings)
+  cleaned = cleaned.replace(/"(?:[^"\\]|\\.)*"|\/\/.*$/gm, (match) =>
+    match.startsWith('"') ? match : ""
+  );
+  return JSON.parse(cleaned);
+}
+
+/** Validate scores and auto-correct confidence per formula */
+export function validateAndCorrectScores(raw: EvaluateScores): EvaluateScores {
+  const parsed = ScoresSchema.safeParse(raw);
+  if (!parsed.success) {
+    console.warn(
+      "Score validation issues:",
+      parsed.error.issues.map((i) => `${i.path}: ${i.message}`).join(", ")
+    );
+  }
+
+  const clamp = (n: number) => Math.max(1, Math.min(5, Math.round(n)));
+  const scores = { ...raw };
+  scores.file_analysis = clamp(scores.file_analysis);
+  scores.app_sanity = clamp(scores.app_sanity);
+  scores.posthog_implementation = clamp(scores.posthog_implementation);
+  scores.event_quality = clamp(scores.event_quality);
+
+  // Auto-correct confidence per formula: min(app_sanity, round(avg(...)))
+  const avg =
+    (scores.file_analysis + scores.app_sanity + scores.posthog_implementation + scores.event_quality) / 4;
+  const expectedConfidence = Math.min(scores.app_sanity, Math.round(avg));
+  if (scores.confidence !== expectedConfidence) {
+    console.warn(`Confidence auto-corrected: ${scores.confidence} -> ${expectedConfidence}`);
+    scores.confidence = expectedConfidence;
+  }
+
+  // Normalize arch_type
+  const validArchTypes = ["server-only", "client-only", "full-stack"];
+  if (!validArchTypes.includes(scores.arch_type)) {
+    console.warn(`Invalid arch_type "${scores.arch_type}", defaulting to "full-stack"`);
+    scores.arch_type = "full-stack";
+  }
+
+  return scores;
+}
+
+// ── Gateway configuration ────────────────────────────────────────────────────
 
 /**
  * Get LLM gateway URL based on PostHog region
@@ -38,7 +170,7 @@ export function configureGateway(apiKey: string, region: string): void {
 export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResult> {
   const { prData, testRun = false, testRunDir } = options;
 
-  const systemPrompt = buildSystemPrompt();
+  const systemPrompt = await buildSystemPrompt(prData);
   const userPrompt = buildUserPrompt(prData);
 
   // Save prompt if test run
@@ -68,7 +200,7 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
   for await (const message of query({
     prompt: userPrompt,
     options: {
-      model: "claude-opus-4-5-20251101",
+      model: process.env.EVALUATOR_MODEL || "claude-opus-4-6",
       allowedTools: ["Read", "Grep", "Glob", "Bash"],
       cwd: process.cwd(),
       // Use acceptEdits instead of bypassPermissions - the latter doesn't work as root in Docker
@@ -133,10 +265,70 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
   // The agent outputs markdown directly - use it as the review comment
   const reviewComment = resultText.trim();
 
-  // Extract and print confidence score for CI parsing
-  const confidenceMatch = reviewComment.match(/Confidence score: (\d\/\d)/);
-  if (confidenceMatch) {
-    console.log(`\nConfidence score: ${confidenceMatch[1]}`);
+  // Check evaluation completeness — warn if less than half of changed files are mentioned
+  const changedFiles = options.prData.files.map((f) => f.filename);
+  const mentionedFiles = changedFiles.filter((f) => reviewComment.includes(f));
+  if (changedFiles.length > 0 && mentionedFiles.length < changedFiles.length / 2) {
+    console.warn(
+      `Warning: Evaluation only mentions ${mentionedFiles.length}/${changedFiles.length} changed files. May be incomplete.`
+    );
+  }
+
+  // Primary: extract rubric and compute scores deterministically
+  let scores: EvaluateScores | undefined;
+  let rubric: RubricData | undefined;
+
+  const rubricMatch = reviewComment.match(/<!-- RUBRIC\s*(\{[\s\S]*?\})\s*RUBRIC -->/);
+  if (rubricMatch) {
+    try {
+      const rawRubric = repairAndParseJSON(rubricMatch[1]);
+      const parsed = RubricSchema.safeParse(rawRubric);
+      if (parsed.success) {
+        rubric = parsed.data;
+      } else {
+        console.warn("Rubric validation issues:", parsed.error.issues.map((i: { path: unknown; message: string }) => `${i.path}: ${i.message}`).join(", "));
+      }
+    } catch (e) {
+      console.warn(`Warning: Failed to parse RUBRIC block: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
+  // Extract framework/arch_type from SCORES block
+  let framework = "unknown";
+  let archType = "full-stack";
+  const scoresMatch = reviewComment.match(/<!-- SCORES\s*(\{[\s\S]*?\})\s*SCORES -->/);
+  if (scoresMatch) {
+    try {
+      const rawScores = repairAndParseJSON(scoresMatch[1]) as Record<string, unknown>;
+      framework = String(rawScores.framework || "unknown");
+      archType = String(rawScores.arch_type || "full-stack");
+    } catch (e) {
+      console.warn(`Warning: Failed to parse SCORES block for framework/arch_type: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
+  // Compute scores from rubric (preferred) or fall back to SCORES block
+  if (rubric) {
+    scores = computeScoresFromRubric(rubric, framework, archType);
+    console.log(`\nScores (from rubric): ${JSON.stringify(scores)}`);
+  } else if (scoresMatch) {
+    // Legacy fallback: use Claude's scores directly
+    try {
+      const rawScores = repairAndParseJSON(scoresMatch[1]) as EvaluateScores;
+      scores = validateAndCorrectScores(rawScores);
+      console.log(`\nScores (from legacy SCORES block): ${JSON.stringify(scores)}`);
+    } catch (e) {
+      console.warn(`Warning: Failed to parse SCORES JSON block: ${e instanceof Error ? e.message : e}`);
+      console.warn(`Raw SCORES content: ${scoresMatch[1].substring(0, 200)}`);
+    }
+  }
+
+  // Fallback: extract confidence from header text
+  if (!scores) {
+    const confidenceMatch = reviewComment.match(/Confidence score: (\d\/\d)/);
+    if (confidenceMatch) {
+      console.log(`\nConfidence score: ${confidenceMatch[1]}`);
+    }
   }
 
   // Save output and usage if test run
@@ -144,6 +336,14 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
     const fs = await import("fs/promises");
     const { join } = await import("path");
     await fs.writeFile(join(testRunDir, "output.md"), reviewComment, "utf-8");
+
+    // Save structured scores and rubric
+    if (scores) {
+      await fs.writeFile(join(testRunDir, "scores.json"), JSON.stringify(scores, null, 2), "utf-8");
+    }
+    if (rubric) {
+      await fs.writeFile(join(testRunDir, "rubric.json"), JSON.stringify(rubric, null, 2), "utf-8");
+    }
 
     // Save usage data
     const usageContent = `# Usage Statistics
@@ -186,5 +386,5 @@ ${JSON.stringify(usageData.modelUsage, null, 2)}
     console.log("--- END PREVIEW ---\n");
   }
 
-  return { reviewComment, commentUrl };
+  return { reviewComment, commentUrl, scores, rubric };
 }
