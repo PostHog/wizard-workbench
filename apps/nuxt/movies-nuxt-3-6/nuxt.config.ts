@@ -21,6 +21,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl,
+      posthogKey: '',
+      posthogHost: '',
     },
   },
   devtools: {
