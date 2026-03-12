@@ -1,4 +1,6 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { usePostHog } from '@posthog/react'
 import { NotFound } from '~/components/NotFound'
 import { PostErrorComponent } from '~/components/PostError'
 import { fetchInvoice, markInvoicePaid } from '~/utils/invoices'
@@ -15,11 +17,28 @@ export const Route = createFileRoute('/posts/$postId')({
 function PostComponent() {
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
 
   const handleMarkAsPaid = async () => {
     await markInvoicePaid({ data: String(invoice.id) })
+    posthog.capture('invoice_marked_paid', {
+      invoice_id: invoice.id,
+      invoice_title: invoice.title,
+      amount: invoice.amount,
+    })
     router.invalidate()
   }
+
+  useEffect(() => {
+    if (invoice) {
+      posthog.capture('invoice_detail_viewed', {
+        invoice_id: invoice.id,
+        invoice_title: invoice.title,
+        amount: invoice.amount,
+        status: invoice.status,
+      })
+    }
+  }, [invoice?.id])
 
   if (!invoice) {
     return <NotFound>Invoice not found</NotFound>
