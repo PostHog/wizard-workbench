@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -89,6 +90,25 @@ export default async function handler(
         password
       });
     }
+
+    const distinctId = req.headers['x-posthog-distinct-id'] as string | undefined;
+    const sessionId = req.headers['x-posthog-session-id'] as string | undefined;
+    const posthog = getPostHogClient();
+    posthog.identify({
+      distinctId: distinctId || foundUser.email,
+      properties: {
+        email: foundUser.email,
+        name: foundUser.name,
+      },
+    });
+    posthog.capture({
+      distinctId: distinctId || foundUser.email,
+      event: 'user_signed_in',
+      properties: {
+        email: foundUser.email,
+        ...(sessionId ? { $session_id: sessionId } : {}),
+      },
+    });
 
     await Promise.all([
       setSession(foundUser, res),
