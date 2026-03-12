@@ -7,6 +7,7 @@ use App\Actions\Billing\GetSubscriptionSummary;
 use App\Actions\Billing\RedirectToBillingPortal;
 use App\Actions\Billing\SwapPlan;
 use App\Domains\Billing\PlanCatalog;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -27,6 +28,12 @@ class SubscriptionController extends Controller
     {
         $plan = $catalog->findOrFail($request->plan);
         $user = $request->user();
+
+        PostHogService::capture((string) $user->id, 'subscription_checkout_started', [
+            'plan_name' => $plan->name,
+            'plan_id' => $plan->id,
+            'price' => $plan->price ?? null,
+        ]);
 
         // Stub out subscription if Stripe isn't configured (for demo/development)
         if (!CheckoutPlan::isStripeConfigured()) {
@@ -58,6 +65,13 @@ class SubscriptionController extends Controller
             'amount' => $plan->price ?? 0,
         ]);
 
+        PostHogService::capture((string) $user->id, 'subscription_created', [
+            'plan_name' => $plan->name,
+            'plan_id' => $plan->id,
+            'price' => $plan->price ?? 0,
+            'demo' => true,
+        ]);
+
         return redirect()->route('dashboard')->with('success', 'Demo subscription created for ' . $plan->name . '. (Stripe not configured)');
     }
 
@@ -70,6 +84,12 @@ class SubscriptionController extends Controller
             try {
                 $swapPlan($user, $plan);
 
+                PostHogService::capture((string) $user->id, 'subscription_plan_swapped', [
+                    'plan_name' => $plan->name,
+                    'plan_id' => $plan->id,
+                    'price' => $plan->price ?? null,
+                ]);
+
                 return redirect()->route('subscribe')->with('success', 'Your subscription has been updated to '.$plan->name.'.');
             } catch (Exception $e) {
                 return redirect()->route('subscribe')->with('error', 'There was an error updating your subscription: '.$e->getMessage());
@@ -81,6 +101,10 @@ class SubscriptionController extends Controller
 
     public function redirectToBillingPortal(Request $request, RedirectToBillingPortal $billingPortal)
     {
-        return $billingPortal($request->user());
+        $user = $request->user();
+
+        PostHogService::capture((string) $user->id, 'billing_portal_accessed');
+
+        return $billingPortal($user);
     }
 }
