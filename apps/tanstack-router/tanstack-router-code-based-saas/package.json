@@ -9,6 +9,7 @@
     "start": "vite"
   },
   "dependencies": {
+    "@posthog/react": "^1.8.2",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-router": "^1.158.1",
     "@tanstack/react-router-devtools": "^1.158.1",
