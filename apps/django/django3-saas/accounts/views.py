@@ -9,15 +9,36 @@ from django.contrib.auth.views import (
 from django.contrib import messages
 from django.urls import reverse_lazy
 from .forms import RegisterForm, LoginForm, ProfileForm
+from config import posthog_client as _ph
 
 
 class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = form.get_user()
+        if _ph.posthog_client:
+            with _ph.posthog_client.new_context():
+                _ph.posthog_client.identify_context(str(user.id))
+                _ph.posthog_client.tag('username', user.username)
+                _ph.posthog_client.tag('date_joined', user.date_joined.isoformat())
+                _ph.posthog_client.capture('user_logged_in', properties={
+                    'login_method': 'email',
+                })
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and _ph.posthog_client:
+            with _ph.posthog_client.new_context():
+                _ph.posthog_client.identify_context(str(request.user.id))
+                _ph.posthog_client.capture('user_logged_out')
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -49,6 +70,14 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            if _ph.posthog_client:
+                with _ph.posthog_client.new_context():
+                    _ph.posthog_client.identify_context(str(user.id))
+                    _ph.posthog_client.tag('username', user.username)
+                    _ph.posthog_client.tag('date_joined', user.date_joined.isoformat())
+                    _ph.posthog_client.capture('user_registered', properties={
+                        'registration_method': 'email',
+                    })
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +92,12 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            if _ph.posthog_client:
+                with _ph.posthog_client.new_context():
+                    _ph.posthog_client.identify_context(str(request.user.id))
+                    _ph.posthog_client.capture('profile_updated', properties={
+                        'fields_changed': list(form.changed_data),
+                    })
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
