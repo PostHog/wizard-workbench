@@ -40,7 +40,6 @@ procs:
 
   wizard-run-proxy:
     # Same as wizard-run but routes requests through a proxy (e.g. Charles on :8888)
-    # Requires Charles (or similar) running on :8888 with SSL proxying enabled
     shell: "PROXY_PRELOAD=\"$(pwd)/proxy/proxy-fetch-preload.cjs\" && export NODE_OPTIONS=\"-r $PROXY_PRELOAD\" && npx tsx services/wizard-run/index.ts"
     autostart: false
     env_file: .env

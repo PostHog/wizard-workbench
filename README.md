@@ -160,4 +160,36 @@ You can activate `wizard-ci.yml` in a few ways:
 
 1. **Manual** - Run from GitHub Actions UI
 2. **Schedule** - Runs on cron
-3. **Dispatch** - Webhook call via `repository_dispatch` with event type `wizard-ci-trigger` 
+3. **Dispatch** - Webhook call via `repository_dispatch` with event type `wizard-ci-trigger`
+
+---
+
+## Running with a proxy
+
+To simulate service outages, throttle internet speed, or inspect network traffic, you can run the Wizard through a proxy.
+
+We can funnel Node traffic through a proxy using **undici**'s `ProxyAgent`.
+
+### Setup
+
+**Charles Proxy** (GUI-based, but requires paid license):
+
+1. Download and open [Charles Proxy](https://www.charlesproxy.com/)
+2. Proxy → Proxy Settings → set HTTP Proxy port to `8888`
+3. Enable SSL Proxying: Proxy → SSL Proxying Settings → Add `*` for host and `443` for port
+4. Install the root certificate: Help → SSL Proxying → Install Charles Root Certificate, then trust it in Keychain Access
+
+**mitmproxy** (free, CLI-based):
+
+```bash
+brew install mitmproxy
+mitmproxy --listen-port 8888
+```
+
+### Usage
+
+In mprocs, you can run the Wizard using `wizard-run-proxy` instead of `wizard-run` to route all traffic through the proxy.
+
+```bash
+mprocs
+```
