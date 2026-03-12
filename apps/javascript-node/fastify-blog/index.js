@@ -1,4 +1,9 @@
 import Fastify from 'fastify';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_KEY, {
+  host: process.env.POSTHOG_HOST,
+});
 
 const fastify = Fastify({ logger: true });
 
@@ -39,6 +44,13 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+
+  posthog.capture({
+    distinctId: author,
+    event: 'post created',
+    properties: { post_id: post.id, title: post.title },
+  });
+
   return reply.status(201).send(post);
 });
 
@@ -49,6 +61,12 @@ fastify.get('/api/posts/:id', async (request, reply) => {
   if (!post) {
     return reply.status(404).send({ error: 'Post not found' });
   }
+
+  posthog.capture({
+    distinctId: 'anonymous',
+    event: 'post viewed',
+    properties: { post_id: post.id, title: post.title, author: post.author },
+  });
 
   const postComments = comments.filter((c) => c.post_id === post.id);
   return { ...post, comments: postComments };
@@ -67,6 +85,12 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  posthog.capture({
+    distinctId: post.author,
+    event: 'post updated',
+    properties: { post_id: post.id, published: post.published },
+  });
+
   return post;
 });
 
@@ -79,12 +103,19 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   }
 
   const postId = posts[index].id;
+  const postAuthor = posts[index].author;
   posts.splice(index, 1);
 
   // Remove associated comments
   for (let i = comments.length - 1; i >= 0; i--) {
     if (comments[i].post_id === postId) comments.splice(i, 1);
   }
+
+  posthog.capture({
+    distinctId: postAuthor,
+    event: 'post deleted',
+    properties: { post_id: postId },
+  });
 
   return reply.status(204).send();
 });
@@ -111,6 +142,13 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+
+  posthog.capture({
+    distinctId: author,
+    event: 'comment added',
+    properties: { post_id: post.id, comment_id: comment.id },
+  });
+
   return reply.status(201).send(comment);
 });
 
@@ -122,3 +160,11 @@ fastify.listen({ port: PORT }, (err) => {
     process.exit(1);
   }
 });
+
+const shutdown = async () => {
+  await posthog.shutdown();
+  await fastify.close();
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
