@@ -352,7 +352,7 @@ jobs:
             const marker = '<!-- wizard-ci-results:' + triggerId + ' -->';
 
             const rows = allApps.map(function(a) {
-              return '| `' + a + '` | ⏳ | pending |';
+              return '| `' + a + '` | ⏳ | pending | |';
             }).join('\n');
 
             const body = [
@@ -362,8 +362,8 @@ jobs:
               '**Trigger ID:** `' + triggerId + '`',
               '**Workflow:** [View run](' + workflowUrl + ')',
               '',
-              '| App | Confidence | PR |',
-              '|-----|------------|-----|',
+              '| App | Confidence | PR | YARA |',
+              '|-----|------------|-----|------|',
               rows,
               '',
               '### Configuration',
@@ -500,7 +500,10 @@ jobs:
           git config user.name "wizard-ci[bot]"
           git config user.email "wizard-ci[bot]@users.noreply.github.com"
           # Switch remote to HTTPS for token-based auth
-          git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
+          git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPO}.git"
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_REPO: ${{ github.repository }}
 
       - name: Run Wizard CI
         id: run-wizard
@@ -569,6 +572,44 @@ jobs:
           echo "confidence_score=$CONFIDENCE" >> $GITHUB_OUTPUT
           echo "Extracted confidence score: '$CONFIDENCE'"
 
+          # Read YARA scanner JSON report (written by wizard to /tmp)
+          YARA_JSON="/tmp/posthog-wizard-yara-report.json"
+          if [ -f "$YARA_JSON" ]; then
+            TOTAL=$(jq -r '.summary.totalScans' "$YARA_JSON")
+            VIOLATIONS=$(jq -r '.summary.violations' "$YARA_JSON")
+            CLEAN=$(jq -r '.summary.clean' "$YARA_JSON")
+
+            # Build human-readable summary
+            YARA_SUMMARY="${TOTAL} tool calls scanned, ${VIOLATIONS} violation(s) detected"
+            if [ "$VIOLATIONS" -gt 0 ]; then
+              # Append violation details
+              VIOLATION_LINES=$(jq -r '.violations[] | "[" + (.action | ascii_upcase) + "] " + .rule + " (" + .severity + ") — " + .phase + ":" + .tool' "$YARA_JSON")
+              YARA_SUMMARY="${YARA_SUMMARY}
+          ${VIOLATION_LINES}"
+            else
+              YARA_SUMMARY="${YARA_SUMMARY}
+          No violations"
+            fi
+
+            echo "yara_report<<EOF" >> $GITHUB_OUTPUT
+            echo "$YARA_SUMMARY" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "yara_total_scans=$TOTAL" >> $GITHUB_OUTPUT
+            echo "yara_violation_count=$VIOLATIONS" >> $GITHUB_OUTPUT
+
+            if [ "$VIOLATIONS" -gt 0 ]; then
+              echo "yara_violations=true" >> $GITHUB_OUTPUT
+              echo "YARA: $VIOLATIONS violation(s) detected (informational)"
+            else
+              echo "yara_violations=false" >> $GITHUB_OUTPUT
+              echo "YARA: $TOTAL scans, all clean"
+            fi
+          else
+            echo "yara_violations=false" >> $GITHUB_OUTPUT
+            echo "yara_violation_count=0" >> $GITHUB_OUTPUT
+            echo "No YARA report file found"
+          fi
+
           exit $WIZARD_EXIT
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -585,6 +626,8 @@ jobs:
           POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
           # Source info (for PR body)
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
+          # Enable YARA security scanner report
+          POSTHOG_WIZARD_YARA_REPORT: 'true'
 
       - name: Prepare artifact name
         # Not used for anything rn
@@ -619,75 +662,115 @@ jobs:
       - name: Label and close PR
         if: steps.run-wizard.outputs.pr_number
         run: |
-          gh pr edit ${{ steps.run-wizard.outputs.pr_number }} --add-label "CI/CD"
-          gh pr close ${{ steps.run-wizard.outputs.pr_number }}
+          gh pr edit "$PR_NUMBER" --add-label "CI/CD"
+          gh pr close "$PR_NUMBER"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.run-wizard.outputs.pr_number }}
 
       - name: Summary
         if: always()
         run: |
-          echo "## Wizard CI Results: ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Wizard CI Results: $APP" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Trigger ID:** \`${{ needs.discover.outputs.trigger_id }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**App:** ${{ matrix.app }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Evaluate:** ${{ needs.discover.outputs.input_evaluate }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger ID:** \`$TRIGGER_ID\`" >> $GITHUB_STEP_SUMMARY
+          echo "**App:** $APP" >> $GITHUB_STEP_SUMMARY
+          echo "**Evaluate:** $INPUT_EVALUATE" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Dependency Versions" >> $GITHUB_STEP_SUMMARY
-          echo "- **wizard:** ${{ needs.discover.outputs.input_wizard_ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **context-mill:** ${{ needs.discover.outputs.input_context_mill_ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **mcp (posthog):** ${{ needs.discover.outputs.input_posthog_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **wizard:** $WIZARD_REF" >> $GITHUB_STEP_SUMMARY
+          echo "- **context-mill:** $CONTEXT_MILL_REF" >> $GITHUB_STEP_SUMMARY
+          echo "- **mcp (posthog):** $POSTHOG_REF" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -n "${{ steps.run-wizard.outputs.pr_url }}" ]; then
-            echo "**PR:** ${{ steps.run-wizard.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$PR_URL" ]; then
+            echo "**PR:** $PR_URL" >> $GITHUB_STEP_SUMMARY
           fi
+          if [ -n "$YARA_REPORT" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### YARA Scanner" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$YARA_REPORT" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            if [ "$YARA_VIOLATIONS" = "true" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "> ⚠️ YARA violations detected — see report above" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+        env:
+          APP: ${{ matrix.app }}
+          TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
+          INPUT_EVALUATE: ${{ needs.discover.outputs.input_evaluate }}
+          WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
+          CONTEXT_MILL_REF: ${{ needs.discover.outputs.input_context_mill_ref }}
+          POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
+          PR_URL: ${{ steps.run-wizard.outputs.pr_url }}
+          YARA_REPORT: ${{ steps.run-wizard.outputs.yara_report }}
+          YARA_VIOLATIONS: ${{ steps.run-wizard.outputs.yara_violations }}
 
       - name: Get job ID
         if: always() && (needs.notify-start.outputs.thread_ts != '' || needs.discover.outputs.input_notify_pr == 'true')
         id: job-id
         run: |
           # Fetch the current job ID from the GitHub API
-          JOB_ID=$(curl -s -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
-            "${{ github.api_url }}/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" \
-            | jq -r '.jobs[] | select(.name | contains("${{ matrix.app }}")) | .id' | head -1)
+          JOB_ID=$(curl -s -H "Authorization: Bearer $APP_TOKEN" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPO/actions/runs/$GITHUB_RUN_ID/jobs" \
+            | jq -r --arg app "$APP" '.jobs[] | select(.name | contains($app)) | .id' | head -1)
           echo "job_id=$JOB_ID" >> $GITHUB_OUTPUT
           echo "Job ID: $JOB_ID"
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP: ${{ matrix.app }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
 
       - name: Notify Slack
         if: always() && needs.notify-start.outputs.thread_ts != ''
         run: |
-          CONFIDENCE="${{ steps.run-wizard.outputs.confidence_score }}"
+          CONFIDENCE="$WIZARD_CONFIDENCE"
           if [ -z "$CONFIDENCE" ]; then
             CONFIDENCE="N/A"
           fi
 
           # Build job-specific logs URL
-          JOB_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ steps.job-id.outputs.job_id }}"
+          JOB_URL="${SERVER_URL}/${GITHUB_REPO}/actions/runs/${RUN_ID}/job/${JOB_ID}"
 
-          if [ -n "${{ steps.run-wizard.outputs.pr_url }}" ]; then
-            PR_FIELD="<${{ steps.run-wizard.outputs.pr_url }}|#${{ steps.run-wizard.outputs.pr_number }}> (<$JOB_URL|logs>)"
+          if [ -n "$PR_URL" ]; then
+            PR_FIELD="<${PR_URL}|#${PR_NUMBER}> (<$JOB_URL|logs>)"
           else
             PR_FIELD="Failed (<$JOB_URL|logs>)"
           fi
 
           curl -s -X POST https://slack.com/api/chat.postMessage \
-            -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
+            -H "Authorization: Bearer $SLACK_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{
-              \"channel\": \"${{ secrets.SLACK_CHANNEL_ID }}\",
-              \"thread_ts\": \"${{ needs.notify-start.outputs.thread_ts }}\",
-              \"text\": \"${{ matrix.app }}\",
+              \"channel\": \"$SLACK_CHANNEL\",
+              \"thread_ts\": \"$THREAD_TS\",
+              \"text\": \"$APP\",
               \"blocks\": [
                 {
                   \"type\": \"section\",
                   \"fields\": [
-                    {\"type\": \"mrkdwn\", \"text\": \"*App:* ${{ matrix.app }}\"},
+                    {\"type\": \"mrkdwn\", \"text\": \"*App:* $APP\"},
                     {\"type\": \"mrkdwn\", \"text\": \"*Confidence:* $CONFIDENCE\"},
                     {\"type\": \"mrkdwn\", \"text\": \"*PR:* $PR_FIELD\"}
                   ]
                 }
               ]
             }"
+        env:
+          WIZARD_CONFIDENCE: ${{ steps.run-wizard.outputs.confidence_score }}
+          PR_URL: ${{ steps.run-wizard.outputs.pr_url }}
+          PR_NUMBER: ${{ steps.run-wizard.outputs.pr_number }}
+          JOB_ID: ${{ steps.job-id.outputs.job_id }}
+          APP: ${{ matrix.app }}
+          SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_ID }}
+          THREAD_TS: ${{ needs.notify-start.outputs.thread_ts }}
 
       - name: Generate token for source repo
         if: always() && needs.discover.outputs.input_notify_pr == 'true' && needs.discover.outputs.input_source_pr_number != ''
@@ -702,22 +785,39 @@ jobs:
       - name: Update source PR comment
         if: always() && needs.discover.outputs.input_notify_pr == 'true' && needs.discover.outputs.input_source_pr_number != ''
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        env:
+          SOURCE_REPO: ${{ needs.discover.outputs.input_source_repo }}
+          SOURCE_PR_NUMBER: ${{ needs.discover.outputs.input_source_pr_number }}
+          TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
+          APP: ${{ matrix.app }}
+          WIZARD_CONFIDENCE: ${{ steps.run-wizard.outputs.confidence_score }}
+          WIZARD_PR_URL: ${{ steps.run-wizard.outputs.pr_url }}
+          WIZARD_PR_NUMBER: ${{ steps.run-wizard.outputs.pr_number }}
+          JOB_ID: ${{ steps.job-id.outputs.job_id }}
+          SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          YARA_REPORT: ${{ steps.run-wizard.outputs.yara_report }}
+          YARA_VIOLATIONS: ${{ steps.run-wizard.outputs.yara_violations }}
         with:
           github-token: ${{ steps.source-repo-token.outputs.token }}
           script: |
             const owner = 'PostHog';
-            const repo = '${{ needs.discover.outputs.input_source_repo }}';
-            const issueNumber = ${{ needs.discover.outputs.input_source_pr_number }};
-            const triggerId = '${{ needs.discover.outputs.trigger_id }}';
-            const app = '${{ matrix.app }}';
-            const confidence = '${{ steps.run-wizard.outputs.confidence_score }}' || 'N/A';
-            const prUrl = '${{ steps.run-wizard.outputs.pr_url }}';
-            const prNumber = '${{ steps.run-wizard.outputs.pr_number }}';
-            const jobUrl = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ steps.job-id.outputs.job_id }}';
+            const repo = process.env.SOURCE_REPO;
+            const issueNumber = parseInt(process.env.SOURCE_PR_NUMBER, 10);
+            const triggerId = process.env.TRIGGER_ID;
+            const app = process.env.APP;
+            const confidence = process.env.WIZARD_CONFIDENCE || 'N/A';
+            const prUrl = process.env.WIZARD_PR_URL;
+            const prNumber = process.env.WIZARD_PR_NUMBER;
+            const jobUrl = `${process.env.SERVER_URL}/${process.env.GITHUB_REPO}/actions/runs/${process.env.RUN_ID}/job/${process.env.JOB_ID}`;
+            const yaraReport = process.env.YARA_REPORT;
+            const yaraViolations = process.env.YARA_VIOLATIONS === 'true';
 
             // Build this job's result row
+            const yaraIcon = yaraViolations ? ' ⚠️' : (yaraReport ? ' ✓' : '');
             const prField = prUrl ? '[#' + prNumber + '](' + prUrl + ') ([logs](' + jobUrl + '))' : 'Failed ([logs](' + jobUrl + '))';
-            const thisRow = '| `' + app + '` | ' + confidence + ' | ' + prField + ' |';
+            const thisRow = '| `' + app + '` | ' + confidence + ' | ' + prField + ' |' + yaraIcon + ' |';
 
             // Marker to identify our comment (created by notify-pr-start job)
             const marker = '<!-- wizard-ci-results:' + triggerId + ' -->';
@@ -743,6 +843,17 @@ jobs:
 
             if (body.match(rowPattern)) {
               body = body.replace(rowPattern, thisRow);
+            }
+
+            // Append YARA report section if violations were detected
+            if (yaraViolations && yaraReport) {
+              const yaraMarker = '<!-- yara:' + app + ' -->';
+              if (!body.includes(yaraMarker)) {
+                body += '\n\n' + yaraMarker + '\n';
+                body += '<details><summary>⚠️ YARA Scanner — ' + app + '</summary>\n\n';
+                body += '```\n' + yaraReport + '\n```\n';
+                body += '</details>';
+              }
             }
 
             await github.rest.issues.updateComment({

@@ -6,7 +6,8 @@
     "evaluate": "tsx services/pr-evaluator/index.ts",
     "wizard-ci": "tsx services/wizard-ci/index.ts",
     "benchmark": "tsx services/wizard-benchmark/index.ts",
-    "framework-detect": "tsx services/framework-detect/index.ts"
+    "framework-detect": "tsx services/framework-detect/index.ts",
+    "yara-scan": "tsx services/yara-scan/index.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.0",

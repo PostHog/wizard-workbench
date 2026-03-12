@@ -129,10 +129,28 @@ export function getWizardBin(): string {
   return join(wizardPath || `${process.env.HOME}/development/wizard`, "dist/bin.js");
 }
 
+export interface YaraViolation {
+  rule: string;
+  severity: string;
+  action: string;
+  phase: string;
+  tool: string;
+}
+
+export interface YaraReport {
+  summary: {
+    totalScans: number;
+    violations: number;
+    clean: number;
+  };
+  violations: YaraViolation[];
+}
+
 export interface WizardResult {
   success: boolean;
   duration: number;
   error?: string;
+  yaraReport?: YaraReport;
 }
 
 export interface WizardOptions {
@@ -144,6 +162,7 @@ export interface WizardOptions {
 /**
  * Run wizard on an app - spawns with inherited stdio for full interactivity.
  * In CI mode, uses --ci flag with required region and api-key.
+ * Always passes --yara-report; after exit, reads the JSON report from /tmp.
  */
 export function runWizard(appPath: string, options: WizardOptions = {}): Promise<WizardResult> {
   const wizardBin = getWizardBin();
@@ -176,8 +195,11 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
     args.push("--ci", "--region", region, "--api-key", apiKey, "--install-dir", appPath);
   }
 
+  // Always request YARA report — the wizard writes a JSON file to /tmp
+  // and prints a human-readable summary to stdout
+  args.push("--yara-report");
+
   return new Promise((resolve) => {
-    // Spawn exactly like wizard-run does - full stdio inherit for interactivity
     const child = spawn("node", args, {
       cwd: appPath,
       stdio: "inherit",
@@ -185,10 +207,12 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
     });
 
     child.on("close", (code) => {
+      const yaraReport = readYaraReport();
       resolve({
         success: code === 0,
         duration: Date.now() - start,
         error: code !== 0 ? `Exit code: ${code}` : undefined,
+        yaraReport,
       });
     });
 
@@ -200,6 +224,48 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
       });
     });
   });
+}
+
+// ============================================================================
+// YARA report
+// ============================================================================
+
+const YARA_REPORT_PATH = "/tmp/posthog-wizard-yara-report.json";
+
+/**
+ * Read the YARA scanner JSON report written by the wizard CLI.
+ * Returns undefined if the file doesn't exist (no scans occurred or flag not supported).
+ */
+export function readYaraReport(): YaraReport | undefined {
+  try {
+    if (!existsSync(YARA_REPORT_PATH)) return undefined;
+    const raw = readFileSync(YARA_REPORT_PATH, "utf-8");
+    return JSON.parse(raw) as YaraReport;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Format a YARA report as a human-readable string for logs and PR bodies.
+ */
+export function formatYaraReport(report: YaraReport): string {
+  const { totalScans, violations: violationCount } = report.summary;
+  const cleanCount = totalScans - violationCount;
+  const lines = [
+    `✓ ${totalScans} tool calls scanned, ${violationCount} violation${violationCount !== 1 ? "s" : ""} detected`,
+  ];
+  if (report.violations.length > 0) {
+    lines.push("");
+    for (const v of report.violations) {
+      lines.push(`  [${v.action.toUpperCase()}] ${v.rule} (${v.severity.toUpperCase()}) — ${v.phase}:${v.tool}`);
+    }
+  }
+  if (cleanCount > 0) {
+    lines.push("");
+    lines.push(`No violations: ✓ ${cleanCount} clean scan${cleanCount !== 1 ? "s" : ""}`);
+  }
+  return lines.join("\n");
 }
 
 // ============================================================================
