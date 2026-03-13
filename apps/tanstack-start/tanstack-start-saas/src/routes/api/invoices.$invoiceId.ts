@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getInvoiceById, updateInvoice, deleteInvoice } from '~/utils/invoices'
+import { getPostHogClient } from '~/utils/posthog-server'
 
 export const Route = createFileRoute('/api/invoices/$invoiceId')({
   server: {
@@ -60,6 +61,18 @@ export const Route = createFileRoute('/api/invoices/$invoiceId')({
         if (!deleted) {
           return Response.json({ error: 'Invoice not found' }, { status: 404 })
         }
+
+        const sessionId = request.headers.get('X-PostHog-Session-Id')
+        const posthog = getPostHogClient()
+        posthog.capture({
+          distinctId: request.headers.get('X-PostHog-Distinct-Id') || 'anonymous',
+          event: 'invoice_deleted',
+          properties: {
+            $session_id: sessionId || undefined,
+            invoice_id: id,
+            source: 'api',
+          },
+        })
 
         return Response.json({ success: true })
       },
