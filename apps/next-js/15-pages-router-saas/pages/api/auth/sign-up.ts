@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -159,6 +160,17 @@ export default async function handler(
       teamId: teamId,
       role: userRole
     };
+
+    const posthog = getPostHogClient();
+    posthog.identify({
+      distinctId: email,
+      properties: { email, created_at: new Date().toISOString() }
+    });
+    posthog.capture({
+      distinctId: email,
+      event: 'server_user_signed_up',
+      properties: { email, user_id: createdUser.id, via_invite: !!inviteId }
+    });
 
     await Promise.all([
       db.insert(teamMembers).values(newTeamMember),
