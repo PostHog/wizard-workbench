@@ -11,12 +11,20 @@ definePageMeta({
 const route = useRoute()
 const type = computed(() => route.params.type as MediaType || 'movie')
 const id = computed(() => route.params.id as string)
+const { $posthog: posthog } = useNuxtApp()
 
 const [item, recommendations] = await Promise.all([
   getMedia(type.value, id.value),
   getRecommendations(type.value, id.value),
 ])
 const $img = useImage()
+
+posthog?.capture('media_viewed', {
+  media_id: item.id,
+  media_type: type.value,
+  title: item.title || item.name,
+  vote_average: item.vote_average,
+})
 
 useHead({
   title: item.name || item.title,
