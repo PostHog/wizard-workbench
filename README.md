@@ -113,6 +113,8 @@ Use keyboard shortcuts in mprocs: `s` to start, `x` to stop, `r` to restart, `q`
 | `wizard-ci-local-run` | CI flow with local evaluation (no PR) |
 | `wizard-ci-create-pr` | Push branch and create PR only (skip wizard run) |
 | `wizard-ci-evaluate-pr` | Evaluate an existing PR or local branch |
+| `mitmproxy` | HTTPS-intercepting proxy on port 8888 |
+| `wizard-run-proxy` | Run wizard with all fetch traffic routed through the proxy |
 
 ---
 
@@ -160,4 +162,32 @@ You can activate `wizard-ci.yml` in a few ways:
 
 1. **Manual** - Run from GitHub Actions UI
 2. **Schedule** - Runs on cron
-3. **Dispatch** - Webhook call via `repository_dispatch` with event type `wizard-ci-trigger` 
+3. **Dispatch** - Webhook call via `repository_dispatch` with event type `wizard-ci-trigger`
+
+---
+
+## Running with a proxy
+
+To inspect network traffic, simulate outages, or throttle requests, you can run the Wizard through an HTTPS-intercepting proxy. All Node `fetch` traffic is routed through the proxy via **undici**'s `ProxyAgent`.
+
+### Setup (one-time)
+
+Install mitmproxy:
+
+```bash
+brew install mitmproxy
+```
+
+Generate and trust the mitmproxy CA certificate:
+
+```bash
+./proxy/setup-mitmproxy
+```
+
+This generates the CA cert at `~/.mitmproxy/mitmproxy-ca-cert.pem` and adds it to your macOS system keychain so Node trusts the proxy's SSL certificates.
+
+### Usage
+
+In mprocs, start the `mitmproxy` process first, then start `wizard-run-proxy`. Traffic will appear in the mitmproxy TUI.
+
+Alternatively, you can use [Charles Proxy](https://www.charlesproxy.com/) (GUI-based, paid license) on port `8888` instead of mitmproxy.

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Sets up mitmproxy for HTTPS interception: generates CA cert and trusts it in the macOS keychain.
+# Usage: ./proxy/setup-mitmproxy
+
+PORT="${PROXY_PORT:-8888}"
+CERT_DIR="$HOME/.mitmproxy"
+CERT_PEM="$CERT_DIR/mitmproxy-ca-cert.pem"
+
+echo "=== mitmproxy setup ==="
+echo ""
+
+# 1. Check mitmproxy is installed
+if ! command -v mitmdump &>/dev/null; then
+  echo "mitmproxy not found. Install with: brew install mitmproxy"
+  exit 1
+fi
+echo "[ok] mitmproxy installed"
+
+# 2. Generate certs if they don't exist (run mitmdump briefly)
+if [ ! -f "$CERT_PEM" ]; then
+  echo "[..] Generating mitmproxy CA certificate..."
+  mitmdump --listen-port "$PORT" &
+  MITM_PID=$!
+  sleep 2
+  kill "$MITM_PID" 2>/dev/null || true
+  wait "$MITM_PID" 2>/dev/null || true
+fi
+
+if [ ! -f "$CERT_PEM" ]; then
+  echo "[fail] Certificate not found at $CERT_PEM after generation attempt"
+  exit 1
+fi
+echo "[ok] CA certificate exists at $CERT_PEM"
+
+# 3. Check if cert is already trusted in system keychain
+CERT_SHA=$(openssl x509 -in "$CERT_PEM" -noout -fingerprint -sha256 2>/dev/null | sed 's/.*=//' | tr -d ':')
+if security find-certificate -a -Z /Library/Keychains/System.keychain 2>/dev/null | grep -qi "$CERT_SHA"; then
+  echo "[ok] CA certificate already trusted in system keychain"
+else
+  echo "[..] Adding CA certificate to system keychain (requires sudo)..."
+  sudo security add-trusted-cert -d -p ssl -p basic \
+    -k /Library/Keychains/System.keychain \
+    "$CERT_PEM"
+  echo "[ok] CA certificate trusted"
+fi
+
+echo ""
+echo "Done. You can now run mprocs and use wizard-run-proxy."
+echo "To remove the trusted cert later:"
+echo "  sudo security remove-trusted-cert -d $CERT_PEM"
