@@ -1,7 +1,10 @@
 import type { Route } from "./+types/country";
+import posthog from "posthog-js";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const countryName = params.countryName;
+
+  posthog.capture('country_viewed', { country: countryName });
 
   const res = await fetch(
     `https://restcountries.com/v3.1/name/${countryName}?fullText=true`
