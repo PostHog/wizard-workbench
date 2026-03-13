@@ -1,4 +1,10 @@
 import Fastify from 'fastify';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const fastify = Fastify({ logger: true });
 
@@ -6,6 +12,12 @@ const posts = [];
 const comments = [];
 let nextPostId = 1;
 let nextCommentId = 1;
+
+fastify.setErrorHandler((err, request, reply) => {
+  const distinctId = request.body?.author || 'anonymous';
+  posthog.captureException(err, distinctId);
+  reply.status(err.statusCode || 500).send({ error: err.message });
+});
 
 // List posts (with optional author filter and pagination)
 fastify.get('/api/posts', async (request) => {
@@ -39,6 +51,16 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+
+  posthog.capture({
+    distinctId: author,
+    event: 'post_created',
+    properties: {
+      post_id: post.id,
+      title: post.title,
+    },
+  });
+
   return reply.status(201).send(post);
 });
 
@@ -67,6 +89,16 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  posthog.capture({
+    distinctId: post.author,
+    event: 'post_updated',
+    properties: {
+      post_id: post.id,
+      title: post.title,
+      published: post.published,
+    },
+  });
+
   return post;
 });
 
@@ -79,12 +111,21 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   }
 
   const postId = posts[index].id;
+  const postAuthor = posts[index].author;
   posts.splice(index, 1);
 
   // Remove associated comments
   for (let i = comments.length - 1; i >= 0; i--) {
     if (comments[i].post_id === postId) comments.splice(i, 1);
   }
+
+  posthog.capture({
+    distinctId: postAuthor,
+    event: 'post_deleted',
+    properties: {
+      post_id: postId,
+    },
+  });
 
   return reply.status(204).send();
 });
@@ -111,6 +152,16 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+
+  posthog.capture({
+    distinctId: author,
+    event: 'comment_created',
+    properties: {
+      comment_id: comment.id,
+      post_id: post.id,
+    },
+  });
+
   return reply.status(201).send(comment);
 });
 
@@ -122,3 +173,11 @@ fastify.listen({ port: PORT }, (err) => {
     process.exit(1);
   }
 });
+
+const shutdown = async () => {
+  await posthog.shutdown();
+  process.exit(0);
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
