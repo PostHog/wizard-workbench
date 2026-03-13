@@ -38,6 +38,22 @@ procs:
     autostart: false
     env_file: .env
 
+  wizard-run-proxy:
+    # Same as wizard-run but routes all fetch requests through a proxy (e.g. mitmproxy or Charles on :8888)
+    # Run ./proxy/setup-mitmproxy first to trust the CA cert
+    shell: "export NODE_OPTIONS=\"${NODE_OPTIONS:-} -r $(pwd)/proxy/proxy-fetch-preload.cjs\" && npx tsx services/wizard-run/index.ts"
+    autostart: false
+    env_file: .env
+    env:
+      HTTPS_PROXY: "http://127.0.0.1:8888"
+      HTTP_PROXY: "http://127.0.0.1:8888"
+      NODE_EXTRA_CA_CERTS: "~/.mitmproxy/mitmproxy-ca-cert.pem"
+
+  mitmproxy:
+    # HTTPS-intercepting proxy on port 8888 — start this before wizard-run-proxy
+    shell: "mitmproxy --listen-port 8888"
+    autostart: false
+
   wizard-tail-run:
     # Tail the wizard's verbose output
     shell: "tail -f /tmp/posthog-wizard.log"
