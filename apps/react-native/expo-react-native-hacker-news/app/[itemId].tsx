@@ -14,12 +14,15 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
 
+import { usePostHog } from "posthog-react-native";
+
 import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export default function ItemDetails() {
+  const posthog = usePostHog();
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
 
@@ -163,6 +166,11 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture('item_link_opened', {
+                    item_id: item.id,
+                    item_title: item.title,
+                    url_host: new URL(item.url).host,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +202,14 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog.capture('parent_item_navigated', {
+                  from_item_id: item?.id,
+                  parent_item_id: parentItem.id,
+                  parent_item_title: parentItem.title || parentItem.text?.slice(0, 80),
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
