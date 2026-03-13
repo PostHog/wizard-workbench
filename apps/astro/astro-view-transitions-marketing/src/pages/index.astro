@@ -60,4 +60,23 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
   </section>
+
+  <script is:inline>
+    function setupIndexPage() {
+      var heroBtns = document.querySelectorAll('.hero-buttons .btn');
+      heroBtns.forEach(function(btn) {
+        btn.removeEventListener('click', btn.__phHandler);
+        btn.__phHandler = function() {
+          window.posthog?.capture('cta_clicked', {
+            label: btn.textContent.trim(),
+            location: 'hero'
+          });
+        };
+        btn.addEventListener('click', btn.__phHandler);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', setupIndexPage);
+    document.addEventListener('astro:page-load', setupIndexPage);
+  </script>
 </Layout>

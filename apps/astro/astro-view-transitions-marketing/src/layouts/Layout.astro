@@ -1,7 +1,8 @@
 ---
-import { ViewTransitions } from 'astro:transitions';
+import { ClientRouter } from 'astro:transitions';
 import Navigation from '../components/Navigation.astro';
 import Footer from '../components/Footer.astro';
+import PostHog from '../components/posthog.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -20,7 +21,8 @@ const { title, description = 'NeuralFlow AI - Transform your workflow with intel
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title} | NeuralFlow AI</title>
-    <ViewTransitions />
+    <ClientRouter />
+    <PostHog />
   </head>
   <body>
     <Navigation />
