@@ -1,6 +1,7 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import posthog from './posthog.js';
 
 const app = new Koa();
 const router = new Router();
@@ -34,6 +35,12 @@ router.post('/api/folders', (ctx) => {
   folders.push(folder);
   ctx.status = 201;
   ctx.body = folder;
+
+  posthog.capture({
+    distinctId: 'server',
+    event: 'folder created',
+    properties: { folder_id: folder.id, folder_name: folder.name },
+  });
 });
 
 router.delete('/api/folders/:id', (ctx) => {
@@ -60,6 +67,12 @@ router.delete('/api/folders/:id', (ctx) => {
 
   folders.splice(index, 1);
   ctx.status = 204;
+
+  posthog.capture({
+    distinctId: 'server',
+    event: 'folder deleted',
+    properties: { folder_id: folderId },
+  });
 });
 
 // --- Notes ---
@@ -107,6 +120,12 @@ router.post('/api/notes', (ctx) => {
   notes.push(note);
   ctx.status = 201;
   ctx.body = note;
+
+  posthog.capture({
+    distinctId: 'server',
+    event: 'note created',
+    properties: { note_id: note.id, folder_id: note.folder_id },
+  });
 });
 
 router.get('/api/notes/:id', (ctx) => {
@@ -144,6 +163,12 @@ router.patch('/api/notes/:id', (ctx) => {
   note.updated_at = new Date().toISOString();
 
   ctx.body = note;
+
+  posthog.capture({
+    distinctId: 'server',
+    event: 'note updated',
+    properties: { note_id: note.id, folder_id: note.folder_id },
+  });
 });
 
 router.delete('/api/notes/:id', (ctx) => {
@@ -155,8 +180,15 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
+  const noteId = notes[index].id;
   notes.splice(index, 1);
   ctx.status = 204;
+
+  posthog.capture({
+    distinctId: 'server',
+    event: 'note deleted',
+    properties: { note_id: noteId },
+  });
 });
 
 app.use(router.routes());
