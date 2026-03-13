@@ -11,8 +11,8 @@ import Layout from '../layouts/Layout.astro';
         Comprehensive guides, API references, and best practices.
       </p>
       <div class="hero-buttons">
-        <a href="/docs" class="btn btn-primary">Get Started</a>
-        <a href="/docs/api" class="btn btn-secondary">API Reference</a>
+        <a href="/docs" class="btn btn-primary" id="hero-get-started">Get Started</a>
+        <a href="/docs/api" class="btn btn-secondary" id="hero-api-reference">API Reference</a>
       </div>
     </div>
   </section>
@@ -47,6 +47,27 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
   </section>
+
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('hero-get-started')?.addEventListener('click', function () {
+        window.posthog?.capture('get_started_clicked', { location: 'hero' });
+      });
+
+      document.getElementById('hero-api-reference')?.addEventListener('click', function () {
+        window.posthog?.capture('api_reference_clicked', { location: 'hero' });
+      });
+
+      document.querySelectorAll('.feature-card').forEach(function (card) {
+        card.addEventListener('click', function () {
+          window.posthog?.capture('feature_card_clicked', {
+            title: card.querySelector('h3')?.textContent,
+            href: card.getAttribute('href'),
+          });
+        });
+      });
+    });
+  </script>
 
   <footer class="footer">
     <div class="container">
