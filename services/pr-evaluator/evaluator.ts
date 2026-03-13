@@ -1,4 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { PostHog } from "posthog-node";
 import { z } from "zod";
 import { postPRComment, type PRData } from "../github/index.js";
 import { buildSystemPrompt, buildUserPrompt } from "./prompt-builder.js";
@@ -188,6 +189,47 @@ export function configureGateway(apiKey: string, region: string): void {
   // Disable experimental betas that the LLM gateway doesn't support
   process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "true";
   console.log(`Configured LLM gateway: ${gatewayUrl}`);
+}
+
+// ── PostHog analytics ─────────────────────────────────────────────────────
+
+async function captureEvalEvent(
+  scores: EvaluateScores,
+  prData: PRData,
+  usageData: { totalCostUsd?: number; usage?: Record<string, number> }
+): Promise<void> {
+  const apiKey = process.env.POSTHOG_PROJECT_API_KEY;
+  if (!apiKey) {
+    return;
+  }
+
+  const client = new PostHog(apiKey, { host: "https://us.i.posthog.com" });
+
+  try {
+    client.capture({
+      distinctId: `wizard-eval-${prData.headBranch}`,
+      event: "wizard_eval",
+      properties: {
+        file_analysis: scores.file_analysis,
+        app_sanity: scores.app_sanity,
+        posthog_implementation: scores.posthog_implementation,
+        event_quality: scores.event_quality,
+        confidence: scores.confidence,
+        framework: scores.framework,
+        arch_type: scores.arch_type,
+        pr_number: prData.number,
+        pr_author: prData.author,
+        files_changed: prData.files.length,
+        cost_usd: usageData.totalCostUsd,
+        input_tokens: usageData.usage?.input_tokens,
+        output_tokens: usageData.usage?.output_tokens,
+      },
+    });
+    await client.shutdown();
+    console.log("PostHog event captured: wizard_eval");
+  } catch (e) {
+    console.warn(`Warning: Failed to capture PostHog event: ${e instanceof Error ? e.message : e}`);
+  }
 }
 
 export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResult> {
@@ -412,6 +454,11 @@ ${JSON.stringify(usageData.modelUsage, null, 2)}
     console.log("\n--- TEST RUN: Review Comment Preview ---");
     console.log(reviewComment);
     console.log("--- END PREVIEW ---\n");
+  }
+
+  // Send wizard_eval event to PostHog for tracking over time
+  if (scores) {
+    await captureEvalEvent(scores, prData, usageData);
   }
 
   return { reviewComment, commentUrl, scores, rubric };

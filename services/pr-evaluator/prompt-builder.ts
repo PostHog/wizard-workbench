@@ -17,6 +17,10 @@ const VENDORED_COMMANDMENTS = join(__dirname, "prompts/commandments.yaml");
 const GITHUB_COMMANDMENTS_URL =
   "https://raw.githubusercontent.com/PostHog/context-mill/main/transformation-config/commandments.yaml";
 
+// Docs loading: fetch integration config from context-mill to get tag -> doc URL mapping
+const GITHUB_INTEGRATION_CONFIG_URL =
+  "https://raw.githubusercontent.com/PostHog/context-mill/main/transformation-config/skills/integration/config.yaml";
+
 let _commandmentsCache: string | null = null;
 
 async function fetchCommandments(): Promise<string> {
@@ -80,6 +84,127 @@ async function getCommandments(): Promise<Record<string, string[]>> {
   const raw = await fetchCommandments();
   _commandmentsMap = parseCommandments(raw);
   return _commandmentsMap;
+}
+
+// ── Docs loading ──────────────────────────────────────────────────────────
+
+let _docsConfigCache: string | null = null;
+
+async function fetchIntegrationConfig(): Promise<string> {
+  if (_docsConfigCache) return _docsConfigCache;
+
+  try {
+    const response = await fetch(GITHUB_INTEGRATION_CONFIG_URL, { signal: AbortSignal.timeout(5000) });
+    if (response.ok) {
+      _docsConfigCache = await response.text();
+      console.log("Loaded integration config from GitHub (latest)");
+      return _docsConfigCache;
+    }
+  } catch {
+    console.warn("Warning: Could not fetch integration config from GitHub");
+  }
+
+  return "";
+}
+
+/**
+ * Parse integration/config.yaml to extract tag -> doc URLs mapping.
+ * Each variant has tags and docs_urls; we map each tag to its variant's URLs.
+ */
+export function parseDocsConfig(raw: string): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  if (!raw) return result;
+
+  // Collect shared_docs URLs
+  const sharedDocs: string[] = [];
+  const sharedMatch = raw.match(/shared_docs:\n((?:\s+-\s+.+\n)*)/);
+  if (sharedMatch) {
+    for (const line of sharedMatch[1].split("\n")) {
+      const urlMatch = line.match(/^\s+-\s+(.+)/);
+      if (urlMatch) sharedDocs.push(urlMatch[1].trim());
+    }
+  }
+
+  // Split into variant blocks — each starts with "  - id:"
+  const variantBlocks = raw.split(/\n  - id:\s*/).slice(1);
+
+  for (const block of variantBlocks) {
+    // Extract tags
+    const tagsMatch = block.match(/tags:\s*\[([^\]]*)\]/);
+    if (!tagsMatch) continue;
+    const tags = tagsMatch[1].split(",").map((t) => t.trim().replace(/['"]/g, "")).filter(Boolean);
+
+    // Extract docs_urls
+    const docsSection = block.match(/docs_urls:\n((?:\s+-\s+.+\n?)*)/);
+    const urls: string[] = [];
+    if (docsSection) {
+      for (const line of docsSection[1].split("\n")) {
+        const urlMatch = line.match(/^\s+-\s+(.+)/);
+        if (urlMatch) urls.push(urlMatch[1].trim());
+      }
+    }
+
+    // Map each tag to the combined URLs (shared + variant-specific)
+    const allUrls = [...sharedDocs, ...urls];
+    for (const tag of tags) {
+      if (!result[tag]) result[tag] = [];
+      for (const url of allUrls) {
+        if (!result[tag].includes(url)) result[tag].push(url);
+      }
+    }
+  }
+
+  return result;
+}
+
+let _docsMap: Record<string, string[]> | null = null;
+
+async function getDocsMap(): Promise<Record<string, string[]>> {
+  if (_docsMap) return _docsMap;
+  const raw = await fetchIntegrationConfig();
+  _docsMap = parseDocsConfig(raw);
+  return _docsMap;
+}
+
+/** Fetch doc content from a posthog.com docs URL (markdown) */
+async function fetchDocContent(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (response.ok) {
+      return await response.text();
+    }
+  } catch {
+    // silently skip failed doc fetches
+  }
+  return null;
+}
+
+/** Fetch all relevant doc content for the detected tags, deduplicating URLs */
+async function fetchDocsForTags(tags: string[]): Promise<{ url: string; content: string }[]> {
+  const docsMap = await getDocsMap();
+  const urlSet = new Set<string>();
+
+  for (const tag of tags) {
+    if (docsMap[tag]) {
+      for (const url of docsMap[tag]) {
+        urlSet.add(url);
+      }
+    }
+  }
+
+  if (urlSet.size === 0) return [];
+
+  const urls = Array.from(urlSet);
+  console.log(`Fetching ${urls.length} doc(s) for tags [${tags.join(", ")}]`);
+
+  const results = await Promise.all(
+    urls.map(async (url) => {
+      const content = await fetchDocContent(url);
+      return content ? { url, content } : null;
+    })
+  );
+
+  return results.filter((r): r is { url: string; content: string } => r !== null);
 }
 
 // Detect frameworks from PR file paths and dependency file patches (NOT full diff — avoids false positives)
@@ -168,6 +293,21 @@ Architecture type: ${archType}
 These are authoritative SDK rules for the detected frameworks. Use them to validate the PR — do NOT flag code that follows these rules as incorrect.
 
 ${rules.join("\n")}`;
+      base.push(section);
+    }
+
+    // Fetch and inject relevant PostHog docs for cross-referencing
+    const docs = await fetchDocsForTags(tags);
+    if (docs.length > 0) {
+      const docSections = docs.map((d) => {
+        const filename = d.url.split("/").pop() || d.url;
+        return `### ${filename}\nSource: ${d.url}\n\n${d.content}`;
+      });
+      const section = `## PostHog documentation reference
+
+Use these docs as the authoritative reference for how PostHog should be implemented in this framework. Cross-reference the PR's implementation against these patterns.
+
+${docSections.join("\n\n---\n\n")}`;
       base.push(section);
     }
   }
