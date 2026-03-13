@@ -6,6 +6,7 @@ import { getMedia, getRecommendations } from '../composables/useTMDB'
 import { formatTime, formatVote, getTrailer } from '../composables/utils'
 import MediaCard from '../components/media/MediaCard.vue'
 import CarouselBase from '../components/carousel/CarouselBase.vue'
+import posthog from 'posthog-js'
 
 console.log('MediaDetailView component loaded')
 
@@ -75,7 +76,14 @@ async function loadMedia() {
   try {
     const media = await getMedia(type.value as any, id.value)
     item.value = media
-    
+
+    posthog.capture('media_detail_viewed', {
+      media_id: media.id,
+      media_type: type.value,
+      title: media.title || media.name,
+      release_year: (media.release_date || media.first_air_date)?.slice(0, 4),
+    })
+
     try {
       const recs = await getRecommendations(type.value as any, id.value, 1)
       recommendations.value = recs.results || []
@@ -102,6 +110,11 @@ watch(() => route.fullPath, () => {
 function playTrailer() {
   if (trailerUrl.value) {
     showModal.value = true
+    posthog.capture('trailer_played', {
+      media_id: item.value?.id,
+      media_type: type.value,
+      title: item.value?.title || item.value?.name,
+    })
   }
 }
 
@@ -193,13 +206,17 @@ function closeModal() {
     <div v-if="recommendations.length > 0" class="mt-10">
       <CarouselBase>
         <template #title>Recommendations</template>
-        <MediaCard
+        <div
           v-for="rec in recommendations"
           :key="rec.id"
-          :item="rec"
-          :type="type.value as any"
-          class="flex-1 w-40 md:w-60"
-        />
+          @click="posthog.capture('recommendation_clicked', { media_id: rec.id, media_type: rec.media_type || type, title: rec.title || rec.name, source_id: id })"
+        >
+          <MediaCard
+            :item="rec"
+            :type="(rec.media_type || type) as any"
+            class="flex-1 w-40 md:w-60"
+          />
+        </div>
       </CarouselBase>
     </div>
   </div>
