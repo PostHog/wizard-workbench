@@ -9,6 +9,7 @@ import { destroyEmailInviteInfoSession } from "~/features/organizations/accept-e
 import { destroyInviteLinkInfoSession } from "~/features/organizations/accept-invite-link/accept-invite-link-session.server";
 import { updateEmailInviteLinkInDatabaseById } from "~/features/organizations/organizations-email-invite-link-model.server";
 import { getInviteInfoForAuthRoutes } from "~/features/organizations/organizations-helpers.server";
+import { posthogContext } from "~/features/posthog/posthog-middleware.server";
 import { uploadUserAvatar } from "~/features/user-accounts/settings/account/account-settings-helpers.server";
 import { updateUserAccountInDatabaseById } from "~/features/user-accounts/user-accounts-model.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
@@ -25,6 +26,7 @@ export async function onboardingUserAccountAction({
     request,
   });
   const { supabase } = context.get(authContext);
+  const posthog = context.get(posthogContext);
   const result = await validateFormData(
     request,
     coerceFormValue(onboardingUserAccountSchema),
@@ -48,6 +50,11 @@ export async function onboardingUserAccountAction({
   await updateUserAccountInDatabaseById({
     id: user.id,
     user: { imageUrl, name: result.data.name },
+  });
+
+  posthog?.capture({
+    event: "onboarding_user_account_completed",
+    properties: { name: result.data.name },
   });
 
   const { inviteLinkInfo, headers: inviteLinkHeaders } =

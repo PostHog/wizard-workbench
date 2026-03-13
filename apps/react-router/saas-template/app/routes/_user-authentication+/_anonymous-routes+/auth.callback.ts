@@ -10,6 +10,7 @@ import {
   acceptEmailInvite,
   acceptInviteLink,
 } from "~/features/organizations/organizations-helpers.server";
+import { posthogContext } from "~/features/posthog/posthog-middleware.server";
 import {
   retrieveUserAccountWithActiveMembershipsFromDatabaseByEmail,
   saveUserAccountToDatabase,
@@ -22,6 +23,7 @@ import { redirectWithToast } from "~/utils/toast.server";
 export async function loader({ request, context }: Route.LoaderArgs) {
   try {
     const { supabase, headers } = context.get(anonymousContext);
+    const posthog = context.get(posthogContext);
     const i18n = getInstance(context);
     const { inviteLinkInfo, headers: inviteLinkHeaders } =
       await getValidInviteLinkInfo(request);
@@ -173,6 +175,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         }
       }
 
+      posthog?.capture({ event: "user_logged_in", properties: { email } });
+
       return redirect(href("/organizations"), {
         headers: combineHeaders(headers, inviteLinkHeaders, emailInviteHeaders),
       });
@@ -204,6 +208,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         userAccountId: userProfile.id,
       });
     }
+
+    posthog?.capture({ event: "user_signed_up", properties: { email } });
 
     return redirect(href("/onboarding"), {
       headers: combineHeaders(headers, inviteLinkHeaders, emailInviteHeaders),
