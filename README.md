@@ -113,6 +113,8 @@ Use keyboard shortcuts in mprocs: `s` to start, `x` to stop, `r` to restart, `q`
 | `wizard-ci-local-run` | CI flow with local evaluation (no PR) |
 | `wizard-ci-create-pr` | Push branch and create PR only (skip wizard run) |
 | `wizard-ci-evaluate-pr` | Evaluate an existing PR or local branch |
+| `mitmproxy` | HTTPS-intercepting proxy on port 8888 |
+| `wizard-run-proxy` | Run wizard with all fetch traffic routed through the proxy |
 
 ---
 
@@ -166,30 +168,26 @@ You can activate `wizard-ci.yml` in a few ways:
 
 ## Running with a proxy
 
-To simulate service outages, throttle internet speed, or inspect network traffic, you can run the Wizard through a proxy.
+To inspect network traffic, simulate outages, or throttle requests, you can run the Wizard through an HTTPS-intercepting proxy. All Node `fetch` traffic is routed through the proxy via **undici**'s `ProxyAgent`.
 
-We can funnel Node traffic through a proxy using **undici**'s `ProxyAgent`.
+### Setup (one-time)
 
-### Setup
-
-**Charles Proxy** (GUI-based, but requires paid license):
-
-1. Download and open [Charles Proxy](https://www.charlesproxy.com/)
-2. Proxy → Proxy Settings → set HTTP Proxy port to `8888`
-3. Enable SSL Proxying: Proxy → SSL Proxying Settings → Add `*` for host and `443` for port
-4. Install the root certificate: Help → SSL Proxying → Install Charles Root Certificate, then trust it in Keychain Access
-
-**mitmproxy** (free, CLI-based):
+Install mitmproxy:
 
 ```bash
 brew install mitmproxy
-mitmproxy --listen-port 8888
 ```
+
+Generate and trust the mitmproxy CA certificate:
+
+```bash
+./proxy/setup-mitmproxy
+```
+
+This generates the CA cert at `~/.mitmproxy/mitmproxy-ca-cert.pem` and adds it to your macOS system keychain so Node trusts the proxy's SSL certificates.
 
 ### Usage
 
-In mprocs, you can run the Wizard using `wizard-run-proxy` instead of `wizard-run` to route all traffic through the proxy.
+In mprocs, start the `mitmproxy` process first, then start `wizard-run-proxy`. Traffic will appear in the mitmproxy TUI.
 
-```bash
-mprocs
-```
+Alternatively, you can use [Charles Proxy](https://www.charlesproxy.com/) (GUI-based, paid license) on port `8888` instead of mitmproxy.
