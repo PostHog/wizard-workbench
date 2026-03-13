@@ -49,7 +49,7 @@ For each item, answer YES/NO based on the changed files:
 
 ### 3. PostHog implementation
 
-- **ph_sdk_installed** — PostHog SDK added to dependencies (posthog-js/posthog-node in package.json, posthog in requirements.txt, etc.) or a PostHog HTML `<script>` tag snippet is added
+- **ph_sdk_installed** — PostHog SDK added to dependencies (posthog-js/posthog-node in package.json, posthog in requirements.txt, etc.) or a PostHog HTML `<script>` tag snippet is added. **These are two valid alternatives — do not require both.** If the app uses a `<script>` tag snippet, PostHog does NOT need to appear in package.json. If the app uses an npm/pip/gem package, it does NOT need a `<script>` tag. Either approach is a YES.
 - **ph_initialized** — PostHog client correctly initialized using framework-appropriate pattern (refer to the PostHog documentation reference section for the correct pattern for this framework)
 - **ph_api_key_env** — API key loaded from environment variable (not hardcoded)
 - **ph_host_configured** — API host correctly configured (points to correct PostHog host or reverse proxy endpoint)
