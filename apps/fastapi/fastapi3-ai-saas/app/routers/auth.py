@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from posthog import capture, identify_context, new_context
 
 from app.config import get_settings
 from app.dependencies import CurrentUser, DbSession, RequiredUser, create_session_token
@@ -34,6 +35,10 @@ async def login(
     user = User.authenticate(db, email, password)
 
     if user:
+        with new_context():
+            identify_context(str(user.id))
+            capture("user logged in", properties={"login_method": "password"})
+
         response = RedirectResponse(url="/dashboard", status_code=302)
         response.set_cookie(
             key="session_token",
@@ -70,6 +75,10 @@ async def signup(
         )
 
     user = User.create(db, email=email, password=password, credits=settings.default_credits)
+
+    with new_context():
+        identify_context(str(user.id))
+        capture("user signed up", properties={"signup_method": "form", "initial_credits": settings.default_credits})
 
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(
