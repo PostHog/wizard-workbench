@@ -1,7 +1,9 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from flask import Flask, request, current_app
+from posthog import Posthog
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -53,6 +55,15 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    # Initialize PostHog
+    posthog_client = Posthog(
+        api_key=app.config['POSTHOG_PROJECT_TOKEN'],
+        host=app.config['POSTHOG_HOST'],
+        enable_exception_autocapture=True,
+    )
+    app.posthog = posthog_client
+    atexit.register(posthog_client.shutdown)
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
