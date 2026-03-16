@@ -1,5 +1,6 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
@@ -43,6 +44,7 @@ export function EmailInviteCard({
   organizationIsFull = false,
   successEmail,
 }: EmailInviteCardProps) {
+  const posthog = usePostHog();
   const { t } = useTranslation("organizations", {
     keyPrefix: "settings.teamMembers.inviteByEmail",
   });
@@ -70,7 +72,26 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(e) => {
+            const email = (
+              e.currentTarget.elements.namedItem(
+                "email",
+              ) as HTMLInputElement | null
+            )?.value;
+            const role = (
+              e.currentTarget.elements.namedItem(
+                "role",
+              ) as HTMLInputElement | null
+            )?.value;
+            posthog?.capture("member_invited_by_email", {
+              has_email: Boolean(email),
+              role,
+            });
+          }}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">
