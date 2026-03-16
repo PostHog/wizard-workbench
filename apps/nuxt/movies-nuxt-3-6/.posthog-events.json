@@ -1,0 +1,27 @@
+[
+  {
+    "event": "user_logged_in",
+    "description": "Fired when a user successfully logs in. Also identifies the user in PostHog.",
+    "file": "pages/login.vue"
+  },
+  {
+    "event": "user_logged_out",
+    "description": "Fired when a user logs out. Resets the PostHog identity.",
+    "file": "composables/useAuth.ts"
+  },
+  {
+    "event": "search_performed",
+    "description": "Fired when a user performs a search for movies or TV shows.",
+    "file": "pages/search.vue"
+  },
+  {
+    "event": "media_viewed",
+    "description": "Fired when a user views a movie or TV show detail page.",
+    "file": "pages/[type]/[id].vue"
+  },
+  {
+    "event": "server_login",
+    "description": "Server-side event fired when a user logs in via the API.",
+    "file": "server/api/auth/login.post.ts"
+  }
+]
