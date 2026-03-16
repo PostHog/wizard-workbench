@@ -25,6 +25,13 @@ export const EXCLUDED_PATH_PATTERNS = [
   /\/composer\.lock$/, // PHP lock files
   /\/poetry\.lock$/, // Python poetry lock files
   /\/Pipfile\.lock$/, // Python pipfile lock files
+  // Build output directories (generated, not source) — anchored to common project root patterns
+  /(?:^|\/)dist\//, // bundler output (top-level or nested)
+  /(?:^|\/)build\/(?:outputs|generated|intermediates|libs)\//, // build output (only known subdirs, not src/build/)
+  /(?:^|\/)vendor\//, // vendored dependencies
+  /\/\.next\//, // Next.js build cache
+  /\/__pycache__\//, // Python bytecode cache
+  /\/coverage\//, // test coverage reports
 ];
 
 // ============================================================================

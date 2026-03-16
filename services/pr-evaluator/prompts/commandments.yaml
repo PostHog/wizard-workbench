@@ -1,0 +1,208 @@
+# Fallback copy of context-mill/transformation-config/commandments.yaml — fetched from GitHub at runtime, this is only used if the fetch fails
+# Tag-based rules that get folded into skill descriptions
+# Skills collect all commandments matching their tags
+
+commandments:
+  react:
+    # PostHog-specific
+    - For feature flags, use useFeatureFlagEnabled() or useFeatureFlagPayload() hooks - they handle loading states and external sync automatically
+    - Add analytics capture in event handlers where user actions occur, NOT in useEffect reacting to state changes
+    # General React patterns (react.dev/learn/you-might-not-need-an-effect)
+    - Do NOT use useEffect for data transformation - calculate derived values during render instead
+    - Do NOT use useEffect to respond to user events - put that logic in the event handler itself
+    - Do NOT use useEffect to chain state updates - calculate all related updates together in the event handler
+    - Do NOT use useEffect to notify parent components - call the parent callback alongside setState in the event handler
+    - To reset component state when a prop changes, pass the prop as the component's key instead of using useEffect
+    - useEffect is ONLY for synchronizing with external systems (non-React widgets, browser APIs, network subscriptions)
+
+  nextjs:
+    # Initialization
+    - For Next.js 15.3+, initialize PostHog in instrumentation-client.ts for the simplest setup
+
+  nextjs-feature-flags:
+    # Client-side feature flags
+    - The PostHog React hooks (useFeatureFlagEnabled, useFeatureFlagPayload) work WITHOUT PostHogProvider if posthog-js is already initialized (e.g., via instrumentation-client.ts)
+    - In client components, import and use hooks directly - the React context defaults to the posthog-js singleton
+    - Do NOT wrap components in PostHogProvider just for feature flags - it's unnecessary if posthog-js is initialized globally
+    # Server-side feature flags
+    - Server Components and Route Handlers cannot use React hooks - use posthog-node SDK instead
+    - Create a server-side PostHog client with posthog-node, call getAllFlags() or getFeatureFlag(), then await posthog.shutdown()
+    - Pass flag values from server to client components as props to avoid hydration mismatches
+    # Avoiding flicker
+    - For flags that affect initial render, evaluate server-side and pass as props to prevent UI flicker
+    - Client-side hooks may return undefined initially while flags load - handle this loading state
+
+  javascript_web:
+    - Remember that source code is available in the node_modules directory
+    - Check package.json for type checking or build scripts to validate changes
+    - posthog-js is the JavaScript SDK package name
+    - posthog.init() MUST be called before any other PostHog methods (capture, identify, etc.)
+    - posthog-js is browser-only — do NOT import it in Node.js or server-side contexts (use posthog-node instead)
+    - Autocapture is ON by default with posthog-js (tracks clicks, form submissions, pageviews). Do NOT disable autocapture unless the user explicitly requests it.
+    - NEVER send PII in posthog.capture() event properties — no emails, full names, phone numbers, physical addresses, IP addresses, or user-generated content
+    - PII belongs in posthog.identify() person properties (email, name, role), NOT in capture() event properties
+    - Call posthog.identify(userId, { email, name, role }) on login AND on page refresh if the user is already logged in
+    - Call posthog.reset() on logout to unlink future events from the current user
+    - For SPAs without a framework router, capture pageviews with posthog.capture($pageview) or use the capture_pageview history_change option in init for History API routing
+
+  javascript_node:
+    - posthog-node is the Node.js server-side SDK package name – do NOT use posthog-js on the server
+    - Include enableExceptionAutocapture: true in the PostHog constructor options
+    - Add posthog.capture() calls in route handlers for meaningful user actions – every route that creates, updates, or deletes data should track an event with contextual properties
+    - Add posthog.captureException(err, distinctId) in the application's error handler (e.g., Express error middleware, Fastify setErrorHandler, Koa app.on('error'))
+    - In long-running servers, the SDK batches events automatically – do NOT set flushAt or flushInterval unless you have a specific reason to
+    - For short-lived processes (scripts, CLIs, serverless), set flushAt to 1 and flushInterval to 0 to send events immediately
+    - Reverse proxy is NOT needed for server-side Node.js – only client-side JavaScript needs a proxy to avoid ad blockers
+    - Remember that source code is available in the node_modules directory
+    - Check package.json for type checking or build scripts to validate changes
+
+  python:
+    - Remember that source code is available in the venv/site-packages directory
+    - posthog is the Python SDK package name
+    - Install dependencies with `pip install posthog` or `pip install -r requirements.txt` and do NOT use unquoted version specifiers like `>=` directly in shell commands
+    - In CLIs and scripts: MUST call posthog.shutdown() before exit or all events are lost
+    - Always use the Posthog() class constructor (instance-based API) instead of module-level posthog.api_key config
+    - Always include enable_exception_autocapture=True in the Posthog() constructor to automatically track exceptions
+    - NEVER send PII in capture() event properties — no emails, full names, phone numbers, physical addresses, IP addresses, or user-generated content
+    - PII belongs in identify() person properties, NOT in capture() event properties. Safe event properties are metadata like message_length, form_type, boolean flags.
+    - Register posthog_client.shutdown with atexit.register() to ensure all events are flushed on exit
+    - The Python SDK has NO identify() method — use posthog_client.set(distinct_id=user_id, properties={...}) to set person properties, or use identify_context(user_id) within a context
+
+  django:
+    - Add 'posthog.integrations.django.PosthogContextMiddleware' to MIDDLEWARE it auto-extracts tracing headers and captures exceptions
+    - Initialize PostHog in AppConfig.ready() with api_key and host from environment variables
+    - Use the context API pattern with new_context(), identify_context(user_id), then capture()
+    - For login/logout views, create a new context since user state changes during the request
+    - Do NOT create custom middleware, distinct_id helpers, or conditional checks - the SDK handles these
+
+  flask:
+    - Initialize PostHog globally in create_app() using posthog.api_key and posthog.host (NOT per-request)
+    - Manually capture exceptions with `posthog.capture_exception(e)` for error tracking since Flask has built-in error handlers
+    - Blueprint registration happens AFTER PostHog initialization in create_app()
+
+  fastapi:
+    - Initialize PostHog in the lifespan context manager on startup using posthog.api_key and posthog.host
+    - Call posthog.flush() in the lifespan shutdown to ensure all events are sent before the app exits
+    - Use Pydantic Settings with @lru_cache decorator on get_settings() for caching and easy test overrides
+    - Use FastAPI dependency injection (Depends) for accessing current_user and settings in route handlers
+    - Use the same context API pattern as Flask/Django (with new_context(), identify_context(user_id), then capture())
+
+  php:
+    - Remember that source code is available in the vendor directory after composer install
+    - posthog/posthog-php is the PHP SDK package name
+    - Check composer.json for existing dependencies and autoload configuration before adding new files
+    - The PHP SDK uses static methods (PostHog::capture, PostHog::identify) - initialize once with PostHog::init()
+    - PHP SDK methods take associative arrays with 'distinctId', 'event', 'properties' keys - not positional arguments
+
+  tanstack-router:
+    - Use TanStack Router's built-in navigation events for pageview tracking instead of useEffect
+    - Use PostHogProvider in the root component defined in either the file-based convention (__root.tsx) or code-based convention (wherever createRootRoute() is called) so all child routes have access to the PostHog client
+
+  tanstack-start:
+    - Use PostHogProvider in the root route (__root.tsx) for client-side tracking
+    - Use posthog-node for server-side event capture in API routes (src/routes/api/) - do NOT use posthog-js on the server
+    - Create a singleton PostHog server client to avoid re-initialization on every request
+
+  laravel:
+    - Create a dedicated PostHogService class in app/Services/ - do NOT scatter PostHog::capture calls throughout controllers
+    - Register PostHog configuration in config/posthog.php using env() for all settings (api_key, host, disabled)
+    - Do NOT use Laravel's event system or observers for analytics - call capture explicitly where actions occur
+
+  ruby:
+    - "posthog-ruby is the Ruby SDK gem name (add `gem 'posthog-ruby'` to Gemfile) but require it with `require 'posthog'` (NOT `require 'posthog-ruby'`)"
+    - "Use PostHog::Client.new(api_key: key, host: host) for instance-based initialization in scripts and CLIs"
+    - "In CLIs and scripts: MUST call client.shutdown before exit or all events are lost"
+    - Use begin/rescue/ensure with shutdown in the ensure block for proper cleanup
+    - "capture and identify take a single hash argument: client.capture(distinct_id: 'user_123', event: 'my_event', properties: { key: 'value' })"
+    - "capture_exception takes POSITIONAL args (not keyword): client.capture_exception(exception, distinct_id, additional_properties) — do NOT use `distinct_id:` keyword syntax"
+
+  ruby-on-rails:
+    - Use posthog-rails gem alongside posthog-ruby for automatic exception capture and ActiveJob instrumentation
+    - Run `rails generate posthog:install` to create the initializer, or manually create config/initializers/posthog.rb
+    - "Configure auto_capture_exceptions: true to automatically track unhandled exceptions in controllers"
+    - "Configure report_rescued_exceptions: true to also capture exceptions that Rails rescues (e.g. with rescue_from)"
+    - "Configure auto_instrument_active_job: true to track background job failures with job class, queue, and arguments"
+    - "Use PostHog.capture() and PostHog.identify() class-level methods (NOT instance methods) — the posthog-rails gem manages the client lifecycle via PostHog.init"
+    - Do NOT manually create PostHog::Client instances in Rails — use PostHog.init in the initializer and PostHog.capture/identify everywhere else
+    - "capture_exception takes POSITIONAL args: PostHog.capture_exception(exception, distinct_id, additional_properties) — do NOT use keyword args"
+    - "Define posthog_distinct_id on the User model for automatic user association in error reports — posthog-rails auto-detects by trying: posthog_distinct_id, distinct_id, id, pk, uuid (in order)"
+    - "For ActiveJob user association, use the class-level DSL `posthog_distinct_id ->(user) { user.email }` or pass user_id: in a hash argument"
+    - Store API key in Rails credentials or environment variables, never hardcode
+    - "For frontend tracking alongside posthog-rails, add the posthog-js snippet to the layout template — posthog-js handles pageviews, session replay, and client-side errors while posthog-ruby handles backend events, server errors, feature flags, and background jobs"
+
+  hogql:
+    # Property access
+    - Use properties.$name syntax for event properties, person.properties.$name for person properties
+    - Use bracket notation for special characters like properties['$feature/cool-flag']
+    - For cohorts, filter with person_id IN COHORT 'cohort-name'
+    - For actions, use matchesAction('action-name') in WHERE clauses
+    # Variables and filters
+    - Include {filters} placeholder in WHERE clauses to enable UI-based filtering in dashboards
+    - Use {variables.name} for reusable SQL variables across dashboards
+    - Access dashboard date range with {filters.dateRange.from} and {filters.dateRange.to}
+    # Performance optimization
+    - ALWAYS include a time range filter - shorter is faster (e.g., timestamp >= now() - INTERVAL 7 DAY)
+    - Prefer uniq() over count(distinct) for counting unique values - it's more efficient
+    - Don't scan the same table multiple times - use materialized views for reusable subsets
+    - Use timestamp-based pagination instead of OFFSET for large datasets
+    - Name queries descriptively for easier debugging in query_log
+    # Functions
+    - Use dateTrunc() for time-based grouping (e.g., dateTrunc('day', timestamp))
+    - For funnel queries, use windowFunnel() or sequenceMatch() functions
+    - Test queries in the PostHog SQL editor before using them in insights or the API
+
+  sveltekit:
+    - Set paths.relative to false in svelte.config.js — this is required for PostHog session replay to work correctly with SSR and is easy to miss
+    - Use the Svelte MCP server tools to check Svelte documentation (list-sections, get-documentation) and validate components (svelte-autofixer) — always run svelte-autofixer on new or modified .svelte files before finishing
+
+  swift:
+    - Read configuration from environment variables via a `PostHogEnv` enum with a `value` computed property that calls `ProcessInfo.processInfo.environment[rawValue]` and `fatalError`s if missing — cases should be `projectToken = "POSTHOG_PROJECT_TOKEN"` and `host = "POSTHOG_HOST"`, set in the Xcode scheme's Run environment variables
+    - When adding SPM dependencies to project.pbxproj, create three distinct objects with unique UUIDs — a `PBXBuildFile` (with `productRef`), an `XCSwiftPackageProductDependency` (with `package` and `productName`), and an `XCRemoteSwiftPackageReference` (with `repositoryURL` and `requirement`). The build file goes in the Frameworks phase `files`, the product dependency goes in the target's `packageProductDependencies`, and the package reference goes in the project's `packageReferences`.
+    - Check the latest release version of posthog-ios at `https://github.com/PostHog/posthog-ios/releases` before setting the `minimumVersion` in the SPM package reference — do not hardcode a stale version
+    - If the project uses App Sandbox (macOS), add `ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES` to the target's build settings so PostHog can reach its servers — do NOT disable the sandbox entirely
+
+  react-native:
+    - posthog-react-native is the React Native SDK package name
+    - Use react-native-config to load POSTHOG_PROJECT_TOKEN and POSTHOG_HOST from .env (variables are embedded at build time, not runtime)
+    - Place PostHogProvider INSIDE NavigationContainer for React Navigation v7 compatibility
+
+  expo:
+    - posthog-react-native is the React Native SDK package name (same as bare RN)
+    - Use expo-constants with app.config.js extras for POSTHOG_PROJECT_TOKEN and POSTHOG_HOST (NOT react-native-config)
+    - Access config via `Constants.expoConfig?.extra?.posthogProjectToken` in your posthog.ts config file
+    - For expo-router, wrap PostHogProvider in app/_layout.tsx and manually track screens with `posthog.screen(pathname, params)` in a useEffect
+
+  astro:
+    - Always use the is:inline directive on PostHog script tags to prevent Astro from processing them and causing TypeScript errors
+    - Use PUBLIC_ prefix for client-side environment variables in Astro (e.g., PUBLIC_POSTHOG_PROJECT_TOKEN)
+    - Create a posthog.astro component in src/components/ for reusable initialization across pages
+    - Import the PostHog component in a Layout and wrap all pages with that layout
+
+  astro-view-transitions:
+    - Wrap PostHog initialization with a window.__posthog_initialized guard to prevent stack overflow during soft navigation
+    - Set capture_pageview option to 'history_change' for automatic pageview tracking during soft navigation
+    - Use the astro page-load event instead of just DOMContentLoaded to re-run scripts after soft navigation
+
+  astro-ssr:
+    - Use posthog-node in API routes under src/pages/api/ for server-side event tracking
+    - Store the posthog-node client instance in a singleton pattern (src/lib/posthog-server.ts) to avoid creating multiple clients
+    - Pass the client session ID to server via X-PostHog-Session-Id header for unified session tracking
+
+  astro-hybrid:
+    - Use posthog-node in API routes under src/pages/api/ for server-side event tracking
+    - Store the posthog-node client instance in a singleton pattern (src/lib/posthog-server.ts) to avoid creating multiple clients
+    - In Astro 5, use output static (the default) with an adapter - pages are prerendered by default
+    - Use export const prerender = false to opt specific pages into SSR when they need server-side rendering
+    - Only pages that need server-side PostHog tracking (like API-backed forms) should opt out of prerendering
+
+  angular:
+    - Use inject() instead of constructor injection. PostHog service should be injected via inject() in components/services that need it.
+    - Create a dedicated PosthogService as a singleton root service that wraps the PostHog SDK.
+    - Always use standalone components over NgModules.
+    - Configure PostHog credentials in src/environments/environment.ts files, as Angular reads environment variables from these configuration files
+
+  android:
+    - Adapt dependency configuration to the appropriate build.gradle(.kts) file according to the project gradle version
+    - Call `PostHogAndroid.setup()` only once in the Application class's `onCreate()` method, so it's initialized as early as possible and only once.
+    - Initialize PostHog in the Application class's `onCreate()` method
+    - Ensure every activity has a `android:label` to accurately track screen views.

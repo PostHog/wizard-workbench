@@ -7,18 +7,22 @@
     "wizard-ci": "tsx services/wizard-ci/index.ts",
     "benchmark": "tsx services/wizard-benchmark/index.ts",
     "framework-detect": "tsx services/framework-detect/index.ts",
-    "yara-scan": "tsx services/yara-scan/index.ts"
+    "yara-scan": "tsx services/yara-scan/index.ts",
+    "test:evaluator": "tsx --test services/pr-evaluator/evaluator.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.0",
     "@octokit/rest": "^21.0.0",
     "dotenv": "^16.4.0",
+    "posthog-node": "^5.28.1",
+    "sanitize-html": "^2.17.1",
     "undici": "^7.0.0",
     "zod": "^3.24.0",
     "zod-to-json-schema": "^3.24.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/sanitize-html": "^2.16.1",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0"
   },
