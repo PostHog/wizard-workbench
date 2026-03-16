@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -86,7 +87,16 @@ function RouterSpinner() {
 
 function RootComponent() {
   return (
-    <>
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN}
+      options={{
+        api_host: '/ingest',
+        ui_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+        defaults: '2026-01-30',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
@@ -132,7 +142,7 @@ function RootComponent() {
         </div>
       </div>
       <TanStackRouterDevtools position="bottom-right" />
-    </>
+    </PostHogProvider>
   )
 }
 
@@ -433,9 +443,13 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: invoice }) => {
+      posthog.capture('invoice_created', { invoice_id: invoice?.id, invoice_title: invoice?.title })
+      router.invalidate()
+    },
   })
 
   return (
@@ -514,12 +528,16 @@ const invoiceRoute = createRoute({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: updated }) => {
+      posthog.capture('invoice_updated', { invoice_id: updated?.id, invoice_title: updated?.title })
+      router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -685,6 +703,7 @@ const usersLayoutRoute = createRoute({
 const roles = ['Admin', 'Member', 'Viewer', 'Editor', 'Manager']
 
 function UsersLayoutComponent() {
+  const posthog = usePostHog()
   const navigate = useNavigate({ from: usersLayoutRoute.fullPath })
   const { usersView } = usersLayoutRoute.useSearch()
   const users = usersLayoutRoute.useLoaderData()
@@ -758,7 +777,12 @@ function UsersLayoutComponent() {
           </div>
           <input
             value={filterDraft}
-            onChange={(e) => setFilterDraft(e.target.value)}
+            onChange={(e) => {
+              setFilterDraft(e.target.value)
+              if (e.target.value) {
+                posthog.capture('team_member_searched', { query: e.target.value })
+              }
+            }}
             placeholder="Search team members..."
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
           />
@@ -1002,6 +1026,7 @@ const profileRoute = createRoute({
 })
 
 function ProfileComponent() {
+  const posthog = usePostHog()
   const { username } = profileRoute.useRouteContext()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
@@ -1049,7 +1074,10 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={() => posthog.capture('upgrade_plan_clicked', { current_plan: 'free' })}
+            >
               Upgrade
             </button>
           </div>
@@ -1067,6 +1095,8 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                posthog.capture('user_logged_out')
+                posthog.reset()
                 auth.logout()
                 router.invalidate()
               }}
@@ -1093,6 +1123,7 @@ const loginRoute = createRoute({
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -1103,6 +1134,8 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog.identify(username, { username })
+    posthog.capture('user_logged_in', { username })
     router.invalidate()
   }
 
@@ -1138,6 +1171,8 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('user_logged_out')
+                posthog.reset()
                 auth.logout()
                 router.invalidate()
               }}
