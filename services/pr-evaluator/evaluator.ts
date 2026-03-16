@@ -198,7 +198,7 @@ async function captureEvalEvent(
   prData: PRData,
   usageData: { totalCostUsd?: number; usage?: Record<string, number> }
 ): Promise<void> {
-  const apiKey = process.env.POSTHOG_PROJECT_API_KEY;
+  const apiKey = process.env.POSTHOG_PROJECT_TOKEN;
   if (!apiKey) {
     return;
   }

@@ -628,6 +628,8 @@ jobs:
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
           # Enable YARA security scanner report
           POSTHOG_WIZARD_YARA_REPORT: 'true'
+          # PostHog tracking for eval analytics
+          POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
 
       - name: Prepare artifact name
         # Not used for anything rn
