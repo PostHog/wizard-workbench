@@ -14,8 +14,8 @@ import Layout from '../layouts/Layout.astro';
         and automated insights. Built for teams that move fast.
       </p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Start Free Trial</a>
-        <a href="/docs" class="btn btn-secondary">Read the Docs</a>
+        <a href="#" class="btn btn-primary" id="hero-trial-btn">Start Free Trial</a>
+        <a href="/docs" class="btn btn-secondary" id="hero-docs-btn">Read the Docs</a>
       </div>
     </div>
   </section>
@@ -61,3 +61,27 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupIndexTracking() {
+    var trialBtn = document.getElementById('hero-trial-btn');
+    var docsBtn = document.getElementById('hero-docs-btn');
+
+    trialBtn?.removeEventListener('click', handleTrialClick);
+    trialBtn?.addEventListener('click', handleTrialClick);
+
+    docsBtn?.removeEventListener('click', handleDocsClick);
+    docsBtn?.addEventListener('click', handleDocsClick);
+  }
+
+  function handleTrialClick() {
+    window.posthog?.capture('cta_clicked', { cta_text: 'Start Free Trial', cta_location: 'hero' });
+  }
+
+  function handleDocsClick() {
+    window.posthog?.capture('docs_cta_clicked', { cta_location: 'hero' });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupIndexTracking);
+  document.addEventListener('astro:page-load', setupIndexTracking);
+</script>
