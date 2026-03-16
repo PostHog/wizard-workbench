@@ -350,19 +350,19 @@ describe("computeScoreFromRubric", () => {
   });
 
   it("excludes n/a from calculation", () => {
-    // 3 yes out of 4 applicable = 75% -> ceil(0.75 * 5) = 4
+    // 3 yes out of 4 applicable = 75% -> round(0.75 * 5) = 4
     const dim: RubricDimension = { a: "yes", b: "yes", c: "yes", d: "no", e: "n/a" };
     assert.equal(computeScoreFromRubric(dim), 4);
   });
 
   it("computes correct score for 50% pass rate", () => {
-    // 2 yes out of 4 = 50% -> ceil(0.5 * 5) = 3
+    // 2 yes out of 4 = 50% -> round(0.5 * 5) = 3
     const dim: RubricDimension = { a: "yes", b: "yes", c: "no", d: "no" };
     assert.equal(computeScoreFromRubric(dim), 3);
   });
 
   it("computes correct score for 1 out of 5", () => {
-    // 1/5 = 20% -> ceil(0.2 * 5) = 1
+    // 1/5 = 20% -> round(0.2 * 5) = 1
     const dim: RubricDimension = { a: "yes", b: "no", c: "no", d: "no", e: "no" };
     assert.equal(computeScoreFromRubric(dim), 1);
   });
@@ -375,15 +375,15 @@ describe("computeScoresFromRubric", () => {
     const rubric: RubricData = {
       file_analysis: { fa_a: "yes", fa_b: "yes", fa_c: "yes", fa_d: "yes", fa_e: "yes", fa_f: "yes" }, // 6/6 = 5
       app_sanity: { as_a: "yes", as_b: "yes", as_c: "yes", as_d: "yes", as_e: "no", as_f: "no", as_g: "no" }, // 4/7 ~57% -> 3
-      posthog_implementation: { ph_a: "yes", ph_b: "yes", ph_c: "yes", ph_d: "yes", ph_e: "yes", ph_f: "n/a", ph_g: "no", ph_h: "n/a" }, // 5/6 ~83% -> 5
+      posthog_implementation: { ph_a: "yes", ph_b: "yes", ph_c: "yes", ph_d: "yes", ph_e: "yes", ph_f: "n/a", ph_g: "no", ph_h: "n/a" }, // 5/6 ~83% -> 4
       event_quality: { eq_a: "yes", eq_b: "yes", eq_c: "yes", eq_d: "yes", eq_e: "no" }, // 4/5 = 80% -> 4
     };
     const scores = computeScoresFromRubric(rubric, "django", "server-only");
     assert.equal(scores.file_analysis, 5);
     assert.equal(scores.app_sanity, 3);
-    assert.equal(scores.posthog_implementation, 5);
+    assert.equal(scores.posthog_implementation, 4);
     assert.equal(scores.event_quality, 4);
-    // avg(5,3,5,4) = 4.25 -> round = 4, min(3, 4) = 3
+    // avg(5,3,4,4) = 4.0 -> round = 4, min(3, 4) = 3
     assert.equal(scores.confidence, 3);
     assert.equal(scores.framework, "django");
     assert.equal(scores.arch_type, "server-only");

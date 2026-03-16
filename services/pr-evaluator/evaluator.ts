@@ -57,7 +57,7 @@ export function computeScoreFromRubric(dimension: RubricDimension): number {
   if (applicable.length === 0) return 3; // default if everything is N/A
   const passed = applicable.filter((v) => v === "yes").length;
   const rate = passed / applicable.length;
-  return Math.max(1, Math.ceil(rate * 5));
+  return Math.max(1, Math.round(rate * 5));
 }
 
 /** Compute all scores deterministically from rubric data */
