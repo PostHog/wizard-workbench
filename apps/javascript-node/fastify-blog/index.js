@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { PostHog } from 'posthog-node';
 
 const fastify = Fastify({ logger: true });
 
@@ -6,6 +7,12 @@ const posts = [];
 const comments = [];
 let nextPostId = 1;
 let nextCommentId = 1;
+
+// --- PostHog Setup ---
+
+const posthog = new PostHog(process.env.POSTHOG_PROJECT_TOKEN, {
+  host: process.env.POSTHOG_HOST,
+});
 
 // List posts (with optional author filter and pagination)
 fastify.get('/api/posts', async (request) => {
@@ -15,6 +22,16 @@ fastify.get('/api/posts', async (request) => {
   if (author) {
     result = result.filter((p) => p.author === author);
   }
+
+  const userId = request.query.user_id || 'anonymous';
+  posthog.capture({
+    distinctId: userId,
+    event: 'posts_listed',
+    properties: {
+      total_posts: result.length,
+      author_filter: author || null,
+    },
+  });
 
   return {
     posts: result.slice(Number(offset), Number(offset) + Number(limit)),
@@ -39,6 +56,24 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+
+  posthog.identify({
+    distinctId: author,
+    properties: {
+      last_active: new Date().toISOString(),
+    },
+  });
+
+  posthog.capture({
+    distinctId: author,
+    event: 'post_created',
+    properties: {
+      post_id: post.id,
+      title_length: title.length,
+      body_length: body.length,
+    },
+  });
+
   return reply.status(201).send(post);
 });
 
@@ -51,6 +86,18 @@ fastify.get('/api/posts/:id', async (request, reply) => {
   }
 
   const postComments = comments.filter((c) => c.post_id === post.id);
+
+  const userId = request.query.user_id || 'anonymous';
+  posthog.capture({
+    distinctId: userId,
+    event: 'post_viewed',
+    properties: {
+      post_id: post.id,
+      post_author: post.author,
+      comment_count: postComments.length,
+    },
+  });
+
   return { ...post, comments: postComments };
 });
 
@@ -67,6 +114,16 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  const userId = request.body?.user_id || post.author;
+  posthog.capture({
+    distinctId: userId,
+    event: 'post_updated',
+    properties: {
+      post_id: post.id,
+      published: post.published,
+    },
+  });
+
   return post;
 });
 
@@ -79,12 +136,27 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   }
 
   const postId = posts[index].id;
+  const postAuthor = posts[index].author;
   posts.splice(index, 1);
 
   // Remove associated comments
+  let removedComments = 0;
   for (let i = comments.length - 1; i >= 0; i--) {
-    if (comments[i].post_id === postId) comments.splice(i, 1);
+    if (comments[i].post_id === postId) {
+      comments.splice(i, 1);
+      removedComments++;
+    }
   }
+
+  const userId = request.query.user_id || postAuthor;
+  posthog.capture({
+    distinctId: userId,
+    event: 'post_deleted',
+    properties: {
+      post_id: postId,
+      comments_removed: removedComments,
+    },
+  });
 
   return reply.status(204).send();
 });
@@ -111,6 +183,17 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+
+  posthog.capture({
+    distinctId: author,
+    event: 'comment_added',
+    properties: {
+      comment_id: comment.id,
+      post_id: post.id,
+      post_author: post.author,
+    },
+  });
+
   return reply.status(201).send(comment);
 });
 
@@ -122,3 +205,13 @@ fastify.listen({ port: PORT }, (err) => {
     process.exit(1);
   }
 });
+
+// Graceful shutdown, flush PostHog events before exiting
+async function shutdown() {
+  await fastify.close();
+  await posthog.shutdown();
+  process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
