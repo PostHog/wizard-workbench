@@ -266,6 +266,9 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
     prompt: userPrompt,
     options: {
       model: process.env.EVALUATOR_MODEL || "claude-opus-4-6",
+      // Cap turns to prevent the agent from exhausting its budget on file reads
+      // without producing the evaluation report (~8.5% failure rate without this)
+      maxTurns: 25,
       allowedTools: ["Read", "Grep", "Glob", "Bash"],
       cwd: process.cwd(),
       // Use acceptEdits instead of bypassPermissions - the latter doesn't work as root in Docker
@@ -323,8 +326,36 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
     throw error;
   }
 
-  if (!resultText) {
-    throw new Error("No result received from agent");
+  if (!resultText || !resultText.includes("## PR Evaluation Report")) {
+    console.warn("Agent did not produce a complete evaluation report. Retrying with reduced tools...");
+
+    // Retry with no tools — force the agent to produce the report from the diff alone
+    resultText = "";
+    for await (const message of query({
+      prompt: userPrompt + "\n\nIMPORTANT: Produce the full evaluation report NOW based on the diff above. Do NOT use any tools.",
+      options: {
+        model: process.env.EVALUATOR_MODEL || "claude-opus-4-6",
+        maxTurns: 1,
+        allowedTools: [],
+        cwd: process.cwd(),
+        permissionMode: "acceptEdits",
+        systemPrompt,
+      },
+    })) {
+      if (message.type === "result" && message.subtype === "success") {
+        resultText = message.result;
+        usageData = {
+          usage: message.usage,
+          modelUsage: message.modelUsage,
+          totalCostUsd: (usageData.totalCostUsd ?? 0) + (message.total_cost_usd ?? 0),
+        };
+        console.log("Retry completed evaluation");
+      }
+    }
+
+    if (!resultText) {
+      throw new Error("No result received from agent (including retry)");
+    }
   }
 
   // The agent outputs markdown directly - use it as the review comment
@@ -393,11 +424,14 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
     reviewComment = injectScoresIntoComment(reviewComment, scores);
   }
 
-  // Fallback: extract confidence from header text
-  if (!scores) {
+  // Print confidence score to stdout so CI can extract it from wizard-output.log
+  if (scores) {
+    console.log(`Confidence score: ${scores.confidence}/5`);
+  } else {
+    // Fallback: extract confidence from header text
     const confidenceMatch = reviewComment.match(/Confidence score: (\d\/\d)/);
     if (confidenceMatch) {
-      console.log(`\nConfidence score: ${confidenceMatch[1]}`);
+      console.log(`Confidence score: ${confidenceMatch[1]}`);
     }
   }
 
