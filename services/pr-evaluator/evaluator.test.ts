@@ -5,7 +5,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { detectFramework, detectArchType, parseCommandments } from "./prompt-builder.js";
+import { detectFramework, detectArchType, parseCommandments, parseDocsConfig } from "./prompt-builder.js";
 import {
   repairAndParseJSON,
   validateAndCorrectScores,
@@ -480,5 +480,112 @@ describe("injectScoresIntoComment", () => {
       const result = injectScoresIntoComment(comment, s);
       assert.ok(result.includes(`${level}/5 ${emoji}`), `Expected emoji ${emoji} for confidence ${level}`);
     }
+  });
+});
+
+// ── parseDocsConfig ──────────────────────────────────────────────────────────
+
+describe("parseDocsConfig", () => {
+  it("returns empty object for empty string", () => {
+    assert.deepEqual(parseDocsConfig(""), {});
+  });
+
+  it("parses a single variant with tags and docs_urls", () => {
+    const yaml = `variants:
+  - id: nextjs
+    tags: [nextjs, react]
+    docs_urls:
+      - https://posthog.com/docs/libraries/next-js
+      - https://posthog.com/docs/libraries/react`;
+    const result = parseDocsConfig(yaml);
+    assert.deepEqual(result["nextjs"], [
+      "https://posthog.com/docs/libraries/next-js",
+      "https://posthog.com/docs/libraries/react",
+    ]);
+    assert.deepEqual(result["react"], [
+      "https://posthog.com/docs/libraries/next-js",
+      "https://posthog.com/docs/libraries/react",
+    ]);
+  });
+
+  it("includes shared_docs in every tag", () => {
+    const yaml = `shared_docs:
+      - https://posthog.com/docs/getting-started
+      - https://posthog.com/docs/error-tracking
+variants:
+  - id: django
+    tags: [django, python]
+    docs_urls:
+      - https://posthog.com/docs/libraries/django`;
+    const result = parseDocsConfig(yaml);
+    assert.deepEqual(result["django"], [
+      "https://posthog.com/docs/getting-started",
+      "https://posthog.com/docs/error-tracking",
+      "https://posthog.com/docs/libraries/django",
+    ]);
+    assert.deepEqual(result["python"], [
+      "https://posthog.com/docs/getting-started",
+      "https://posthog.com/docs/error-tracking",
+      "https://posthog.com/docs/libraries/django",
+    ]);
+  });
+
+  it("handles multiple variants", () => {
+    const yaml = `variants:
+  - id: django
+    tags: [django]
+    docs_urls:
+      - https://posthog.com/docs/libraries/django
+  - id: flask
+    tags: [flask]
+    docs_urls:
+      - https://posthog.com/docs/libraries/flask`;
+    const result = parseDocsConfig(yaml);
+    assert.deepEqual(result["django"], ["https://posthog.com/docs/libraries/django"]);
+    assert.deepEqual(result["flask"], ["https://posthog.com/docs/libraries/flask"]);
+  });
+
+  it("skips variants with no tags", () => {
+    const yaml = `variants:
+  - id: mystery
+    docs_urls:
+      - https://posthog.com/docs/mystery`;
+    const result = parseDocsConfig(yaml);
+    assert.deepEqual(result, {});
+  });
+
+  it("handles quoted tags", () => {
+    const yaml = `variants:
+  - id: rails
+    tags: ['ruby-on-rails', "ruby"]
+    docs_urls:
+      - https://posthog.com/docs/libraries/ruby-on-rails`;
+    const result = parseDocsConfig(yaml);
+    assert.ok(result["ruby-on-rails"]);
+    assert.ok(result["ruby"]);
+  });
+
+  it("handles variant with no docs_urls", () => {
+    const yaml = `variants:
+  - id: bare
+    tags: [bare]`;
+    const result = parseDocsConfig(yaml);
+    assert.deepEqual(result["bare"], []);
+  });
+
+  it("deduplicates URLs when shared_docs overlap with variant docs", () => {
+    const yaml = `shared_docs:
+      - https://posthog.com/docs/shared
+variants:
+  - id: test
+    tags: [test]
+    docs_urls:
+      - https://posthog.com/docs/shared
+      - https://posthog.com/docs/specific`;
+    const result = parseDocsConfig(yaml);
+    assert.deepEqual(result["test"], [
+      "https://posthog.com/docs/shared",
+      "https://posthog.com/docs/specific",
+    ]);
   });
 });

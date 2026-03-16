@@ -166,20 +166,50 @@ async function getDocsMap(): Promise<Record<string, string[]>> {
   return _docsMap;
 }
 
-/** Fetch doc content from a posthog.com docs URL (markdown) */
+const MAX_DOC_CHARS = 15_000;
+const MAX_TOTAL_DOCS_CHARS = 50_000;
+
+/** Strip HTML tags and collapse whitespace to extract text content */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&[a-z]+;/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/** Fetch doc content from a URL, stripping HTML if needed and capping size */
 async function fetchDocContent(url: string): Promise<string | null> {
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    if (response.ok) {
-      return await response.text();
+    if (!response.ok) return null;
+
+    let content = await response.text();
+
+    // Strip HTML if the response looks like an HTML page
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("text/html") || content.trimStart().startsWith("<!") || content.trimStart().startsWith("<html")) {
+      content = stripHtml(content);
     }
+
+    // Truncate individual doc at newline boundary
+    if (content.length > MAX_DOC_CHARS) {
+      const cutAt = content.lastIndexOf("\n", MAX_DOC_CHARS);
+      const safeCut = cutAt > 0 ? cutAt : MAX_DOC_CHARS;
+      content = content.substring(0, safeCut) + "\n\n[doc truncated at 15k chars]";
+    }
+
+    return content;
   } catch {
     // silently skip failed doc fetches
   }
   return null;
 }
 
-/** Fetch all relevant doc content for the detected tags, deduplicating URLs */
+/** Fetch all relevant doc content for the detected tags, deduplicating URLs and capping total size */
 async function fetchDocsForTags(tags: string[]): Promise<{ url: string; content: string }[]> {
   const docsMap = await getDocsMap();
   const urlSet = new Set<string>();
@@ -204,7 +234,20 @@ async function fetchDocsForTags(tags: string[]): Promise<{ url: string; content:
     })
   );
 
-  return results.filter((r): r is { url: string; content: string } => r !== null);
+  // Cap total docs size to avoid blowing up the system prompt
+  const docs: { url: string; content: string }[] = [];
+  let totalChars = 0;
+  for (const r of results) {
+    if (!r) continue;
+    if (totalChars + r.content.length > MAX_TOTAL_DOCS_CHARS) {
+      console.warn(`Docs truncated: ${totalChars + r.content.length} chars would exceed ${MAX_TOTAL_DOCS_CHARS} cap, skipping remaining docs`);
+      break;
+    }
+    docs.push(r);
+    totalChars += r.content.length;
+  }
+
+  return docs;
 }
 
 // Detect frameworks from PR file paths and dependency file patches (NOT full diff — avoids false positives)
