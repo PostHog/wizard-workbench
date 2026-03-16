@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -114,6 +115,12 @@ public final class SupportViewModel: @unchecked Sendable {
     private func handle(result: SupportPurchaseResult, for product: SupportProduct) {
         switch result {
         case .success:
+            // PostHog: Capture successful purchase event
+            PostHogSDK.shared.capture("support_purchase_completed", properties: [
+                "product_id": product.id,
+                "product_name": product.displayName,
+                "product_kind": product.kind == .subscription ? "subscription" : "tip",
+            ])
             switch product.kind {
             case .subscription:
                 alertInfo = AlertInfo(
@@ -132,13 +139,19 @@ public final class SupportViewModel: @unchecked Sendable {
                 message: "Your purchase is pending approval from Apple. It will complete automatically once confirmed."
             )
         case .userCancelled:
-            break
+            // PostHog: Capture cancelled purchase event
+            PostHogSDK.shared.capture("support_purchase_cancelled", properties: [
+                "product_id": product.id,
+                "product_kind": product.kind == .subscription ? "subscription" : "tip",
+            ])
         }
     }
 
     private func handleRestore(result: SupportPurchaseResult) {
         switch result {
         case .success:
+            // PostHog: Capture successful restore event
+            PostHogSDK.shared.capture("support_restore_completed")
             alertInfo = AlertInfo(
                 title: "Purchases Restored",
                 message: "Any existing supporter subscriptions or tips linked to your Apple ID are now active again."
