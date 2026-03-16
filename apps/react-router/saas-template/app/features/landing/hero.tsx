@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconBook2 } from "@tabler/icons-react";
 import type { CSSProperties } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -18,6 +19,7 @@ const imageFadeStyle: CSSProperties = {
 export function Hero() {
   const { t } = useTranslation("landing", { keyPrefix: "hero" });
   const { t: tCommon } = useTranslation("translation");
+  const posthog = usePostHog();
 
   return (
     <section className="relative z-0 py-24 text-center sm:pt-32">
@@ -78,7 +80,14 @@ export function Hero() {
         </p>
 
         <div className="mt-10 flex items-center justify-center gap-2">
-          <Button render={<Link to="/register" />}>{t("cta.primary")}</Button>
+          <Button
+            onClick={() =>
+              posthog?.capture("register_cta_clicked", { location: "hero" })
+            }
+            render={<Link to="/register" />}
+          >
+            {t("cta.primary")}
+          </Button>
 
           <Button
             className="text-foreground"

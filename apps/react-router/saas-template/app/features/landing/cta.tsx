@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconBook2 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -6,6 +7,7 @@ import { Button } from "~/components/ui/button";
 
 export function CTA() {
   const { t } = useTranslation("landing", { keyPrefix: "cta" });
+  const posthog = usePostHog();
 
   return (
     <section className="py-12 lg:px-4">
@@ -21,7 +23,12 @@ export function CTA() {
         </div>
 
         <div className="mt-8 flex items-center justify-center gap-4">
-          <Button render={<Link to="/register" />}>
+          <Button
+            onClick={() =>
+              posthog?.capture("register_cta_clicked", { location: "cta" })
+            }
+            render={<Link to="/register" />}
+          >
             {t("buttons.primary")}
           </Button>
 
