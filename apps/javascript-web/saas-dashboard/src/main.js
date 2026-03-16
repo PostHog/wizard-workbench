@@ -1,3 +1,4 @@
+import { initPostHog } from './analytics.js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -6,6 +7,8 @@ import { renderProjects } from './pages/projects.js';
 import { renderProjectDetail } from './pages/project-detail.js';
 import { renderSettings } from './pages/settings.js';
 import { renderActivity } from './pages/activity.js';
+
+initPostHog();
 
 /**
  * Auth guard — redirects to login if no user is logged in.
