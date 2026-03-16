@@ -171,9 +171,16 @@ const MAX_TOTAL_DOCS_CHARS = 50_000;
 
 /** Strip HTML tags and collapse whitespace to extract text content */
 function stripHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
+  let result = html;
+  // Loop to handle nested/malformed tags like <scr<script>ipt>
+  let prev = "";
+  while (prev !== result) {
+    prev = result;
+    result = result
+      .replace(/<script[\s\S]*?<\/script\s*>/gi, "")
+      .replace(/<style[\s\S]*?<\/style\s*>/gi, "");
+  }
+  return result
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/g, " ")
     .replace(/&[a-z]+;/gi, "")
