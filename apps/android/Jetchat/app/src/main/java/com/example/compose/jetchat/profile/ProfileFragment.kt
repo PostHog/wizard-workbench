@@ -44,6 +44,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
+import com.posthog.PostHog
 import com.example.compose.jetchat.MainViewModel
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
@@ -59,6 +60,10 @@ class ProfileFragment : Fragment() {
         // Consider using safe args plugin
         val userId = arguments?.getString("userId")
         viewModel.setUserId(userId)
+        PostHog.capture(
+            event = "profile viewed",
+            properties = mapOf("user_id" to (userId ?: "unknown")),
+        )
     }
 
     @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
