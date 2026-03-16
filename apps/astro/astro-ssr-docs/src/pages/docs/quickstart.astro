@@ -59,3 +59,19 @@ console.log('Extracted data:', document.data);</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    window.posthog?.capture('docs_quickstart_viewed');
+
+    var codeBlocks = document.querySelectorAll('pre');
+    codeBlocks.forEach(function (block) {
+      block.style.cursor = 'pointer';
+      block.addEventListener('click', function () {
+        var text = block.querySelector('code')?.textContent || '';
+        navigator.clipboard?.writeText(text).catch(function () {});
+        window.posthog?.capture('docs_code_copied', { page: 'quickstart' });
+      });
+    });
+  });
+</script>
