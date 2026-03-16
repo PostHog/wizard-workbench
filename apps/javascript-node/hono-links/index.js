@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import posthog from './posthog.js';
 
 const app = new Hono();
 
@@ -47,6 +48,13 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  posthog.capture({
+    distinctId: 'server',
+    event: 'link_created',
+    properties: { link_id: link.id, tags: link.tags },
+  });
+
   return c.json(link, 201);
 });
 
@@ -87,7 +95,14 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [removed] = links.splice(index, 1);
+
+  posthog.capture({
+    distinctId: 'server',
+    event: 'link_deleted',
+    properties: { link_id: removed.id },
+  });
+
   return c.body(null, 204);
 });
 
@@ -106,4 +121,9 @@ const PORT = process.env.PORT || 3002;
 
 serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Hono links API running on http://localhost:${PORT}`);
+});
+
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
 });
