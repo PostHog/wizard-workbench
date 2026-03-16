@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { homedir } from "os";
+import sanitizeHtml from "sanitize-html";
 import type { PRData } from "../github/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -171,19 +172,11 @@ const MAX_TOTAL_DOCS_CHARS = 50_000;
 
 /** Strip HTML tags and collapse whitespace to extract text content */
 function stripHtml(html: string): string {
-  let result = html;
-  // Loop to handle nested/malformed tags like <scr<script>ipt>
-  let prev = "";
-  while (prev !== result) {
-    prev = result;
-    result = result
-      .replace(/<script[\s\S]*?<\/script\s*>/gi, "")
-      .replace(/<style[\s\S]*?<\/style\s*>/gi, "");
-  }
-  return result
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&[a-z]+;/gi, "")
+  const sanitized = sanitizeHtml(html, {
+    allowedTags: [],
+    allowedAttributes: {},
+  });
+  return sanitized
     .replace(/\s{2,}/g, " ")
     .trim();
 }
