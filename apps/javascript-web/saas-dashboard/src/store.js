@@ -5,6 +5,8 @@
  * and re-render your current view.
  */
 
+import posthog from './posthog.js';
+
 const STORAGE_KEY = 'trackflow_data';
 
 const DEFAULT_STATE = {
@@ -133,10 +135,14 @@ export const store = {
     state.currentUser = member;
     this.save();
     this.logActivity('logged_in', member.name);
+    posthog.identify(member.id, { email: member.email, name: member.name, role: member.role });
+    posthog.capture('user_logged_in', { role: member.role });
     return true;
   },
 
   logout() {
+    posthog.capture('user_logged_out');
+    posthog.reset();
     state.currentUser = null;
     this.save();
   },
@@ -159,6 +165,7 @@ export const store = {
     state.projects.push(project);
     this.save();
     this.logActivity('created_project', name);
+    posthog.capture('project_created', { project_id: project.id, project_name: name });
     return project;
   },
 
@@ -168,6 +175,7 @@ export const store = {
     state.projects = state.projects.filter((p) => p.id !== id);
     this.save();
     this.logActivity('deleted_project', name);
+    posthog.capture('project_deleted', { project_id: id, project_name: name });
   },
 
   // --- Tasks ---
@@ -187,6 +195,7 @@ export const store = {
     project.tasks.push(task);
     this.save();
     this.logActivity('added_task', `${title} → ${project.name}`);
+    posthog.capture('task_created', { task_id: task.id, task_title: title, priority, project_id: projectId, project_name: project.name });
     return task;
   },
 
@@ -196,6 +205,7 @@ export const store = {
 
     const task = project.tasks.find((t) => t.id === taskId);
     if (task) {
+      const previousStatus = task.status;
       task.status = status;
       this.save();
       const label = status === 'done' ? 'Completed' : status === 'in_progress' ? 'In Progress' : 'To Do';
@@ -203,6 +213,7 @@ export const store = {
         status === 'done' ? 'completed_task' : 'moved_task',
         `${task.title} → ${label}`,
       );
+      posthog.capture('task_status_updated', { task_id: taskId, task_title: task.title, previous_status: previousStatus, new_status: status, project_id: projectId });
     }
   },
 
@@ -213,7 +224,10 @@ export const store = {
     const task = project.tasks.find((t) => t.id === taskId);
     project.tasks = project.tasks.filter((t) => t.id !== taskId);
     this.save();
-    if (task) this.logActivity('deleted_task', task.title);
+    if (task) {
+      this.logActivity('deleted_task', task.title);
+      posthog.capture('task_deleted', { task_id: taskId, task_title: task.title, project_id: projectId });
+    }
   },
 
   assignTask(projectId, taskId, assigneeId) {

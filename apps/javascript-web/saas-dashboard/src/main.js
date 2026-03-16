@@ -1,3 +1,4 @@
+import posthog from './posthog.js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -37,6 +38,13 @@ router.notFound(() => {
   }
 });
 
+// --- Pageview tracking ---
+
+window.addEventListener('hashchange', () => {
+  posthog.capture('$pageview', { $current_url: window.location.href });
+});
+
 // --- Start ---
 
 router.start();
+posthog.capture('$pageview', { $current_url: window.location.href });
