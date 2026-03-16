@@ -7,6 +7,7 @@ use App\Support\Branding;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Cashier\Cashier;
+use PostHog\PostHog;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -33,5 +34,9 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         View::share('brand', Branding::all());
+
+        if (!config('posthog.disabled') && config('posthog.api_key')) {
+            PostHog::init(config('posthog.api_key'), ['host' => config('posthog.host')]);
+        }
     }
 }

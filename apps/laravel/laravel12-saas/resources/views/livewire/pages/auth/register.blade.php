@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -29,6 +30,15 @@ new #[Layout('layouts.guest')] class extends Component
         $validated['password'] = Hash::make($validated['password']);
 
         event(new Registered($user = User::create($validated)));
+
+        PostHogService::identify((string) $user->id, [
+            'email' => $user->email,
+            'name' => $user->name,
+        ]);
+        PostHogService::capture((string) $user->id, 'user_registered', [
+            'email' => $user->email,
+            'name' => $user->name,
+        ]);
 
         Auth::login($user);
 
