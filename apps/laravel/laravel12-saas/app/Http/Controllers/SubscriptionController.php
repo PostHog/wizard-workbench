@@ -7,6 +7,7 @@ use App\Actions\Billing\GetSubscriptionSummary;
 use App\Actions\Billing\RedirectToBillingPortal;
 use App\Actions\Billing\SwapPlan;
 use App\Domains\Billing\PlanCatalog;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -29,9 +30,14 @@ class SubscriptionController extends Controller
         $user = $request->user();
 
         // Stub out subscription if Stripe isn't configured (for demo/development)
-        if (!CheckoutPlan::isStripeConfigured()) {
+        if (! CheckoutPlan::isStripeConfigured()) {
             return $this->createStubSubscription($user, $plan);
         }
+
+        PostHogService::capture((string) $user->id, 'subscription_checkout_started', [
+            'plan' => $plan->name,
+            'plan_id' => $plan->stripe_plan_id,
+        ]);
 
         $checkoutSession = $checkoutPlan($user, $plan);
 
@@ -49,16 +55,21 @@ class SubscriptionController extends Controller
         // Create a fake subscription
         $user->subscriptions()->create([
             'type' => 'default',
-            'stripe_id' => 'sub_demo_' . uniqid(),
+            'stripe_id' => 'sub_demo_'.uniqid(),
             'stripe_status' => 'active',
-            'stripe_price' => $plan->stripe_plan_id ?? 'price_demo_' . uniqid(),
+            'stripe_price' => $plan->stripe_plan_id ?? 'price_demo_'.uniqid(),
             'quantity' => 1,
             'trial_ends_at' => null,
             'ends_at' => null,
             'amount' => $plan->price ?? 0,
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'Demo subscription created for ' . $plan->name . '. (Stripe not configured)');
+        PostHogService::capture((string) $user->id, 'subscription_created', [
+            'plan' => $plan->name,
+            'mode' => 'demo',
+        ]);
+
+        return redirect()->route('dashboard')->with('success', 'Demo subscription created for '.$plan->name.'. (Stripe not configured)');
     }
 
     public function swap(Request $request, PlanCatalog $catalog, SwapPlan $swapPlan)
@@ -69,6 +80,11 @@ class SubscriptionController extends Controller
         if ($user->subscribed('default')) {
             try {
                 $swapPlan($user, $plan);
+
+                PostHogService::capture((string) $user->id, 'subscription_plan_swapped', [
+                    'plan' => $plan->name,
+                    'plan_id' => $plan->stripe_plan_id,
+                ]);
 
                 return redirect()->route('subscribe')->with('success', 'Your subscription has been updated to '.$plan->name.'.');
             } catch (Exception $e) {
