@@ -6,6 +6,7 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import { usePostHog } from "@posthog/react";
 
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
@@ -56,6 +57,9 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog();
+  posthog?.captureException(error);
+
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
