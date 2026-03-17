@@ -59,3 +59,18 @@ console.log('Extracted data:', document.data);</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    window.posthog?.capture('docs_quickstart_viewed');
+
+    var installCode = document.querySelector('pre code');
+    if (installCode) {
+      installCode.addEventListener('click', function () {
+        window.posthog?.capture('docs_sdk_install_copied', {
+          command: installCode.textContent?.trim(),
+        });
+      });
+    }
+  });
+</script>
