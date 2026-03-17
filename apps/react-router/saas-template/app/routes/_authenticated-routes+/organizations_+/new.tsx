@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { useTranslation } from "react-i18next";
 import { TbArrowLeft } from "react-icons/tb";
 import { Link, useNavigation } from "react-router";
@@ -35,6 +36,7 @@ export async function action(args: Route.ActionArgs) {
 export default function NewOrganizationRoute({
   actionData,
 }: Route.ComponentProps) {
+  const posthog = usePostHog();
   const { t } = useTranslation("organizations", { keyPrefix: "new" });
 
   const navigation = useNavigation();
@@ -65,10 +67,16 @@ export default function NewOrganizationRoute({
       </header>
 
       <main className="mx-auto flex min-h-[calc(100svh-var(--header-height))] w-full max-w-lg flex-col items-center justify-center px-4 py-4 md:py-6 lg:px-6">
-        <CreateOrganizationFormCard
-          isCreatingOrganization={isCreatingOrganization}
-          lastResult={actionData?.result}
-        />
+        <div
+          onSubmit={() => {
+            posthog?.capture("organization_created");
+          }}
+        >
+          <CreateOrganizationFormCard
+            isCreatingOrganization={isCreatingOrganization}
+            lastResult={actionData?.result}
+          />
+        </div>
       </main>
     </>
   );
