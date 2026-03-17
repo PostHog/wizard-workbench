@@ -13,6 +13,7 @@ import { ListFilter, LucideIcon } from "lucide-react-native";
 
 import { Colors } from "@/constants/Colors";
 import { StoryType } from "@/constants/stories";
+import { usePostHog } from "posthog-react-native";
 
 export type Option = {
   id: StoryType;
@@ -37,6 +38,7 @@ export const StoriesSelect = ({
   options,
   defaultOpen = false,
 }: Props) => {
+  const posthog = usePostHog();
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const selectedOption = useMemo(
@@ -86,6 +88,13 @@ export const StoriesSelect = ({
                 key={item.id}
                 style={[styles.option, isSelected && styles.optionSelected]}
                 onPress={() => {
+                  if (item.id !== value) {
+                    posthog.capture("story_type_changed", {
+                      from_type: value,
+                      to_type: item.id,
+                      to_label: item.label,
+                    });
+                  }
                   onChange(item.id);
                   setIsOpen(false);
                 }}

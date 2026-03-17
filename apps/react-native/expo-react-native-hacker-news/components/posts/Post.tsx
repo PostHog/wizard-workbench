@@ -14,9 +14,11 @@ import { Link2, MessageSquareText } from "lucide-react-native";
 
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { usePostHog } from "posthog-react-native";
 
 export const Post = ({ id, title, url, score, text, kids }: Item) => {
   const QC = useQueryClient();
+  const posthog = usePostHog();
 
   const isExternal = useMemo(() => {
     return text === undefined;
@@ -34,6 +36,11 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
+          posthog.capture("story_tapped", {
+            story_id: id,
+            story_title: title,
+            is_external: isExternal,
+          });
           if (isExternal) Linking.openURL(url);
           else await navigateToDetails();
         }}
@@ -66,6 +73,11 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog.capture("comment_thread_opened", {
+              story_id: id,
+              story_title: title,
+              comment_count: kids?.length || 0,
+            });
             await navigateToDetails();
           }}
         >
@@ -86,6 +98,11 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           <Pressable
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              posthog.capture("external_link_opened", {
+                story_id: id,
+                story_title: title,
+                url_host: new URL(url).host,
+              });
               Linking.openURL(url);
             }}
           >
