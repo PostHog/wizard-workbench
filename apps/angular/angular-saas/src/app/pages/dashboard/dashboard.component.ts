@@ -7,6 +7,7 @@ import { ActivityFeedComponent } from './components/activity-feed/activity-feed.
 import { QuickActionsComponent } from './components/quick-actions/quick-actions.component';
 import { CreateProjectModalComponent } from '@app/shared/components/create-project-modal/create-project-modal.component';
 import { AddMemberModalComponent } from '@app/shared/components/add-member-modal/add-member-modal.component';
+import { PostHogService } from '@app/services/posthog.service';
 
 interface StatItem {
   label: string;
@@ -26,6 +27,7 @@ interface StatItem {
 export class DashboardComponent {
   readonly credentialsService = inject(CredentialsService);
   private readonly dataService = inject(DataService);
+  private readonly posthogService = inject(PostHogService);
 
   readonly showCreateProjectModal = signal(false);
   readonly showAddMemberModal = signal(false);
@@ -41,10 +43,12 @@ export class DashboardComponent {
   });
 
   openCreateProjectModal() {
+    this.posthogService.posthog.capture('create_project_modal_opened');
     this.showCreateProjectModal.set(true);
   }
 
   openAddMemberModal() {
+    this.posthogService.posthog.capture('add_member_modal_opened');
     this.showAddMemberModal.set(true);
   }
 
