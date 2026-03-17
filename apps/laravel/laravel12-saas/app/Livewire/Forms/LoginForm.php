@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use App\Services\PostHogService;
 use Livewire\Attributes\Validate;
 use Livewire\Form;
 
@@ -39,6 +40,15 @@ class LoginForm extends Form
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        $user = Auth::user();
+        PostHogService::identify((string) $user->id, [
+            'email' => $user->email,
+            'name' => $user->name,
+        ]);
+        PostHogService::capture((string) $user->id, 'user_logged_in', [
+            'email' => $user->email,
+        ]);
     }
 
     /**

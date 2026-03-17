@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
@@ -23,12 +24,14 @@ class SocialiteController extends Controller
             return redirect('/login')->withErrors(['error' => 'Unable to login using '.$provider]);
         }
 
-        $user = User::where([
+        $existingUser = User::where([
             'provider' => $provider,
             'provider_id' => $socialUser->getId(),
         ])->first();
 
-        if (! $user) {
+        $isNewUser = ! $existingUser;
+
+        if ($isNewUser) {
             $user = User::create([
                 'name' => $socialUser->getName(),
                 'email' => $socialUser->getEmail(),
@@ -36,9 +39,28 @@ class SocialiteController extends Controller
                 'provider_id' => $socialUser->getId(),
                 'password' => bcrypt(str()->random(16)),
             ]);
+        } else {
+            $user = $existingUser;
         }
 
         Auth::login($user);
+
+        PostHogService::identify((string) $user->id, [
+            'email' => $user->email,
+            'name' => $user->name,
+        ]);
+
+        if ($isNewUser) {
+            PostHogService::capture((string) $user->id, 'social_signup_completed', [
+                'provider' => $provider,
+                'email' => $user->email,
+            ]);
+        } else {
+            PostHogService::capture((string) $user->id, 'social_login_completed', [
+                'provider' => $provider,
+                'email' => $user->email,
+            ]);
+        }
 
         return redirect('/dashboard');
     }
