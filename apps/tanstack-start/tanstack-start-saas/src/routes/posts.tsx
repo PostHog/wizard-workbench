@@ -1,4 +1,6 @@
 import { Link, Outlet, createFileRoute } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
+import * as React from 'react'
 import { fetchInvoices } from '../utils/invoices'
 
 export const Route = createFileRoute('/posts')({
@@ -8,6 +10,13 @@ export const Route = createFileRoute('/posts')({
 
 function PostsComponent() {
   const invoices = Route.useLoaderData() ?? []
+  const posthog = usePostHog()
+
+  React.useEffect(() => {
+    posthog.capture('invoices_list_viewed', {
+      invoice_count: invoices.length,
+    })
+  }, [])
 
   return (
     <div className="h-full flex flex-col">
