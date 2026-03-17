@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -199,6 +200,9 @@ public final class CommentsViewModel: @unchecked Sendable {
         var updatedPost = currentPost
         updatedPost.isBookmarked = newState
         post = updatedPost
+        // PostHog: Capture bookmark toggle event
+        let eventName = newState ? "post_bookmarked" : "post_unbookmarked"
+        PostHogSDK.shared.capture(eventName, properties: ["post_id": currentPost.id])
         return newState
     }
 

@@ -7,6 +7,7 @@
 
 import Domain
 import Foundation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -59,7 +60,8 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.upvote(item: postForVoting)
-
+            // PostHog: Capture post upvote event
+            PostHogSDK.shared.capture("post_upvoted", properties: ["post_id": postForVoting.id])
         } catch {
             // Revert optimistic changes on error
             post.upvoted = false
@@ -128,6 +130,8 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.upvoteComment(commentForVoting, for: post)
+            // PostHog: Capture comment upvote event
+            PostHogSDK.shared.capture("comment_upvoted", properties: ["comment_id": commentForVoting.id, "post_id": post.id])
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = false
