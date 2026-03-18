@@ -1,5 +1,6 @@
-import { Component, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
+import { PostHogService } from '@core/services/posthog.service';
 
 interface Plan {
   id: string;
@@ -24,7 +25,8 @@ interface Invoice {
   styleUrl: './billing.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class BillingComponent {
+export class BillingComponent implements OnInit {
+  private readonly posthogService = inject(PostHogService);
   readonly currentPlan = signal('starter');
 
   readonly plans: Plan[] = [
@@ -62,4 +64,10 @@ export class BillingComponent {
   ];
 
   readonly currentPlanDetails = computed(() => this.plans.find((p) => p.id === this.currentPlan()));
+
+  ngOnInit() {
+    this.posthogService.posthog.capture('billing_plan_viewed', {
+      current_plan: this.currentPlan(),
+    });
+  }
 }
