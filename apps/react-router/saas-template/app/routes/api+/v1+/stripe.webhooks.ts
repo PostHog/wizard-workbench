@@ -17,6 +17,7 @@ import {
   handleStripeSubscriptionScheduleExpiringEvent,
   handleStripeSubscriptionScheduleUpdatedEvent,
 } from "~/features/billing/stripe-event-handlers.server";
+import { posthogContext } from "~/lib/posthog.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const json = (payload: unknown, init?: ResponseInit) =>
@@ -33,7 +34,7 @@ const badRequest = (payload?: { message?: string; error?: string }) =>
 
 export const loader = () => notAllowed();
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
   const method = request.method;
 
   if (method !== "POST") {
@@ -55,11 +56,26 @@ export async function action({ request }: Route.ActionArgs) {
       process.env.STRIPE_WEBHOOK_SECRET,
     );
 
+    const posthog = context.get(posthogContext);
+
     switch (event.type) {
       case "charge.dispute.closed": {
         return handleStripeChargeDisputeClosedEvent(event);
       }
       case "checkout.session.completed": {
+        const organizationId = event.data.object.metadata?.organizationId;
+        if (organizationId) {
+          posthog?.capture({
+            distinctId: organizationId,
+            event: "checkout_session_completed",
+            properties: {
+              amount_total: event.data.object.amount_total,
+              currency: event.data.object.currency,
+              customer_email: event.data.object.customer_details?.email,
+              organization_id: organizationId,
+            },
+          });
+        }
         return handleStripeCheckoutSessionCompletedEvent(event);
       }
       case "customer.deleted": {
@@ -69,6 +85,19 @@ export async function action({ request }: Route.ActionArgs) {
         return handleStripeCustomerSubscriptionCreatedEvent(event);
       }
       case "customer.subscription.deleted": {
+        const deletedSub = event.data.object;
+        const deletedOrgId = deletedSub.metadata?.organizationId;
+        if (deletedOrgId) {
+          posthog?.capture({
+            distinctId: deletedOrgId,
+            event: "subscription_deleted",
+            properties: {
+              canceled_at: deletedSub.canceled_at,
+              organization_id: deletedOrgId,
+              subscription_id: deletedSub.id,
+            },
+          });
+        }
         return handleStripeCustomerSubscriptionDeletedEvent(event);
       }
       case "customer.subscription.updated": {
