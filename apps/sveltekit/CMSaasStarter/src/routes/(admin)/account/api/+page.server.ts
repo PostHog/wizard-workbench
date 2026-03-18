@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -70,6 +71,13 @@ export const actions = {
         email,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_updated",
+      properties: { new_email: email },
+    })
 
     return {
       email,
@@ -172,6 +180,13 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "password_updated",
+      properties: { is_recovery_session: !!isRecoverySession },
+    })
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +235,12 @@ export const actions = {
         currentPassword,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+    })
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -304,6 +325,17 @@ export const actions = {
     const newProfile =
       priorProfile?.updated_at === null && priorProfileError === null
     if (newProfile) {
+      const posthog = getPostHogClient()
+      posthog.capture({
+        distinctId: user.id,
+        event: "profile_created",
+        properties: {
+          full_name: fullName,
+          company_name: companyName,
+          website,
+        },
+      })
+
       await sendAdminEmail({
         subject: "Profile Created",
         body: `Profile created by ${session.user.email}\nFull name: ${fullName}\nCompany name: ${companyName}\nWebsite: ${website}`,

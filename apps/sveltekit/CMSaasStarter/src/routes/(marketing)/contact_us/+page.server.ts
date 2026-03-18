@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { getPostHogClient } from "$lib/server/posthog"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -68,6 +69,19 @@ export const actions = {
       console.error("Error saving contact request", insertError)
       return fail(500, { errors: { _: "Error saving" } })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: email,
+      event: "contact_form_submitted",
+      properties: {
+        first_name: firstName,
+        last_name: lastName,
+        company,
+        has_phone: !!phone,
+        has_message: !!message,
+      },
+    })
 
     // Send email to admin
     await sendAdminEmail({
