@@ -24,7 +24,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Basic integrations</li>
             <li>Email support</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
+          <a href="#" class="btn btn-secondary pricing-starter-cta" style="width: 100%; justify-content: center;">Get Started</a>
         </div>
 
         <div class="pricing-card featured">
@@ -40,7 +40,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Advanced analytics</li>
             <li>Custom workflows</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
+          <a href="#" class="btn btn-primary pricing-pro-cta" style="width: 100%; justify-content: center;">Start Free Trial</a>
         </div>
 
         <div class="pricing-card">
@@ -57,9 +57,41 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="#" class="btn btn-secondary pricing-enterprise-cta" style="width: 100%; justify-content: center;">Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function handleStarterClick() {
+    window.posthog?.capture('pricing_starter_clicked', { plan: 'starter', price: '$29/month' });
+  }
+
+  function handleProClick() {
+    window.posthog?.capture('pricing_pro_trial_clicked', { plan: 'pro', price: '$99/month' });
+  }
+
+  function handleEnterpriseClick() {
+    window.posthog?.capture('pricing_enterprise_contact_clicked', { plan: 'enterprise' });
+  }
+
+  function setupPricingPage() {
+    var starterCta = document.querySelector('.pricing-starter-cta');
+    var proCta = document.querySelector('.pricing-pro-cta');
+    var enterpriseCta = document.querySelector('.pricing-enterprise-cta');
+
+    starterCta?.removeEventListener('click', handleStarterClick);
+    starterCta?.addEventListener('click', handleStarterClick);
+
+    proCta?.removeEventListener('click', handleProClick);
+    proCta?.addEventListener('click', handleProClick);
+
+    enterpriseCta?.removeEventListener('click', handleEnterpriseClick);
+    enterpriseCta?.addEventListener('click', handleEnterpriseClick);
+  }
+
+  document.addEventListener('DOMContentLoaded', setupPricingPage);
+  document.addEventListener('astro:page-load', setupPricingPage);
+</script>

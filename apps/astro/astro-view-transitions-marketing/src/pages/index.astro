@@ -61,3 +61,27 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupIndexPage() {
+    var heroCta = document.querySelector('.hero-buttons .btn-primary');
+    var heroDocsCta = document.querySelector('.hero-buttons .btn-secondary');
+
+    heroCta?.removeEventListener('click', handleHeroCtaClick);
+    heroCta?.addEventListener('click', handleHeroCtaClick);
+
+    heroDocsCta?.removeEventListener('click', handleHeroDocsClick);
+    heroDocsCta?.addEventListener('click', handleHeroDocsClick);
+  }
+
+  function handleHeroCtaClick() {
+    window.posthog?.capture('hero_cta_clicked');
+  }
+
+  function handleHeroDocsClick() {
+    window.posthog?.capture('hero_docs_clicked');
+  }
+
+  document.addEventListener('DOMContentLoaded', setupIndexPage);
+  document.addEventListener('astro:page-load', setupIndexPage);
+</script>
