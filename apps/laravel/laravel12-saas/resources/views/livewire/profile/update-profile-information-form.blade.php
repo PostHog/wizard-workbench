@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -9,6 +10,7 @@ use Livewire\Volt\Component;
 new class extends Component
 {
     public string $name = '';
+
     public string $email = '';
 
     /**
@@ -23,7 +25,7 @@ new class extends Component
     /**
      * Update the profile information for the currently authenticated user.
      */
-    public function updateProfileInformation(): void
+    public function updateProfileInformation(PostHogService $posthog): void
     {
         $user = Auth::user();
 
@@ -39,6 +41,11 @@ new class extends Component
         }
 
         $user->save();
+
+        // PostHog: track profile update
+        $posthog->capture($user->email, 'profile_updated', [
+            'email_changed' => $user->wasChanged('email'),
+        ]);
 
         $this->dispatch('profile-updated', name: $user->name);
     }
