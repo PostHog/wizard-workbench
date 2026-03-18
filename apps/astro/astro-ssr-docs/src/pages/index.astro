@@ -54,3 +54,31 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </footer>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Track hero button clicks
+    var heroButtons = document.querySelectorAll('.hero-buttons .btn');
+    heroButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var label = btn.textContent.trim();
+        if (label === 'Get Started') {
+          window.posthog?.capture('docs_get_started_clicked', { location: 'hero' });
+        } else if (label === 'API Reference') {
+          window.posthog?.capture('docs_api_reference_clicked', { location: 'hero' });
+        }
+      });
+    });
+
+    // Track feature card clicks
+    var featureCards = document.querySelectorAll('.feature-card');
+    featureCards.forEach(function (card) {
+      card.addEventListener('click', function () {
+        window.posthog?.capture('docs_feature_card_clicked', {
+          card_title: card.querySelector('h3')?.textContent.trim(),
+          destination: card.getAttribute('href'),
+        });
+      });
+    });
+  });
+</script>
