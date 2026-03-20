@@ -632,36 +632,6 @@ jobs:
           # PostHog tracking for eval analytics
           POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
 
-      - name: Prepare artifact name
-        # Not used for anything rn
-        if: always()
-        id: artifact-name
-        run: |
-          # Replace slashes with dashes for valid artifact name
-          SAFE_NAME="${{ matrix.app }}"
-          SAFE_NAME="${SAFE_NAME//\//-}"
-          echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
-
-      - name: Upload context-mill resources
-        # Only upload once (from the first matrix job) since the zip is identical across all jobs
-        if: always() && !env.ACT && matrix.app == needs.discover.outputs.first_app
-        continue-on-error: true
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: context-mill-resources-${{ github.run_id }}
-          path: context-mill-mcp-resources.zip
-          if-no-files-found: warn
-
-      - name: Upload skills resources
-        # Only upload once (from the first matrix job) since the zip is identical across all jobs
-        if: always() && !env.ACT && matrix.app == needs.discover.outputs.first_app
-        continue-on-error: true
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: skills-resources-${{ github.run_id }}
-          path: skills-mcp-resources.zip
-          if-no-files-found: warn
-
       - name: Configure AWS credentials
         if: always() && !env.ACT
         continue-on-error: true
