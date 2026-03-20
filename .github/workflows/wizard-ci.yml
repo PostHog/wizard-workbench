@@ -2,7 +2,6 @@ name: Wizard CI
 
 permissions:
   contents: read
-  id-token: write
 
 on:
   # Scheduled runs (Wed at 11 AM EST / 4 PM UTC)
@@ -394,6 +393,9 @@ jobs:
     needs: [discover, notify-start, notify-pr-start]
     if: always() && needs.discover.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       max-parallel: 10
