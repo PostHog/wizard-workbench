@@ -2,6 +2,7 @@ name: Wizard CI
 
 permissions:
   contents: read
+  id-token: write
 
 on:
   # Scheduled runs (Wed at 11 AM EST / 4 PM UTC)
@@ -660,6 +661,34 @@ jobs:
           name: skills-resources-${{ github.run_id }}
           path: skills-mcp-resources.zip
           if-no-files-found: warn
+
+      - name: Configure AWS credentials
+        if: always() && !env.ACT
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_WIZARD_ARTIFACTS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_WIZARD_ARTIFACTS_REGION }}
+          mask-aws-account-id: true
+          unset-current-credentials: true
+
+      - name: Upload artifacts to S3
+        if: always() && !env.ACT
+        continue-on-error: true
+        run: |
+          TRIGGER_ID="${{ needs.discover.outputs.trigger_id }}"
+          SAFE_APP="${{ matrix.app }}"
+          SAFE_APP="${SAFE_APP//\//-}"
+          S3_PREFIX="s3://${{ secrets.AWS_WIZARD_ARTIFACTS_BUCKET }}/${TRIGGER_ID}/${SAFE_APP}"
+
+          aws s3 cp wizard-output.log "${S3_PREFIX}/wizard-output.log" || true
+          aws s3 cp context-mill-mcp-resources.zip "${S3_PREFIX}/context-mill-mcp-resources.zip" || true
+          aws s3 cp skills-mcp-resources.zip "${S3_PREFIX}/skills-mcp-resources.zip" || true
+
+          YARA_JSON="/tmp/posthog-wizard-yara-report.json"
+          if [ -f "$YARA_JSON" ]; then
+            aws s3 cp "$YARA_JSON" "${S3_PREFIX}/yara-report.json" || true
+          fi
 
       - name: Label and close PR
         if: steps.run-wizard.outputs.pr_number
