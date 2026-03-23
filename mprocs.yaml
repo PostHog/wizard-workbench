@@ -56,8 +56,9 @@ procs:
 
   wizard-tail-run:
     # Tail the wizard's verbose output
-    shell: "tail -f /tmp/posthog-wizard.log"
+    shell: "tail -f \"${POSTHOG_WIZARD_LOG_DIR:-/tmp}/posthog-wizard.log\""
     autostart: false
+    env_file: .env
 
   # ═══════════════════════════════════════════════════════════════════════════
   # WIZARD BENCHMARK - Run wizard with benchmark tracking
