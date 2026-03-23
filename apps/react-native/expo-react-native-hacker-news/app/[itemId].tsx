@@ -14,6 +14,8 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
 
+import { usePostHog } from "posthog-react-native";
+
 import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
@@ -22,6 +24,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -72,7 +75,10 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable onPress={() => {
+              posthog.capture('user_profile_viewed', { username: item.by });
+              router.push(`/users/${item.by}`);
+            }}>
               <Text
                 style={{
                   fontSize: 16,
@@ -120,6 +126,11 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog.capture('item_upvoted', {
+                  item_id: item.id,
+                  item_type: item.type,
+                  score: item.score || 0,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -163,6 +174,10 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture('external_link_opened', {
+                    item_id: item.id,
+                    url: item.url,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
