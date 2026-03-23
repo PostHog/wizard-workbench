@@ -1,3 +1,5 @@
+import posthog
+from posthog import new_context, identify_context, tag, capture
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -15,9 +17,27 @@ class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        user = form.get_user()
+        response = super().form_valid(form)
+        with new_context():
+            identify_context(str(user.id))
+            tag('is_staff', user.is_staff)
+            capture('user_logged_in', properties={
+                'login_method': 'email',
+            })
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def post(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('user_logged_out')
+        return super().post(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -49,6 +69,12 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            with new_context():
+                identify_context(str(user.id))
+                tag('is_staff', user.is_staff)
+                capture('user_registered', properties={
+                    'registration_method': 'email',
+                })
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +89,9 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('profile_updated')
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
