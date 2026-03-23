@@ -33,6 +33,7 @@ import { adjustSeats } from "~/features/billing/stripe-helpers.server";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import type { Prisma } from "~/generated/client";
 import { OrganizationMembershipRole } from "~/generated/client";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { sendEmail } from "~/utils/email.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
@@ -361,6 +362,17 @@ export async function teamMembersAction({
             }),
           });
         }
+
+        const posthog = context.get(posthogContext);
+        posthog?.capture({
+          distinctId: user.email,
+          event: "team_member_invited",
+          properties: {
+            invited_email: body.email,
+            invited_role: body.role,
+            organization_id: organization.id,
+          },
+        });
 
         const toastHeaders = await createToastHeaders({
           title: i18n.t(

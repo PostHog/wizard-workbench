@@ -1,4 +1,5 @@
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { IconMail } from "@tabler/icons-react";
 import { Trans, useTranslation } from "react-i18next";
 import { data, Form, href, Link, useNavigation } from "react-router";
@@ -70,9 +71,15 @@ export default function RegisterRoute({
     keyPrefix: "register",
   });
   const { inviteLinkInfo } = loaderData;
+  const posthog = usePostHog();
 
   const isAwaitingEmailConfirmation =
     getIsAwaitingEmailConfirmation(actionData);
+
+  if (isAwaitingEmailConfirmation && actionData?.email) {
+    posthog?.identify(actionData.email, { email: actionData.email });
+    posthog?.capture("user_registered", { email: actionData.email });
+  }
 
   const { form, fields } = useForm(registerWithEmailSchema, {
     lastResult: actionData?.result,

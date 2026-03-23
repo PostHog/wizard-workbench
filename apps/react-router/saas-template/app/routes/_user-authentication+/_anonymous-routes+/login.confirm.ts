@@ -15,6 +15,7 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
@@ -61,6 +62,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       email: user.email,
       supabaseUserId: user.id,
     }));
+
+  const posthog = context.get(posthogContext);
+  posthog?.capture({
+    distinctId: user.email,
+    event: "user_logged_in",
+    properties: { method: "email" },
+  });
 
   if (inviteLinkInfo || emailInviteInfo) {
     const organizationId =

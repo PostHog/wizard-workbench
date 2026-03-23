@@ -17,6 +17,7 @@ import {
   handleStripeSubscriptionScheduleExpiringEvent,
   handleStripeSubscriptionScheduleUpdatedEvent,
 } from "~/features/billing/stripe-event-handlers.server";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const json = (payload: unknown, init?: ResponseInit) =>
@@ -33,7 +34,7 @@ const badRequest = (payload?: { message?: string; error?: string }) =>
 
 export const loader = () => notAllowed();
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
   const method = request.method;
 
   if (method !== "POST") {
@@ -60,6 +61,21 @@ export async function action({ request }: Route.ActionArgs) {
         return handleStripeChargeDisputeClosedEvent(event);
       }
       case "checkout.session.completed": {
+        const posthog = context.get(posthogContext);
+        const session = event.data.object;
+        const organizationId = session.metadata?.organizationId;
+        const customerEmail = session.customer_details?.email;
+        if (organizationId && customerEmail) {
+          posthog?.capture({
+            distinctId: customerEmail,
+            event: "subscription_completed",
+            properties: {
+              amount_total: session.amount_total,
+              currency: session.currency,
+              organization_id: organizationId,
+            },
+          });
+        }
         return handleStripeCheckoutSessionCompletedEvent(event);
       }
       case "customer.deleted": {
