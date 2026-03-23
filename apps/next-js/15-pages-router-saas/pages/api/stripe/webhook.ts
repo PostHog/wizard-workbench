@@ -2,6 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { getTeamByStripeCustomerId } from '@/lib/db/queries';
+import { db } from '@/lib/db/drizzle';
+import { teamMembers, users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 // Disable body parsing, need raw body for Stripe webhook signature verification
 export const config = {
@@ -38,10 +43,36 @@ export default async function handler(
 
   switch (event.type) {
     case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
+    case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+
+      const customerId = subscription.customer as string;
+      const team = await getTeamByStripeCustomerId(customerId);
+      if (team) {
+        const member = await db
+          .select({ email: users.email })
+          .from(teamMembers)
+          .innerJoin(users, eq(teamMembers.userId, users.id))
+          .where(eq(teamMembers.teamId, team.id))
+          .limit(1);
+        const distinctId = member[0]?.email ?? customerId;
+        const posthog = getPostHogClient();
+        const eventName = event.type === 'customer.subscription.deleted'
+          ? 'subscription_cancelled'
+          : 'subscription_updated';
+        posthog.capture({
+          distinctId,
+          event: eventName,
+          properties: {
+            subscription_id: subscription.id,
+            status: subscription.status,
+            stripe_customer_id: customerId,
+          },
+        });
+      }
       break;
+    }
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
