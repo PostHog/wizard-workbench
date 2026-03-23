@@ -424,9 +424,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
-        with:
-          # Pinned to avoid 404 outages when unpinned latest is temporarily unavailable
-          version: 10.23.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
