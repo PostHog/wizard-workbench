@@ -430,10 +430,23 @@ jobs:
 
       - name: Install GitHub CLI
         run: |
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y gh
+          if command -v gh > /dev/null 2>&1; then
+            echo "gh already installed: $(gh --version | head -1)"
+            exit 0
+          fi
+
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            brew update
+            brew install gh
+          elif [ "$RUNNER_OS" = "Linux" ]; then
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+          else
+            echo "Unsupported runner OS: $RUNNER_OS"
+            exit 1
+          fi
 
       - name: Clone and build Wizard CLI
         run: |
@@ -628,10 +641,10 @@ jobs:
           kill ${{ steps.run-wizard.outputs.context_mill_pid }} 2>/dev/null || true
 
           # Extract PR URL
-          PR_URL=$(grep -oP 'PR: \K(https://github.com/[^\s]+)' wizard-output.log || true)
+          PR_URL=$(sed -n 's#.*PR: \(https://github.com/[^[:space:]]*\).*#\1#p' wizard-output.log | head -1 || true)
           if [ -n "$PR_URL" ]; then
             echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
-            PR_NUM=$(echo $PR_URL | grep -oP '/pull/\K\d+')
+            PR_NUM=$(echo "$PR_URL" | sed -n 's#.*/pull/\([0-9][0-9]*\).*#\1#p')
             echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
           fi
 
