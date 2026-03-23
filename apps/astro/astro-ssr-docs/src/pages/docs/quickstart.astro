@@ -59,3 +59,22 @@ console.log('Extracted data:', document.data);</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    window.posthog?.capture('quickstart_viewed');
+
+    document.querySelectorAll('pre').forEach(function (pre) {
+      pre.style.cursor = 'pointer';
+      pre.addEventListener('click', function () {
+        var code = pre.querySelector('code')?.textContent || '';
+        navigator.clipboard?.writeText(code).then(function () {
+          window.posthog?.capture('code_copied', {
+            page: 'quickstart',
+            snippet_preview: code.trim().slice(0, 80)
+          });
+        });
+      });
+    });
+  });
+</script>
