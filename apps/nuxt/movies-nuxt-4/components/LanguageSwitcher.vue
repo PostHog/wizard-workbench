@@ -1,11 +1,16 @@
 <script setup>
 const { locale, locales, setLocale } = useI18n()
+const posthog = usePostHog()
 
 const availableLocales = computed(() => {
   return (locales.value)
 })
 
 function updateLocale(event) {
+  posthog?.capture('language_changed', {
+    from_language: locale.value,
+    to_language: event.target.value,
+  })
   setLocale(event.target.value)
   window.location.reload()
 }

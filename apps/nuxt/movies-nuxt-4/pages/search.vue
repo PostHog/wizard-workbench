@@ -37,7 +37,16 @@ async function fetch(page: number) {
   }
 }
 
-const throttledSearch = useDebounceFn(search, 200)
+const posthog = usePostHog()
+
+function searchWithTracking() {
+  if (currentSearch.value === input.value)
+    return
+  search()
+  posthog?.capture('media_searched', { query: input.value })
+}
+
+const throttledSearch = useDebounceFn(searchWithTracking, 200)
 
 const vFocus = {
   mounted: (el: HTMLElement) => el.focus(),
@@ -63,7 +72,7 @@ watch(
         type="text"
         text-2xl bg-transparent outline-none w-full
         :placeholder="$t('Type to search...')"
-        @keyup.enter="search"
+        @keyup.enter="searchWithTracking"
       >
     </div>
     <div v-if="error" p8 flex flex-col gap-3 items-start>
