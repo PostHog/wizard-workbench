@@ -526,6 +526,7 @@ jobs:
           cd $CONTEXT_MILL_PATH
           npm run dev &
           CONTEXT_MILL_PID=$!
+          disown $CONTEXT_MILL_PID
 
           # Wait for context-mill server to be ready (retry every 30s, max 2 minutes)
           echo "Waiting for context-mill server to start..."
@@ -551,6 +552,7 @@ jobs:
           cd $MCP_PATH
           pnpm dev:local-resources &
           MCP_PID=$!
+          disown $MCP_PID
 
           # Wait for MCP server to be ready (retry every 30s, max 2 minutes)
           echo "Waiting for MCP server to start..."
