@@ -17,6 +17,10 @@ struct HackersApp: App {
     // Keep AppDelegate for legacy services and setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
+    init() {
+        PostHogAnalytics.setup()
+    }
+
     var body: some Scene {
         WindowGroup {
             MainContentView()
