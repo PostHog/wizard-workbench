@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -162,6 +163,11 @@ public final class CommentsViewModel: @unchecked Sendable {
                 self.post?.commentsCount = commentCountExcludingStoryText
                 self.isPostLoading = false
                 self.onCommentsLoaded?(loadedComments)
+                // PostHog: Track comments viewed
+                PostHogSDK.shared.capture("comments_viewed", properties: [
+                    "post_id": self.postID,
+                    "comment_count": commentCountExcludingStoryText
+                ])
             }
 
             return loadedComments
