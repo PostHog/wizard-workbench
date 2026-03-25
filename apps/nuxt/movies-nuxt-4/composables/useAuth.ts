@@ -33,12 +33,15 @@ export const useAuth = () => {
   }
 
   const logout = async () => {
+    const posthog = usePostHog()
     try {
       await $fetch('/api/auth/logout', { method: 'POST' })
     } catch (error) {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error)
     } finally {
+      posthog?.capture('user_logged_out')
+      posthog?.reset()
       user.value = null
       cookie.value = null
       await navigateTo('/login')
