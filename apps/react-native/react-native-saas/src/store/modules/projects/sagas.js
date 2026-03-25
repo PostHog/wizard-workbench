@@ -2,6 +2,7 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoProjects } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   getProjectsSuccess,
@@ -28,6 +29,7 @@ export function* getProjects() {
 export function* createProject({ payload }) {
   const { title } = payload;
   const token = yield select(state => state.auth.token);
+  const team = yield select(state => state.teams.active);
 
   try {
     // Demo mode
@@ -35,6 +37,7 @@ export function* createProject({ payload }) {
       const newProject = { id: Date.now(), title };
       yield put(createProjectSuccess(newProject));
       yield put(closeProjectModal());
+      posthog.capture('project_created', { team_id: team?.id, team_name: team?.name });
       toast.showSuccess('Project created');
       return;
     }
@@ -43,9 +46,15 @@ export function* createProject({ payload }) {
 
     yield put(createProjectSuccess(response.data));
     yield put(closeProjectModal());
+    posthog.capture('project_created', {
+      project_id: response.data.id,
+      team_id: team?.id,
+      team_name: team?.name,
+    });
 
     toast.showSuccess('Project created');
   } catch (err) {
+    posthog.capture('project_creation_failed', { team_id: team?.id });
     toast.showError('Error creating project');
   }
 }
