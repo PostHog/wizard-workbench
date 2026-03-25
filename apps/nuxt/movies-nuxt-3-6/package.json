@@ -31,5 +31,9 @@
     "pinia": "^2.1.3",
     "typescript": "^5.1.3",
     "vue-tsc": "^1.6.5"
+  },
+  "dependencies": {
+    "posthog-js": "^1.363.5",
+    "posthog-node": "^5.28.5"
   }
 }
