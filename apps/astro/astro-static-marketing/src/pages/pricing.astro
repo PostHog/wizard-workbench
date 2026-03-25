@@ -62,4 +62,20 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
   </section>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    var pricingCards = document.querySelectorAll('.pricing-card');
+    pricingCards.forEach(function (card) {
+      var planName = card.querySelector('h3')?.textContent.trim();
+      var cta = card.querySelector('.btn');
+      cta?.addEventListener('click', function () {
+        window.posthog?.capture('pricing_plan_selected', {
+          plan: planName,
+          cta_label: cta.textContent.trim()
+        });
+      });
+    });
+  });
+</script>
 </Layout>

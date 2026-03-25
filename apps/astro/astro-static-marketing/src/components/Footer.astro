@@ -15,3 +15,16 @@ const currentYear = new Date().getFullYear();
     <p class="footer-copy">&copy; {currentYear} NeuralFlow AI. All rights reserved.</p>
   </div>
 </footer>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    var footerLinks = document.querySelectorAll('.footer-link');
+    footerLinks.forEach(function (link) {
+      link.addEventListener('click', function () {
+        window.posthog?.capture('footer_link_clicked', {
+          label: link.textContent.trim()
+        });
+      });
+    });
+  });
+</script>

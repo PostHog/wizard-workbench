@@ -60,4 +60,18 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
   </section>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    var heroBtns = document.querySelectorAll('.hero-buttons .btn');
+    heroBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        window.posthog?.capture('cta_clicked', {
+          label: btn.textContent.trim(),
+          location: 'hero'
+        });
+      });
+    });
+  });
+</script>
 </Layout>
