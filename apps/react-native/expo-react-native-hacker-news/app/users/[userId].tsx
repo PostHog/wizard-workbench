@@ -8,6 +8,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import RenderHTML from "react-native-render-html";
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import { useEffect } from "react";
+import { usePostHog } from "posthog-react-native";
 
 import { Activities } from "@/components/posts/user-activities/UserActivities";
 
@@ -17,6 +19,7 @@ import { Avatar } from "@/components/Avatar";
 export default function UserDetails() {
   const { userId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
 
   if (typeof userId !== "string") {
     return router.back();
@@ -26,6 +29,12 @@ export default function UserDetails() {
     queryKey: getUserDetailsQueryKey(userId),
     queryFn: getUserQueryFn,
   });
+
+  useEffect(() => {
+    posthog.capture("user_profile_viewed", {
+      profile_user_id: userId,
+    });
+  }, [userId]);
 
   return (
     <View style={styles.page}>
