@@ -87,12 +87,12 @@ Make sure you've set up and installed dependencies for all required repos.
 Enter `phrocs` to run the local dev stack:
 
 ```bash
-phrocs --config mprocs.yaml
+phrocs
 ```
 
 ### phrocs Commands
 
-Use keyboard shortcuts in phrocs: `r` to start/restart, `s` to stop, `q` to quit.
+Use keyboard shortcuts in phrocs: `r` to run/restart, `s` to stop, `q` to quit.
 
 #### Auto-start Processes (run automatically)
 
