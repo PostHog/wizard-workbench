@@ -574,17 +574,6 @@ jobs:
             echo "::warning::MCP server failed to start after 2 minutes"
           fi
 
-          # Run wizard-ci (always runs in CI mode internally)
-          cd $GITHUB_WORKSPACE
-          CMD="pnpm wizard-ci --app ${{ matrix.app }} --base ${{ needs.discover.outputs.input_base_branch }}"
-          if [ -n "${{ needs.discover.outputs.trigger_id }}" ]; then
-            CMD="$CMD --trigger-id ${{ needs.discover.outputs.trigger_id }}"
-          fi
-          if [ "${{ needs.discover.outputs.input_evaluate }}" = "true" ]; then
-            CMD="$CMD --evaluate"
-          fi
-
-          echo "cmd=$CMD" >> $GITHUB_OUTPUT
           echo "mcp_pid=$MCP_PID" >> $GITHUB_OUTPUT
           echo "context_mill_pid=$CONTEXT_MILL_PID" >> $GITHUB_OUTPUT
         env:
@@ -611,8 +600,19 @@ jobs:
         id: execute-wizard
         continue-on-error: true
         run: |
-          ${{ steps.run-wizard.outputs.cmd }} 2>&1 | tee wizard-output.log
+          CMD_ARGS=(pnpm wizard-ci --app "$MATRIX_APP" --base "$INPUT_BASE_BRANCH")
+          if [ -n "$TRIGGER_ID" ]; then
+            CMD_ARGS+=(--trigger-id "$TRIGGER_ID")
+          fi
+          if [ "$INPUT_EVALUATE" = "true" ]; then
+            CMD_ARGS+=(--evaluate)
+          fi
+          "${CMD_ARGS[@]}" 2>&1 | tee wizard-output.log
         env:
+          MATRIX_APP: ${{ matrix.app }}
+          INPUT_BASE_BRANCH: ${{ needs.discover.outputs.input_base_branch }}
+          TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
+          INPUT_EVALUATE: ${{ needs.discover.outputs.input_evaluate }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           POSTHOG_REGION: ${{ needs.discover.outputs.input_posthog_region }}
           POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
@@ -630,8 +630,8 @@ jobs:
         id: process-results
         if: always()
         run: |
-          if [ "${{ steps.execute-wizard.outcome }}" != "success" ]; then
-            echo "::warning::Wizard exited with failure for ${{ matrix.app }}"
+          if [ "$WIZARD_OUTCOME" != "success" ]; then
+            echo "::warning::Wizard exited with failure for $MATRIX_APP"
           fi
 
           # Save resources zips from running server (for artifact upload)
@@ -639,8 +639,8 @@ jobs:
           curl -s http://localhost:8765/skills-mcp-resources.zip -o skills-mcp-resources.zip || true
 
           # Stop servers
-          kill ${{ steps.run-wizard.outputs.mcp_pid }} 2>/dev/null || true
-          kill ${{ steps.run-wizard.outputs.context_mill_pid }} 2>/dev/null || true
+          kill "$MCP_PID" 2>/dev/null || true
+          kill "$CONTEXT_MILL_PID" 2>/dev/null || true
 
           # Extract PR URL
           PR_URL=$(sed -n 's#.*PR: \(https://github.com/[^[:space:]]*\).*#\1#p' wizard-output.log | head -1 || true)
@@ -692,6 +692,11 @@ jobs:
             echo "yara_violation_count=0" >> $GITHUB_OUTPUT
             echo "No YARA report file found"
           fi
+        env:
+          WIZARD_OUTCOME: ${{ steps.execute-wizard.outcome }}
+          MATRIX_APP: ${{ matrix.app }}
+          MCP_PID: ${{ steps.run-wizard.outputs.mcp_pid }}
+          CONTEXT_MILL_PID: ${{ steps.run-wizard.outputs.context_mill_pid }}
 
       - name: Prepare artifact name
         # Not used for anything rn
@@ -699,9 +704,11 @@ jobs:
         id: artifact-name
         run: |
           # Replace slashes with dashes for valid artifact name
-          SAFE_NAME="${{ matrix.app }}"
+          SAFE_NAME="$MATRIX_APP"
           SAFE_NAME="${SAFE_NAME//\//-}"
           echo "safe_name=$SAFE_NAME" >> $GITHUB_OUTPUT
+        env:
+          MATRIX_APP: ${{ matrix.app }}
 
       - name: Upload context-mill resources
         # Only upload once (from the first matrix job) since the zip is identical across all jobs
