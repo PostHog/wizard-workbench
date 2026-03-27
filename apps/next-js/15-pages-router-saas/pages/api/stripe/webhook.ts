@@ -2,6 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { db } from '@/lib/db/drizzle';
+import { teams, users, teamMembers } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 // Disable body parsing, need raw body for Stripe webhook signature verification
 export const config = {
@@ -38,10 +42,48 @@ export default async function handler(
 
   switch (event.type) {
     case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
+    case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+
+      const posthog = getPostHogClient();
+      const stripeCustomerId = subscription.customer as string;
+
+      // Find the team owner's email to use as distinct ID
+      const teamRow = await db
+        .select({ id: teams.id })
+        .from(teams)
+        .where(eq(teams.stripeCustomerId, stripeCustomerId))
+        .limit(1);
+
+      let distinctId = stripeCustomerId;
+      if (teamRow.length > 0) {
+        const ownerRow = await db
+          .select({ email: users.email })
+          .from(users)
+          .innerJoin(teamMembers, eq(teamMembers.userId, users.id))
+          .where(eq(teamMembers.teamId, teamRow[0].id))
+          .limit(1);
+        if (ownerRow.length > 0) {
+          distinctId = ownerRow[0].email;
+        }
+      }
+
+      const posthogEvent = event.type === 'customer.subscription.deleted'
+        ? 'subscription_cancelled'
+        : 'subscription_updated';
+
+      posthog.capture({
+        distinctId,
+        event: posthogEvent,
+        properties: {
+          subscription_id: subscription.id,
+          status: subscription.status,
+          stripe_customer_id: stripeCustomerId,
+        }
+      });
       break;
+    }
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
