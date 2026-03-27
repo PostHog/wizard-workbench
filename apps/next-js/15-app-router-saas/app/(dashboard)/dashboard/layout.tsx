@@ -5,6 +5,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Users, Settings, Shield, Activity, Menu } from 'lucide-react';
+import useSWR from 'swr';
+import { User } from '@/lib/db/schema';
+import posthog from 'posthog-js';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function DashboardLayout({
   children
@@ -13,6 +18,14 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+
+  if (user?.email) {
+    posthog.identify(user.email, {
+      email: user.email,
+      name: user.name ?? undefined,
+    });
+  }
 
   const navItems = [
     { href: '/dashboard', icon: Users, label: 'Team' },
