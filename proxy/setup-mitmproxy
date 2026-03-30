@@ -47,6 +47,6 @@ else
 fi
 
 echo ""
-echo "Done. You can now run mprocs and use wizard-run-proxy."
+echo "Done. You can now run phrocs and use wizard-run-proxy."
 echo "To remove the trusted cert later:"
 echo "  sudo security remove-trusted-cert -d $CERT_PEM"

@@ -42,7 +42,7 @@ services/
 
 ## Wizard local dev stack
 
-The workbench can run the entire Wizard stack in local development mode, with hot reload where supported. It uses `mprocs` to run all the repos defined in your `.env` file:
+The workbench can run the entire Wizard stack in local development mode, with hot reload where supported. It uses `phrocs` to run all the repos defined in your `.env` file:
 
 - [Context Mill repo](https://github.com/PostHog/context-mill)
 - [Wizard repo](https://github.com/PostHog/wizard)
@@ -52,10 +52,10 @@ The workbench can run the entire Wizard stack in local development mode, with ho
 
 ### Setup
 
-Install [mprocs](https://github.com/pvolok/mprocs):
+Install [phrocs](https://github.com/PostHog/posthog/tree/master/tools/phrocs)
 
 ```bash
-brew install mprocs
+brew tap posthog/tap && brew install phrocs
 ```
 
 Install dependencies in this repo:
@@ -84,15 +84,15 @@ Make sure you've set up and installed dependencies for all required repos.
 
 ### Running
 
-Enter `mprocs` to run the local dev stack:
+Enter `phrocs` to run the local dev stack:
 
 ```bash
-mprocs
+phrocs
 ```
 
-### mprocs Commands
+### phrocs Commands
 
-Use keyboard shortcuts in mprocs: `s` to start, `x` to stop, `r` to restart, `q` to quit.
+Use keyboard shortcuts in phrocs: `r` to run/restart, `s` to stop, `q` to quit.
 
 #### Auto-start Processes (run automatically)
 
@@ -188,6 +188,6 @@ This generates the CA cert at `~/.mitmproxy/mitmproxy-ca-cert.pem` and adds it t
 
 ### Usage
 
-In mprocs, start the `mitmproxy` process first, then start `wizard-run-proxy`. Traffic will appear in the mitmproxy TUI.
+In phrocs, start the `mitmproxy` process first, then start `wizard-run-proxy`. Traffic will appear in the mitmproxy TUI.
 
 Alternatively, you can use [Charles Proxy](https://www.charlesproxy.com/) (GUI-based, paid license) on port `8888` instead of mitmproxy.

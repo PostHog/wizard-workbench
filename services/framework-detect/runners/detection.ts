@@ -113,7 +113,7 @@ export async function runDetection(installDir: string): Promise<DetectionResult>
   const registryPath = join(wizardPath, "dist", "src", "lib", "registry.js");
   if (!existsSync(registryPath)) {
     throw new Error(
-      `Wizard not built — expected ${registryPath}\nRun "pnpm build" in ${wizardPath} (or start wizard-build in mprocs).`,
+      `Wizard not built — expected ${registryPath}\nRun "pnpm build" in ${wizardPath} (or start wizard-build in phrocs).`,
     );
   }
 
