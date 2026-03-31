@@ -1,15 +1,30 @@
 import { Link } from "react-router";
 import { useCart, type CartItem } from "../context/CartContext";
+import { usePostHog } from '@posthog/react';
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
+  const posthog = usePostHog();
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+    posthog?.capture('cart_item_removed', {
+      product_id: item.id,
+      product_name: item.name,
+      product_category: item.category,
+      price: item.price,
+      quantity: item.quantity,
+    });
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+    posthog?.capture('cart_item_quantity_updated', {
+      product_id: item.id,
+      product_name: item.name,
+      old_quantity: item.quantity,
+      new_quantity: newQuantity,
+    });
   };
 
   if (cart.length === 0) {
