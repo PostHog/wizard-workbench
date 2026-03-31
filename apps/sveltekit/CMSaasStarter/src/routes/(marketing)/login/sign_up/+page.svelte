@@ -1,8 +1,24 @@
 <script lang="ts">
   import { Auth } from "@supabase/auth-ui-svelte"
   import { sharedAppearance, oauthProviders } from "../login_config"
+  import { onMount } from "svelte"
+  import posthog from "posthog-js"
 
   let { data } = $props()
+
+  onMount(() => {
+    data.supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "SIGNED_IN") {
+        const {
+          data: { user },
+        } = await data.supabase.auth.getUser()
+        if (user) {
+          posthog.identify(user.id, { email: user.email })
+          posthog.capture("user_signed_up", { email: user.email })
+        }
+      }
+    })
+  })
 </script>
 
 <svelte:head>
