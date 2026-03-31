@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
@@ -46,7 +47,13 @@ export function CreateSubscriptionModalContent({
   const { t: tModal } = useTranslation("billing", {
     keyPrefix: "noCurrentPlanModal",
   });
+  const posthog = usePostHog();
   const [billingPeriod, setBillingPeriod] = useState("annual");
+
+  const handleBillingPeriodChange = (value: string) => {
+    setBillingPeriod(value);
+    posthog?.capture("billing_period_toggled", { billing_period: value });
+  };
 
   const navigation = useNavigation();
   const isSubmitting =
@@ -106,8 +113,19 @@ export function CreateSubscriptionModalContent({
     (tier) => planLimits[tier] < currentSeats,
   );
 
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    const lookupKey = formData.get("lookupKey");
+    if (lookupKey) {
+      posthog?.capture("pricing_plan_selected", {
+        billing_period: billingPeriod,
+        lookup_key: lookupKey,
+      });
+    }
+  };
+
   return (
-    <Form method="post" replace>
+    <Form method="post" onSubmit={handleFormSubmit} replace>
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>
@@ -137,7 +155,7 @@ export function CreateSubscriptionModalContent({
           value={OPEN_CHECKOUT_SESSION_INTENT}
         />
 
-        <Tabs onValueChange={setBillingPeriod} value={billingPeriod}>
+        <Tabs onValueChange={handleBillingPeriodChange} value={billingPeriod}>
           <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row md:mb-2">
             <TabsList>
               <TabsTrigger value="monthly">{t("monthly")}</TabsTrigger>

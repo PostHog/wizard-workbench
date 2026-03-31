@@ -1,3 +1,4 @@
+import { PostHog } from "posthog-node";
 import type { Stripe } from "stripe";
 
 import { updateOrganizationInDatabaseById } from "../organizations/organizations-model.server";
@@ -22,6 +23,14 @@ import {
 } from "./stripe-subscription-schedule-model.server";
 import { stripeAdmin } from "~/features/billing/stripe-admin.server";
 import { getErrorMessage } from "~/utils/get-error-message";
+
+function createPostHogClient() {
+  return new PostHog(process.env.VITE_PUBLIC_POSTHOG_TOKEN ?? "", {
+    flushAt: 1,
+    flushInterval: 0,
+    host: process.env.VITE_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",
+  });
+}
 
 const ok = () => Response.json({ message: "OK" });
 
@@ -121,6 +130,19 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
           organizationId: organization.id,
         });
       }
+
+      const posthog = createPostHogClient();
+      posthog.capture({
+        distinctId: event.data.object.metadata.organizationId,
+        event: "checkout_session_completed",
+        properties: {
+          amount_total: event.data.object.amount_total,
+          currency: event.data.object.currency,
+          customer_email: event.data.object.customer_details?.email,
+          organization_id: event.data.object.metadata.organizationId,
+        },
+      });
+      await posthog.shutdown().catch(() => {});
     } else {
       console.error("No organization ID found in checkout session metadata");
       prettyPrint(event);
@@ -177,6 +199,22 @@ export const handleStripeCustomerSubscriptionDeletedEvent = async (
 ) => {
   try {
     await updateStripeSubscriptionFromAPIInDatabase(event.data.object);
+
+    const customerId =
+      typeof event.data.object.customer === "string"
+        ? event.data.object.customer
+        : event.data.object.customer?.id;
+
+    const posthog = createPostHogClient();
+    posthog.capture({
+      distinctId: customerId ?? event.data.object.id,
+      event: "subscription_deleted",
+      properties: {
+        customer_id: customerId,
+        subscription_id: event.data.object.id,
+      },
+    });
+    await posthog.shutdown().catch(() => {});
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);
