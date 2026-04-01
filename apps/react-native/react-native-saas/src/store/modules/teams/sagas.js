@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoTeams } from '../../../services/demoData';
+import posthog from '../../../services/posthog';
 
 import { getTeamsSuccess, createTeamSuccess, closeTeamModal } from './actions';
 import { getProjectsRequest } from '../projects/actions';
@@ -34,6 +35,7 @@ export function* createTeam({ payload }) {
       const newTeam = { id: Date.now(), name, slug };
       yield put(createTeamSuccess(newTeam));
       yield put(closeTeamModal());
+      posthog.capture('team_created', { team_name: name });
       toast.showSuccess('Team created');
       return;
     }
@@ -42,6 +44,7 @@ export function* createTeam({ payload }) {
 
     yield put(createTeamSuccess(response.data));
     yield put(closeTeamModal());
+    posthog.capture('team_created', { team_name: name, team_id: response.data.id });
 
     toast.showSuccess('Team created');
   } catch (err) {
@@ -53,6 +56,7 @@ export function* selectActiveTeam({ payload }) {
   const { team } = payload;
 
   yield call([AsyncStorage, 'setItem'], '@Omni:team', JSON.stringify(team));
+  posthog.capture('team_switched', { team_id: team.id, team_name: team.name });
 
   yield put(getProjectsRequest());
 }
