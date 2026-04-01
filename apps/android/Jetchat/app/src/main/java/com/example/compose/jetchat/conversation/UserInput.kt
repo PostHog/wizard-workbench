@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -173,7 +174,12 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                 focusState = textFieldFocusState,
             )
             UserInputSelector(
-                onSelectorChange = { currentInputSelector = it },
+                onSelectorChange = { selector ->
+                    if (selector == InputSelector.EMOJI && currentInputSelector != InputSelector.EMOJI) {
+                        PostHog.capture(event = "emoji selector opened")
+                    }
+                    currentInputSelector = selector
+                },
                 sendMessageEnabled = textState.text.isNotBlank(),
                 onMessageSent = {
                     onMessageSent(textState.text)
@@ -446,10 +452,12 @@ private fun UserInputText(
             onStartRecording = {
                 val consumed = !isRecordingMessage
                 isRecordingMessage = true
+                PostHog.capture(event = "voice recording started")
                 consumed
             },
             onFinishRecording = {
                 // handle end of recording
+                PostHog.capture(event = "voice recording completed")
                 isRecordingMessage = false
             },
             onCancelRecording = {
