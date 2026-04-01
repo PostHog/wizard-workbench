@@ -2,6 +2,8 @@ import { checkoutAction } from '@/lib/payments/actions';
 import { Check } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { SubmitButton } from './submit-button';
+import { getUser } from '@/lib/db/queries';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 // Prices are fresh for one hour max
 export const revalidate = 3600;
@@ -11,6 +13,15 @@ export default async function PricingPage() {
     getStripePrices(),
     getStripeProducts(),
   ]);
+
+  const user = await getUser();
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: user?.email ?? 'anonymous',
+    event: 'pricing_page_viewed',
+    properties: { is_authenticated: !!user },
+  });
+  await posthog.shutdown();
 
   const basePlan = products.find((product) => product.name === 'Base');
   const plusPlan = products.find((product) => product.name === 'Plus');
