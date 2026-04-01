@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodos, createTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -32,6 +33,21 @@ export async function POST(request: NextRequest) {
       title: validatedData.title,
       description: validatedData.description,
       completed: validatedData.completed,
+    });
+
+    const distinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') ?? 'anonymous';
+    const sessionId = request.headers.get('X-POSTHOG-SESSION-ID');
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId,
+      event: 'todo_created',
+      properties: {
+        todo_id: newTodo.id,
+        todo_title: newTodo.title,
+        has_description: !!newTodo.description,
+        ...(sessionId ? { $session_id: sessionId } : {}),
+        source: 'api',
+      },
     });
 
     return NextResponse.json(newTodo, { status: 201 });
