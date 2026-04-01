@@ -3,6 +3,7 @@ import type { Route } from "./+types/products.$productId";
 import { getProductById } from "../data/products";
 import { useCart } from "../context/CartContext";
 import { useState } from "react";
+import { usePostHog } from "@posthog/react";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const productId = parseInt(params.productId);
@@ -19,11 +20,19 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
   const { product } = loaderData;
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
+  const posthog = usePostHog();
 
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
     }
+    posthog?.capture('product_added_to_cart', {
+      product_id: product.id,
+      product_name: product.name,
+      product_category: product.category,
+      product_price: product.price,
+      quantity,
+    });
   };
 
   return (
