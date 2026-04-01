@@ -5,10 +5,12 @@ const images = ref<Image[] | null>(null)
 const index = ref(0)
 
 const current = computed(() => images.value?.[index.value])
+const posthog = usePostHog()
 
 provideImageModal((img, idx) => {
   images.value = img
   index.value = idx
+  posthog?.capture('photo_viewed', { photo_count: img.length, photo_index: idx })
 })
 
 function prev() {
