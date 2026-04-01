@@ -15,6 +15,7 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
@@ -53,10 +54,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       throw new Error("User email not found");
     }
 
+    const posthog = (context as PostHogContext).posthog;
+
     const maybeUser =
       await retrieveUserAccountWithActiveMembershipsFromDatabaseByEmail(email);
 
     if (maybeUser) {
+      posthog?.identify(maybeUser.id, { email });
+      posthog?.capture({ event: "user_logged_in", properties: { email } });
       if (inviteLinkInfo || emailInviteInfo) {
         const organizationId =
           // biome-ignore lint/style/noNonNullAssertion: The is checked above
@@ -182,6 +187,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       email,
       supabaseUserId: user.id,
     });
+    posthog?.identify(userProfile.id, { email });
+    posthog?.capture({ event: "user_signed_up", properties: { email } });
 
     if (emailInviteInfo) {
       await acceptEmailInvite({

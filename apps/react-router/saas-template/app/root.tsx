@@ -1,6 +1,7 @@
 import "./app.css";
 
 import { FormOptionsProvider } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
@@ -32,6 +33,7 @@ import {
   localeCookie,
 } from "./features/localization/i18next-middleware.server";
 import { useToast } from "./hooks/use-toast";
+import { posthogMiddleware } from "./lib/posthog-middleware";
 import { cn } from "./lib/utils";
 import { ClientHintCheck, getHints } from "./utils/client-hints";
 import { combineHeaders } from "./utils/combine-headers.server";
@@ -63,7 +65,11 @@ export const shouldRevalidate = ({
   return defaultShouldRevalidate;
 };
 
-export const middleware = [securityMiddleware, i18nextMiddleware];
+export const middleware = [
+  securityMiddleware,
+  i18nextMiddleware,
+  posthogMiddleware,
+];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { colorScheme, honeypotInputProps, toastData } = await promiseHash({
@@ -190,6 +196,9 @@ export default function App({ loaderData: { locale } }: Route.ComponentProps) {
 }
 
 function BaseErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog();
+  posthog.captureException(error);
+
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
