@@ -1,4 +1,5 @@
 import uuid
+from posthog import new_context, identify_context, capture
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -70,6 +71,13 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('subscription_started', properties={
+                    'plan_slug': plan.slug,
+                    'plan_interval': plan.interval,
+                    'is_demo': True,
+                })
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -139,6 +147,13 @@ def change_plan(request, plan_slug):
             subscription.save()
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
+        with new_context():
+            identify_context(str(request.user.id))
+            capture('subscription_changed', properties={
+                'new_plan_slug': plan.slug,
+                'new_plan_interval': plan.interval,
+            })
+
         return redirect('billing:manage')
 
     return render(request, 'billing/change_plan.html', {
@@ -171,6 +186,13 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+
+        with new_context():
+            identify_context(str(request.user.id))
+            capture('subscription_cancelled', properties={
+                'plan_slug': subscription.plan.slug,
+            })
+
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -270,6 +292,13 @@ def _handle_checkout_completed(session):
         stripe_customer_id=stripe_sub['customer'],
     )
 
+    with new_context():
+        identify_context(str(user.id))
+        capture('checkout_completed', properties={
+            'plan_slug': plan.slug,
+            'plan_interval': plan.interval,
+        })
+
 
 def _handle_subscription_updated(subscription_data):
     """Update subscription status."""
@@ -323,5 +352,11 @@ def _handle_payment_failed(invoice):
         )
         subscription.status = 'past_due'
         subscription.save()
+
+        with new_context():
+            identify_context(str(subscription.user_id))
+            capture('payment_failed', properties={
+                'plan_slug': subscription.plan.slug,
+            })
     except Subscription.DoesNotExist:
         pass
