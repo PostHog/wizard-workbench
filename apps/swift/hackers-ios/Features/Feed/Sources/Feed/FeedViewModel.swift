@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -163,6 +164,12 @@ public final class FeedViewModel: @unchecked Sendable {
     public func vote(on post: Domain.Post, upvote: Bool) async throws {
         if upvote {
             try await voteUseCase.upvote(post: post)
+            // PostHog: Track post vote
+            PostHogSDK.shared.capture("post_voted", properties: [
+                "post_id": post.id,
+                "post_title": post.title,
+                "post_type": post.postType.rawValue,
+            ])
         }
         // Unvote removed; do nothing when upvote == false
     }
@@ -218,6 +225,12 @@ public final class FeedViewModel: @unchecked Sendable {
     public func changePostType(_ newType: Domain.PostType) async {
         guard postType != newType else { return }
 
+        // PostHog: Track feed category change
+        PostHogSDK.shared.capture("feed_category_changed", properties: [
+            "from_category": postType.rawValue,
+            "to_category": newType.rawValue,
+        ])
+
         postType = newType
         persistLastFeedCategoryIfNeeded()
         reset(clearPosts: true)  // Clear posts immediately to prevent flash of old data
@@ -257,6 +270,12 @@ public final class FeedViewModel: @unchecked Sendable {
     public func toggleBookmark(for post: Domain.Post) async -> Bool {
         let newState = await bookmarksController.toggle(post: post)
         await handleBookmarksUpdate(postId: post.id, isBookmarked: newState)
+        // PostHog: Track bookmark toggle
+        PostHogSDK.shared.capture("post_bookmarked", properties: [
+            "post_id": post.id,
+            "post_title": post.title,
+            "is_bookmarked": newState,
+        ])
         return newState
     }
 
@@ -311,6 +330,11 @@ public final class FeedViewModel: @unchecked Sendable {
                 await MainActor.run {
                     self.searchResults = annotated
                     self.isSearchInProgress = false
+                    // PostHog: Track search performed
+                    PostHogSDK.shared.capture("search_performed", properties: [
+                        "query": currentQuery,
+                        "result_count": annotated.count,
+                    ])
                 }
             } catch {
                 if Task.isCancelled { return }
