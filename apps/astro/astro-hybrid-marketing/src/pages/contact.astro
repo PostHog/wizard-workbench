@@ -65,11 +65,16 @@ import Layout from '../layouts/Layout.astro';
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
+    const sessionId = (window as any).posthog?.get_session_id?.() || null;
+    const distinctId = (window as any).posthog?.get_distinct_id?.() || null;
+
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(sessionId ? { 'X-PostHog-Session-Id': sessionId } : {}),
+          ...(distinctId ? { 'X-PostHog-Distinct-Id': distinctId } : {}),
         },
         body: JSON.stringify(data),
       });
@@ -79,14 +84,20 @@ import Layout from '../layouts/Layout.astro';
       if (response.ok) {
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
+        (window as any).posthog?.capture('contact_form_submitted', {
+          interest: data.interest,
+          has_company: !!data.company,
+        });
         form.reset();
       } else {
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
+        (window as any).posthog?.captureException(new Error(result.error || 'Contact form submission failed'));
       }
     } catch (error) {
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
+      (window as any).posthog?.captureException(error);
     }
   });
 </script>
