@@ -1,5 +1,11 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const app = new Hono();
 
@@ -47,6 +53,20 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  const distinctId = c.req.header('x-posthog-distinct-id') || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'link saved',
+    properties: {
+      link_id: link.id,
+      url: link.url,
+      title: link.title,
+      tags: link.tags,
+      has_description: link.description.length > 0,
+    },
+  });
+
   return c.json(link, 201);
 });
 
@@ -76,6 +96,28 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  const distinctId = c.req.header('x-posthog-distinct-id') || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'link updated',
+    properties: {
+      link_id: link.id,
+      fields_updated: Object.keys(body),
+    },
+  });
+
+  if (body.favorite === true) {
+    posthog.capture({
+      distinctId,
+      event: 'link favorited',
+      properties: {
+        link_id: link.id,
+        url: link.url,
+        title: link.title,
+      },
+    });
+  }
+
   return c.json(link);
 });
 
@@ -87,7 +129,20 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
+  const deleted = links[index];
   links.splice(index, 1);
+
+  const distinctId = c.req.header('x-posthog-distinct-id') || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'link deleted',
+    properties: {
+      link_id: deleted.id,
+      url: deleted.url,
+      title: deleted.title,
+    },
+  });
+
   return c.body(null, 204);
 });
 
@@ -102,8 +157,27 @@ app.get('/api/tags', (c) => {
   return c.json({ tags: tagCounts });
 });
 
+app.onError((err, c) => {
+  const distinctId = c.req.header('x-posthog-distinct-id') || 'anonymous';
+  posthog.captureException(err, distinctId, {
+    path: c.req.path,
+    method: c.req.method,
+  });
+  return c.json({ error: 'Internal server error' }, 500);
+});
+
 const PORT = process.env.PORT || 3002;
 
 serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Hono links API running on http://localhost:${PORT}`);
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
 });
