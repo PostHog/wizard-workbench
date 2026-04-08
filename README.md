@@ -79,6 +79,7 @@ cp .env.example .env
 | `WIZARD_PATH` | Yes | Path to your local wizard repo (e.g., `~/development/wizard`) |
 | `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key for wizard CI mode and PR evaluator |
 | `POSTHOG_REGION` | No | PostHog region (`us` or `eu`). Defaults to `us`. Can also be set via `--region` flag or workflow input. |
+| `POSTHOG_WIZARD_LOG_DIR` | No | Directory for wizard verbose logs. Wizard writes `posthog-wizard.log` inside this directory (defaults to `/tmp`). |
 
 Make sure you've set up and installed dependencies for all required repos.
 
@@ -108,7 +109,7 @@ Use keyboard shortcuts in phrocs: `r` to run/restart, `s` to stop, `q` to quit.
 | Process | Description |
 |---------|-------------|
 | `wizard-run` | Interactive app selector - choose which app to run wizard on |
-| `wizard-tail-run` | Tail the wizard's verbose output (`/tmp/posthog-wizard.log`) |
+| `wizard-tail-run` | Tail the wizard's verbose output (`$POSTHOG_WIZARD_LOG_DIR/posthog-wizard.log`, defaults to `/tmp/posthog-wizard.log`) |
 | `wizard-ci-run` | Full CI flow: run wizard, create PR, evaluate |
 | `wizard-ci-local-run` | CI flow with local evaluation (no PR) |
 | `wizard-ci-create-pr` | Push branch and create PR only (skip wizard run) |
