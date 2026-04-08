@@ -1,4 +1,5 @@
 import uuid
+from posthog import new_context, identify_context, capture
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -21,6 +22,18 @@ if STRIPE_CONFIGURED:
 def pricing(request):
     """Display pricing plans."""
     plans = Plan.objects.filter(is_active=True)
+
+    # PostHog: Track pricing page view (top of conversion funnel)
+    if request.user.is_authenticated:
+        user_id = str(request.user.id)
+    else:
+        user_id = 'anonymous'
+    with new_context():
+        identify_context(user_id)
+        capture('pricing_viewed', properties={
+            'plan_count': plans.count(),
+        })
+
     return render(request, 'billing/pricing.html', {'plans': plans})
 
 
@@ -70,6 +83,16 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+
+            # PostHog: Track subscription started (demo mode)
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('subscription_started', properties={
+                    'plan_name': plan.name,
+                    'plan_interval': plan.interval,
+                    'is_demo': True,
+                })
+
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -116,6 +139,7 @@ def change_plan(request, plan_slug):
         return redirect('billing:subscribe', plan_slug=plan_slug)
 
     if request.method == 'POST':
+        previous_plan_name = subscription.plan.name
         if STRIPE_CONFIGURED and subscription.stripe_subscription_id and not subscription.stripe_subscription_id.startswith('sub_demo_'):
             # Update Stripe subscription
             try:
@@ -138,6 +162,15 @@ def change_plan(request, plan_slug):
             subscription.plan = plan
             subscription.save()
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
+
+        # PostHog: Track plan change
+        with new_context():
+            identify_context(str(request.user.id))
+            capture('subscription_plan_changed', properties={
+                'previous_plan': previous_plan_name,
+                'new_plan': plan.name,
+                'new_plan_interval': plan.interval,
+            })
 
         return redirect('billing:manage')
 
@@ -171,6 +204,15 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+
+        # PostHog: Track subscription canceled
+        with new_context():
+            identify_context(str(request.user.id))
+            capture('subscription_canceled', properties={
+                'plan_name': subscription.plan.name,
+                'plan_interval': subscription.plan.interval,
+            })
+
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -270,6 +312,15 @@ def _handle_checkout_completed(session):
         stripe_customer_id=stripe_sub['customer'],
     )
 
+    # PostHog: Track subscription started via Stripe
+    with new_context():
+        identify_context(str(user.id))
+        capture('subscription_started', properties={
+            'plan_name': plan.name,
+            'plan_interval': plan.interval,
+            'is_demo': False,
+        })
+
 
 def _handle_subscription_updated(subscription_data):
     """Update subscription status."""
@@ -323,5 +374,13 @@ def _handle_payment_failed(invoice):
         )
         subscription.status = 'past_due'
         subscription.save()
+
+        # PostHog: Track payment failure
+        with new_context():
+            identify_context(str(subscription.user_id))
+            capture('payment_failed', properties={
+                'plan_name': subscription.plan.name,
+                'plan_interval': subscription.plan.interval,
+            })
     except Subscription.DoesNotExist:
         pass
