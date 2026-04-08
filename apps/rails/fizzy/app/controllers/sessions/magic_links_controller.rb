@@ -44,6 +44,19 @@ class Sessions::MagicLinksController < ApplicationController
       clear_pending_authentication_token
       start_new_session_for magic_link.identity
 
+      distinct_id = magic_link.identity.posthog_distinct_id
+
+      PostHog.identify(
+        distinct_id: distinct_id,
+        properties: { email: magic_link.identity.email_address }
+      )
+
+      PostHog.capture(
+        distinct_id: distinct_id,
+        event: "user_logged_in",
+        properties: { login_method: "magic_link", is_new_user: requires_signup_completion?(magic_link) }
+      )
+
       respond_to do |format|
         format.html { redirect_to after_sign_in_url(magic_link) }
         format.json { render json: { session_token: session_token, requires_signup_completion: requires_signup_completion?(magic_link) } }

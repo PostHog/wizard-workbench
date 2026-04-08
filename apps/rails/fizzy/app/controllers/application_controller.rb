@@ -10,4 +10,10 @@ class ApplicationController < ActionController::Base
   etag { "v1" }
   stale_when_importmap_changes
   allow_browser versions: :modern
+
+  private
+    # Alias for posthog-rails which calls current_user_method to get the user context.
+    def current_user
+      Current.user
+    end
 end
