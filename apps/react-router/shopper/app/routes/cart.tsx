@@ -1,15 +1,45 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useCart, type CartItem } from "../context/CartContext";
+import { usePostHog } from "@posthog/react";
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
+  const posthog = usePostHog();
+  const navigate = useNavigate();
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+    posthog?.capture("cart_item_removed", {
+      product_id: item.id,
+      product_name: item.name,
+      product_category: item.category,
+      product_price: item.price,
+      quantity_removed: item.quantity,
+    });
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+    posthog?.capture("cart_quantity_updated", {
+      product_id: item.id,
+      product_name: item.name,
+      old_quantity: item.quantity,
+      new_quantity: newQuantity,
+    });
+  };
+
+  const handleCheckout = () => {
+    posthog?.capture("checkout_started", {
+      cart_total: getCartTotal(),
+      cart_item_count: cart.reduce((sum, item) => sum + item.quantity, 0),
+      items: cart.map((item) => ({
+        product_id: item.id,
+        product_name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    });
+    navigate("/checkout");
   };
 
   if (cart.length === 0) {
@@ -152,12 +182,12 @@ export default function Cart() {
               </div>
             </div>
 
-            <Link
-              to="/checkout"
+            <button
+              onClick={handleCheckout}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout
-            </Link>
+            </button>
 
             <Link
               to="/products"
