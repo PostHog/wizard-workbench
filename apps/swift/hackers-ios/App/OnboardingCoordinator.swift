@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Onboarding
+import PostHog
 import SwiftUI
 
 @MainActor
@@ -26,6 +27,8 @@ final class OnboardingCoordinator {
 
     func markOnboardingShown() {
         onboardingUseCase.markOnboardingShown(for: appVersion)
+        // PostHog: Track onboarding completion
+        PostHogSDK.shared.capture("onboarding_completed", properties: ["app_version": appVersion])
     }
 
     func makeOnboardingView(onDismiss: @escaping () -> Void) -> some View {
