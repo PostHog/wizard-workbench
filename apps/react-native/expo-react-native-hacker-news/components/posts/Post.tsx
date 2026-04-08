@@ -14,6 +14,7 @@ import { Link2, MessageSquareText } from "lucide-react-native";
 
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { posthog } from "@/src/config/posthog";
 
 export const Post = ({ id, title, url, score, text, kids }: Item) => {
   const QC = useQueryClient();
@@ -23,6 +24,12 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
   }, [text]);
 
   const navigateToDetails = async () => {
+    posthog.capture("post_opened", {
+      post_id: id,
+      post_title: title,
+      comment_count: kids?.length || 0,
+      score,
+    });
     await QC.prefetchQuery({
       queryKey: getItemDetailsQueryKey(id),
       queryFn: getItemQueryFn,
@@ -34,8 +41,14 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
-          if (isExternal) Linking.openURL(url);
-          else await navigateToDetails();
+          if (isExternal) {
+            posthog.capture("post_external_link_opened", {
+              post_id: id,
+              post_title: title,
+              url,
+            });
+            Linking.openURL(url);
+          } else await navigateToDetails();
         }}
       >
         <Text style={{ color: "black", fontSize: 20, fontWeight: 500 }}>
