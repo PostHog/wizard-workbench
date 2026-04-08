@@ -15,6 +15,7 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
@@ -56,7 +57,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const maybeUser =
       await retrieveUserAccountWithActiveMembershipsFromDatabaseByEmail(email);
 
+    const posthog = context.get(posthogContext);
+
     if (maybeUser) {
+      posthog?.capture({
+        distinctId: maybeUser.id,
+        event: "user logged in",
+        properties: { email, method: "google" },
+      });
+
       if (inviteLinkInfo || emailInviteInfo) {
         const organizationId =
           // biome-ignore lint/style/noNonNullAssertion: The is checked above
@@ -181,6 +190,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const userProfile = await saveUserAccountToDatabase({
       email,
       supabaseUserId: user.id,
+    });
+
+    posthog?.capture({
+      distinctId: userProfile.id,
+      event: "user signed up",
+      properties: { email, method: "google" },
     });
 
     if (emailInviteInfo) {
