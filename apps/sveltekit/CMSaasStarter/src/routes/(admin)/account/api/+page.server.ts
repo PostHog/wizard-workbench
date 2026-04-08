@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -172,6 +173,14 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user?.id ?? "unknown",
+      event: "password_changed",
+      properties: { is_recovery_session: isRecoverySession ?? false },
+    })
+    await posthog.flush()
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +229,13 @@ export const actions = {
         currentPassword,
       })
     }
+
+    const posthogDelete = getPostHogClient()
+    posthogDelete.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+    })
+    await posthogDelete.flush()
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -321,6 +337,18 @@ export const actions = {
         },
       })
     }
+
+    const posthogProfile = getPostHogClient()
+    const profileEvent = newProfile ? "profile_created" : "profile_updated"
+    posthogProfile.capture({
+      distinctId: user.id,
+      event: profileEvent,
+      properties: {
+        company_name: companyName,
+        has_website: !!website,
+      },
+    })
+    await posthogProfile.flush()
 
     return {
       fullName,
