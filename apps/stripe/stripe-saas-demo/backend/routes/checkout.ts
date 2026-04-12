@@ -23,6 +23,7 @@ checkoutRouter.post("/", async (req, res) => {
       cancel_url: `${frontendUrl}/?canceled=true`,
       client_reference_id: userId,
       customer_email: customerEmail,
+      metadata: { posthog_person_distinct_id: userId || customerEmail },
     });
 
     res.json({ url: session.url });
