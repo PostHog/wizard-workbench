@@ -4,6 +4,11 @@ class Cards::TriagesController < ApplicationController
   def create
     column = @card.board.columns.find(params[:column_id])
     @card.triage_into(column)
+    PostHog.capture(
+      distinct_id: Current.identity.posthog_distinct_id,
+      event: "card_triaged",
+      properties: { card_id: @card.id, board_id: @card.board_id, column_id: column.id, column_name: column.name }
+    )
 
     respond_to do |format|
       format.html { redirect_to @card }

@@ -20,6 +20,10 @@ class Identity < ApplicationRecord
     end
   end
 
+  def posthog_distinct_id
+    email_address
+  end
+
   def send_magic_link(**attributes)
     attributes[:purpose] = attributes.delete(:for) if attributes.key?(:for)
 
