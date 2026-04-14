@@ -159,6 +159,8 @@ export interface WizardOptions {
   ci?: boolean;
   region?: "us" | "eu";
   apiKey?: string;
+  command?: string;
+  skillId?: string;
 }
 
 /**
@@ -178,8 +180,15 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
     });
   }
 
-  // Build wizard args
-  const args = [wizardBin, "--local-mcp"];
+  // Build wizard args — subcommand (e.g. 'revenue') must come before flags
+  const args = [wizardBin];
+  if (options.command) {
+    args.push(options.command);
+  }
+  if (options.skillId) {
+    args.push(`--skill=${options.skillId}`);
+  }
+  args.push("--local-mcp");
 
   if (options.ci) {
     // Validate CI mode requirements - read from options first, then env vars, with fallback

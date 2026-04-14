@@ -1,0 +1,21 @@
+{
+  "name": "stripe-saas-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsx watch server.ts",
+    "setup": "tsx setup.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "posthog-node": "^5.29.0",
+    "stripe": "^17.5.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

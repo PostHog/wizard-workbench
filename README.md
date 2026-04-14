@@ -32,11 +32,16 @@ The `services/` directory is a toolbox for scripts and utilities to help with Wi
 
 ```
 services/
-├── pr-evaluator/    # AI-powered code evaluation for PRs and branches
-├── wizard-ci/       # Automated wizard runs with PR creation
-├── wizard-run/      # Interactive wizard runner
-└── github/          # GitHub/git utilities
+├── pr-evaluator/     # AI-powered code evaluation for PRs and branches
+├── wizard-ci/        # Automated wizard runs with PR creation
+├── wizard-run/       # Interactive wizard runner
+├── wizard-commands.ts # Registry of wizard commands (integration, revenue, …)
+└── github/           # GitHub/git utilities
 ```
+
+Adding a new wizard command to the pickers: append an entry to
+`services/wizard-commands.ts`. All runners (`wizard-run`, `wizard-ci`,
+`wizard-benchmark`) read from that registry and pick it up automatically.
 
 ---
 
@@ -108,7 +113,7 @@ Use keyboard shortcuts in phrocs: `r` to run/restart, `s` to stop, `q` to quit.
 
 | Process | Description |
 |---------|-------------|
-| `wizard-run` | Interactive app selector - choose which app to run wizard on |
+| `wizard-run` | Interactive picker: choose a wizard command (`posthog-wizard`, `posthog-wizard revenue`, …) then an app |
 | `wizard-tail-run` | Tail the wizard's verbose output (`$POSTHOG_WIZARD_LOG_DIR/posthog-wizard.log`, defaults to `/tmp/posthog-wizard.log`) |
 | `wizard-ci-run` | Full CI flow: run wizard, create PR, evaluate |
 | `wizard-ci-local-run` | CI flow with local evaluation (no PR) |
