@@ -40,6 +40,7 @@ import { deleteStripeSubscriptionScheduleFromDatabaseById } from "./stripe-subsc
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/organizations_+/$organizationSlug+/settings+/+types/billing";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { OrganizationMembershipRole } from "~/generated/client";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
@@ -81,6 +82,7 @@ export async function billingAction({
     }
 
     const baseUrl = extractBaseUrl(requestToUrl(request));
+    const posthog = context.get(posthogContext);
 
     switch (body.intent) {
       case CANCEL_SUBSCRIPTION_INTENT: {
@@ -97,6 +99,12 @@ export async function billingAction({
           customerId: organization.stripeCustomerId,
           organizationSlug: params.organizationSlug,
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
+        });
+
+        posthog?.capture({
+          distinctId: user.email,
+          event: "subscription_cancelled",
+          properties: { organization_id: organization.id },
         });
 
         return redirect(cancelSession.url);
@@ -159,6 +167,15 @@ export async function billingAction({
           seatsUsed: organization._count.memberships,
         });
 
+        posthog?.capture({
+          distinctId: user.email,
+          event: "subscription_checkout_started",
+          properties: {
+            lookup_key: body.lookupKey,
+            organization_id: organization.id,
+          },
+        });
+
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
         return redirect(checkoutSession.url!);
       }
@@ -187,6 +204,12 @@ export async function billingAction({
             subscription: { cancelAtPeriodEnd: false },
           });
         }
+
+        posthog?.capture({
+          distinctId: user.email,
+          event: "subscription_resumed",
+          properties: { organization_id: organization.id },
+        });
 
         const toast = await createToastHeaders({
           title: i18n.t(

@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
@@ -42,6 +43,7 @@ export function CreateSubscriptionModalContent({
   currentSeats,
   planLimits,
 }: CreateSubscriptionModalContentProps) {
+  const posthog = usePostHog();
   const { t } = useTranslation("billing", { keyPrefix: "pricing" });
   const { t: tModal } = useTranslation("billing", {
     keyPrefix: "noCurrentPlanModal",
@@ -106,8 +108,17 @@ export function CreateSubscriptionModalContent({
     (tier) => planLimits[tier] < currentSeats,
   );
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const form = e.currentTarget;
+    const lookupKey = form.lookupKey?.value as string | undefined;
+    posthog?.capture("pricing_plan_clicked", {
+      billing_period: billingPeriod,
+      lookup_key: lookupKey,
+    });
+  };
+
   return (
-    <Form method="post" replace>
+    <Form method="post" onSubmit={handleSubmit} replace>
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>

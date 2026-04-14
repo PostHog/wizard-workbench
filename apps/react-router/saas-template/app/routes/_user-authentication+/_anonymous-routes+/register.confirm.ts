@@ -10,6 +10,7 @@ import {
 } from "~/features/organizations/organizations-helpers.server";
 import { saveUserAccountToDatabase } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
@@ -39,10 +40,18 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     throw new Error("User not found");
   }
 
+  const posthog = context.get(posthogContext);
+
   try {
     const userAccount = await saveUserAccountToDatabase({
       email: user.email,
       supabaseUserId: user.id,
+    });
+
+    posthog?.capture({
+      distinctId: user.email,
+      event: "user_signed_up",
+      properties: { email: user.email },
     });
 
     const i18n = getInstance(context);
