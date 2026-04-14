@@ -167,9 +167,6 @@ async function getDocsMap(): Promise<Record<string, string[]>> {
   return _docsMap;
 }
 
-const MAX_DOC_CHARS = 15_000;
-const MAX_TOTAL_DOCS_CHARS = 50_000;
-
 /** Strip HTML tags and collapse whitespace to extract text content */
 function stripHtml(html: string): string {
   const sanitized = sanitizeHtml(html, {
@@ -193,13 +190,6 @@ async function fetchDocContent(url: string): Promise<string | null> {
     const contentType = response.headers.get("content-type") || "";
     if (contentType.includes("text/html") || content.trimStart().startsWith("<!") || content.trimStart().startsWith("<html")) {
       content = stripHtml(content);
-    }
-
-    // Truncate individual doc at newline boundary
-    if (content.length > MAX_DOC_CHARS) {
-      const cutAt = content.lastIndexOf("\n", MAX_DOC_CHARS);
-      const safeCut = cutAt > 0 ? cutAt : MAX_DOC_CHARS;
-      content = content.substring(0, safeCut) + "\n\n[doc truncated at 15k chars]";
     }
 
     return content;
@@ -234,20 +224,7 @@ async function fetchDocsForTags(tags: string[]): Promise<{ url: string; content:
     })
   );
 
-  // Cap total docs size to avoid blowing up the system prompt
-  const docs: { url: string; content: string }[] = [];
-  let totalChars = 0;
-  for (const r of results) {
-    if (!r) continue;
-    if (totalChars + r.content.length > MAX_TOTAL_DOCS_CHARS) {
-      console.warn(`Docs truncated: ${totalChars + r.content.length} chars would exceed ${MAX_TOTAL_DOCS_CHARS} cap, skipping remaining docs`);
-      break;
-    }
-    docs.push(r);
-    totalChars += r.content.length;
-  }
-
-  return docs;
+  return results.filter((r): r is { url: string; content: string } => r !== null);
 }
 
 // Detect frameworks from PR file paths and dependency file patches (NOT full diff — avoids false positives)
