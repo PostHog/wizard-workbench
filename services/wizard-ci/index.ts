@@ -574,10 +574,16 @@ async function runCI(
     }
     console.log();
 
-    const confirm = await prompt("      Proceed with git restore? (y/n): ");
-    if (confirm.toLowerCase() !== "y") {
-      console.log("      Skipped\n");
-      return false;
+    // Non-TTY (CI): auto-proceed. CI starts from a clean checkout, so any
+    // stray files here are transient and should be reset without blocking.
+    if (process.stdin.isTTY) {
+      const confirm = await prompt("      Proceed with git restore? (y/n): ");
+      if (confirm.toLowerCase() !== "y") {
+        console.log("      Skipped\n");
+        return false;
+      }
+    } else {
+      console.log("      Non-TTY: auto-proceeding with git restore\n");
     }
   } else {
     console.log("      No uncommitted changes in app\n");
@@ -815,10 +821,17 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Determine which command to run
-  const command = opts.command
-    ? resolveCommandOpt(opts.command)
-    : await selectCommand();
+  // Determine which command to run. Interactive prompt is only for human
+  // TTY usage — CI (no TTY) must fall through to the default ciCapable
+  // command, never hang on a select prompt.
+  let command: WizardCommand;
+  if (opts.command) {
+    command = resolveCommandOpt(opts.command);
+  } else if (process.stdin.isTTY) {
+    command = await selectCommand();
+  } else {
+    command = resolveCommandOpt(undefined);
+  }
 
   // Determine which app to test
   let target: App;
@@ -831,8 +844,11 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     target = app;
-  } else {
+  } else if (process.stdin.isTTY) {
     target = await selectApp(apps);
+  } else {
+    console.error("Error: --app is required in non-interactive mode");
+    process.exit(1);
   }
 
   // Generate or use provided trigger ID
