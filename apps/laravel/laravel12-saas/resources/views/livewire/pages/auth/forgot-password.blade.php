@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Password;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -31,6 +32,8 @@ new #[Layout('layouts.guest')] class extends Component
         }
 
         $this->reset('email');
+
+        PostHogService::capture('anonymous_' . request()->ip(), 'password_reset_requested');
 
         session()->flash('status', __($status));
     }

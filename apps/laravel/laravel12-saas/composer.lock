@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0275185749fcbdf020b24729821224d6",
+    "content-hash": "8ee35c385912b50f9a16c93aa4a01fab",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -5059,6 +5059,60 @@
                 }
             ],
             "time": "2025-12-15T11:51:42+00:00"
+        },
+        {
+            "name": "posthog/posthog-php",
+            "version": "3.7.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PostHog/posthog-php.git",
+                "reference": "bb7e317da1c35eaa523d9e80c76d4d86bf5067df"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PostHog/posthog-php/zipball/bb7e317da1c35eaa523d9e80c76d4d86bf5067df",
+                "reference": "bb7e317da1c35eaa523d9e80c76d4d86bf5067df",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "php": ">=8.0"
+            },
+            "require-dev": {
+                "overtrue/phplint": "^3.0",
+                "phpunit/phpunit": "^9.0",
+                "slope-it/clock-mock": "^0.4.0",
+                "squizlabs/php_codesniffer": "^3.7"
+            },
+            "bin": [
+                "bin/posthog"
+            ],
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "PostHog\\": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PostHog <hey@posthog.com>",
+                    "homepage": "https://posthog.com/"
+                }
+            ],
+            "description": "PostHog PHP Library",
+            "homepage": "https://github.com/PostHog/posthog-php",
+            "keywords": [
+                "posthog"
+            ],
+            "support": {
+                "issues": "https://github.com/PostHog/posthog-php/issues",
+                "source": "https://github.com/PostHog/posthog-php/tree/3.7.3"
+            },
+            "time": "2025-12-04T19:45:37+00:00"
         },
         {
             "name": "pragmarx/google2fa",
