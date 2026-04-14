@@ -5,9 +5,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from posthog import identify_context, new_context, set_context_session
+from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.analytics import posthog_client
 from app.config import get_settings
 from app.database import init_db
+from app.dependencies import get_session_user_id
 from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
 
 settings = get_settings()
@@ -22,12 +26,41 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    # Flush PostHog events before shutdown
+    posthog_client.flush()
+
+
+class PostHogMiddleware(BaseHTTPMiddleware):
+    """Middleware that wraps each request in a PostHog context."""
+
+    async def dispatch(self, request: Request, call_next):
+        with new_context():
+            # Identify user from session cookie
+            session_token = request.cookies.get("session_token")
+            if session_token:
+                user_id = get_session_user_id(session_token)
+                if user_id is not None:
+                    identify_context(str(user_id))
+
+            # Correlate with frontend PostHog session if headers are present
+            frontend_distinct_id = request.headers.get("X-POSTHOG-DISTINCT-ID")
+            frontend_session_id = request.headers.get("X-POSTHOG-SESSION-ID")
+            if frontend_distinct_id:
+                identify_context(frontend_distinct_id)
+            if frontend_session_id:
+                set_context_session(frontend_session_id)
+
+            response = await call_next(request)
+        return response
+
 
 app = FastAPI(
     title=settings.app_name,
     description="AI content generation platform",
     lifespan=lifespan,
 )
+
+app.add_middleware(PostHogMiddleware)
 
 # Include routers
 app.include_router(auth.router)
