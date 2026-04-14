@@ -8,5 +8,7 @@
     "start": "node index.js",
     "dev": "node --watch index.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "posthog-node": "^5.29.2"
+  }
 }
