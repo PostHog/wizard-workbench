@@ -55,12 +55,13 @@ const PLUGIN_NAMES = [
 ] as const;
 
 function defaultConfig(): BenchmarkConfig {
+  const logDir = process.env.POSTHOG_WIZARD_LOG_DIR || "/tmp";
   return {
     plugins: Object.fromEntries(PLUGIN_NAMES.map((p) => [p, true])),
     output: {
       benchmarkPath: "/tmp/posthog-wizard-benchmark.json",
       benchmarkEnabled: true,
-      logPath: "/tmp/posthog-wizard.log",
+      logPath: join(logDir, "posthog-wizard.log"),
       logEnabled: true,
       suppressWizardLogs: false,
     },
