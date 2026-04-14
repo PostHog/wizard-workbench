@@ -16,6 +16,11 @@ on:
         required: false
         type: string
         default: ''
+      command:
+        description: 'Wizard command id (e.g., "revenue"). Empty = first ciCapable command (default integration).'
+        required: false
+        type: string
+        default: ''
       evaluate:
         description: 'Run PR evaluator'
         type: boolean
@@ -85,6 +90,7 @@ jobs:
       input_source_repo: ${{ steps.resolve-inputs.outputs.source_repo }}
       input_source_pr_number: ${{ steps.resolve-inputs.outputs.source_pr_number }}
       input_source_pr_url: ${{ steps.resolve-inputs.outputs.source_pr_url }}
+      input_command: ${{ steps.resolve-inputs.outputs.command }}
 
     steps:
       - name: Resolve inputs
@@ -105,7 +111,9 @@ jobs:
           CP_SOURCE_REPO: ${{ github.event.client_payload.source_repo }}
           CP_SOURCE_PR_NUMBER: ${{ github.event.client_payload.source_pr_number }}
           CP_SOURCE_PR_URL: ${{ github.event.client_payload.source_pr_url }}
+          CP_COMMAND: ${{ github.event.client_payload.command }}
           INPUT_APP: ${{ inputs.app }}
+          INPUT_COMMAND: ${{ inputs.command }}
           INPUT_EVALUATE: ${{ inputs.evaluate }}
           INPUT_BASE_BRANCH: ${{ inputs.base_branch }}
           INPUT_WIZARD_REF: ${{ inputs.wizard_ref }}
@@ -130,6 +138,7 @@ jobs:
             SOURCE_REPO=""
             SOURCE_PR_NUMBER=""
             SOURCE_PR_URL=""
+            COMMAND=""
           elif [ "$EVENT_NAME" = "repository_dispatch" ]; then
             APP="${CP_APP:-all}"
             EVALUATE="${CP_EVALUATE:-true}"
@@ -150,6 +159,7 @@ jobs:
             SOURCE_REPO="${CP_SOURCE_REPO:-}"
             SOURCE_PR_NUMBER="${CP_SOURCE_PR_NUMBER:-}"
             SOURCE_PR_URL="${CP_SOURCE_PR_URL:-}"
+            COMMAND="${CP_COMMAND:-}"
           else
             APP="${INPUT_APP:-all}"
             EVALUATE="${INPUT_EVALUATE:-true}"
@@ -165,6 +175,7 @@ jobs:
             SOURCE_REPO=""
             SOURCE_PR_NUMBER=""
             SOURCE_PR_URL=""
+            COMMAND="${INPUT_COMMAND:-}"
           fi
 
           echo "app=$APP" >> $GITHUB_OUTPUT
@@ -181,9 +192,11 @@ jobs:
           echo "source_repo=$SOURCE_REPO" >> $GITHUB_OUTPUT
           echo "source_pr_number=$SOURCE_PR_NUMBER" >> $GITHUB_OUTPUT
           echo "source_pr_url=$SOURCE_PR_URL" >> $GITHUB_OUTPUT
+          echo "command=$COMMAND" >> $GITHUB_OUTPUT
 
           echo "Resolved inputs:"
           echo "  app: $APP"
+          echo "  command: ${COMMAND:-<default>}"
           echo "  evaluate: $EVALUATE"
           echo "  base_branch: $BASE_BRANCH"
           echo "  wizard_ref: $WIZARD_REF"
@@ -601,6 +614,9 @@ jobs:
         continue-on-error: true
         run: |
           CMD_ARGS=(pnpm wizard-ci --app "$MATRIX_APP" --base "$INPUT_BASE_BRANCH")
+          if [ -n "$INPUT_COMMAND" ]; then
+            CMD_ARGS+=(--command "$INPUT_COMMAND")
+          fi
           if [ -n "$TRIGGER_ID" ]; then
             CMD_ARGS+=(--trigger-id "$TRIGGER_ID")
           fi
@@ -611,6 +627,7 @@ jobs:
         env:
           MATRIX_APP: ${{ matrix.app }}
           INPUT_BASE_BRANCH: ${{ needs.discover.outputs.input_base_branch }}
+          INPUT_COMMAND: ${{ needs.discover.outputs.input_command }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
           INPUT_EVALUATE: ${{ needs.discover.outputs.input_evaluate }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}

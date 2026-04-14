@@ -360,9 +360,16 @@ export interface EvaluateResult {
 /**
  * Run pr-evaluator on a PR
  */
-export function runEvaluator(prNumber: number): Promise<EvaluateResult> {
+export function runEvaluator(
+  prNumber: number,
+  options: { command?: string } = {},
+): Promise<EvaluateResult> {
   return new Promise((resolve) => {
-    const child = spawn("pnpm", ["run", "evaluate", "--pr", String(prNumber)], {
+    const args = ["run", "evaluate", "--pr", String(prNumber)];
+    if (options.command) {
+      args.push("--command", options.command);
+    }
+    const child = spawn("pnpm", args, {
       cwd: process.cwd(),
       stdio: "inherit",
       env: process.env,
@@ -388,6 +395,7 @@ export interface EvaluateOnBranchOptions {
   branch: string;
   baseBranch?: string;
   testRunName?: string;
+  command?: string;
 }
 
 /**
@@ -404,6 +412,10 @@ export function runEvaluatorOnBranch(options: EvaluateOnBranchOptions): Promise<
 
     if (options.testRunName) {
       args.push("--test-run", options.testRunName);
+    }
+
+    if (options.command) {
+      args.push("--command", options.command);
     }
 
     const child = spawn("pnpm", args, {

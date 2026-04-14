@@ -152,14 +152,14 @@ interface EvaluationInfo {
   prUrl?: string;
 }
 
-async function runEvaluation(prUrl: string): Promise<EvaluationInfo> {
+async function runEvaluation(prUrl: string, commandId?: string): Promise<EvaluationInfo> {
   const prNumber = extractPRNumber(prUrl);
   if (!prNumber) {
     console.warn(`      Could not extract PR number from URL: ${prUrl}\n`);
     return { success: false };
   }
   console.log(`      PR #${prNumber}\n`);
-  const evalResult = await runEvaluator(prNumber);
+  const evalResult = await runEvaluator(prNumber, { command: commandId });
   if (!evalResult.success) {
     console.warn(`      Evaluation failed: ${evalResult.error}\n`);
     return { success: false, prNumber, prUrl };
@@ -176,12 +176,18 @@ interface LocalEvaluationInfo {
   testRunDir?: string;
 }
 
-async function runLocalEvaluation(branch: string, baseBranch: string, testRunName?: string): Promise<LocalEvaluationInfo> {
+async function runLocalEvaluation(
+  branch: string,
+  baseBranch: string,
+  testRunName?: string,
+  commandId?: string,
+): Promise<LocalEvaluationInfo> {
   console.log(`      Branch: ${branch} (base: ${baseBranch})\n`);
   const evalResult = await runEvaluatorOnBranch({
     branch,
     baseBranch,
     testRunName,
+    command: commandId,
   });
   const testRunDir = testRunName ? `test-evaluations/${testRunName}` : undefined;
   if (!evalResult.success) {
@@ -520,7 +526,7 @@ async function pushOnlyMode(opts: Options): Promise<void> {
   let evalInfo: EvaluationInfo | undefined;
   if (opts.evaluate && result.prUrl) {
     console.log("[3/3] Running PR evaluation...");
-    evalInfo = await runEvaluation(result.prUrl);
+    evalInfo = await runEvaluation(result.prUrl, opts.command);
   }
 
   if (opts.deleteBranch) {
@@ -658,7 +664,7 @@ async function runCI(
       // Run evaluation on the branch
       console.log("[5/5] Running local evaluation (test-run mode)...");
       const testRunName = `local-${triggerId}-${app.name.replace(/\//g, "-")}`;
-      const evalInfo = await runLocalEvaluation(branchName, opts.base, testRunName);
+      const evalInfo = await runLocalEvaluation(branchName, opts.base, testRunName, command.id);
 
       // Return to original branch
       checkout(repoRoot, originalBranch);
@@ -760,7 +766,7 @@ async function runCI(
   let evalInfo: EvaluationInfo | undefined;
   if (opts.evaluate && prResult.prUrl) {
     console.log("[6/6] Running PR evaluation...");
-    evalInfo = await runEvaluation(prResult.prUrl);
+    evalInfo = await runEvaluation(prResult.prUrl, command.id);
   }
 
   if (opts.deleteBranch) {

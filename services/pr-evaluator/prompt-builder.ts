@@ -11,7 +11,20 @@ const __dirname = dirname(__filename);
 // Load prompt templates from .md files in explicit order
 const TASK_PROMPT = readFileSync(join(__dirname, "prompts/task.md"), "utf-8").trim();
 const EVALUATION_CRITERIA = readFileSync(join(__dirname, "prompts/evaluation.md"), "utf-8").trim();
+const EVALUATION_CRITERIA_REVENUE = readFileSync(
+  join(__dirname, "prompts/evaluation-revenue.md"),
+  "utf-8",
+).trim();
 const OUTPUT_FORMAT = readFileSync(join(__dirname, "prompts/output-format.md"), "utf-8").trim();
+const OUTPUT_FORMAT_REVENUE = readFileSync(
+  join(__dirname, "prompts/output-format-revenue.md"),
+  "utf-8",
+).trim();
+
+/** Per-command prompt overrides. Extend when a new command gets its own rubric. */
+const PROMPTS_BY_COMMAND: Record<string, { rubric: string; outputFormat: string }> = {
+  revenue: { rubric: EVALUATION_CRITERIA_REVENUE, outputFormat: OUTPUT_FORMAT_REVENUE },
+};
 
 // Commandments loading: fetch from GitHub > COMMANDMENTS_PATH env var > vendored fallback
 const VENDORED_COMMANDMENTS = join(__dirname, "prompts/commandments.yaml");
@@ -310,8 +323,22 @@ export function detectArchType(tags: string[]): "server-only" | "client-only" | 
   return "full-stack";
 }
 
-export async function buildSystemPrompt(prData?: PRData): Promise<string> {
-  const base = [TASK_PROMPT, EVALUATION_CRITERIA, OUTPUT_FORMAT];
+export async function buildSystemPrompt(
+  prData?: PRData,
+  options: { command?: string } = {},
+): Promise<string> {
+  const commandId = options.command;
+  const override = commandId ? PROMPTS_BY_COMMAND[commandId] : undefined;
+  const rubric = override?.rubric ?? EVALUATION_CRITERIA;
+  const outputFormat = override?.outputFormat ?? OUTPUT_FORMAT;
+
+  const base: string[] = [TASK_PROMPT];
+  if (commandId && commandId !== "default") {
+    base.push(
+      `You are evaluating a PR produced by the **${commandId}** wizard command, not the default PostHog integration. Score against the ${commandId}-specific rubric below.`,
+    );
+  }
+  base.push(rubric, outputFormat);
 
   if (prData) {
     const tags = detectFramework(prData);
