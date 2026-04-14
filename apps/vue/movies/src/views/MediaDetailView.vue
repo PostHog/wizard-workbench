@@ -6,6 +6,7 @@ import { getMedia, getRecommendations } from '../composables/useTMDB'
 import { formatTime, formatVote, getTrailer } from '../composables/utils'
 import MediaCard from '../components/media/MediaCard.vue'
 import CarouselBase from '../components/carousel/CarouselBase.vue'
+import posthog from 'posthog-js'
 
 console.log('MediaDetailView component loaded')
 
@@ -71,11 +72,18 @@ async function loadMedia() {
     title: type.value === 'movie' ? 'Loading...' : undefined,
     name: type.value === 'tv' ? 'Loading...' : undefined,
   }
-  
+
   try {
     const media = await getMedia(type.value as any, id.value)
     item.value = media
-    
+
+    posthog.capture('media_detail_viewed', {
+      media_id: media.id,
+      media_type: type.value,
+      media_title: media.title || media.name,
+      release_year: (media.release_date || media.first_air_date)?.slice(0, 4),
+    })
+
     try {
       const recs = await getRecommendations(type.value as any, id.value, 1)
       recommendations.value = recs.results || []
@@ -85,6 +93,7 @@ async function loadMedia() {
   } catch (error) {
     // Keep fake data if real data fails
     console.error('Error loading media:', error)
+    posthog.captureException(error)
   } finally {
     loading.value = false
   }
@@ -102,6 +111,11 @@ watch(() => route.fullPath, () => {
 function playTrailer() {
   if (trailerUrl.value) {
     showModal.value = true
+    posthog.capture('trailer_played', {
+      media_id: item.value?.id,
+      media_type: type.value,
+      media_title: item.value?.title || item.value?.name,
+    })
   }
 }
 
@@ -112,11 +126,11 @@ function closeModal() {
 
 <template>
   <div class="min-h-screen bg-black text-white">
-    
+
     <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
       <div class="text-xl">Loading media data...</div>
     </div>
-    
+
     <div v-else-if="!item" class="flex flex-col items-center justify-center min-h-[400px] p-10">
       <div class="text-2xl mb-4">Failed to load media</div>
       <div class="text-gray-400 mb-4">Type: {{ type.value }} | ID: {{ id }}</div>
@@ -127,7 +141,7 @@ function closeModal() {
         Retry
       </button>
     </div>
-    
+
     <div v-else class="pb-10">
     <!-- Hero Section -->
     <div class="relative aspect-[3/2] lg:aspect-[25/9] bg-black min-h-[400px]">

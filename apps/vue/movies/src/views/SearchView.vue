@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { searchShows } from '../composables/useTMDB'
 import type { Media } from '../types'
 import MediaCard from '../components/media/MediaCard.vue'
+import posthog from 'posthog-js'
 
 const route = useRoute()
 const query = ref('')
@@ -19,12 +20,17 @@ const search = async () => {
   loading.value = true
   try {
     const response = await searchShows(query.value, 1)
-    results.value = response.results.filter((item: Media) => 
+    results.value = response.results.filter((item: Media) =>
       item.media_type === 'movie' || item.media_type === 'tv'
     ) as Media[]
+    posthog.capture('search_performed', {
+      query: query.value,
+      result_count: results.value.length,
+    })
   } catch (error) {
     console.error('Search error:', error)
     results.value = []
+    posthog.captureException(error)
   } finally {
     loading.value = false
   }
@@ -42,7 +48,7 @@ watch(() => route.query.q, (newQuery) => {
   <div class="min-h-screen p-10 bg-black text-white">
     <div class="max-w-6xl mx-auto">
       <h1 class="text-3xl font-bold mb-6">Search</h1>
-      
+
       <form @submit.prevent="search" class="mb-8">
         <div class="flex gap-4">
           <input
