@@ -15,6 +15,13 @@ import { existsSync, writeFileSync } from "fs";
 import { spawn } from "child_process";
 import { createInterface } from "readline";
 import { findApps, getWizardBin, resetApp, type App } from "../wizard-ci/utils.js";
+import {
+  WIZARD_COMMANDS,
+  commandToSubcommand,
+  commandToInvocation,
+  findCommand,
+  type WizardCommand,
+} from "../wizard-commands.js";
 import { checkbox } from "./prompts.js";
 
 const WORKBENCH = join(import.meta.dirname, "../..");
@@ -67,6 +74,7 @@ function defaultConfig(): BenchmarkConfig {
 interface Options {
   region: "us" | "eu";
   defaults: boolean;
+  command?: string;
 }
 
 function parseArgs(): Options {
@@ -76,7 +84,9 @@ function parseArgs(): Options {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === "--defaults") opts.defaults = true;
-    else if (arg === "--region") {
+    else if (arg === "--command" && i + 1 < args.length) {
+      opts.command = args[++i];
+    } else if (arg === "--region") {
       const value = args[++i];
       if (value !== "us" && value !== "eu") {
         console.error(`Invalid region: ${value}. Must be 'us' or 'eu'.`);
@@ -89,10 +99,17 @@ wizard-benchmark: Interactive benchmark runner for the PostHog wizard
 
 Usage:
   pnpm benchmark                     Interactive mode (default)
+  pnpm benchmark --command <id>      Skip command picker
   pnpm benchmark --defaults          Skip plugin prompts, use all defaults
   pnpm benchmark --region <us|eu>    Specify PostHog region (default: us)
 
+Available commands:
+${WIZARD_COMMANDS.filter((c) => c.ciCapable)
+  .map((c) => `  ${commandToInvocation(c.id).padEnd(28)}  ${c.description}`)
+  .join("\n")}
+
 Options:
+  --command <id>       Wizard command (CI-capable only)
   --defaults           Use default benchmark config without prompting
   --region <us|eu>     PostHog region (default: us)
   -h, --help           Show this help message
@@ -134,6 +151,33 @@ async function selectApp(apps: App[]): Promise<App> {
   return apps[index];
 }
 
+async function selectCommand(): Promise<WizardCommand> {
+  // Benchmark always uses --ci, so only CI-capable commands are valid.
+  const available = WIZARD_COMMANDS.filter((c) => c.ciCapable);
+  if (available.length === 0) {
+    console.error("No CI-capable wizard commands available.");
+    process.exit(1);
+  }
+
+  console.log("Select a wizard command:\n");
+  available.forEach((cmd, i) =>
+    console.log(
+      `  ${i + 1}) ${commandToInvocation(cmd.id).padEnd(28)} ${cmd.description}`,
+    ),
+  );
+  console.log();
+
+  const selection = await prompt(`Enter number (1-${available.length}): `);
+  const index = parseInt(selection, 10) - 1;
+
+  if (index < 0 || index >= available.length) {
+    console.error("Invalid selection");
+    process.exit(1);
+  }
+
+  return available[index];
+}
+
 // ============================================================================
 // Wizard runner
 // ============================================================================
@@ -144,7 +188,11 @@ interface BenchmarkResult {
   error?: string;
 }
 
-function runBenchmark(appPath: string, opts: Options): Promise<BenchmarkResult> {
+function runBenchmark(
+  appPath: string,
+  opts: Options,
+  command: WizardCommand,
+): Promise<BenchmarkResult> {
   const wizardBin = getWizardBin();
   const start = Date.now();
 
@@ -167,15 +215,21 @@ function runBenchmark(appPath: string, opts: Options): Promise<BenchmarkResult> 
     });
   }
 
-  const args = [
-    wizardBin,
+  // Subcommand (e.g. 'revenue') must come before flags
+  const subcommand = commandToSubcommand(command.id);
+  const args: string[] = [wizardBin];
+  if (subcommand) args.push(subcommand);
+  args.push(
     "--local-mcp",
     "--benchmark",
     "--ci",
-    "--region", region,
-    "--api-key", apiKey,
-    "--install-dir", appPath,
-  ];
+    "--region",
+    region,
+    "--api-key",
+    apiKey,
+    "--install-dir",
+    appPath,
+  );
 
   return new Promise((resolve) => {
     const child = spawn("node", args, {
@@ -215,6 +269,27 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // Resolve command: from --command flag or interactive picker
+  let command: WizardCommand;
+  if (opts.command) {
+    const found = findCommand(opts.command);
+    if (!found) {
+      console.error(
+        `Unknown command: ${opts.command}. Valid: ${WIZARD_COMMANDS.map((c) => c.id).join(", ")}`,
+      );
+      process.exit(1);
+    }
+    if (!found.ciCapable) {
+      console.error(
+        `Command "${found.id}" does not support CI mode (benchmark requires --ci).`,
+      );
+      process.exit(1);
+    }
+    command = found;
+  } else {
+    command = await selectCommand();
+  }
+
   const selectedApp = await selectApp(apps);
   const config = defaultConfig();
 
@@ -237,9 +312,10 @@ async function main(): Promise<void> {
   writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
   process.env.POSTHOG_WIZARD_BENCHMARK_CONFIG = configPath;
 
-  console.log(`Running benchmark on ${selectedApp.name}\n`);
+  console.log(`Running benchmark: ${commandToInvocation(command.id)}`);
+  console.log(`App: ${selectedApp.name}\n`);
 
-  const result = await runBenchmark(selectedApp.path, opts);
+  const result = await runBenchmark(selectedApp.path, opts, command);
 
   if (!result.success) {
     console.error(`\nBenchmark failed: ${result.error}`);

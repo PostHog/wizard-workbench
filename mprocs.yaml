@@ -33,7 +33,8 @@ procs:
   # ═══════════════════════════════════════════════════════════════════════════
 
   wizard-run:
-    # Interactive app selector - choose which app to run wizard on
+    # Interactive command + app selector. Pick which wizard command to run
+    # (integration, revenue analytics, …) then which app to run it against.
     shell: "npx tsx services/wizard-run/index.ts"
     autostart: false
     env_file: .env

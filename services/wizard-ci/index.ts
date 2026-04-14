@@ -39,6 +39,13 @@ import {
   type App,
   type YaraReport,
 } from "./utils.js";
+import {
+  WIZARD_COMMANDS,
+  commandToSubcommand,
+  commandToInvocation,
+  findCommand,
+  type WizardCommand,
+} from "../wizard-commands.js";
 
 // ============================================================================
 // Config
@@ -49,6 +56,7 @@ const APPS_DIR = join(WORKBENCH, "apps");
 
 interface Options {
   app?: string;
+  command?: string;
   triggerId?: string;
   local: boolean;
   base: string;
@@ -232,6 +240,7 @@ function parseArgs(): Options {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === "--app" || arg === "-a") opts.app = args[++i];
+    else if (arg === "--command" || arg === "-c") opts.command = args[++i];
     else if (arg === "--trigger-id" || arg === "-t") opts.triggerId = args[++i];
     else if (arg === "--local" || arg === "-l") opts.local = true;
     else if (arg === "--base") opts.base = args[++i];
@@ -258,8 +267,9 @@ POSTHOG_PERSONAL_API_KEY to be defined in .env file.
 For running all apps, use the wizard-trigger GitHub workflow.
 
 Usage:
-  pnpm wizard-ci                     Interactive app selection
+  pnpm wizard-ci                     Interactive command + app selection
   pnpm wizard-ci --app <name>        Test specific app
+  pnpm wizard-ci --command <id>      Wizard command (default: first CI-capable)
   pnpm wizard-ci --trigger-id <id>   Trigger ID (inherited from orchestrator)
   pnpm wizard-ci --local             Skip PR creation
   pnpm wizard-ci --base <branch>     Base branch for PR (default: main)
@@ -304,6 +314,54 @@ async function selectApp(apps: App[]): Promise<App> {
     process.exit(1);
   }
   return apps[index];
+}
+
+async function selectCommand(): Promise<WizardCommand> {
+  // CI mode only runs CI-capable commands
+  const available = WIZARD_COMMANDS.filter((c) => c.ciCapable);
+  if (available.length === 0) {
+    console.error("No CI-capable wizard commands available.");
+    process.exit(1);
+  }
+
+  console.log("\nSelect a wizard command:\n");
+  available.forEach((cmd, i) =>
+    console.log(
+      `  ${i + 1}) ${commandToInvocation(cmd.id).padEnd(28)} ${cmd.description}`,
+    ),
+  );
+  const choice = await prompt(`\nSelect command (1-${available.length}): `);
+  const index = parseInt(choice, 10) - 1;
+  if (index < 0 || index >= available.length) {
+    console.error("Invalid selection");
+    process.exit(1);
+  }
+  return available[index];
+}
+
+function resolveCommandOpt(id: string | undefined): WizardCommand {
+  if (id === undefined) {
+    // Default to the first CI-capable command if no --command flag given
+    // (caller should use selectCommand() for interactive mode)
+    const first = WIZARD_COMMANDS.find((c) => c.ciCapable);
+    if (!first) {
+      console.error("No CI-capable wizard commands available.");
+      process.exit(1);
+    }
+    return first;
+  }
+  const found = findCommand(id);
+  if (!found) {
+    console.error(
+      `Unknown command: ${id}. Valid: ${WIZARD_COMMANDS.map((c) => c.id).join(", ")}`,
+    );
+    process.exit(1);
+  }
+  if (!found.ciCapable) {
+    console.error(`Command "${found.id}" does not support CI mode.`);
+    process.exit(1);
+  }
+  return found;
 }
 
 // ============================================================================
@@ -485,7 +543,12 @@ async function pushOnlyMode(opts: Options): Promise<void> {
 // Run Wizard CI flow
 // ============================================================================
 
-async function runCI(app: App, opts: Options, triggerId: string): Promise<boolean> {
+async function runCI(
+  app: App,
+  opts: Options,
+  triggerId: string,
+  command: WizardCommand,
+): Promise<boolean> {
   const repoRoot = getRepoRoot(WORKBENCH);
   const appRelativePath = relative(repoRoot, app.path);
 
@@ -524,7 +587,10 @@ async function runCI(app: App, opts: Options, triggerId: string): Promise<boolea
 
   // 2. Run wizard (always in CI mode)
   console.log("[2/5] Running wizard...\n");
-  const result = await runWizard(app.path, { ci: true });
+  const result = await runWizard(app.path, {
+    ci: true,
+    command: commandToSubcommand(command.id),
+  });
   console.log();
 
   if (!result.success) {
@@ -743,6 +809,11 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // Determine which command to run
+  const command = opts.command
+    ? resolveCommandOpt(opts.command)
+    : await selectCommand();
+
   // Determine which app to test
   let target: App;
 
@@ -763,11 +834,12 @@ async function main(): Promise<void> {
 
   // Run test
   console.log(`\nWizard CI`);
+  console.log(`Command: ${commandToInvocation(command.id)}`);
   console.log(`App: ${target.name}`);
   console.log(`Trigger ID: ${triggerId}`);
   console.log(`Mode: ${opts.local ? "local" : "create PR"}`);
 
-  const success = await runCI(target, opts, triggerId);
+  const success = await runCI(target, opts, triggerId, command);
 
   process.exit(success ? 0 : 1);
 }
