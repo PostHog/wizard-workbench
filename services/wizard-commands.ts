@@ -30,23 +30,34 @@ export const WIZARD_COMMANDS: WizardCommand[] = [
     description: 'Wire Stripe + PostHog for revenue tracking',
     ciCapable: true,
   },
+  {
+    id: 'skill',
+    label: 'Skill',
+    description: 'Run a skill by ID from context mill',
+  },
 ];
 
 /**
  * Convert a command id to the subcommand string the wizard binary expects.
- * 'default' → undefined (no subcommand), any other id → the id itself.
+ * 'default' → undefined (no subcommand), 'skill' → undefined (uses --skill flag),
+ * any other id → the id itself.
  */
 export function commandToSubcommand(id: string): string | undefined {
-  return id === 'default' ? undefined : id;
+  if (id === 'default' || id === 'skill') return undefined;
+  return id;
 }
 
 /**
  * Render a command as the literal CLI invocation that will be run.
- * e.g. 'default' → "posthog-wizard", 'revenue' → "posthog-wizard revenue".
+ * e.g. 'default' → "posthog-wizard", 'revenue' → "posthog-wizard revenue",
+ * 'skill' → "posthog-wizard --skill=<skill-id>".
  */
-export function commandToInvocation(id: string): string {
+export function commandToInvocation(id: string, skillId?: string): string {
+  if (id === 'skill') {
+    return `wizard --skill=${skillId || '<skill-id>'}`;
+  }
   const sub = commandToSubcommand(id);
-  return sub ? `posthog-wizard ${sub}` : 'posthog-wizard';
+  return sub ? `wizard ${sub}` : 'wizard';
 }
 
 export function findCommand(id: string): WizardCommand | undefined {

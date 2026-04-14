@@ -160,6 +160,7 @@ export interface WizardOptions {
   region?: "us" | "eu";
   apiKey?: string;
   command?: string;
+  skillId?: string;
 }
 
 /**
@@ -183,6 +184,9 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
   const args = [wizardBin];
   if (options.command) {
     args.push(options.command);
+  }
+  if (options.skillId) {
+    args.push(`--skill=${options.skillId}`);
   }
   args.push("--local-mcp");
 

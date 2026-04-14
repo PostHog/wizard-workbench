@@ -157,6 +157,16 @@ async function main(): Promise<void> {
     command = await selectCommand(opts.ci);
   }
 
+  // If the skill command was selected, prompt for the skill ID
+  let skillId: string | undefined;
+  if (command.id === 'skill') {
+    skillId = await prompt('Enter skill ID: ');
+    if (!skillId) {
+      console.error("Skill ID is required.");
+      process.exit(1);
+    }
+  }
+
   const apps = findApps(APPS_DIR);
   if (apps.length === 0) {
     console.error(`No apps found in ${APPS_DIR}`);
@@ -166,7 +176,7 @@ async function main(): Promise<void> {
   const selectedApp = await selectApp(apps);
 
   console.log();
-  console.log(`Command: ${commandToInvocation(command.id)}`);
+  console.log(`Command: ${commandToInvocation(command.id, skillId)}`);
   console.log(`App:     ${selectedApp.name}`);
   console.log(`Path:    ${selectedApp.path}`);
   if (opts.ci) {
@@ -178,6 +188,7 @@ async function main(): Promise<void> {
     ci: opts.ci,
     region: opts.region,
     command: commandToSubcommand(command.id),
+    skillId,
   });
 
   if (!result.success) {
