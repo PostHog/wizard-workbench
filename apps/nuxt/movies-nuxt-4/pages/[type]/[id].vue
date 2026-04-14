@@ -17,6 +17,13 @@ const [item, recommendations] = await Promise.all([
   getRecommendations(type.value, id.value),
 ])
 const $img = useImage()
+const posthog = usePostHog()
+
+posthog?.capture('media_viewed', {
+  media_id: id.value,
+  media_type: type.value,
+  title: item.name || item.title,
+})
 
 useHead({
   title: item.name || item.title,
