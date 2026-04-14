@@ -1,6 +1,12 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const app = new Koa();
 const router = new Router();
@@ -34,6 +40,16 @@ router.post('/api/folders', (ctx) => {
   folders.push(folder);
   ctx.status = 201;
   ctx.body = folder;
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'folder created',
+    properties: {
+      folder_id: folder.id,
+      folder_name: folder.name,
+    },
+  });
 });
 
 router.delete('/api/folders/:id', (ctx) => {
@@ -60,6 +76,15 @@ router.delete('/api/folders/:id', (ctx) => {
 
   folders.splice(index, 1);
   ctx.status = 204;
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'folder deleted',
+    properties: {
+      folder_id: folderId,
+    },
+  });
 });
 
 // --- Notes ---
@@ -79,6 +104,19 @@ router.get('/api/notes', (ctx) => {
   }
 
   ctx.body = { notes: result, total: result.length };
+
+  if (search) {
+    const distinctId = ctx.headers['x-posthog-distinct-id'] || 'anonymous';
+    posthog.capture({
+      distinctId,
+      event: 'notes searched',
+      properties: {
+        query: search,
+        folder_id: folder_id ? parseInt(folder_id, 10) : null,
+        result_count: result.length,
+      },
+    });
+  }
 });
 
 router.post('/api/notes', (ctx) => {
@@ -107,6 +145,17 @@ router.post('/api/notes', (ctx) => {
   notes.push(note);
   ctx.status = 201;
   ctx.body = note;
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note created',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+      has_content: note.content.length > 0,
+    },
+  });
 });
 
 router.get('/api/notes/:id', (ctx) => {
@@ -144,6 +193,19 @@ router.patch('/api/notes/:id', (ctx) => {
   note.updated_at = new Date().toISOString();
 
   ctx.body = note;
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note updated',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+      updated_title: title !== undefined,
+      updated_content: content !== undefined,
+      updated_folder: folder_id !== undefined,
+    },
+  });
 });
 
 router.delete('/api/notes/:id', (ctx) => {
@@ -155,15 +217,38 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
+  const deletedNoteId = notes[index].id;
   notes.splice(index, 1);
   ctx.status = 204;
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note deleted',
+    properties: {
+      note_id: deletedNoteId,
+    },
+  });
 });
 
 app.use(router.routes());
 app.use(router.allowedMethods());
 
+app.on('error', (err, ctx) => {
+  const distinctId = ctx?.headers?.['x-posthog-distinct-id'] || 'anonymous';
+  posthog.captureException(err, distinctId);
+});
+
 const PORT = process.env.PORT || 3003;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Koa notes API running on http://localhost:${PORT}`);
 });
+
+const shutdown = async () => {
+  await posthog.shutdown();
+  server.close();
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
