@@ -1,5 +1,6 @@
 'use client';
 
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,22 @@ interface TodoItemProps {
 }
 
 export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
+  const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const completed = e.target.checked;
+    onToggle(todo.id, completed);
+    posthog.capture(completed ? 'todo_completed' : 'todo_reopened', {
+      todo_id: todo.id,
+    });
+  };
+
+  const handleDelete = () => {
+    onDelete(todo.id);
+    posthog.capture('todo_deleted', {
+      todo_id: todo.id,
+      was_completed: todo.completed,
+    });
+  };
+
   return (
     <Card className={todo.completed ? 'opacity-60' : ''}>
       <CardHeader>
@@ -20,7 +37,7 @@ export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
           <div className="flex items-start gap-3 flex-1">
             <Checkbox
               checked={todo.completed}
-              onChange={(e) => onToggle(todo.id, e.target.checked)}
+              onChange={handleToggle}
               className="mt-1"
             />
             <div className="flex-1">
@@ -37,7 +54,7 @@ export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onDelete(todo.id)}
+            onClick={handleDelete}
             className="text-destructive hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />
