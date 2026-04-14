@@ -3,6 +3,7 @@ import type { Route } from "./+types/countries";
 import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
+import { usePostHog } from "@posthog/react";
 
 export async function clientLoader() {
   try {
@@ -35,6 +36,7 @@ export async function clientLoader() {
 
 export default function Countries({ loaderData }: Route.ComponentProps) {
   const { user } = useAuth();
+  const posthog = usePostHog();
   const [search, setSearch] = useState<string>("");
   const [region, setRegion] = useState<string>("");
 
@@ -48,6 +50,9 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
   const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRegion = e.target.value;
     setRegion(newRegion);
+    if (newRegion) {
+      posthog?.capture('countries_filtered', { region: newRegion });
+    }
   };
 
   // Ensure loaderData is an array, fallback to empty array
@@ -137,6 +142,9 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
+                        if (!isClaimed) {
+                          posthog?.capture('country_claimed', { country: countryName, region: country.region });
+                        }
                         claimCountry(countryName);
                         window.location.reload();
                       }}
@@ -150,6 +158,9 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        if (!isLiked) {
+                          posthog?.capture('country_liked', { country: countryName, region: country.region });
+                        }
                         likeCountry(countryName);
                         window.location.reload();
                       }}
@@ -163,6 +174,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        posthog?.capture('country_visited', { country: countryName, region: country.region });
                         visitCountry(countryName);
                         window.location.reload();
                       }}
