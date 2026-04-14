@@ -87,13 +87,6 @@ procs:
     autostart: false
     env_file: .env
 
-  wizard-ci-local-run-revenue:
-    # Full revenue CI: wizard revenue run + revenue-specific eval against stripe-next-js-saas-starter.
-    # Uses stripe-next-js-saas-starter because findApps doesn't pick up stripe-saas-demo as a single target locally.
-    shell: "pnpm wizard-ci --local --evaluate --command revenue --app stripe/stripe-next-js-saas-starter"
-    autostart: false
-    env_file: .env
-
   wizard-ci-create-pr:
     # Only pushes branch and creates PR on GH
     shell: "pnpm wizard-ci --push-only --branch"
@@ -107,13 +100,6 @@ procs:
   wizard-ci-evaluate-pr:
     # Agent evaluates a PR or local branch
     shell: "pnpm run evaluate"
-    autostart: false
-    env_file: .env
-
-  wizard-ci-evaluate-revenue:
-    # Evaluate the current HEAD branch against the revenue rubric (test-run, no GitHub comment).
-    # Use this to iterate on evaluation-revenue.md / output-format-revenue.md without running the wizard.
-    shell: "pnpm run evaluate --branch HEAD --base main --test-run revenue-local --command revenue"
     autostart: false
     env_file: .env
 
