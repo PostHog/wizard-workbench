@@ -14,8 +14,8 @@ import Layout from '../layouts/Layout.astro';
         and automated insights. Built for teams that move fast.
       </p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Start Free Trial</a>
-        <a href="/docs" class="btn btn-secondary">Read the Docs</a>
+        <a href="#" class="btn btn-primary" id="hero-cta">Start Free Trial</a>
+        <a href="/docs" class="btn btn-secondary" id="hero-docs-cta">Read the Docs</a>
       </div>
     </div>
   </section>
@@ -61,3 +61,27 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupIndexPage() {
+    const heroCta = document.getElementById('hero-cta');
+    const heroDocsCta = document.getElementById('hero-docs-cta');
+
+    heroCta?.removeEventListener('click', handleHeroCtaClick);
+    heroDocsCta?.removeEventListener('click', handleHeroDocsCtaClick);
+
+    heroCta?.addEventListener('click', handleHeroCtaClick);
+    heroDocsCta?.addEventListener('click', handleHeroDocsCtaClick);
+  }
+
+  function handleHeroCtaClick() {
+    window.posthog?.capture('cta_clicked', { location: 'hero' });
+  }
+
+  function handleHeroDocsCtaClick() {
+    window.posthog?.capture('docs_cta_clicked', { location: 'hero' });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupIndexPage);
+  document.addEventListener('astro:page-load', setupIndexPage);
+</script>
