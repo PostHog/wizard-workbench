@@ -8,6 +8,11 @@ export interface EvaluateOptions {
   prData: PRData;
   testRun?: boolean;
   testRunDir?: string;
+  /**
+   * Wizard command id the PR was produced by (e.g., "revenue"). Selects
+   * the rubric in `buildSystemPrompt`. Omit for the default integration.
+   */
+  command?: string;
 }
 
 export interface EvaluateScores {
@@ -233,9 +238,9 @@ async function captureEvalEvent(
 }
 
 export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResult> {
-  const { prData, testRun = false, testRunDir } = options;
+  const { prData, testRun = false, testRunDir, command } = options;
 
-  const systemPrompt = await buildSystemPrompt(prData);
+  const systemPrompt = await buildSystemPrompt(prData, { command });
   const userPrompt = buildUserPrompt(prData);
 
   // Save prompt if test run

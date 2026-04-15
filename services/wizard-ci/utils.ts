@@ -100,6 +100,12 @@ export function findApps(appsDir: string): App[] {
       }
       const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
 
+      // A `.wizard-root` marker file forces this directory to register as a
+      // single app and skip recursion into children. Use this for monorepo
+      // roots (e.g. `stripe/stripe-saas-demo` containing backend/ + frontend/)
+      // where the wizard should operate on the whole tree as one target.
+      const isWizardRoot = existsSync(join(fullPath, ".wizard-root"));
+
       // Check for JS/TS projects (package.json), Python projects (manage.py for Django, requirements.txt),
       // Android projects (build.gradle or build.gradle.kts), or Swift/Xcode projects
       const isJsProject = existsSync(join(fullPath, "package.json"));
@@ -110,7 +116,7 @@ export function findApps(appsDir: string): App[] {
       const isSwiftProject = existsSync(join(fullPath, "Package.swift")) ||
         readdirSync(fullPath).some(f => f.endsWith(".xcodeproj"));
 
-      if (isJsProject || isDjangoProject || isPythonProject || isAndroidProject || isRailsProject || isSwiftProject) {
+      if (isWizardRoot || isJsProject || isDjangoProject || isPythonProject || isAndroidProject || isRailsProject || isSwiftProject) {
         apps.push({ name: relativePath, path: fullPath });
       } else {
         scan(fullPath, relativePath);
@@ -364,9 +370,16 @@ export interface EvaluateResult {
 /**
  * Run pr-evaluator on a PR
  */
-export function runEvaluator(prNumber: number): Promise<EvaluateResult> {
+export function runEvaluator(
+  prNumber: number,
+  options: { command?: string } = {},
+): Promise<EvaluateResult> {
   return new Promise((resolve) => {
-    const child = spawn("pnpm", ["run", "evaluate", "--pr", String(prNumber)], {
+    const args = ["run", "evaluate", "--pr", String(prNumber)];
+    if (options.command) {
+      args.push("--command", options.command);
+    }
+    const child = spawn("pnpm", args, {
       cwd: process.cwd(),
       stdio: "inherit",
       env: process.env,
@@ -392,6 +405,7 @@ export interface EvaluateOnBranchOptions {
   branch: string;
   baseBranch?: string;
   testRunName?: string;
+  command?: string;
 }
 
 /**
@@ -408,6 +422,10 @@ export function runEvaluatorOnBranch(options: EvaluateOnBranchOptions): Promise<
 
     if (options.testRunName) {
       args.push("--test-run", options.testRunName);
+    }
+
+    if (options.command) {
+      args.push("--command", options.command);
     }
 
     const child = spawn("pnpm", args, {

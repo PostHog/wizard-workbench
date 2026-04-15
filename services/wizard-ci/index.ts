@@ -152,14 +152,14 @@ interface EvaluationInfo {
   prUrl?: string;
 }
 
-async function runEvaluation(prUrl: string): Promise<EvaluationInfo> {
+async function runEvaluation(prUrl: string, commandId?: string): Promise<EvaluationInfo> {
   const prNumber = extractPRNumber(prUrl);
   if (!prNumber) {
     console.warn(`      Could not extract PR number from URL: ${prUrl}\n`);
     return { success: false };
   }
   console.log(`      PR #${prNumber}\n`);
-  const evalResult = await runEvaluator(prNumber);
+  const evalResult = await runEvaluator(prNumber, { command: commandId });
   if (!evalResult.success) {
     console.warn(`      Evaluation failed: ${evalResult.error}\n`);
     return { success: false, prNumber, prUrl };
@@ -176,12 +176,18 @@ interface LocalEvaluationInfo {
   testRunDir?: string;
 }
 
-async function runLocalEvaluation(branch: string, baseBranch: string, testRunName?: string): Promise<LocalEvaluationInfo> {
+async function runLocalEvaluation(
+  branch: string,
+  baseBranch: string,
+  testRunName?: string,
+  commandId?: string,
+): Promise<LocalEvaluationInfo> {
   console.log(`      Branch: ${branch} (base: ${baseBranch})\n`);
   const evalResult = await runEvaluatorOnBranch({
     branch,
     baseBranch,
     testRunName,
+    command: commandId,
   });
   const testRunDir = testRunName ? `test-evaluations/${testRunName}` : undefined;
   if (!evalResult.success) {
@@ -304,45 +310,10 @@ async function prompt(question: string): Promise<string> {
   });
 }
 
-async function selectApp(apps: App[]): Promise<App> {
-  console.log("\nAvailable apps:\n");
-  apps.forEach((app, i) => console.log(`  ${i + 1}) ${app.name}`));
-  const choice = await prompt(`\nSelect app (1-${apps.length}): `);
-  const index = parseInt(choice, 10) - 1;
-  if (index < 0 || index >= apps.length) {
-    console.error("Invalid selection");
-    process.exit(1);
-  }
-  return apps[index];
-}
-
-async function selectCommand(): Promise<WizardCommand> {
-  // CI mode only runs CI-capable commands
-  const available = WIZARD_COMMANDS.filter((c) => c.ciCapable);
-  if (available.length === 0) {
-    console.error("No CI-capable wizard commands available.");
-    process.exit(1);
-  }
-
-  console.log("\nSelect a wizard command:\n");
-  available.forEach((cmd, i) =>
-    console.log(
-      `  ${i + 1}) ${commandToInvocation(cmd.id).padEnd(28)} ${cmd.description}`,
-    ),
-  );
-  const choice = await prompt(`\nSelect command (1-${available.length}): `);
-  const index = parseInt(choice, 10) - 1;
-  if (index < 0 || index >= available.length) {
-    console.error("Invalid selection");
-    process.exit(1);
-  }
-  return available[index];
-}
-
 function resolveCommandOpt(id: string | undefined): WizardCommand {
   if (id === undefined) {
-    // Default to the first CI-capable command if no --command flag given
-    // (caller should use selectCommand() for interactive mode)
+    // Default to the first CI-capable command when no --command is given.
+    // Interactive selection lives in services/wizard-run/index.ts.
     const first = WIZARD_COMMANDS.find((c) => c.ciCapable);
     if (!first) {
       console.error("No CI-capable wizard commands available.");
@@ -520,7 +491,7 @@ async function pushOnlyMode(opts: Options): Promise<void> {
   let evalInfo: EvaluationInfo | undefined;
   if (opts.evaluate && result.prUrl) {
     console.log("[3/3] Running PR evaluation...");
-    evalInfo = await runEvaluation(result.prUrl);
+    evalInfo = await runEvaluation(result.prUrl, opts.command);
   }
 
   if (opts.deleteBranch) {
@@ -658,7 +629,7 @@ async function runCI(
       // Run evaluation on the branch
       console.log("[5/5] Running local evaluation (test-run mode)...");
       const testRunName = `local-${triggerId}-${app.name.replace(/\//g, "-")}`;
-      const evalInfo = await runLocalEvaluation(branchName, opts.base, testRunName);
+      const evalInfo = await runLocalEvaluation(branchName, opts.base, testRunName, command.id);
 
       // Return to original branch
       checkout(repoRoot, originalBranch);
@@ -760,7 +731,7 @@ async function runCI(
   let evalInfo: EvaluationInfo | undefined;
   if (opts.evaluate && prResult.prUrl) {
     console.log("[6/6] Running PR evaluation...");
-    evalInfo = await runEvaluation(prResult.prUrl);
+    evalInfo = await runEvaluation(prResult.prUrl, command.id);
   }
 
   if (opts.deleteBranch) {
@@ -809,24 +780,22 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Determine which command to run
-  const command = opts.command
-    ? resolveCommandOpt(opts.command)
-    : await selectCommand();
+  // wizard-ci is the scripted entry point: no interactive selection.
+  // `pnpm wizard-run` (services/wizard-run/index.ts) owns the interactive
+  // command + app picker for local mprocs usage.
+  const command: WizardCommand = resolveCommandOpt(opts.command);
 
-  // Determine which app to test
-  let target: App;
-
-  if (opts.app) {
-    const app = apps.find((a) => a.name === opts.app || a.name.endsWith(opts.app!));
-    if (!app) {
-      console.error(`App not found: ${opts.app}`);
-      console.log("Available:", apps.map((a) => a.name).join(", "));
-      process.exit(1);
-    }
-    target = app;
-  } else {
-    target = await selectApp(apps);
+  if (!opts.app) {
+    console.error(
+      "Error: --app is required. Run `pnpm wizard-run` for an interactive app picker.",
+    );
+    process.exit(1);
+  }
+  const target = apps.find((a) => a.name === opts.app || a.name.endsWith(opts.app!));
+  if (!target) {
+    console.error(`App not found: ${opts.app}`);
+    console.log("Available:", apps.map((a) => a.name).join(", "));
+    process.exit(1);
   }
 
   // Generate or use provided trigger ID

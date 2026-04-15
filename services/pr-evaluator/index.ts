@@ -33,11 +33,13 @@ Options:
   --branch, -b <name>     Local branch to evaluate (use "HEAD" for current branch)
   --base <branch>         Base branch for comparison (default: main)
   --test-run [name]       Run evaluation without posting to GitHub, saves prompt and output to test-evaluations/<name>/
+  --command <id>          Wizard command id the PR was produced by (e.g., "revenue"). Selects the rubric. Default: integration rubric.
   --help, -h              Show this help message
 
 Examples:
   pnpm run evaluate --pr 123
   pnpm run evaluate --pr 123 --test-run
+  pnpm run evaluate --pr 123 --command revenue
   pnpm run evaluate --branch feature/my-feature
   pnpm run evaluate --branch HEAD --base develop
   pnpm run evaluate -b HEAD --test-run
@@ -50,6 +52,7 @@ function parseArgs(args: string[]): {
   baseBranch: string;
   testRun: boolean;
   testRunName?: string;
+  command?: string;
   help: boolean;
 } {
   const result = {
@@ -58,6 +61,7 @@ function parseArgs(args: string[]): {
     baseBranch: "main",
     testRun: false,
     testRunName: undefined as string | undefined,
+    command: undefined as string | undefined,
     help: false,
   };
 
@@ -88,6 +92,11 @@ function parseArgs(args: string[]): {
       const value = args[++i];
       if (value) {
         result.baseBranch = value;
+      }
+    } else if (arg === "--command") {
+      const value = args[++i];
+      if (value) {
+        result.command = value;
       }
     }
   }
@@ -200,6 +209,7 @@ async function main(): Promise<void> {
       prData,
       testRun: args.testRun,
       testRunDir,
+      command: args.command,
     });
 
     console.log("\n=== Evaluation Complete ===");
