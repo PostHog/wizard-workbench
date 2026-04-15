@@ -100,6 +100,12 @@ export function findApps(appsDir: string): App[] {
       }
       const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
 
+      // A `.wizard-root` marker file forces this directory to register as a
+      // single app and skip recursion into children. Use this for monorepo
+      // roots (e.g. `stripe/stripe-saas-demo` containing backend/ + frontend/)
+      // where the wizard should operate on the whole tree as one target.
+      const isWizardRoot = existsSync(join(fullPath, ".wizard-root"));
+
       // Check for JS/TS projects (package.json), Python projects (manage.py for Django, requirements.txt),
       // Android projects (build.gradle or build.gradle.kts), or Swift/Xcode projects
       const isJsProject = existsSync(join(fullPath, "package.json"));
@@ -110,7 +116,7 @@ export function findApps(appsDir: string): App[] {
       const isSwiftProject = existsSync(join(fullPath, "Package.swift")) ||
         readdirSync(fullPath).some(f => f.endsWith(".xcodeproj"));
 
-      if (isJsProject || isDjangoProject || isPythonProject || isAndroidProject || isRailsProject || isSwiftProject) {
+      if (isWizardRoot || isJsProject || isDjangoProject || isPythonProject || isAndroidProject || isRailsProject || isSwiftProject) {
         apps.push({ name: relativePath, path: fullPath });
       } else {
         scan(fullPath, relativePath);
