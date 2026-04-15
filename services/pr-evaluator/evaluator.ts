@@ -271,9 +271,6 @@ export async function evaluatePR(options: EvaluateOptions): Promise<EvaluateResu
     prompt: userPrompt,
     options: {
       model: process.env.EVALUATOR_MODEL || "claude-opus-4-6",
-      // Cap turns to prevent the agent from exhausting its budget on file reads
-      // without producing the evaluation report (~8.5% failure rate without this)
-      maxTurns: 25,
       allowedTools: ["Read", "Grep", "Glob", "Bash"],
       cwd: process.cwd(),
       // Use acceptEdits instead of bypassPermissions - the latter doesn't work as root in Docker

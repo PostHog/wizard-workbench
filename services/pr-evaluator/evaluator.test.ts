@@ -17,7 +17,6 @@ import {
   type RubricDimension,
   type RubricData,
 } from "./evaluator.js";
-import { truncateDiff, MAX_DIFF_CHARS, MAX_FILE_PATCH_CHARS } from "./git-local.js";
 import type { PRData } from "../github/index.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -295,39 +294,6 @@ describe("validateAndCorrectScores", () => {
     const scores = makeScores({ arch_type: "invalid" as any });
     const result = validateAndCorrectScores(scores);
     assert.equal(result.arch_type, "full-stack");
-  });
-});
-
-// ── truncateDiff ─────────────────────────────────────────────────────────────
-
-describe("truncateDiff", () => {
-  it("returns short diffs unchanged", () => {
-    const diff = "diff --git a/foo.ts b/foo.ts\n+hello";
-    assert.equal(truncateDiff(diff), diff);
-  });
-
-  it("truncates diffs over MAX_DIFF_CHARS", () => {
-    // Build a diff with multiple file sections that exceeds MAX_DIFF_CHARS
-    const fileCount = 10;
-    const perFile = Math.ceil((MAX_DIFF_CHARS + 1000) / fileCount);
-    const sections = Array.from({ length: fileCount }, (_, i) =>
-      `diff --git a/file${i}.ts b/file${i}.ts\n` + "x".repeat(perFile)
-    );
-    const diff = sections.join("\n");
-    const result = truncateDiff(diff);
-    assert.ok(result.includes("[diff truncated at 100k chars]") || result.includes("[patch truncated"));
-    assert.ok(result.length < diff.length, "Result should be shorter than input");
-  });
-
-  it("truncates individual long file patches", () => {
-    // Build a diff that's under MAX_DIFF_CHARS overall but has one huge file patch
-    const longPatch = "diff --git a/big.ts b/big.ts\n" + "x".repeat(MAX_FILE_PATCH_CHARS + 5000);
-    const shortPatch = "diff --git a/small.ts b/small.ts\n+ok";
-    // Total must exceed MAX_DIFF_CHARS for truncateDiff to kick in
-    const padding = "diff --git a/pad.ts b/pad.ts\n" + "y".repeat(MAX_DIFF_CHARS);
-    const diff = longPatch + "\n" + shortPatch + "\n" + padding;
-    const result = truncateDiff(diff);
-    assert.ok(result.includes("[patch truncated"), "Should truncate the long individual patch");
   });
 });
 
