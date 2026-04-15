@@ -821,13 +821,17 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Determine which command to run. Interactive prompt is only for human
-  // TTY usage — CI (no TTY) must fall through to the default ciCapable
-  // command, never hang on a select prompt.
+  // CI=true is the authoritative signal for non-interactive environments
+  // across every standard CI system (GitHub Actions sets it on every step).
+  // Stdin TTY detection is a secondary fallback.
+  const nonInteractive = process.env.CI === "true" || !process.stdin.isTTY;
+
+  // Interactive prompt only fires for local TTY usage; CI falls through
+  // to the default ciCapable command.
   let command: WizardCommand;
   if (opts.command) {
     command = resolveCommandOpt(opts.command);
-  } else if (process.stdin.isTTY) {
+  } else if (!nonInteractive) {
     command = await selectCommand();
   } else {
     command = resolveCommandOpt(undefined);
@@ -844,7 +848,7 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     target = app;
-  } else if (process.stdin.isTTY) {
+  } else if (!nonInteractive) {
     target = await selectApp(apps);
   } else {
     console.error("Error: --app is required in non-interactive mode");
