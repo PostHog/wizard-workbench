@@ -22,14 +22,14 @@ The wizard has completed a deep integration of PostHog into this Next.js 15 SaaS
 
 ## Next steps
 
-We've built some insights and a dashboard for you to keep an eye on user behavior, based on the events we just instrumented:
+To explore your analytics, visit your PostHog project and create insights for these key events:
 
-- **Dashboard — Analytics basics**: https://us.posthog.com/project/228144/dashboard/1468191
-- **Signup → Checkout Conversion Funnel**: https://us.posthog.com/project/228144/insights/Rejsc2sS
-- **New Sign-ups Over Time**: https://us.posthog.com/project/228144/insights/pjba3GRc
-- **Account Deletions (Churn)**: https://us.posthog.com/project/228144/insights/uW9rQTkw
-- **Subscription Events** (completed vs canceled): https://us.posthog.com/project/228144/insights/vm180PKL
-- **Daily Active Users (Sign-ins)**: https://us.posthog.com/project/228144/insights/5gDwVemn
+- **Dashboard**: https://us.posthog.com/project/2/dashboards
+- **Signup → Checkout Conversion Funnel**: Create a funnel from `user_signed_up` → `checkout_initiated` → `checkout_completed`
+- **New Sign-ups Over Time**: Trend of `user_signed_up` events
+- **Account Deletions (Churn)**: Trend of `account_deleted` events
+- **Subscription Events**: Breakdown of `checkout_completed` vs `subscription_canceled`
+- **Daily Active Users**: Trend of `user_signed_in` events
 
 ### Agent skill
 
