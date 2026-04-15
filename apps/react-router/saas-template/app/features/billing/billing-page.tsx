@@ -1,4 +1,5 @@
 import type { SubmissionResult } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import { IconCircleX } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
@@ -163,6 +164,7 @@ export function BillingPage({
   const { t: tTier } = useTranslation("billing", {
     keyPrefix: "pricing.plans",
   });
+  const posthog = usePostHog();
   const [isPlanManagementModalOpen, setIsPlanManagementModalOpen] =
     useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -275,7 +277,18 @@ export function BillingPage({
             </DialogContent>
           </Dialog>
         ) : cancelAtPeriodEnd ? (
-          <Form className="@container/alert" method="POST" replace>
+          <Form
+            className="@container/alert"
+            method="POST"
+            onSubmit={() => {
+              posthog?.capture("subscription_resumed", {
+                current_interval: currentInterval,
+                current_tier: currentTier,
+                organization_slug: organizationSlug,
+              });
+            }}
+            replace
+          >
             <Alert
               className="@xl/alert:block flex flex-col gap-2"
               variant="destructive"
@@ -627,7 +640,17 @@ export function BillingPage({
                 {t("cancelSubscriptionModal.changePlan")}
               </Button>
 
-              <Form method="POST" replace>
+              <Form
+                method="POST"
+                onSubmit={() => {
+                  posthog?.capture("subscription_cancelled", {
+                    current_interval: currentInterval,
+                    current_tier: currentTier,
+                    organization_slug: organizationSlug,
+                  });
+                }}
+                replace
+              >
                 <Button
                   disabled={isSubmitting}
                   name="intent"

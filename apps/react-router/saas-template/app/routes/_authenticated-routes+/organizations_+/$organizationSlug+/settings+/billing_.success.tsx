@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconRosetteDiscountCheck } from "@tabler/icons-react";
 import confetti from "canvas-confetti";
 import { useEffect } from "react";
@@ -40,6 +41,13 @@ export default function BillingSuccessRoute({ params }: Route.ComponentProps) {
     keyPrefix: "billingSuccessPage",
   });
   const { organizationSlug } = params;
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    posthog?.capture("billing_success_viewed", {
+      organization_slug: organizationSlug,
+    });
+  }, [posthog, organizationSlug]);
 
   useEffect(() => {
     const end = Date.now() + 2 * 1000; // 3 seconds
