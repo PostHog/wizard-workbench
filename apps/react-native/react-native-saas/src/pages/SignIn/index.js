@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
+import { usePostHog } from 'posthog-react-native';
 
 import {
   View,
@@ -16,11 +17,17 @@ import styles from './styles';
 
 export default function SignIn() {
   const dispatch = useDispatch();
+  const posthog = usePostHog();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   let refPassword = useRef(null);
+
+  useEffect(() => {
+    posthog.capture('sign_in_viewed');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleSubmit() {
     dispatch(signInRequest(email, password));
