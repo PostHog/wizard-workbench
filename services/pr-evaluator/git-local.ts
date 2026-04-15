@@ -20,39 +20,6 @@ import {
   filterDiff,
 } from "../github/index.js";
 
-// ── Diff truncation ─────────────────────────────────────────────────────────
-
-export const MAX_DIFF_CHARS = 100_000;
-export const MAX_FILE_PATCH_CHARS = 20_000;
-
-/** Truncate oversized diffs to stay within token limits */
-export function truncateDiff(diff: string): string {
-  if (diff.length <= MAX_DIFF_CHARS) return diff;
-
-  // First pass: truncate individual file patches that are too long (at newline boundary)
-  const sections = diff.split(/(?=^diff --git )/m);
-  const truncatedSections = sections.map((section) => {
-    if (section.length <= MAX_FILE_PATCH_CHARS) return section;
-    const cutAt = section.lastIndexOf("\n", MAX_FILE_PATCH_CHARS);
-    const safeCut = cutAt > 0 ? cutAt : MAX_FILE_PATCH_CHARS;
-    return (
-      section.substring(0, safeCut) +
-      `\n... [patch truncated, was ${section.length} chars] ...\n`
-    );
-  });
-
-  let result = truncatedSections.join("");
-
-  // Second pass: truncate overall if still too long (at newline boundary)
-  if (result.length > MAX_DIFF_CHARS) {
-    const cutAt = result.lastIndexOf("\n", MAX_DIFF_CHARS);
-    const safeCut = cutAt > 0 ? cutAt : MAX_DIFF_CHARS;
-    result = result.substring(0, safeCut) + "\n\n[diff truncated at 100k chars]";
-  }
-
-  return result;
-}
-
 // ── Local branch fetching ───────────────────────────────────────────────────
 
 export interface LocalBranchOptions {
@@ -97,9 +64,8 @@ export async function fetchLocalBranch(options: LocalBranchOptions): Promise<PRD
     );
   }
 
-  // Get diff, filter excluded paths, and truncate if oversized
   const rawDiff = getDiff(cwd, mergeBase, actualBranch);
-  const diff = truncateDiff(filterDiff(rawDiff));
+  const diff = filterDiff(rawDiff);
 
   // Get file stats using diff --stat
   const diffStat = getDiffNumstat(cwd, mergeBase, actualBranch);
