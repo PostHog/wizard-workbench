@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -27,6 +28,17 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_subscription_toggled",
+      properties: {
+        unsubscribed: newUnsubscribedStatus,
+        $set: { email: session.user.email },
+      },
+    })
+    await posthog.flush()
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -70,6 +82,16 @@ export const actions = {
         email,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_changed",
+      properties: {
+        $set: { email },
+      },
+    })
+    await posthog.flush()
 
     return {
       email,
@@ -172,6 +194,17 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user?.id ?? session.user.id,
+      event: "password_changed",
+      properties: {
+        is_recovery_session: !!isRecoverySession,
+        $set: { email: user?.email },
+      },
+    })
+    await posthog.flush()
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +253,16 @@ export const actions = {
         currentPassword,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+      properties: {
+        $set: { email: user.email },
+      },
+    })
+    await posthog.flush()
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -321,6 +364,23 @@ export const actions = {
         },
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: newProfile ? "profile_created" : "profile_updated",
+      properties: {
+        company_name: companyName,
+        has_website: !!website,
+        $set: {
+          email: session.user.email,
+          name: fullName,
+          company_name: companyName,
+          website,
+        },
+      },
+    })
+    await posthog.flush()
 
     return {
       fullName,
