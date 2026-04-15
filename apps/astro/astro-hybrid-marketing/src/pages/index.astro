@@ -61,3 +61,19 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    var heroButtons = document.querySelectorAll('.hero-buttons .btn');
+    heroButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var label = btn.textContent.trim();
+        if (label === 'Start Free Trial') {
+          window.posthog?.capture('cta_clicked', { location: 'hero', label: label });
+        } else if (label === 'Contact Sales') {
+          window.posthog?.capture('contact_sales_clicked', { location: 'hero', label: label });
+        }
+      });
+    });
+  });
+</script>
