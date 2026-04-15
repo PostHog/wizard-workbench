@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/cor
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CredentialsService } from '@app/auth/services/credentials.service';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { PosthogService } from '@core/services/posthog.service';
 
 @Component({
   selector: 'app-account-settings',
@@ -57,7 +58,7 @@ import { HotToastService } from '@ngxpert/hot-toast';
       <div class="danger-zone">
         <h4>Danger Zone</h4>
         <p>Once you delete your account, there is no going back. Please be certain.</p>
-        <button type="button" class="btn-danger">Delete Account</button>
+        <button type="button" class="btn-danger" (click)="onDeleteAccount()">Delete Account</button>
       </div>
     </div>
   `,
@@ -191,6 +192,7 @@ export class AccountSettingsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly credentialsService = inject(CredentialsService);
   private readonly toast = inject(HotToastService);
+  private readonly posthogService = inject(PosthogService);
 
   accountForm: FormGroup = this.fb.group({
     firstName: [''],
@@ -213,6 +215,14 @@ export class AccountSettingsComponent implements OnInit {
   }
 
   onSave() {
+    const { currentPassword, newPassword } = this.accountForm.getRawValue();
+    this.posthogService.posthog.capture('account_settings_saved', {
+      changed_password: !!(currentPassword && newPassword),
+    });
     this.toast.success('Account settings saved');
+  }
+
+  onDeleteAccount() {
+    this.posthogService.posthog.capture('account_deletion_initiated');
   }
 }
