@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 
 @MainActor
 @Observable
@@ -70,6 +71,9 @@ public final class SessionService: AuthenticationServiceProtocol {
     public func unauthenticate() {
         Task { [weak self] in
             guard let self else { return }
+            // PostHog: Capture logout event before reset
+            PostHogSDK.shared.capture("user_logged_out")
+            PostHogSDK.shared.reset()
             try? await authenticationUseCase.logout()
             await MainActor.run { self.user = nil }
         }

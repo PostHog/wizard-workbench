@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -81,10 +82,22 @@ public final class SupportViewModel: @unchecked Sendable {
             do {
                 let result = try await self.supportUseCase.purchase(productId: product.id)
                 self.handle(result: result, for: product)
-                if result == .success, product.kind == .subscription {
-                    self.isSubscribed = true
+                if result == .success {
+                    // PostHog: Capture successful purchase
+                    PostHogSDK.shared.capture("support_purchase_completed", properties: [
+                        "product_id": product.id,
+                        "product_kind": product.kind == .subscription ? "subscription" : "tip",
+                    ])
+                    if product.kind == .subscription {
+                        self.isSubscribed = true
+                    }
                 }
             } catch {
+                // PostHog: Capture purchase failure
+                PostHogSDK.shared.capture("support_purchase_failed", properties: [
+                    "product_id": product.id,
+                    "error_message": error.localizedDescription,
+                ])
                 self.alertInfo = AlertInfo(
                     title: "Purchase Failed",
                     message: error.localizedDescription
