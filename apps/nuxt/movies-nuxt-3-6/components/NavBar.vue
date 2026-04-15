@@ -1,5 +1,12 @@
 <script setup lang="ts">
 const { user, logout } = useAuth()
+const { $posthog } = useNuxtApp()
+
+async function handleLogout() {
+  $posthog?.capture('user_logged_out', { username: user.value })
+  $posthog?.reset()
+  await logout()
+}
 </script>
 
 <template>
@@ -37,9 +44,9 @@ const { user, logout } = useAuth()
     <div v-if="user" class="flex items-center gap-2">
       <span class="text-sm text-gray-400">{{ user }}</span>
       <button
-        @click="logout"
         class="i-ph-sign-out text-2xl hover:text-primary cursor-pointer"
         title="Logout"
+        @click="handleLogout"
       />
     </div>
   </div>

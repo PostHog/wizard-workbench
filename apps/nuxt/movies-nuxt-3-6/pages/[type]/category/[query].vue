@@ -10,6 +10,14 @@ const items: Media[] = reactive([])
 async function fetch(page: number) {
   items.push(...(await listMedia(type.value, query.value, page)).results)
 }
+
+onMounted(() => {
+  const { $posthog } = useNuxtApp()
+  $posthog?.capture('category_browsed', {
+    category: query.value,
+    media_type: type.value,
+  })
+})
 </script>
 
 <template>
