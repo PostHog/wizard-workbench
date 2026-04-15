@@ -7,6 +7,7 @@ use App\Actions\Billing\GetSubscriptionSummary;
 use App\Actions\Billing\RedirectToBillingPortal;
 use App\Actions\Billing\SwapPlan;
 use App\Domains\Billing\PlanCatalog;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -33,6 +34,11 @@ class SubscriptionController extends Controller
             return $this->createStubSubscription($user, $plan);
         }
 
+        PostHogService::capture((string) $user->id, 'subscription_checkout_started', [
+            'plan_name' => $plan->name,
+            'plan_id' => $plan->id,
+        ]);
+
         $checkoutSession = $checkoutPlan($user, $plan);
 
         return redirect($checkoutSession->url);
@@ -58,6 +64,12 @@ class SubscriptionController extends Controller
             'amount' => $plan->price ?? 0,
         ]);
 
+        PostHogService::capture((string) $user->id, 'subscription_created', [
+            'plan_name' => $plan->name,
+            'plan_id' => $plan->id,
+            'demo_mode' => true,
+        ]);
+
         return redirect()->route('dashboard')->with('success', 'Demo subscription created for ' . $plan->name . '. (Stripe not configured)');
     }
 
@@ -69,6 +81,11 @@ class SubscriptionController extends Controller
         if ($user->subscribed('default')) {
             try {
                 $swapPlan($user, $plan);
+
+                PostHogService::capture((string) $user->id, 'subscription_plan_swapped', [
+                    'plan_name' => $plan->name,
+                    'plan_id' => $plan->id,
+                ]);
 
                 return redirect()->route('subscribe')->with('success', 'Your subscription has been updated to '.$plan->name.'.');
             } catch (Exception $e) {
