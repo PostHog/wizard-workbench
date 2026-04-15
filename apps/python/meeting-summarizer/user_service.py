@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """User Management Service - A pure Python background service for managing users."""
 
+import atexit
 import uuid
 from datetime import datetime
 from typing import Optional
 
 from database import UserDatabase
 from models import User
+from posthog_client import posthog_client
+
+if posthog_client:
+    atexit.register(posthog_client.shutdown)
 
 
 class UserService:
@@ -36,6 +41,17 @@ class UserService:
 
         if self.db.create_user(user):
             print(f"✓ User registered: {username} ({email})")
+            if posthog_client:
+                posthog_client.set(distinct_id=user.user_id, properties={
+                    'username': user.username,
+                    'email': user.email,
+                    'full_name': user.full_name,
+                })
+                posthog_client.capture(
+                    distinct_id=user.user_id,
+                    event='user_registered',
+                    properties={'has_full_name': bool(full_name)},
+                )
             return user
         else:
             print(f"✗ Failed to register user: {username} (email or username already exists)")
@@ -63,6 +79,12 @@ class UserService:
 
         if success:
             print(f"✓ User deactivated: {user_id}")
+            if posthog_client:
+                posthog_client.capture(
+                    distinct_id=user_id,
+                    event='user_deactivated',
+                    properties={'has_reason': bool(reason)},
+                )
         else:
             print(f"✗ Failed to deactivate user: {user_id}")
 
