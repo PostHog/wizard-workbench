@@ -1,5 +1,5 @@
 import { Stack } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 
 import { Posts } from "@/components/posts/Posts";
@@ -11,9 +11,16 @@ import {
   storyTypes,
 } from "@/constants/stories";
 import { Colors } from "@/constants/Colors";
+import { posthog } from "@/src/config/posthog";
 
 export default function HomeScreen() {
   const [storyType, setStoryType] = useState<StoryType>("topstories");
+
+  useEffect(() => {
+    posthog.capture("story_feed_viewed", {
+      story_type: storyType,
+    });
+  }, []);
 
   const storyOptions: Option[] = useMemo(() => {
     return storyTypes.map(({ label, type }) => ({

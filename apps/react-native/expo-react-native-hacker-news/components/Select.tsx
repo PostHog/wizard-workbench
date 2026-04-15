@@ -13,6 +13,7 @@ import { ListFilter, LucideIcon } from "lucide-react-native";
 
 import { Colors } from "@/constants/Colors";
 import { StoryType } from "@/constants/stories";
+import { posthog } from "@/src/config/posthog";
 
 export type Option = {
   id: StoryType;
@@ -86,6 +87,11 @@ export const StoriesSelect = ({
                 key={item.id}
                 style={[styles.option, isSelected && styles.optionSelected]}
                 onPress={() => {
+                  posthog.capture("story_type_changed", {
+                    story_type: item.id,
+                    story_type_label: item.label,
+                    previous_story_type: value,
+                  });
                   onChange(item.id);
                   setIsOpen(false);
                 }}
