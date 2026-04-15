@@ -122,13 +122,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Interactive mode if neither --pr nor --branch is provided.
-  // Non-TTY (CI): hard-error instead of hanging on a prompt.
-  if (!hasPr && !hasBranch && !process.stdin.isTTY) {
-    console.error("Error: --pr or --branch is required in non-interactive mode\n");
-    printUsage();
-    process.exit(1);
-  }
+  // Interactive mode if neither --pr nor --branch is provided
   if (!hasPr && !hasBranch) {
     console.log("PR Evaluator - Evaluate PostHog integration quality\n");
     const choice = await prompt("Evaluate a [p]r number or local [b]ranch? (p/b): ");

@@ -539,16 +539,10 @@ async function runCI(
     }
     console.log();
 
-    // Non-TTY (CI): auto-proceed. CI starts from a clean checkout, so any
-    // stray files here are transient and should be reset without blocking.
-    if (process.stdin.isTTY) {
-      const confirm = await prompt("      Proceed with git restore? (y/n): ");
-      if (confirm.toLowerCase() !== "y") {
-        console.log("      Skipped\n");
-        return false;
-      }
-    } else {
-      console.log("      Non-TTY: auto-proceeding with git restore\n");
+    const confirm = await prompt("      Proceed with git restore? (y/n): ");
+    if (confirm.toLowerCase() !== "y") {
+      console.log("      Skipped\n");
+      return false;
     }
   } else {
     console.log("      No uncommitted changes in app\n");
