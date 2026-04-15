@@ -2,6 +2,7 @@ import { checkoutAction } from '@/lib/payments/actions';
 import { Check } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { SubmitButton } from './submit-button';
+import { PricingPageTracker } from './pricing-tracker';
 
 // Prices are fresh for one hour max
 export const revalidate = 3600;
@@ -20,6 +21,12 @@ export default async function PricingPage() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <PricingPageTracker
+        plans={[
+          { name: basePlan?.name || 'Base', priceId: basePrice?.id, unitAmount: basePrice?.unitAmount || 800, interval: basePrice?.interval || 'month' },
+          { name: plusPlan?.name || 'Plus', priceId: plusPrice?.id, unitAmount: plusPrice?.unitAmount || 1200, interval: plusPrice?.interval || 'month' },
+        ]}
+      />
       <div className="grid md:grid-cols-2 gap-8 max-w-xl mx-auto">
         <PricingCard
           name={basePlan?.name || 'Base'}
