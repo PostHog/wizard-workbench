@@ -40,6 +40,7 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.compose.jetchat.auth.LoginScreen
 import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -83,6 +84,14 @@ class NavActivity : AppCompatActivity() {
                         LoginScreen(
                             onLogin = { username, password ->
                                 viewModel.login(username, password)
+                                PostHog.identify(
+                                    distinctId = username,
+                                    userProperties = mapOf("username" to username),
+                                )
+                                PostHog.capture(
+                                    event = "user logged in",
+                                    properties = mapOf("username" to username),
+                                )
                             },
                         )
                     } else {
@@ -106,6 +115,8 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onLogoutClicked = {
+                                PostHog.capture(event = "user logged out")
+                                PostHog.reset()
                                 viewModel.logout()
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
