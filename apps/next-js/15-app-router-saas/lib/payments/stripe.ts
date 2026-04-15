@@ -7,6 +7,7 @@ import {
   updateTeamSubscription
 } from '@/lib/db/queries';
 import { stripeStub } from './stripe-stub';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 // Use stub if STRIPE_MODE=stub or if STRIPE_SECRET_KEY is missing/invalid
 const useStub =
@@ -55,6 +56,10 @@ export async function createCheckoutSession({
       trial_period_days: 14
     }
   });
+
+  const posthog = getPostHogClient();
+  posthog.capture({ distinctId: user.email, event: 'checkout_started', properties: { price_id: priceId, team_id: team.id } });
+  await posthog.shutdown();
 
   redirect(session.url!);
 }

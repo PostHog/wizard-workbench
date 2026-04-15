@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
+import posthog from 'posthog-js';
 
 export function SubmitButton() {
   const { pending } = useFormStatus();
@@ -13,6 +14,11 @@ export function SubmitButton() {
       disabled={pending}
       variant="outline"
       className="w-full rounded-full"
+      onClick={(e) => {
+        const form = (e.currentTarget as HTMLButtonElement).closest('form');
+        const priceId = (form?.elements.namedItem('priceId') as HTMLInputElement)?.value;
+        posthog.capture('pricing_cta_clicked', { price_id: priceId });
+      }}
     >
       {pending ? (
         <>
