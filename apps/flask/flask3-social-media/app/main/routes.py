@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 from flask_babel import _, get_locale
 import sqlalchemy as sa
 from langdetect import detect, LangDetectException
+from posthog import new_context, identify_context, capture
 from app import db
 from app.main.forms import EditProfileForm, EmptyForm, PostForm, SearchForm, \
     MessageForm
@@ -36,6 +37,9 @@ def index():
                     language=language)
         db.session.add(post)
         db.session.commit()
+        with new_context():
+            identify_context(current_user.username)
+            capture('post_created', properties={'language': language or 'unknown'})
         flash(_('Your post is now live!'))
         return redirect(url_for('main.index'))
     page = request.args.get('page', 1, type=int)
@@ -102,6 +106,9 @@ def edit_profile():
         current_user.username = form.username.data
         current_user.about_me = form.about_me.data
         db.session.commit()
+        with new_context():
+            identify_context(current_user.username)
+            capture('profile_updated', properties={'has_about_me': bool(current_user.about_me)})
         flash(_('Your changes have been saved.'))
         return redirect(url_for('main.edit_profile'))
     elif request.method == 'GET':
@@ -126,6 +133,9 @@ def follow(username):
             return redirect(url_for('main.user', username=username))
         current_user.follow(user)
         db.session.commit()
+        with new_context():
+            identify_context(current_user.username)
+            capture('user_followed')
         flash(_('You are following %(username)s!', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -147,6 +157,9 @@ def unfollow(username):
             return redirect(url_for('main.user', username=username))
         current_user.unfollow(user)
         db.session.commit()
+        with new_context():
+            identify_context(current_user.username)
+            capture('user_unfollowed')
         flash(_('You are not following %(username)s.', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -168,6 +181,9 @@ def search():
     if not g.search_form.validate():
         return redirect(url_for('main.explore'))
     page = request.args.get('page', 1, type=int)
+    with new_context():
+        identify_context(current_user.username)
+        capture('post_search_performed', properties={'page': page})
     posts, total = Post.search(g.search_form.q.data, page,
                                current_app.config['POSTS_PER_PAGE'])
     next_url = url_for('main.search', q=g.search_form.q.data, page=page + 1) \
@@ -190,6 +206,9 @@ def send_message(recipient):
         user.add_notification('unread_message_count',
                               user.unread_message_count())
         db.session.commit()
+        with new_context():
+            identify_context(current_user.username)
+            capture('message_sent')
         flash(_('Your message has been sent.'))
         return redirect(url_for('main.user', username=recipient))
     return render_template('send_message.html', title=_('Send Message'),
@@ -224,6 +243,9 @@ def export_posts():
     else:
         current_user.launch_task('export_posts', _('Exporting posts...'))
         db.session.commit()
+        with new_context():
+            identify_context(current_user.username)
+            capture('posts_export_started')
     return redirect(url_for('main.user', username=current_user.username))
 
 
