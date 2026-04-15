@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -39,6 +40,10 @@ new class extends Component
         }
 
         $user->save();
+
+        PostHogService::capture((string) $user->id, 'profile_updated', [
+            'email_changed' => $user->wasChanged('email'),
+        ]);
 
         $this->dispatch('profile-updated', name: $user->name);
     }

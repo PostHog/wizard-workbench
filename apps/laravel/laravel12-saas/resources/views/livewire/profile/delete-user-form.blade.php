@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
@@ -16,6 +17,10 @@ new class extends Component
         $this->validate([
             'password' => ['required', 'string', 'current_password'],
         ]);
+
+        $userId = (string) Auth::id();
+
+        PostHogService::capture($userId, 'account_deleted');
 
         tap(Auth::user(), $logout(...))->delete();
 
