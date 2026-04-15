@@ -1,3 +1,4 @@
+import type { PostHog } from "posthog-node";
 import { href, redirect } from "react-router";
 
 import type { Route } from "./+types/auth.callback";
@@ -56,7 +57,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const maybeUser =
       await retrieveUserAccountWithActiveMembershipsFromDatabaseByEmail(email);
 
+    const posthog = (context as Record<string, unknown>).posthog as
+      | PostHog
+      | undefined;
+
     if (maybeUser) {
+      posthog?.capture({
+        distinctId: maybeUser.id,
+        event: "user_logged_in",
+        properties: { $set: { email }, email },
+      });
+
       if (inviteLinkInfo || emailInviteInfo) {
         const organizationId =
           // biome-ignore lint/style/noNonNullAssertion: The is checked above
@@ -181,6 +192,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const userProfile = await saveUserAccountToDatabase({
       email,
       supabaseUserId: user.id,
+    });
+
+    posthog?.capture({
+      distinctId: userProfile.id,
+      event: "user_signed_up",
+      properties: { $set: { email }, email },
     });
 
     if (emailInviteInfo) {

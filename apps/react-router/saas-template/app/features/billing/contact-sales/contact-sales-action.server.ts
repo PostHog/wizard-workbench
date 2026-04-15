@@ -1,5 +1,6 @@
 import { parseSubmission, report } from "@conform-to/react/future";
 import { parseFormData } from "@remix-run/form-data-parser";
+import type { PostHog } from "posthog-node";
 import { data } from "react-router";
 
 import { CONTACT_SALES_INTENT } from "./contact-sales-constants";
@@ -9,7 +10,10 @@ import type { Route } from ".react-router/types/app/routes/+types/contact-sales"
 import { checkHoneypot } from "~/utils/honeypot.server";
 import { badRequest } from "~/utils/http-responses.server";
 
-export async function contactSalesAction({ request }: Route.ActionArgs) {
+export async function contactSalesAction({
+  request,
+  context,
+}: Route.ActionArgs) {
   const formData = await parseFormData(request);
 
   // Check honeypot before validation (honeypot fields won't be in validated data)
@@ -29,10 +33,22 @@ export async function contactSalesAction({ request }: Route.ActionArgs) {
     });
   }
 
+  const posthog = (context as Record<string, unknown>).posthog as
+    | PostHog
+    | undefined;
+
   switch (result.data.intent) {
     case CONTACT_SALES_INTENT: {
       const { intent: _, ...submissionData } = result.data;
       await saveContactSalesFormSubmissionToDatabase(submissionData);
+      posthog?.capture({
+        distinctId: submissionData.workEmail,
+        event: "contact_sales_submitted",
+        properties: {
+          company_name: submissionData.companyName,
+          work_email: submissionData.workEmail,
+        },
+      });
       return data({ result: undefined, success: true });
     }
   }

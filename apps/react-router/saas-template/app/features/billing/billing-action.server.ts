@@ -1,3 +1,4 @@
+import type { PostHog } from "posthog-node";
 import { data, redirect } from "react-router";
 import { z } from "zod";
 
@@ -67,6 +68,9 @@ export async function billingAction({
       organizationMembershipContext,
     );
     const i18n = getInstance(context);
+    const posthog = (context as Record<string, unknown>).posthog as
+      | PostHog
+      | undefined;
 
     const result = await validateFormData(request, schema);
 
@@ -97,6 +101,15 @@ export async function billingAction({
           customerId: organization.stripeCustomerId,
           organizationSlug: params.organizationSlug,
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
+        });
+
+        posthog?.capture({
+          distinctId: user.id,
+          event: "subscription_cancelled",
+          properties: {
+            organization_id: organization.id,
+            subscription_id: organization.stripeSubscriptions[0].stripeId,
+          },
         });
 
         return redirect(cancelSession.url);
@@ -159,6 +172,16 @@ export async function billingAction({
           seatsUsed: organization._count.memberships,
         });
 
+        posthog?.capture({
+          distinctId: user.id,
+          event: "subscription_checkout_started",
+          properties: {
+            lookup_key: body.lookupKey,
+            organization_id: organization.id,
+            price_id: price.stripeId,
+          },
+        });
+
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
         return redirect(checkoutSession.url!);
       }
@@ -187,6 +210,15 @@ export async function billingAction({
             subscription: { cancelAtPeriodEnd: false },
           });
         }
+
+        posthog?.capture({
+          distinctId: user.id,
+          event: "subscription_resumed",
+          properties: {
+            organization_id: organization.id,
+            subscription_id: organization.stripeSubscriptions[0]?.stripeId,
+          },
+        });
 
         const toast = await createToastHeaders({
           title: i18n.t(
@@ -231,6 +263,16 @@ export async function billingAction({
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
           subscriptionItemId:
             organization.stripeSubscriptions[0].items[0].stripeId,
+        });
+
+        posthog?.capture({
+          distinctId: user.id,
+          event: "subscription_plan_switched",
+          properties: {
+            lookup_key: body.lookupKey,
+            new_price_id: price.stripeId,
+            organization_id: organization.id,
+          },
         });
 
         return redirect(portalSession.url);

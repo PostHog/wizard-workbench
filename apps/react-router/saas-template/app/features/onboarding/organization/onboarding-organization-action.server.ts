@@ -1,5 +1,6 @@
 import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { createId } from "@paralleldrive/cuid2";
+import type { PostHog } from "posthog-node";
 import { redirect } from "react-router";
 
 import { requireUserNeedsOnboarding } from "../onboarding-helpers.server";
@@ -49,6 +50,18 @@ export async function onboardingOrganizationAction({
       slug: slugify(result.data.name),
     },
     userId: user.id,
+  });
+
+  const posthog = (context as Record<string, unknown>).posthog as
+    | PostHog
+    | undefined;
+  posthog?.capture({
+    distinctId: user.id,
+    event: "onboarding_organization_completed",
+    properties: {
+      organization_id: organization.id,
+      organization_name: organization.name,
+    },
   });
 
   return redirect(`/organizations/${organization.slug}`, { headers });
