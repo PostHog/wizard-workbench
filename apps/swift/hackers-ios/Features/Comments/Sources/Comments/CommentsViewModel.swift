@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -133,6 +134,7 @@ public final class CommentsViewModel: @unchecked Sendable {
             updatedPost.isBookmarked = bookmarksController.isBookmarked(currentPost.id)
             post = updatedPost
         }
+        PostHogSDK.shared.capture("comments_viewed", properties: ["post_id": postID])
         await commentsLoader.loadIfNeeded()
         updateVisibleComments()
     }
@@ -211,6 +213,7 @@ public final class CommentsViewModel: @unchecked Sendable {
 
         do {
             try await voteUseCase.upvote(comment: comment, for: post)
+            PostHogSDK.shared.capture("comment_upvoted", properties: ["post_id": post.id, "comment_id": comment.id])
         } catch {
             comment.upvoted = false
             throw error
@@ -236,6 +239,11 @@ public final class CommentsViewModel: @unchecked Sendable {
     public func toggleCommentVisibility(_ comment: Comment) {
         let visible = comment.visibility == .visible
         comment.visibility = visible ? .compact : .visible
+        PostHogSDK.shared.capture("comment_collapsed", properties: [
+            "post_id": postID,
+            "comment_id": comment.id,
+            "collapsed": visible,
+        ])
 
         if let commentIndex = indexOfComment(comment, source: comments) {
             let childrenCount = countChildren(comment)

@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -163,6 +164,7 @@ public final class FeedViewModel: @unchecked Sendable {
     public func vote(on post: Domain.Post, upvote: Bool) async throws {
         if upvote {
             try await voteUseCase.upvote(post: post)
+            PostHogSDK.shared.capture("post_upvoted", properties: ["post_id": post.id, "post_title": post.title])
         }
         // Unvote removed; do nothing when upvote == false
     }
@@ -219,6 +221,7 @@ public final class FeedViewModel: @unchecked Sendable {
         guard postType != newType else { return }
 
         postType = newType
+        PostHogSDK.shared.capture("feed_category_changed", properties: ["category": newType.rawValue])
         persistLastFeedCategoryIfNeeded()
         reset(clearPosts: true)  // Clear posts immediately to prevent flash of old data
         await feedLoader.refresh()
@@ -257,6 +260,11 @@ public final class FeedViewModel: @unchecked Sendable {
     public func toggleBookmark(for post: Domain.Post) async -> Bool {
         let newState = await bookmarksController.toggle(post: post)
         await handleBookmarksUpdate(postId: post.id, isBookmarked: newState)
+        PostHogSDK.shared.capture("post_bookmarked", properties: [
+            "post_id": post.id,
+            "post_title": post.title,
+            "bookmarked": newState,
+        ])
         return newState
     }
 
@@ -298,6 +306,7 @@ public final class FeedViewModel: @unchecked Sendable {
         }
 
         isSearchInProgress = true
+        PostHogSDK.shared.capture("post_searched", properties: ["query": trimmed])
         let currentQuery = query
         searchTask = Task { [weak self] in
             guard let self else { return }
