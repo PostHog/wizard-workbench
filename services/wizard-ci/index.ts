@@ -310,45 +310,10 @@ async function prompt(question: string): Promise<string> {
   });
 }
 
-async function selectApp(apps: App[]): Promise<App> {
-  console.log("\nAvailable apps:\n");
-  apps.forEach((app, i) => console.log(`  ${i + 1}) ${app.name}`));
-  const choice = await prompt(`\nSelect app (1-${apps.length}): `);
-  const index = parseInt(choice, 10) - 1;
-  if (index < 0 || index >= apps.length) {
-    console.error("Invalid selection");
-    process.exit(1);
-  }
-  return apps[index];
-}
-
-async function selectCommand(): Promise<WizardCommand> {
-  // CI mode only runs CI-capable commands
-  const available = WIZARD_COMMANDS.filter((c) => c.ciCapable);
-  if (available.length === 0) {
-    console.error("No CI-capable wizard commands available.");
-    process.exit(1);
-  }
-
-  console.log("\nSelect a wizard command:\n");
-  available.forEach((cmd, i) =>
-    console.log(
-      `  ${i + 1}) ${commandToInvocation(cmd.id).padEnd(28)} ${cmd.description}`,
-    ),
-  );
-  const choice = await prompt(`\nSelect command (1-${available.length}): `);
-  const index = parseInt(choice, 10) - 1;
-  if (index < 0 || index >= available.length) {
-    console.error("Invalid selection");
-    process.exit(1);
-  }
-  return available[index];
-}
-
 function resolveCommandOpt(id: string | undefined): WizardCommand {
   if (id === undefined) {
-    // Default to the first CI-capable command if no --command flag given
-    // (caller should use selectCommand() for interactive mode)
+    // Default to the first CI-capable command when no --command is given.
+    // Interactive selection lives in services/wizard-run/index.ts.
     const first = WIZARD_COMMANDS.find((c) => c.ciCapable);
     if (!first) {
       console.error("No CI-capable wizard commands available.");
@@ -821,37 +786,21 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // CI=true is the authoritative signal for non-interactive environments
-  // across every standard CI system (GitHub Actions sets it on every step).
-  // Stdin TTY detection is a secondary fallback.
-  const nonInteractive = process.env.CI === "true" || !process.stdin.isTTY;
+  // wizard-ci is the scripted entry point: no interactive selection.
+  // `pnpm wizard-run` (services/wizard-run/index.ts) owns the interactive
+  // command + app picker for local mprocs usage.
+  const command: WizardCommand = resolveCommandOpt(opts.command);
 
-  // Interactive prompt only fires for local TTY usage; CI falls through
-  // to the default ciCapable command.
-  let command: WizardCommand;
-  if (opts.command) {
-    command = resolveCommandOpt(opts.command);
-  } else if (!nonInteractive) {
-    command = await selectCommand();
-  } else {
-    command = resolveCommandOpt(undefined);
+  if (!opts.app) {
+    console.error(
+      "Error: --app is required. Run `pnpm wizard-run` for an interactive app picker.",
+    );
+    process.exit(1);
   }
-
-  // Determine which app to test
-  let target: App;
-
-  if (opts.app) {
-    const app = apps.find((a) => a.name === opts.app || a.name.endsWith(opts.app!));
-    if (!app) {
-      console.error(`App not found: ${opts.app}`);
-      console.log("Available:", apps.map((a) => a.name).join(", "));
-      process.exit(1);
-    }
-    target = app;
-  } else if (!nonInteractive) {
-    target = await selectApp(apps);
-  } else {
-    console.error("Error: --app is required in non-interactive mode");
+  const target = apps.find((a) => a.name === opts.app || a.name.endsWith(opts.app!));
+  if (!target) {
+    console.error(`App not found: ${opts.app}`);
+    console.log("Available:", apps.map((a) => a.name).join(", "));
     process.exit(1);
   }
 
