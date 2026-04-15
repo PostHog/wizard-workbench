@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.database import init_db
+from app.posthog_client import init_posthog, shutdown_posthog
 from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
 
 settings = get_settings()
@@ -20,7 +21,13 @@ async def lifespan(app: FastAPI):
     # Initialize database
     init_db()
 
+    # Initialize PostHog
+    init_posthog()
+
     yield
+
+    # Flush PostHog events on shutdown
+    shutdown_posthog()
 
 
 app = FastAPI(

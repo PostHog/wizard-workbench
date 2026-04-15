@@ -3,10 +3,12 @@
 from typing import List
 
 from fastapi import APIRouter, HTTPException, status
+from posthog import identify_context, new_context
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import APIKey
+from app.posthog_client import get_posthog
 
 router = APIRouter(prefix="/api/keys", tags=["api-keys"])
 
@@ -73,6 +75,10 @@ async def create_api_key(
 
     api_key = APIKey.create(db, user_id=current_user.id, name=request.name)
 
+    with new_context():
+        identify_context(str(current_user.id))
+        get_posthog().capture("api key created", properties={"key_name": request.name})
+
     return APIKeyCreated(
         id=api_key.id,
         name=api_key.name,
@@ -103,5 +109,9 @@ async def revoke_api_key(
 
     api_key.is_active = False
     db.commit()
+
+    with new_context():
+        identify_context(str(current_user.id))
+        get_posthog().capture("api key revoked", properties={"key_name": api_key.name})
 
     return None

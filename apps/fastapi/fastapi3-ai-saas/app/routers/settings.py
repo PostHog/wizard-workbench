@@ -5,9 +5,11 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Form, Request, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from posthog import identify_context, new_context
 from pydantic import BaseModel, EmailStr
 
 from app.dependencies import DbSession, RequiredUser
+from app.posthog_client import get_posthog
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 templates = Jinja2Templates(directory="app/templates")
@@ -67,6 +69,9 @@ async def update_settings(
             current_user.email = email
             db.commit()
             success = "Settings updated successfully"
+            with new_context():
+                identify_context(str(current_user.id))
+                get_posthog().capture("settings updated", properties={"field_updated": "email"})
     else:
         success = "No changes made"
 
@@ -109,6 +114,9 @@ async def change_password(
         current_user.set_password(new_password)
         db.commit()
         success = "Password changed successfully"
+        with new_context():
+            identify_context(str(current_user.id))
+            get_posthog().capture("password changed")
 
     api_key_count = db.query(APIKey).filter(
         APIKey.user_id == current_user.id,
