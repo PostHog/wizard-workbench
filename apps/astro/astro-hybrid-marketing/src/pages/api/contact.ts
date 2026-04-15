@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -10,23 +11,39 @@ interface ContactFormData {
   message: string;
 }
 
+function validateContactForm(data: ContactFormData): string | null {
+  if (!data.name || !data.email || !data.interest || !data.message) {
+    return 'missing_fields';
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(data.email)) {
+    return 'invalid_format';
+  }
+  return null;
+}
+
 export const POST: APIRoute = async ({ request }) => {
+  const sessionId = request.headers.get('X-PostHog-Session-Id') || undefined;
+  // Use the client-provided session ID as the distinct ID to correlate with client events.
+  // Fall back to 'anonymous' — never use PII (e.g. email) as distinctId.
+  const distinctId = sessionId || 'anonymous';
+  const posthog = getPostHogServer();
+
   try {
     const data: ContactFormData = await request.json();
+    const validationError = validateContactForm(data);
 
-    // Validate required fields
-    if (!data.name || !data.email || !data.interest || !data.message) {
+    if (validationError) {
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_validation_error',
+        properties: {
+          $session_id: sessionId,
+          reason: validationError,
+        },
+      });
       return new Response(
-        JSON.stringify({ error: 'Please fill in all required fields.' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) {
-      return new Response(
-        JSON.stringify({ error: 'Please enter a valid email address.' }),
+        JSON.stringify({ error: 'Please check your submission and try again.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -43,6 +60,15 @@ export const POST: APIRoute = async ({ request }) => {
       interest: data.interest,
       message: data.message,
       timestamp: new Date().toISOString(),
+    });
+
+    posthog.capture({
+      distinctId,
+      event: 'contact_form_received',
+      properties: {
+        $session_id: sessionId,
+        source: 'contact_form',
+      },
     });
 
     return new Response(

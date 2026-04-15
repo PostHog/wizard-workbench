@@ -1,0 +1,48 @@
+[
+  {
+    "event": "cta_clicked",
+    "description": "User clicked the primary 'Start Free Trial' CTA on the hero section",
+    "file": "src/pages/index.astro",
+    "properties": { "cta": "start_free_trial", "location": "hero" }
+  },
+  {
+    "event": "cta_clicked",
+    "description": "User clicked the 'Contact Sales' CTA on the hero section",
+    "file": "src/pages/index.astro",
+    "properties": { "cta": "contact_sales", "location": "hero" }
+  },
+  {
+    "event": "get_started_clicked",
+    "description": "User clicked the 'Get Started' button in the navigation",
+    "file": "src/components/Navigation.astro"
+  },
+  {
+    "event": "pricing_plan_clicked",
+    "description": "User clicked a pricing plan CTA button",
+    "file": "src/pages/pricing.astro",
+    "properties": { "plan": "starter | pro | enterprise" }
+  },
+  {
+    "event": "contact_form_submitted",
+    "description": "User successfully submitted the contact form (client-side confirmation)",
+    "file": "src/pages/contact.astro",
+    "properties": { "interest": "demo | pricing | enterprise | partnership | other" }
+  },
+  {
+    "event": "contact_form_error",
+    "description": "Contact form submission failed on the client side (network or server error)",
+    "file": "src/pages/contact.astro"
+  },
+  {
+    "event": "contact_form_received",
+    "description": "Server successfully received and validated a contact form submission",
+    "file": "src/pages/api/contact.ts",
+    "properties": { "interest": "string", "has_company": "boolean" }
+  },
+  {
+    "event": "contact_form_validation_error",
+    "description": "Server-side validation failed for a contact form submission",
+    "file": "src/pages/api/contact.ts",
+    "properties": { "reason": "missing_fields | invalid_email" }
+  }
+]
