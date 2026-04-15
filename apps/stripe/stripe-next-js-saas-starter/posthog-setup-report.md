@@ -1,10 +1,14 @@
 <wizard-report>
 # PostHog post-wizard report
 
-The wizard has completed a deep integration of PostHog into this Next.js 15 SaaS Starter. PostHog is now initialized client-side via `instrumentation-client.ts` (the recommended approach for Next.js 15.3+), with a reverse proxy configured in `next.config.ts` to improve event delivery reliability. A server-side PostHog client (`lib/posthog-server.ts`) handles event capture in Server Actions and API routes. Users are identified both client-side (in `app/(dashboard)/layout.tsx` via the SWR `onSuccess` hook) and server-side (on sign-in and sign-up), using the database user ID as the distinct ID for consistent cross-domain correlation. Error tracking is enabled via `capture_exceptions: true` in the client init.
+The wizard has completed a deep integration of PostHog into this Next.js 15 SaaS Starter. PostHog is initialized client-side via `instrumentation-client.ts` (the recommended approach for Next.js 15.3+), with a reverse proxy configured in `next.config.ts` for reliable event delivery. A server-side PostHog client (`lib/posthog-server.ts`) handles capture in Server Actions and API routes. Users are identified both client-side (in `app/(dashboard)/layout.tsx` via the SWR `onSuccess` hook) and server-side (on sign-in and sign-up), using the database user ID as the consistent distinct ID across both domains. Error tracking is enabled via `capture_exceptions: true` in the client init.
+
+This session added two new failure-path events to complete the auth conversion funnel:
 
 | Event | Description | File |
 |---|---|---|
+| `sign_in_failed` | Fired on failed sign-in — with `reason: user_not_found` or `reason: invalid_password` | `app/(login)/actions.ts` *(added)* |
+| `sign_up_failed` | Fired when sign-up fails because the email already exists (`reason: email_already_exists`) | `app/(login)/actions.ts` *(added)* |
 | `user_signed_in` | User successfully signs in | `app/(login)/actions.ts` |
 | `user_signed_up` | New user completes registration | `app/(login)/actions.ts` |
 | `user_signed_out` | User signs out | `app/(login)/actions.ts` |
@@ -22,14 +26,14 @@ The wizard has completed a deep integration of PostHog into this Next.js 15 SaaS
 
 ## Next steps
 
-We've built some insights and a dashboard for you to keep an eye on user behavior, based on the events we just instrumented:
+We recommend creating an **Analytics basics** dashboard in PostHog with the following insights to monitor key business metrics:
 
-- **Dashboard — Analytics basics**: https://us.posthog.com/project/228144/dashboard/1468191
-- **Signup → Checkout Conversion Funnel**: https://us.posthog.com/project/228144/insights/Rejsc2sS
-- **New Sign-ups Over Time**: https://us.posthog.com/project/228144/insights/pjba3GRc
-- **Account Deletions (Churn)**: https://us.posthog.com/project/228144/insights/uW9rQTkw
-- **Subscription Events** (completed vs canceled): https://us.posthog.com/project/228144/insights/vm180PKL
-- **Daily Active Users (Sign-ins)**: https://us.posthog.com/project/228144/insights/5gDwVemn
+- **Dashboard**: https://us.posthog.com/project/2/dashboard (create an "Analytics basics" dashboard here)
+- **Signup → Checkout Conversion Funnel** — funnel insight: `user_signed_up` → `checkout_initiated` → `checkout_completed`: https://us.posthog.com/project/2/insights/new
+- **Auth Failure Rate** — trends of `sign_in_failed` and `sign_up_failed` broken down by `reason`: https://us.posthog.com/project/2/insights/new
+- **Subscription Churn** — trend of `subscription_canceled` over time: https://us.posthog.com/project/2/insights/new
+- **Account Deletions (Churn)** — trend of `account_deleted` events: https://us.posthog.com/project/2/insights/new
+- **Daily Active Users (Sign-ins)** — trend of `user_signed_in` over time: https://us.posthog.com/project/2/insights/new
 
 ### Agent skill
 

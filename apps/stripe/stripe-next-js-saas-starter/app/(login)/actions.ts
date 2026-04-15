@@ -65,6 +65,13 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     .limit(1);
 
   if (userWithTeam.length === 0) {
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: email,
+      event: 'sign_in_failed',
+      properties: { email, reason: 'user_not_found' }
+    });
+    await posthog.shutdown();
     return {
       error: 'Invalid email or password. Please try again.',
       email,
@@ -80,6 +87,13 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   );
 
   if (!isPasswordValid) {
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(foundUser.id),
+      event: 'sign_in_failed',
+      properties: { email, reason: 'invalid_password' }
+    });
+    await posthog.shutdown();
     return {
       error: 'Invalid email or password. Please try again.',
       email,
@@ -132,6 +146,13 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     .limit(1);
 
   if (existingUser.length > 0) {
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: email,
+      event: 'sign_up_failed',
+      properties: { email, reason: 'email_already_exists' }
+    });
+    await posthog.shutdown();
     return {
       error: 'Failed to create user. Please try again.',
       email,
