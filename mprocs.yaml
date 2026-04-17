@@ -27,6 +27,8 @@ procs:
     shell: "source .env && cd $WIZARD_PATH && pnpm build && pnpm build:watch"
     autostart: true
     stop_signal: SIGTERM
+    env_file: .env
+
 
   # ═══════════════════════════════════════════════════════════════════════════
   # WIZARD RUNS - Execute wizard on test apps (press 's' to start)
