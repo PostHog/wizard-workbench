@@ -1,5 +1,6 @@
-import { Component, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
+import { PostHogService } from '@app/services/posthog.service';
 
 interface Plan {
   id: string;
@@ -25,6 +26,7 @@ interface Invoice {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BillingComponent {
+  private readonly posthogService = inject(PostHogService);
   readonly currentPlan = signal('starter');
 
   readonly plans: Plan[] = [
@@ -62,4 +64,19 @@ export class BillingComponent {
   ];
 
   readonly currentPlanDetails = computed(() => this.plans.find((p) => p.id === this.currentPlan()));
+
+  selectPlan(planId: string): void {
+    const previousPlan = this.currentPlan();
+    if (previousPlan === planId) return;
+
+    const plan = this.plans.find((p) => p.id === planId);
+    this.currentPlan.set(planId);
+
+    this.posthogService.posthog.capture('billing_plan_selected', {
+      plan_id: planId,
+      plan_name: plan?.name,
+      plan_price: plan?.price,
+      previous_plan: previousPlan,
+    });
+  }
 }
