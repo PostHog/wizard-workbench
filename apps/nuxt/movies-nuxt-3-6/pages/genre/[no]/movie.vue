@@ -13,6 +13,15 @@ async function fetch(page: number) {
   const data = await getMediaByGenre(type, no.value, page)
   items.push(...data.results)
 }
+
+const { $posthog: posthog } = useNuxtApp()
+onMounted(() => {
+  posthog?.capture('genre_browsed', {
+    media_type: type,
+    genre_id: no.value,
+    genre_name: name,
+  })
+})
 </script>
 
 <template>

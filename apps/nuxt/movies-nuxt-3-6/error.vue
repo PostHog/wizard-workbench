@@ -10,6 +10,17 @@ const isDev = process.dev
 function handleError() {
   return clearError({ redirect: '/' })
 }
+
+const { $posthog: posthog } = useNuxtApp()
+onMounted(() => {
+  posthog?.capture('error_displayed', {
+    status_code: props.error?.statusCode,
+    error_message: message.value,
+    is_404: is404.value,
+  })
+  if (!is404.value && props.error)
+    posthog?.captureException(props.error)
+})
 </script>
 
 <template>

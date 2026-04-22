@@ -4,16 +4,22 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 const { login } = useAuth()
+const { $posthog: posthog } = useNuxtApp()
 
-const handleLogin = async () => {
+async function handleLogin() {
   error.value = ''
   loading.value = true
 
   try {
     await login(username.value, password.value)
-  } catch (e: any) {
+    posthog?.identify(username.value)
+    posthog?.capture('user_logged_in', { username: username.value })
+  }
+  catch (e: any) {
     error.value = e.message || 'Login failed'
-  } finally {
+    posthog?.capture('user_login_failed', { error: error.value })
+  }
+  finally {
     loading.value = false
   }
 }
@@ -46,9 +52,9 @@ const handleLogin = async () => {
               class="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               placeholder="Enter your username"
               :disabled="loading"
-            />
+            >
           </div>
-          
+
           <div>
             <label for="password" class="block text-sm font-medium text-gray-300 mb-2">
               Password
@@ -62,7 +68,7 @@ const handleLogin = async () => {
               class="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               placeholder="Enter your password"
               :disabled="loading"
-            />
+            >
           </div>
         </div>
 
@@ -79,8 +85,8 @@ const handleLogin = async () => {
         >
           <span v-if="loading" class="flex items-center justify-center gap-2">
             <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
             Signing in...
           </span>
