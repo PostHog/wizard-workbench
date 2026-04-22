@@ -7,6 +7,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -76,10 +77,18 @@ function PricingCard({
 
     startTransition(async () => {
       try {
+        posthog.capture('checkout_started', {
+          plan: name,
+          price_id: priceId,
+          interval,
+        });
+
         const response = await fetch('/api/stripe/create-checkout', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id(),
+            'X-POSTHOG-SESSION-ID': posthog.get_session_id() ?? '',
           },
           body: JSON.stringify({ priceId })
         });
@@ -92,6 +101,7 @@ function PricingCard({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         console.error('Checkout error:', err);
       }
     });
