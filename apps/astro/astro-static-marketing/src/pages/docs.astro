@@ -13,32 +13,32 @@ import Layout from '../layouts/Layout.astro';
   <section class="features" style="padding-top: 3rem;">
     <div class="container">
       <div class="features-grid">
-        <a href="#" class="feature-card" style="text-decoration: none;">
+        <a href="#" class="feature-card docs-section-card" data-section="getting-started" style="text-decoration: none;">
           <div class="feature-icon">🚀</div>
           <h3>Getting Started</h3>
           <p>Set up your account and start using NeuralFlow in under 5 minutes.</p>
         </a>
-        <a href="#" class="feature-card" style="text-decoration: none;">
+        <a href="#" class="feature-card docs-section-card" data-section="api-reference" style="text-decoration: none;">
           <div class="feature-icon">📚</div>
           <h3>API Reference</h3>
           <p>Complete API documentation with examples for all endpoints.</p>
         </a>
-        <a href="#" class="feature-card" style="text-decoration: none;">
+        <a href="#" class="feature-card docs-section-card" data-section="integrations" style="text-decoration: none;">
           <div class="feature-icon">🔌</div>
           <h3>Integrations</h3>
           <p>Connect NeuralFlow with your favorite tools and services.</p>
         </a>
-        <a href="#" class="feature-card" style="text-decoration: none;">
+        <a href="#" class="feature-card docs-section-card" data-section="workflows" style="text-decoration: none;">
           <div class="feature-icon">🔄</div>
           <h3>Workflows</h3>
           <p>Build powerful automation workflows with our visual builder.</p>
         </a>
-        <a href="#" class="feature-card" style="text-decoration: none;">
+        <a href="#" class="feature-card docs-section-card" data-section="security" style="text-decoration: none;">
           <div class="feature-icon">🔐</div>
           <h3>Security</h3>
           <p>Learn about our security practices and compliance certifications.</p>
         </a>
-        <a href="#" class="feature-card" style="text-decoration: none;">
+        <a href="#" class="feature-card docs-section-card" data-section="faq" style="text-decoration: none;">
           <div class="feature-icon">❓</div>
           <h3>FAQ</h3>
           <p>Answers to commonly asked questions about NeuralFlow.</p>
@@ -47,3 +47,14 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.docs-section-card').forEach(function (card) {
+      card.addEventListener('click', function () {
+        var section = card.getAttribute('data-section');
+        window.posthog?.capture('docs_section_clicked', { section: section });
+      });
+    });
+  });
+</script>
