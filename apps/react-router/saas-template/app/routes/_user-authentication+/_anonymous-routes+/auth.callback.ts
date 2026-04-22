@@ -15,6 +15,7 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import { posthogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
@@ -173,6 +174,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         }
       }
 
+      const { posthog } = context.get(posthogContext);
+      posthog.capture({
+        distinctId: maybeUser.id,
+        event: "user_logged_in",
+        properties: { email },
+      });
+
       return redirect(href("/organizations"), {
         headers: combineHeaders(headers, inviteLinkHeaders, emailInviteHeaders),
       });
@@ -181,6 +189,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const userProfile = await saveUserAccountToDatabase({
       email,
       supabaseUserId: user.id,
+    });
+
+    const { posthog } = context.get(posthogContext);
+    posthog.capture({
+      distinctId: userProfile.id,
+      event: "user_signed_up",
+      properties: { email },
     });
 
     if (emailInviteInfo) {

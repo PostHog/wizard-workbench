@@ -1,3 +1,4 @@
+import type { PostHog } from "posthog-node";
 import type { Stripe } from "stripe";
 
 import { updateOrganizationInDatabaseById } from "../organizations/organizations-model.server";
@@ -97,6 +98,7 @@ export const handleStripeChargeDisputeClosedEvent = async (
 
 export const handleStripeCheckoutSessionCompletedEvent = async (
   event: Stripe.CheckoutSessionCompletedEvent,
+  posthog?: PostHog,
 ) => {
   try {
     if (event.data.object.metadata?.organizationId) {
@@ -121,6 +123,20 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
           organizationId: organization.id,
         });
       }
+
+      posthog?.capture({
+        distinctId: event.data.object.metadata.organizationId,
+        event: "subscription_started",
+        properties: {
+          customer_email: event.data.object.customer_details?.email,
+          organization_id: event.data.object.metadata.organizationId,
+          organization_name: organization.name,
+          stripe_customer_id:
+            typeof event.data.object.customer === "string"
+              ? event.data.object.customer
+              : undefined,
+        },
+      });
     } else {
       console.error("No organization ID found in checkout session metadata");
       prettyPrint(event);
@@ -174,9 +190,25 @@ export const handleStripeCustomerSubscriptionCreatedEvent = async (
 
 export const handleStripeCustomerSubscriptionDeletedEvent = async (
   event: Stripe.CustomerSubscriptionDeletedEvent,
+  posthog?: PostHog,
 ) => {
   try {
     await updateStripeSubscriptionFromAPIInDatabase(event.data.object);
+
+    const customerId =
+      typeof event.data.object.customer === "string"
+        ? event.data.object.customer
+        : event.data.object.customer?.id;
+
+    posthog?.capture({
+      distinctId: customerId ?? event.data.object.id,
+      event: "subscription_cancelled",
+      properties: {
+        stripe_customer_id: customerId,
+        stripe_subscription_id: event.data.object.id,
+        subscription_status: event.data.object.status,
+      },
+    });
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);

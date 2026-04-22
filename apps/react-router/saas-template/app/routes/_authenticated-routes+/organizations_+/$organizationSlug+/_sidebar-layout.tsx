@@ -1,3 +1,5 @@
+import { usePostHog } from "@posthog/react";
+import { useEffect } from "react";
 import type { ShouldRevalidateFunctionArgs, UIMatch } from "react-router";
 import { data, href, Outlet, redirect, useMatches } from "react-router";
 import { promiseHash } from "remix-utils/promise";
@@ -69,6 +71,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 
   return data(
     {
+      currentUserId: user.id,
       defaultSidebarOpen,
       ...mapOnboardingUserToOrganizationLayoutProps({
         organizationSlug: params.organizationSlug,
@@ -98,18 +101,27 @@ export default function OrganizationLayoutRoute({
   const {
     billingSidebarCardProps,
     createSubscriptionModalProps,
+    currentUserId,
     defaultSidebarOpen,
     navUserProps,
     notificationButtonProps,
     organizationSwitcherProps,
   } = loaderData;
+
+  const posthog = usePostHog();
+  useEffect(() => {
+    posthog?.identify(currentUserId, {
+      email: navUserProps.user.email,
+      name: navUserProps.user.name,
+    });
+  }, [posthog, currentUserId, navUserProps.user.email, navUserProps.user.name]);
   const breadcrumbs = findBreadcrumbs(
     matches as UIMatch<{ breadcrumb?: { title: string; to: string } }>[],
   );
 
   // Check if we're on a paste detail page
-  const isPasteDetailPage = matches.some(
-    (match) => match.id?.includes("pastes.$pasteId"),
+  const isPasteDetailPage = matches.some((match) =>
+    match.id?.includes("pastes.$pasteId"),
   );
 
   // If it's a paste detail page, render without sidebar

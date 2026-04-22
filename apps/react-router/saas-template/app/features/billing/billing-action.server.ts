@@ -40,6 +40,7 @@ import { deleteStripeSubscriptionScheduleFromDatabaseById } from "./stripe-subsc
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/organizations_+/$organizationSlug+/settings+/+types/billing";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { OrganizationMembershipRole } from "~/generated/client";
+import { posthogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
@@ -159,6 +160,17 @@ export async function billingAction({
           seatsUsed: organization._count.memberships,
         });
 
+        const { posthog } = context.get(posthogContext);
+        posthog.capture({
+          distinctId: user.id,
+          event: "checkout_session_opened",
+          properties: {
+            organization_id: organization.id,
+            price_lookup_key: body.lookupKey,
+            product_name: price.product.name,
+          },
+        });
+
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
         return redirect(checkoutSession.url!);
       }
@@ -187,6 +199,16 @@ export async function billingAction({
             subscription: { cancelAtPeriodEnd: false },
           });
         }
+
+        const { posthog: posthogResume } = context.get(posthogContext);
+        posthogResume.capture({
+          distinctId: user.id,
+          event: "subscription_resumed",
+          properties: {
+            organization_id: organization.id,
+            subscription_id: organization.stripeSubscriptions[0]?.stripeId,
+          },
+        });
 
         const toast = await createToastHeaders({
           title: i18n.t(
