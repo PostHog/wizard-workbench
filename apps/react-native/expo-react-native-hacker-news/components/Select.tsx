@@ -10,6 +10,7 @@ import { BlurView } from "expo-blur";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 import { ListFilter, LucideIcon } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import { Colors } from "@/constants/Colors";
 import { StoryType } from "@/constants/stories";
@@ -38,6 +39,7 @@ export const StoriesSelect = ({
   defaultOpen = false,
 }: Props) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const posthog = usePostHog();
 
   const selectedOption = useMemo(
     () => options.find((option) => option.id === value),
@@ -102,7 +104,15 @@ export const StoriesSelect = ({
       )}
       <Pressable
         style={styles.trigger}
-        onPress={() => setIsOpen((prev) => !prev)}
+        onPress={() => {
+          const opening = !isOpen;
+          if (opening) {
+            posthog.capture("stories_filter_opened", {
+              current_story_type: value,
+            });
+          }
+          setIsOpen(opening);
+        }}
       >
         <ListFilter color="#f1f1f1" />
         <Text style={styles.triggerLabel}>
