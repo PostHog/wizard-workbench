@@ -2,12 +2,14 @@
 
 from contextlib import asynccontextmanager
 
+import posthog
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.database import init_db
+from app.middleware import PostHogMiddleware
 from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
 
 settings = get_settings()
@@ -20,7 +22,17 @@ async def lifespan(app: FastAPI):
     # Initialize database
     init_db()
 
+    # Initialize PostHog
+    if not settings.posthog_disabled:
+        posthog.api_key = settings.posthog_project_token
+        posthog.host = settings.posthog_host
+        posthog.debug = settings.debug
+
     yield
+
+    # Flush PostHog events on shutdown
+    if not settings.posthog_disabled:
+        posthog.flush()
 
 
 app = FastAPI(
@@ -28,6 +40,8 @@ app = FastAPI(
     description="AI content generation platform",
     lifespan=lifespan,
 )
+
+app.add_middleware(PostHogMiddleware)
 
 # Include routers
 app.include_router(auth.router)
