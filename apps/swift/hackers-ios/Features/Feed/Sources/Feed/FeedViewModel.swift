@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -218,6 +219,12 @@ public final class FeedViewModel: @unchecked Sendable {
     public func changePostType(_ newType: Domain.PostType) async {
         guard postType != newType else { return }
 
+        // PostHog: Capture feed category change
+        PostHogSDK.shared.capture("feed_category_changed", properties: [
+            "category": newType.rawValue,
+            "previous_category": postType.rawValue,
+        ])
+
         postType = newType
         persistLastFeedCategoryIfNeeded()
         reset(clearPosts: true)  // Clear posts immediately to prevent flash of old data
@@ -257,6 +264,12 @@ public final class FeedViewModel: @unchecked Sendable {
     public func toggleBookmark(for post: Domain.Post) async -> Bool {
         let newState = await bookmarksController.toggle(post: post)
         await handleBookmarksUpdate(postId: post.id, isBookmarked: newState)
+        // PostHog: Capture bookmark toggle
+        let eventName = newState ? "post_bookmarked" : "post_bookmark_removed"
+        PostHogSDK.shared.capture(eventName, properties: [
+            "post_id": post.id,
+            "post_title": post.title,
+        ])
         return newState
     }
 
@@ -311,6 +324,11 @@ public final class FeedViewModel: @unchecked Sendable {
                 await MainActor.run {
                     self.searchResults = annotated
                     self.isSearchInProgress = false
+                    // PostHog: Capture search query with result count
+                    PostHogSDK.shared.capture("post_searched", properties: [
+                        "query": currentQuery,
+                        "result_count": results.count,
+                    ])
                 }
             } catch {
                 if Task.isCancelled { return }
