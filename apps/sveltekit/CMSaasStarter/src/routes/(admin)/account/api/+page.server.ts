@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -70,6 +71,13 @@ export const actions = {
         email,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_change_initiated",
+      properties: { new_email: email },
+    })
 
     return {
       email,
@@ -172,6 +180,12 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "password_changed",
+    })
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +234,13 @@ export const actions = {
         currentPassword,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+      properties: { email: user.email },
+    })
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -318,6 +339,30 @@ export const actions = {
         template_properties: {
           companyName: "SaaS Starter",
           WebsiteBaseUrl: WebsiteBaseUrl,
+        },
+      })
+    }
+
+    const posthog = getPostHogClient()
+    if (newProfile) {
+      posthog.capture({
+        distinctId: user.id,
+        event: "profile_created",
+        properties: {
+          full_name: fullName,
+          company_name: companyName,
+          website,
+          email: session.user.email,
+        },
+      })
+    } else {
+      posthog.capture({
+        distinctId: user.id,
+        event: "profile_updated",
+        properties: {
+          full_name: fullName,
+          company_name: companyName,
+          website,
         },
       })
     }
