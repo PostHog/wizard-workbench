@@ -17,6 +17,7 @@ const [item, recommendations] = await Promise.all([
   getRecommendations(type.value, id.value),
 ])
 const $img = useImage()
+const { $posthog: posthog } = useNuxtApp()
 
 useHead({
   title: item.name || item.title,
@@ -24,6 +25,12 @@ useHead({
     { name: 'description', content: item.overview },
     { property: 'og:image', content: $img(`/tmdb${item.poster_path}`, { width: 1200, height: 630 }) },
   ],
+})
+
+posthog?.capture('media_detail_viewed', {
+  media_type: type.value,
+  media_id: id.value,
+  media_title: item.name || item.title,
 })
 </script>
 
