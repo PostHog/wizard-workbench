@@ -39,6 +39,7 @@ import {
   type YaraReport,
 } from "./utils.js";
 import {
+  WIZARD_COMMANDS,
   commandToSubcommand,
   commandToInvocation,
   findCommand,
@@ -753,7 +754,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Resolve command: from --command flag or interactive picker
+  // Resolve command: from --command flag, default for non-interactive, or picker
   let command: WizardCommand;
   if (opts.command) {
     const found = findCommand(opts.command);
@@ -766,6 +767,14 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     command = found;
+  } else if (opts.app) {
+    // Non-interactive: --app was passed without --command, default to first CI-capable
+    const first = WIZARD_COMMANDS.find((c) => c.ciCapable);
+    if (!first) {
+      console.error("No CI-capable wizard commands available.");
+      process.exit(1);
+    }
+    command = first;
   } else {
     command = await selectCommand(true);
   }
