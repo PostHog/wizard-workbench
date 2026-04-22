@@ -216,6 +216,9 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
   // and prints a human-readable summary to stdout
   args.push("--yara-report");
 
+  const redactedArgs = args.map((a, i) => args[i - 1] === "--api-key" ? "***" : a);
+  console.log(`      $ node ${redactedArgs.join(" ")}\n`);
+
   return new Promise((resolve) => {
     const child = spawn("node", args, {
       cwd: appPath,

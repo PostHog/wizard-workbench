@@ -15,9 +15,8 @@
  * Adding a new test app: drop a project under /apps; it appears automatically.
  */
 import "dotenv/config";
-import { createInterface } from "readline";
 import { join } from "path";
-import { findApps, runWizard, type App } from "../wizard-ci/utils.js";
+import { findApps, runWizard } from "../wizard-ci/utils.js";
 import {
   WIZARD_COMMANDS,
   commandToSubcommand,
@@ -25,6 +24,7 @@ import {
   findCommand,
   type WizardCommand,
 } from "../wizard-commands.js";
+import { prompt, selectCommand, selectApp } from "./picker.js";
 
 const WORKBENCH = join(import.meta.dirname, "../..");
 const APPS_DIR = join(WORKBENCH, "apps");
@@ -78,61 +78,6 @@ Options:
   }
 
   return opts;
-}
-
-function prompt(question: string): Promise<string> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
-}
-
-async function selectCommand(ciMode: boolean): Promise<WizardCommand> {
-  const available = ciMode
-    ? WIZARD_COMMANDS.filter((c) => c.ciCapable)
-    : WIZARD_COMMANDS;
-
-  if (available.length === 0) {
-    console.error("No wizard commands available for this mode.");
-    process.exit(1);
-  }
-
-  console.log("Select a wizard command:\n");
-  available.forEach((cmd, i) =>
-    console.log(
-      `  ${i + 1}) ${commandToInvocation(cmd.id).padEnd(28)} ${cmd.description}`,
-    ),
-  );
-  console.log();
-
-  const selection = await prompt(`Enter number (1-${available.length}): `);
-  const index = parseInt(selection, 10) - 1;
-
-  if (index < 0 || index >= available.length) {
-    console.error("Invalid selection");
-    process.exit(1);
-  }
-
-  return available[index];
-}
-
-async function selectApp(apps: App[]): Promise<App> {
-  console.log("Select an app to run the wizard on:\n");
-  apps.forEach((app, i) => console.log(`  ${i + 1}) ${app.name}`));
-  console.log();
-
-  const selection = await prompt(`Enter number (1-${apps.length}): `);
-  const index = parseInt(selection, 10) - 1;
-
-  if (index < 0 || index >= apps.length) {
-    console.error("Invalid selection");
-    process.exit(1);
-  }
-
-  return apps[index];
 }
 
 async function main(): Promise<void> {
