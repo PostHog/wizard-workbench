@@ -1,6 +1,18 @@
 import Fastify from 'fastify';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const fastify = Fastify({ logger: true });
+
+fastify.setErrorHandler((err, request, reply) => {
+  const distinctId = request.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.captureException(err, distinctId);
+  reply.status(500).send({ error: 'Internal Server Error' });
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +51,16 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+
+  posthog.capture({
+    distinctId: author,
+    event: 'post_created',
+    properties: {
+      post_id: post.id,
+      title: post.title,
+    },
+  });
+
   return reply.status(201).send(post);
 });
 
@@ -67,6 +89,17 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  const updatingUser = request.headers['x-posthog-distinct-id'] || post.author;
+  posthog.capture({
+    distinctId: updatingUser,
+    event: 'post_updated',
+    properties: {
+      post_id: post.id,
+      title: post.title,
+      published: post.published,
+    },
+  });
+
   return post;
 });
 
@@ -85,6 +118,15 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   for (let i = comments.length - 1; i >= 0; i--) {
     if (comments[i].post_id === postId) comments.splice(i, 1);
   }
+
+  const deletingUser = request.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId: deletingUser,
+    event: 'post_deleted',
+    properties: {
+      post_id: postId,
+    },
+  });
 
   return reply.status(204).send();
 });
@@ -111,6 +153,16 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+
+  posthog.capture({
+    distinctId: author,
+    event: 'comment_created',
+    properties: {
+      comment_id: comment.id,
+      post_id: post.id,
+    },
+  });
+
   return reply.status(201).send(comment);
 });
 
