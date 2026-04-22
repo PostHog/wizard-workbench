@@ -11,12 +11,14 @@ import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link2, MessageSquareText } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export const Post = ({ id, title, url, score, text, kids }: Item) => {
   const QC = useQueryClient();
+  const posthog = usePostHog();
 
   const isExternal = useMemo(() => {
     return text === undefined;
@@ -34,6 +36,12 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
+          posthog.capture("post_tapped", {
+            post_id: id,
+            post_title: title,
+            is_external: isExternal,
+            url: url ?? null,
+          });
           if (isExternal) Linking.openURL(url);
           else await navigateToDetails();
         }}
@@ -46,6 +54,11 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog.capture("post_upvoted", {
+              post_id: id,
+              post_title: title,
+              score: score,
+            });
             await Haptics.notificationAsync(
               Haptics.NotificationFeedbackType.Success
             );
@@ -86,6 +99,12 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           <Pressable
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              posthog.capture("post_external_link_opened", {
+                post_id: id,
+                post_title: title,
+                url,
+                host: new URL(url).host,
+              });
               Linking.openURL(url);
             }}
           >
