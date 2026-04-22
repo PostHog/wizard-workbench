@@ -6,15 +6,21 @@ import {
   useRouter,
 } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter()
+  const posthog = usePostHog()
   const isRoot = useMatch({
     strict: false,
     select: (state) => state.id === rootRouteId,
   })
 
   console.error('DefaultCatchBoundary Error:', error)
+  posthog.captureException(error)
+  posthog.capture('app_error_occurred', {
+    error_message: error instanceof Error ? error.message : String(error),
+  })
 
   return (
     <div className="min-w-0 flex-1 p-8 flex flex-col items-center justify-center">
