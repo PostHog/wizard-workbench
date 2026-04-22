@@ -65,12 +65,22 @@ import Layout from '../layouts/Layout.astro';
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
+    const sessionId = (window as any).posthog?.get_session_id?.() || null;
+    const distinctId = (window as any).posthog?.get_distinct_id?.() || null;
+
+    (window as any).posthog?.capture('contact_form_submitted', {
+      interest: data.interest,
+      has_company: Boolean(data.company),
+    });
+
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (sessionId) headers['X-PostHog-Session-Id'] = sessionId;
+      if (distinctId) headers['X-PostHog-Distinct-Id'] = distinctId;
+
       const response = await fetch('/api/contact', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(data),
       });
 
