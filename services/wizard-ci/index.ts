@@ -10,7 +10,6 @@
  * For running all apps, use the wizard-trigger GitHub workflow.
  */
 import "dotenv/config";
-import { createInterface } from "readline";
 import { join, relative } from "path";
 import {
   findApps,
@@ -46,6 +45,11 @@ import {
   findCommand,
   type WizardCommand,
 } from "../wizard-commands.js";
+import {
+  prompt as interactivePrompt,
+  selectCommand,
+  selectApp,
+} from "../wizard-run/picker.js";
 
 // ============================================================================
 // Config
@@ -57,6 +61,7 @@ const APPS_DIR = join(WORKBENCH, "apps");
 interface Options {
   app?: string;
   command?: string;
+  skillId?: string;
   triggerId?: string;
   local: boolean;
   base: string;
@@ -301,38 +306,7 @@ Evaluation:
 }
 
 async function prompt(question: string): Promise<string> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
-}
-
-function resolveCommandOpt(id: string | undefined): WizardCommand {
-  if (id === undefined) {
-    // Default to the first CI-capable command when no --command is given.
-    // Interactive selection lives in services/wizard-run/index.ts.
-    const first = WIZARD_COMMANDS.find((c) => c.ciCapable);
-    if (!first) {
-      console.error("No CI-capable wizard commands available.");
-      process.exit(1);
-    }
-    return first;
-  }
-  const found = findCommand(id);
-  if (!found) {
-    console.error(
-      `Unknown command: ${id}. Valid: ${WIZARD_COMMANDS.map((c) => c.id).join(", ")}`,
-    );
-    process.exit(1);
-  }
-  if (!found.ciCapable) {
-    console.error(`Command "${found.id}" does not support CI mode.`);
-    process.exit(1);
-  }
-  return found;
+  return interactivePrompt(question);
 }
 
 // ============================================================================
@@ -780,22 +754,43 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // wizard-ci is the scripted entry point: no interactive selection.
-  // `pnpm wizard-run` (services/wizard-run/index.ts) owns the interactive
-  // command + app picker for local mprocs usage.
-  const command: WizardCommand = resolveCommandOpt(opts.command);
-
-  if (!opts.app) {
-    console.error(
-      "Error: --app is required. Run `pnpm wizard-run` for an interactive app picker.",
-    );
-    process.exit(1);
+  // Resolve command: from --command flag, default for non-interactive, or picker
+  let command: WizardCommand;
+  if (opts.command) {
+    const found = findCommand(opts.command);
+    if (!found) {
+      console.error(`Unknown command: ${opts.command}`);
+      process.exit(1);
+    }
+    if (!found.ciCapable) {
+      console.error(`Command "${found.id}" does not support CI mode.`);
+      process.exit(1);
+    }
+    command = found;
+  } else if (opts.app) {
+    // Non-interactive: --app was passed without --command, default to first CI-capable
+    const first = WIZARD_COMMANDS.find((c) => c.ciCapable);
+    if (!first) {
+      console.error("No CI-capable wizard commands available.");
+      process.exit(1);
+    }
+    command = first;
+  } else {
+    command = await selectCommand(true);
   }
-  const target = apps.find((a) => a.name === opts.app || a.name.endsWith(opts.app!));
-  if (!target) {
-    console.error(`App not found: ${opts.app}`);
-    console.log("Available:", apps.map((a) => a.name).join(", "));
-    process.exit(1);
+
+  // Resolve app: from --app flag or interactive picker
+  let target: App;
+  if (opts.app) {
+    const found = apps.find((a) => a.name === opts.app || a.name.endsWith(opts.app!));
+    if (!found) {
+      console.error(`App not found: ${opts.app}`);
+      console.log("Available:", apps.map((a) => a.name).join(", "));
+      process.exit(1);
+    }
+    target = found;
+  } else {
+    target = await selectApp(apps);
   }
 
   // Generate or use provided trigger ID
