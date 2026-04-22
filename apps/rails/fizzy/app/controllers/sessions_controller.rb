@@ -19,6 +19,8 @@ class SessionsController < ApplicationController
   end
 
   def destroy
+    PostHog.capture(distinct_id: Current.identity.email_address, event: "user_logged_out") if Current.identity
+
     terminate_session
 
     respond_to do |format|

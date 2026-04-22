@@ -1,0 +1,10 @@
+PostHog.init do |config|
+  config.api_key = ENV.fetch("POSTHOG_PROJECT_TOKEN", nil)
+  config.host = ENV.fetch("POSTHOG_HOST", nil)
+end
+
+PostHog::Rails.configure do |config|
+  config.auto_capture_exceptions = true
+  config.report_rescued_exceptions = true
+  config.auto_instrument_active_job = true
+end
