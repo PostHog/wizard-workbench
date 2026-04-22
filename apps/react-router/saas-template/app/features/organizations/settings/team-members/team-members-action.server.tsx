@@ -33,6 +33,7 @@ import { adjustSeats } from "~/features/billing/stripe-helpers.server";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import type { Prisma } from "~/generated/client";
 import { OrganizationMembershipRole } from "~/generated/client";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { sendEmail } from "~/utils/email.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
@@ -55,6 +56,7 @@ export async function teamMembersAction({
     const { user, organization, role, headers } = context.get(
       organizationMembershipContext,
     );
+    const posthog = context.get(posthogContext);
     const i18n = getInstance(context);
 
     if (role === OrganizationMembershipRole.member) {
@@ -247,6 +249,18 @@ export async function teamMembersAction({
           userId: targetUserId,
         });
 
+        posthog?.capture({
+          distinctId: user.id,
+          event: "member_role_changed",
+          properties: {
+            new_role: requestedRoleOrStatus,
+            organization_id: organization.id,
+            organization_name: organization.name,
+            previous_role: targetMembership.role,
+            target_user_id: targetUserId,
+          },
+        });
+
         // Return success
         return data({}, { headers });
       }
@@ -361,6 +375,17 @@ export async function teamMembersAction({
             }),
           });
         }
+
+        posthog?.capture({
+          distinctId: user.id,
+          event: "member_invited_by_email",
+          properties: {
+            invited_email: body.email,
+            invited_role: body.role,
+            organization_id: organization.id,
+            organization_name: organization.name,
+          },
+        });
 
         const toastHeaders = await createToastHeaders({
           title: i18n.t(
