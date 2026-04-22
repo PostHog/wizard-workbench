@@ -6,6 +6,7 @@ import { View, Text, TouchableOpacity, Switch } from 'react-native';
 import api from '~/services/api';
 
 import { updateMemberRequest } from '~/store/modules/members/actions';
+import { posthog } from '~/config/posthog';
 
 import Modal from '~/components/Modal';
 
@@ -33,6 +34,11 @@ export default function RoleUpdater({ visible, onRequestClose, member }) {
       : member.roles.filter(memberRole => memberRole.id !== role.id);
 
     dispatch(updateMemberRequest(member.id, roles));
+    posthog.capture('member_role_updated', {
+      member_id: member.id,
+      role_name: role.name,
+      role_granted: value,
+    });
     onRequestClose();
   }
 

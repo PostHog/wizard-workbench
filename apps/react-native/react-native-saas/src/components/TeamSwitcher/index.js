@@ -4,6 +4,7 @@ import { View, TouchableOpacity, Image, Text } from 'react-native';
 
 import { getTeamsRequest, selectTeam } from '~/store/modules/teams/actions';
 import { signOut } from '~/store/modules/auth/actions';
+import { posthog } from '~/config/posthog';
 
 import NewTeam from '~/components/NewTeam';
 
@@ -28,6 +29,7 @@ export default function TeamSwitcher() {
             style={styles.teamContainer}
             onPress={() => {
               dispatch(selectTeam(team));
+              posthog.capture('team_selected', { team_id: team.id, team_name: team.name });
             }}
           >
             <Image

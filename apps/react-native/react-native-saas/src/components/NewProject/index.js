@@ -5,6 +5,7 @@ import PropTypes from 'prop-types';
 import { Text, TextInput, TouchableOpacity } from 'react-native';
 
 import { createProjectRequest } from '~/store/modules/projects/actions';
+import { posthog } from '~/config/posthog';
 
 import Modal from '~/components/Modal';
 
@@ -16,6 +17,7 @@ export default function NewProject({ visible, onRequestClose }) {
 
   function handleSubmit() {
     dispatch(createProjectRequest(newProject));
+    posthog.capture('project_created', { project_title: newProject });
     setNewProject('');
     onRequestClose();
   }
