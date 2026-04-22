@@ -7,6 +7,7 @@ from typing import Optional
 
 from database import UserDatabase
 from models import User
+from posthog_client import get_posthog_client
 
 
 class UserService:
@@ -63,6 +64,10 @@ class UserService:
 
         if success:
             print(f"✓ User deactivated: {user_id}")
+            posthog = get_posthog_client()
+            if posthog:
+                props = {'has_reason': reason is not None}
+                posthog.capture(distinct_id=user_id, event='user_deactivated', properties=props)
         else:
             print(f"✗ Failed to deactivate user: {user_id}")
 
@@ -77,6 +82,10 @@ class UserService:
 
             if success:
                 print(f"✓ User deleted: {user_id}")
+                posthog = get_posthog_client()
+                if posthog:
+                    props = {'has_reason': reason is not None}
+                    posthog.capture(distinct_id=user_id, event='user_deleted', properties=props)
                 return True
 
         print(f"✗ Failed to delete user: {user_id}")

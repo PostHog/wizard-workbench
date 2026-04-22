@@ -23,6 +23,7 @@ import mimetypes
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+from posthog_client import get_posthog_client
 
 
 # Session management
@@ -223,6 +224,17 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 meeting_id = path.split('/')[-1]
                 meeting = self.db.get_meeting(meeting_id)
                 if meeting and meeting.user_id == user.user_id:
+                    posthog = get_posthog_client()
+                    if posthog:
+                        posthog.capture(
+                            distinct_id=user.user_id,
+                            event='meeting_viewed',
+                            properties={
+                                'meeting_id': meeting.meeting_id,
+                                'duration_minutes': meeting.duration_minutes,
+                                'participant_count': len(meeting.participants),
+                            },
+                        )
                     self._send_json(meeting.to_dict())
                 else:
                     self._send_json({'error': 'Meeting not found'}, 404)
@@ -236,6 +248,16 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 stats = self.db.get_meeting_stats(user.user_id)
+                posthog = get_posthog_client()
+                if posthog:
+                    posthog.capture(
+                        distinct_id=user.user_id,
+                        event='meeting_stats_viewed',
+                        properties={
+                            'total_meetings': stats.get('total_meetings', 0),
+                            'total_hours': stats.get('total_hours', 0),
+                        },
+                    )
                 self._send_json(stats)
                 return
 
@@ -274,6 +296,16 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
 
+                    posthog = get_posthog_client()
+                    if posthog:
+                        posthog.set(distinct_id=user.user_id, properties={
+                            'username': user.username,
+                            'name': user.full_name,
+                        })
+                        posthog.capture(distinct_id=user.user_id, event='user_logged_in', properties={
+                            'username': user.username,
+                        })
+
                     # Send response with session cookie
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
@@ -291,6 +323,14 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     self.wfile.write(response_data.encode('utf-8'))
                 else:
                     logging.warning(f"Login failed for: {email} (user {'found but inactive' if user else 'not found'})")
+                    posthog = get_posthog_client()
+                    if posthog:
+                        anon_id = 'anon-' + hashlib.sha256(email.encode()).hexdigest()[:16]
+                        posthog.capture(
+                            distinct_id=anon_id,
+                            event='user_login_failed',
+                            properties={'is_inactive': bool(user)},
+                        )
                     self._send_json({'error': 'User not found or inactive'}, 401)
                 return
 
@@ -298,7 +338,11 @@ class SaaSHandler(BaseHTTPRequestHandler):
             if path == '/api/auth/logout':
                 session_id = self._get_session_id()
                 if session_id:
+                    current_user = self._get_current_user()
                     self.sessions.delete_session(session_id)
+                    posthog = get_posthog_client()
+                    if posthog and current_user:
+                        posthog.capture(distinct_id=current_user.user_id, event='user_logged_out')
 
                 self._set_headers(200, 'application/json')
                 self.send_header('Set-Cookie', 'session_id=; Path=/; HttpOnly; Max-Age=0')
@@ -332,6 +376,17 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_user(user):
+                    posthog = get_posthog_client()
+                    if posthog:
+                        posthog.set(distinct_id=user.user_id, properties={
+                            'username': user.username,
+                            'name': user.full_name,
+                        })
+                        posthog.capture(
+                            distinct_id=current_user.user_id,
+                            event='user_registered',
+                            properties={'new_user_id': user.user_id, 'username': user.username},
+                        )
                     self._send_json(user.to_dict(), 201)
                 else:
                     self._send_json({'error': 'User already exists'}, 409)
@@ -370,6 +425,20 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    posthog = get_posthog_client()
+                    if posthog:
+                        posthog.capture(
+                            distinct_id=current_user.user_id,
+                            event='meeting_created',
+                            properties={
+                                'meeting_id': meeting.meeting_id,
+                                'duration_minutes': meeting.duration_minutes,
+                                'participant_count': len(meeting.participants),
+                                'action_item_count': len(meeting.action_items),
+                                'key_point_count': len(meeting.key_points),
+                                'transcript_word_count': len(transcript.split()),
+                            },
+                        )
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -449,6 +518,16 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    posthog = get_posthog_client()
+                    if posthog:
+                        posthog.capture(
+                            distinct_id=current_user.user_id,
+                            event='meeting_deleted',
+                            properties={
+                                'meeting_id': meeting_id,
+                                'duration_minutes': meeting.duration_minutes,
+                            },
+                        )
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
