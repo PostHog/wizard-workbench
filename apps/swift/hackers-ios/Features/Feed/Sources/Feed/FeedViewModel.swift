@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -163,6 +164,12 @@ public final class FeedViewModel: @unchecked Sendable {
     public func vote(on post: Domain.Post, upvote: Bool) async throws {
         if upvote {
             try await voteUseCase.upvote(post: post)
+            // PostHog: Capture post vote
+            PostHogSDK.shared.capture("post_voted", properties: [
+                "post_id": post.id,
+                "post_title": post.title,
+                "post_type": postType.rawValue,
+            ])
         }
         // Unvote removed; do nothing when upvote == false
     }
@@ -220,6 +227,8 @@ public final class FeedViewModel: @unchecked Sendable {
 
         postType = newType
         persistLastFeedCategoryIfNeeded()
+        // PostHog: Capture feed category change
+        PostHogSDK.shared.capture("feed_category_changed", properties: ["category": newType.rawValue])
         reset(clearPosts: true)  // Clear posts immediately to prevent flash of old data
         await feedLoader.refresh()
     }
@@ -257,6 +266,12 @@ public final class FeedViewModel: @unchecked Sendable {
     public func toggleBookmark(for post: Domain.Post) async -> Bool {
         let newState = await bookmarksController.toggle(post: post)
         await handleBookmarksUpdate(postId: post.id, isBookmarked: newState)
+        // PostHog: Capture bookmark toggle
+        PostHogSDK.shared.capture("post_bookmarked", properties: [
+            "post_id": post.id,
+            "post_title": post.title,
+            "bookmarked": newState,
+        ])
         return newState
     }
 
@@ -311,6 +326,11 @@ public final class FeedViewModel: @unchecked Sendable {
                 await MainActor.run {
                     self.searchResults = annotated
                     self.isSearchInProgress = false
+                    // PostHog: Capture search event
+                    PostHogSDK.shared.capture("post_searched", properties: [
+                        "query": currentQuery,
+                        "result_count": annotated.count,
+                    ])
                 }
             } catch {
                 if Task.isCancelled { return }

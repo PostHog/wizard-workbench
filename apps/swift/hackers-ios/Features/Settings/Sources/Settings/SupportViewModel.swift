@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -75,6 +76,11 @@ public final class SupportViewModel: @unchecked Sendable {
 
     public func purchase(product: SupportProduct) {
         processingProductId = product.id
+        // PostHog: Capture purchase initiation
+        PostHogSDK.shared.capture("purchase_initiated", properties: [
+            "product_id": product.id,
+            "product_kind": product.kind == .subscription ? "subscription" : "tip",
+        ])
         Task { @MainActor [weak self] in
             guard let self else { return }
             defer { self.processingProductId = nil }
@@ -84,11 +90,24 @@ public final class SupportViewModel: @unchecked Sendable {
                 if result == .success, product.kind == .subscription {
                     self.isSubscribed = true
                 }
+                if result == .success {
+                    // PostHog: Capture successful purchase
+                    PostHogSDK.shared.capture("purchase_completed", properties: [
+                        "product_id": product.id,
+                        "product_kind": product.kind == .subscription ? "subscription" : "tip",
+                    ])
+                }
             } catch {
                 self.alertInfo = AlertInfo(
                     title: "Purchase Failed",
                     message: error.localizedDescription
                 )
+                // PostHog: Capture purchase failure
+                PostHogSDK.shared.capture("purchase_failed", properties: [
+                    "product_id": product.id,
+                    "product_kind": product.kind == .subscription ? "subscription" : "tip",
+                    "error": error.localizedDescription,
+                ])
             }
         }
     }
