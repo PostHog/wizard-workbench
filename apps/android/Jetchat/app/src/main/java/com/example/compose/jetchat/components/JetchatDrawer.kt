@@ -20,6 +20,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.os.Build
+import com.posthog.PostHog
 import androidx.annotation.ChecksSdkIntAtLeast
 import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
@@ -320,6 +321,7 @@ private fun addWidgetToHomeScreen(context: Context) {
     val myProvider = ComponentName(context, WidgetReceiver::class.java)
     if (widgetAddingIsSupported(context)) {
         appWidgetManager.requestPinAppWidget(myProvider, null, null)
+        PostHog.capture(event = "widget_added_to_home_screen")
     }
 }
 

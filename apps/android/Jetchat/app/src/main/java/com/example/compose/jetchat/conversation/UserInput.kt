@@ -17,6 +17,7 @@
 package com.example.compose.jetchat.conversation
 
 import androidx.activity.compose.BackHandler
+import com.posthog.PostHog
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -284,7 +285,12 @@ private fun UserInputSelector(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.EMOJI) },
+            onClick = {
+                if (currentInputSelector != InputSelector.EMOJI) {
+                    PostHog.capture(event = "emoji_picker_opened")
+                }
+                onSelectorChange(InputSelector.EMOJI)
+            },
             icon = painterResource(id = R.drawable.ic_mood),
             selected = currentInputSelector == InputSelector.EMOJI,
             description = stringResource(id = R.string.emoji_selector_bt_desc),
@@ -446,14 +452,19 @@ private fun UserInputText(
             onStartRecording = {
                 val consumed = !isRecordingMessage
                 isRecordingMessage = true
+                if (consumed) {
+                    PostHog.capture(event = "voice_recording_started")
+                }
                 consumed
             },
             onFinishRecording = {
                 // handle end of recording
                 isRecordingMessage = false
+                PostHog.capture(event = "voice_recording_finished")
             },
             onCancelRecording = {
                 isRecordingMessage = false
+                PostHog.capture(event = "voice_recording_cancelled")
             },
             modifier = Modifier.fillMaxHeight(),
         )

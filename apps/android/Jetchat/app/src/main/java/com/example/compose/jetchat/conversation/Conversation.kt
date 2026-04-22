@@ -19,6 +19,7 @@
 package com.example.compose.jetchat.conversation
 
 import android.content.ClipDescription
+import com.posthog.PostHog
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -202,6 +203,13 @@ fun ConversationContent(
                 onMessageSent = { content ->
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
+                    )
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "channel_name" to uiState.channelName,
+                            "message_length" to content.length,
+                        ),
                     )
                 },
                 resetScroll = {
