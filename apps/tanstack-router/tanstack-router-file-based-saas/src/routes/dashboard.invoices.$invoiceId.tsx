@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
+import { usePostHog } from 'posthog-js/react'
 import { z } from 'zod'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
@@ -28,6 +29,7 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
     onSuccess: () => router.invalidate(),
@@ -90,11 +92,10 @@ function InvoiceComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
-            updateInvoiceMutation.mutate({
-              id: invoice.id,
-              title: formData.get('title') as string,
-              body: formData.get('body') as string,
-            })
+            const title = formData.get('title') as string
+            const body = formData.get('body') as string
+            updateInvoiceMutation.mutate({ id: invoice.id, title, body })
+            posthog.capture('invoice_updated', { invoice_id: invoice.id, title })
           }}
           className="space-y-4"
         >
