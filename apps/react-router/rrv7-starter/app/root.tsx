@@ -9,8 +9,10 @@ import {
   type MetaFunction,
 } from 'react-router'
 import gsap from 'gsap'
+import { usePostHog } from '@posthog/react'
 
 import type { Route } from './+types/root'
+import { posthogMiddleware } from '@/lib/posthog-middleware'
 import stylesheet from './app.css?url'
 import { RouteTransitionManager } from '@joycostudio/transitions'
 import routes from './routes'
@@ -20,6 +22,8 @@ import Footer from '@/components/footer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+
+export const middleware: Route.MiddlewareFunction[] = [posthogMiddleware]
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -135,6 +139,9 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined
+
+  const posthog = usePostHog()
+  posthog?.captureException(error)
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? '404' : 'Error'
