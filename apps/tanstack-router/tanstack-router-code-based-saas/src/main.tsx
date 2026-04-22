@@ -32,6 +32,7 @@ import {
 import { useMutation } from './useMutation'
 import type { NotFoundRouteProps } from '@tanstack/react-router'
 import type { Invoice } from './mockTodos'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import './styles.css'
 
 //
@@ -86,7 +87,16 @@ function RouterSpinner() {
 
 function RootComponent() {
   return (
-    <>
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN!}
+      options={{
+        api_host: '/ingest',
+        ui_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST || 'https://us.posthog.com',
+        defaults: '2026-01-30',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
@@ -132,7 +142,7 @@ function RootComponent() {
         </div>
       </div>
       <TanStackRouterDevtools position="bottom-right" />
-    </>
+    </PostHogProvider>
   )
 }
 
@@ -433,10 +443,23 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data }) => {
+      router.invalidate()
+      posthog.capture('invoice_created', {
+        invoice_id: data?.id,
+        invoice_title: data?.title,
+      })
+    },
   })
+
+  React.useEffect(() => {
+    if (createInvoiceMutation.status === 'error' && createInvoiceMutation.error) {
+      posthog.captureException(createInvoiceMutation.error)
+    }
+  }, [createInvoiceMutation.status, createInvoiceMutation.error])
 
   return (
     <div className="p-6">
@@ -514,13 +537,26 @@ const invoiceRoute = createRoute({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data }) => {
+      router.invalidate()
+      posthog.capture('invoice_updated', {
+        invoice_id: data?.id,
+        invoice_title: data?.title,
+      })
+    },
   })
+
+  React.useEffect(() => {
+    if (updateInvoiceMutation.status === 'error' && updateInvoiceMutation.error) {
+      posthog.captureException(updateInvoiceMutation.error)
+    }
+  }, [updateInvoiceMutation.status, updateInvoiceMutation.error])
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
     navigate({
@@ -1002,6 +1038,7 @@ const profileRoute = createRoute({
 })
 
 function ProfileComponent() {
+  const posthog = usePostHog()
   const { username } = profileRoute.useRouteContext()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
@@ -1067,6 +1104,8 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                posthog.capture('user_signed_out')
+                posthog.reset()
                 auth.logout()
                 router.invalidate()
               }}
@@ -1093,6 +1132,7 @@ const loginRoute = createRoute({
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -1103,6 +1143,8 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog.identify(username, { username })
+    posthog.capture('user_signed_in', { username })
     router.invalidate()
   }
 
@@ -1138,6 +1180,8 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('user_signed_out')
+                posthog.reset()
                 auth.logout()
                 router.invalidate()
               }}
