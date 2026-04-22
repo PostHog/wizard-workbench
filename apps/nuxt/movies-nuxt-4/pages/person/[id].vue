@@ -3,6 +3,11 @@ const id = useRouteParam<string>('id')
 const person = await getPerson(id.value)
 
 const $img = useImage()
+const posthog = usePostHog()
+
+if (import.meta.client) {
+  posthog?.capture('person_viewed', { person_id: id.value, person_name: person.name })
+}
 
 useHead({
   title: person.name,
