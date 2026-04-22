@@ -1,12 +1,31 @@
 #!/usr/bin/env python3
 """User Management Service - A pure Python background service for managing users."""
 
+import os
 import uuid
 from datetime import datetime
 from typing import Optional
 
+from dotenv import load_dotenv
+from posthog import Posthog
 from database import UserDatabase
 from models import User
+
+load_dotenv()
+
+
+def _initialize_posthog():
+    token = os.getenv('POSTHOG_PROJECT_TOKEN')
+    if not token:
+        return None
+    return Posthog(
+        token,
+        host=os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com'),
+        enable_exception_autocapture=True
+    )
+
+
+posthog_client = _initialize_posthog()
 
 
 class UserService:
@@ -36,6 +55,13 @@ class UserService:
 
         if self.db.create_user(user):
             print(f"✓ User registered: {username} ({email})")
+            if posthog_client:
+                posthog_client.set(distinct_id=user_id, properties={'username': username})
+                posthog_client.capture(
+                    distinct_id=user_id,
+                    event='user_registered',
+                    properties={'has_full_name': full_name is not None},
+                )
             return user
         else:
             print(f"✗ Failed to register user: {username} (email or username already exists)")
@@ -63,6 +89,12 @@ class UserService:
 
         if success:
             print(f"✓ User deactivated: {user_id}")
+            if posthog_client:
+                posthog_client.capture(
+                    distinct_id=user_id,
+                    event='user_deactivated',
+                    properties={'has_reason': reason is not None},
+                )
         else:
             print(f"✗ Failed to deactivate user: {user_id}")
 
@@ -95,6 +127,8 @@ class UserService:
     def shutdown(self):
         """Shutdown the service gracefully."""
         print(f"Service {self.service_id} shutting down...")
+        if posthog_client:
+            posthog_client.shutdown()
 
 
 def main():
