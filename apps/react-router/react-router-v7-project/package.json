@@ -9,10 +9,13 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
+    "@posthog/react": "^1.9.0",
     "@react-router/node": "^7.12.0",
     "@react-router/serve": "^7.12.0",
     "isbot": "^5.1.17",
     "nanoid": "^5.1.6",
+    "posthog-js": "^1.370.1",
+    "posthog-node": "^5.29.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router": "^7.12.0"
