@@ -140,9 +140,9 @@ Options:
 
 Examples:
   pnpm framework-detect
-  pnpm framework-detect apps/python/meeting-summarizer
-  pnpm framework-detect apps/django --verbose
-  pnpm framework-detect apps/angular -v
+  pnpm framework-detect apps/basic-integration/python/meeting-summarizer
+  pnpm framework-detect apps/basic-integration/django --verbose
+  pnpm framework-detect apps/basic-integration/angular -v
 `);
 }
 

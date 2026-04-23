@@ -21,7 +21,7 @@ Also check `detectArchType()`: is your framework server-only, client-only, or fu
 ## Add a test app and run the evaluator
 
 ```bash
-# Add an example app under apps/{framework}/
+# Add an example app under apps/{workflow}/{framework}/
 # Run the wizard against it to generate a PR branch
 # Then evaluate:
 pnpm run evaluate -- -b HEAD --test-run my-framework-test

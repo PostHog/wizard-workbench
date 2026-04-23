@@ -263,12 +263,6 @@ function runBenchmark(
 
 async function main(): Promise<void> {
   const opts = parseArgs();
-  const apps = findApps(APPS_DIR);
-
-  if (apps.length === 0) {
-    console.error(`No apps found in ${APPS_DIR}`);
-    process.exit(1);
-  }
 
   // Resolve command: from --command flag or interactive picker
   let command: WizardCommand;
@@ -289,6 +283,14 @@ async function main(): Promise<void> {
     command = found;
   } else {
     command = await selectCommand();
+  }
+
+  const scopedAppsDir = join(APPS_DIR, command.appsDir);
+  const apps = findApps(scopedAppsDir);
+
+  if (apps.length === 0) {
+    console.error(`No apps found in ${scopedAppsDir}`);
+    process.exit(1);
   }
 
   const selectedApp = await selectApp(apps);

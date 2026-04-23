@@ -15,6 +15,8 @@ export interface WizardCommand {
   description: string;
   /** Whether this command supports the --ci flag for non-interactive runs. */
   ciCapable?: boolean;
+  /** Subdirectory under apps/ to scan for test apps. */
+  appsDir: string;
 }
 
 export const WIZARD_COMMANDS: WizardCommand[] = [
@@ -23,17 +25,20 @@ export const WIZARD_COMMANDS: WizardCommand[] = [
     label: 'PostHog Integration',
     description: 'Set up PostHog in a new or existing project',
     ciCapable: true,
+    appsDir: 'basic-integration',
   },
   {
     id: 'revenue',
     label: 'Revenue Analytics',
     description: 'Wire Stripe + PostHog for revenue tracking',
     ciCapable: true,
+    appsDir: 'revenue',
   },
   {
     id: 'skill',
     label: 'Skill',
     description: 'Run a skill by ID from context mill',
+    appsDir: 'misc',
   },
 ];
 

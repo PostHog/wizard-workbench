@@ -747,13 +747,6 @@ async function main(): Promise<void> {
     return;
   }
 
-  const apps = findApps(APPS_DIR);
-
-  if (apps.length === 0) {
-    console.error("No apps found");
-    process.exit(1);
-  }
-
   // Resolve command: from --command flag, default for non-interactive, or picker
   let command: WizardCommand;
   if (opts.command) {
@@ -768,7 +761,6 @@ async function main(): Promise<void> {
     }
     command = found;
   } else if (opts.app) {
-    // Non-interactive: --app was passed without --command, default to first CI-capable
     const first = WIZARD_COMMANDS.find((c) => c.ciCapable);
     if (!first) {
       console.error("No CI-capable wizard commands available.");
@@ -777,6 +769,14 @@ async function main(): Promise<void> {
     command = first;
   } else {
     command = await selectCommand(true);
+  }
+
+  const scopedAppsDir = join(APPS_DIR, command.appsDir);
+  const apps = findApps(scopedAppsDir);
+
+  if (apps.length === 0) {
+    console.error(`No apps found in ${scopedAppsDir}`);
+    process.exit(1);
   }
 
   // Resolve app: from --app flag or interactive picker

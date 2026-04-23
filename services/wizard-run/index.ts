@@ -112,9 +112,10 @@ async function main(): Promise<void> {
     }
   }
 
-  const apps = findApps(APPS_DIR);
+  const scopedAppsDir = join(APPS_DIR, command.appsDir);
+  const apps = findApps(scopedAppsDir);
   if (apps.length === 0) {
-    console.error(`No apps found in ${APPS_DIR}`);
+    console.error(`No apps found in ${scopedAppsDir}`);
     process.exit(1);
   }
 
