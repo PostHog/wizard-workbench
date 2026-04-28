@@ -35,6 +35,13 @@ export const WIZARD_COMMANDS: WizardCommand[] = [
     appsDir: 'revenue',
   },
   {
+    id: 'audit',
+    label: 'Audit',
+    description: 'Audit an existing PostHog integration for correctness and best practices',
+    ciCapable: true,
+    appsDir: 'audit',
+  },
+  {
     id: 'skill',
     label: 'Skill',
     description: 'Run a skill by ID from context mill',
