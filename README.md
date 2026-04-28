@@ -8,23 +8,26 @@ The wizard workbench is a few things:
 
 ## Test apps
 
-A stable of test applications and codebases, with no PostHog installed, lives in `/apps/<framework>/<app-name>`. 
+Test apps are organized by workflow under `/apps/<workflow>/<framework>/<app-name>`.
 
 ```
 apps/
-└── next-js/
-│   ├── 15-app-router-saas
-│   ├── 15-pages-router-saas
-└── react-router/
-│   ├── react-router-v7-projects
-│   ├── saas-template
-└── django/
-│   ├── 15-pages-router-saas
-└── flask/
-└── laravel/
+├── basic-integration/    # Default PostHog integration
+│   ├── next-js/
+│   │   ├── 15-app-router-saas
+│   │   └── 15-pages-router-saas
+│   ├── react-router/
+│   ├── django/
+│   └── ...
+├── revenue/              # Revenue analytics (Stripe + PostHog)
+│   └── stripe/
+│       ├── stripe-next-js-saas-starter
+│       └── stripe-saas-demo
+└── misc/                 # Misc apps for skill runs
+    └── quack-quack
 ```
 
-To add a new test app, create a directory under `/apps`.
+To add a new test app, create a directory under the appropriate workflow folder in `/apps`.
 
 ## Services
 

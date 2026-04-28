@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'App path (e.g., "next-js/15-app-router-saas"), category (e.g., "next-js"), or "all"'
+        description: 'App path (e.g., "next-js/15-app-router-saas"), category (e.g., "next-js"), "sample" (one per framework), or "all"'
         required: false
         type: string
         default: ''
@@ -230,8 +230,22 @@ jobs:
       - name: Find available apps
         id: find-apps
         run: |
-          # List all apps using the fixed directory structure: apps/{framework}/{app}
-          APPS=$(ls -d apps/*/* 2>/dev/null | sed 's|apps/||' | sort)
+          # Apps live under apps/{workflow}/{framework}/{app}
+          # .wizard-root marks monorepo roots that should not be recursed into
+          APPS=""
+          while IFS= read -r dir; do
+            if [ -f "$dir/.wizard-root" ]; then
+              APPS="$APPS
+          $(echo "$dir" | sed 's|apps/||')"
+            else
+              for app in "$dir"/*/; do
+                [ -d "$app" ] && APPS="$APPS
+          $(echo "${app%/}" | sed 's|apps/||')"
+              done
+            fi
+          done < <(find apps -mindepth 2 -maxdepth 2 -type d | sort)
+
+          APPS=$(echo "$APPS" | sed '/^$/d' | sort)
 
           # Convert to JSON array
           APPS_JSON=$(echo "$APPS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
@@ -247,16 +261,21 @@ jobs:
           AVAILABLE: ${{ steps.find-apps.outputs.apps }}
         run: |
           if [ -z "$INPUT_APP" ] || [ "$INPUT_APP" = "all" ]; then
-            # Run all apps
             SELECTED="$AVAILABLE"
             echo "Running all apps"
+          elif [ "$INPUT_APP" = "sample" ]; then
+            # One app per framework (second path segment)
+            SELECTED=$(echo "$AVAILABLE" | jq -c '
+              group_by(split("/")[1]) | map(.[0])
+            ')
+            echo "Running sample (one per framework)"
           else
             # Check if it's an exact app match
             if echo "$AVAILABLE" | jq -e --arg app "$INPUT_APP" 'index($app) != null' > /dev/null; then
               SELECTED="[\"$INPUT_APP\"]"
               echo "Running single app: $INPUT_APP"
             else
-              # Check if it's a category/prefix (e.g., "next-js" matches "next-js/15-app-router-todo")
+              # Check if it's a prefix match (workflow or framework)
               MATCHED=$(echo "$AVAILABLE" | jq -c --arg prefix "$INPUT_APP/" '[.[] | select(startswith($prefix))]')
               MATCH_COUNT=$(echo "$MATCHED" | jq 'length')
 
@@ -267,9 +286,6 @@ jobs:
                 echo "::error::App or category '$INPUT_APP' not found."
                 echo "Available apps:"
                 echo "$AVAILABLE" | jq -r '.[]'
-                echo ""
-                echo "Available categories:"
-                echo "$AVAILABLE" | jq -r '.[]' | cut -d'/' -f1 | sort -u
                 exit 1
               fi
             fi
