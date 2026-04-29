@@ -1,10 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Users, Settings, Shield, Activity, Menu } from 'lucide-react';
+import useSWR from 'swr';
+import posthog from 'posthog-js';
+import { User } from '@/lib/db/schema';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+function PostHogIdentify() {
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  useEffect(() => {
+    if (user?.id) {
+      posthog.identify(String(user.id), {
+        email: user.email,
+        name: user.name,
+      });
+    }
+  }, [user?.id]);
+  return null;
+}
 
 export default function DashboardLayout({
   children
@@ -23,6 +41,7 @@ export default function DashboardLayout({
 
   return (
     <div className="flex flex-col min-h-[calc(100dvh-68px)] max-w-7xl mx-auto w-full">
+      <PostHogIdentify />
       {/* Mobile header */}
       <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4">
         <div className="flex items-center">
