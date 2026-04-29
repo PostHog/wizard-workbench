@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { notFound } from '@tanstack/react-router'
+import { getPostHogClient } from '~/utils/posthog-server'
 
 export type Invoice = {
   id: number
@@ -141,9 +142,21 @@ export const markInvoicePaid = createServerFn({ method: 'POST' })
     if (isNaN(id)) {
       throw new Error('Invalid invoice ID')
     }
+    const existing = getInvoiceById(id)
     const invoice = updateInvoice(id, { status: 'paid' })
     if (!invoice) {
       throw new Error('Invoice not found')
     }
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: 'anonymous',
+      event: 'invoice_paid',
+      properties: {
+        invoice_id: id,
+        invoice_title: existing?.title,
+        invoice_amount: existing?.amount,
+        source: 'server_fn',
+      },
+    })
     return invoice
   })

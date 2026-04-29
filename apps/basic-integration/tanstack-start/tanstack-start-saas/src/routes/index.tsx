@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 
 export const Route = createFileRoute('/')({
   component: Home,
 })
 
 function Home() {
+  const posthog = usePostHog()
+
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
@@ -19,12 +22,14 @@ function Home() {
             <Link
               to="/posts"
               className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              onClick={() => posthog.capture('home_view_invoices_clicked')}
             >
               View Invoices
             </Link>
             <Link
               to="/users"
               className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => posthog.capture('home_manage_team_clicked')}
             >
               Manage Team
             </Link>
@@ -75,6 +80,7 @@ function Home() {
               to="/posts/$postId"
               params={{ postId: '3' }}
               className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={() => posthog.capture('home_view_invoice_clicked', { invoice_id: 3 })}
             >
               View Invoice
             </Link>
