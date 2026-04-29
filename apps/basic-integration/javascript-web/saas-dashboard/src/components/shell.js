@@ -1,3 +1,4 @@
+import posthog from 'posthog-js';
 import { api } from '../api.js';
 import { router } from '../router.js';
 import { store } from '../store.js';
@@ -53,6 +54,8 @@ export function renderShell(activeSection) {
   `;
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
+    posthog.capture('user_logged_out');
+    posthog.reset();
     await api.logout();
     router.navigate('/login');
   });

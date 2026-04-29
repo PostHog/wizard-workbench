@@ -1,3 +1,4 @@
+import posthog from 'posthog-js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -6,6 +7,20 @@ import { renderProjects } from './pages/projects.js';
 import { renderProjectDetail } from './pages/project-detail.js';
 import { renderSettings } from './pages/settings.js';
 import { renderActivity } from './pages/activity.js';
+
+posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_KEY, {
+  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+  capture_pageview: false,
+});
+
+const currentUser = store.state.currentUser;
+if (currentUser) {
+  posthog.identify(currentUser.id, {
+    email: currentUser.email,
+    name: currentUser.name,
+    role: currentUser.role,
+  });
+}
 
 /**
  * Auth guard — redirects to login if no user is logged in.
@@ -39,4 +54,9 @@ router.notFound(() => {
 
 // --- Start ---
 
+window.addEventListener('hashchange', () => {
+  posthog.capture('$pageview');
+});
+
 router.start();
+posthog.capture('$pageview');
