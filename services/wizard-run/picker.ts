@@ -23,7 +23,7 @@ export function prompt(question: string): Promise<string> {
 
 export async function selectCommand(ciMode: boolean): Promise<WizardCommand> {
   const available = ciMode
-    ? WIZARD_COMMANDS.filter((c) => c.ci)
+    ? WIZARD_COMMANDS.filter((c) => c.ciCapable)
     : WIZARD_COMMANDS;
 
   if (available.length === 0) {

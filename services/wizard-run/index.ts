@@ -93,7 +93,7 @@ async function main(): Promise<void> {
       );
       process.exit(1);
     }
-    if (opts.ci && !found.ci) {
+    if (opts.ci && !found.ciCapable) {
       console.error(`Command "${found.id}" does not support CI mode.`);
       process.exit(1);
     }

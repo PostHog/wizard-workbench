@@ -16,8 +16,8 @@ export interface WizardCommand {
   label: string;
   /** One-line description shown next to the label. */
   description: string;
-  /** Whether this command runs in CI. */
-  ci?: boolean;
+  /** Whether this command supports the --ci flag for non-interactive runs. */
+  ciCapable?: boolean;
   /** Subdirectory under apps/ to scan for test apps. */
   appsDir: string;
 }
@@ -27,7 +27,7 @@ interface ManifestEntry {
   dir: string;
   label: string;
   description: string;
-  ci?: boolean;
+  ciCapable?: boolean;
 }
 
 interface Manifest {
@@ -44,7 +44,7 @@ function loadManifest(): WizardCommand[] {
     id: w.id,
     label: w.label,
     description: w.description,
-    ci: w.ci ?? false,
+    ciCapable: w.ciCapable ?? false,
     appsDir: w.dir,
   }));
 }

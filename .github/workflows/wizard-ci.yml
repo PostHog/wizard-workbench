@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'App path (e.g., "basic-integration/next-js/15-app-router-saas"), category (e.g., "basic-integration/next-js"), "sample" (one per framework), or "all". Workflow command is inferred from the leading segment (see apps/manifest.json).'
+        description: 'App path (e.g. "basic-integration/next-js/15-app-router-saas"), framework (e.g. "basic-integration/next-js"), category (e.g. "basic-integration"), "sample", or "all".'
         required: false
         type: string
         default: ''
@@ -218,9 +218,9 @@ jobs:
         id: find-apps
         run: |
           # Apps live under apps/{workflow}/{framework}/{app}, where {workflow}
-          # is the `dir` of a manifest entry with `ci: true`.
+          # is the `dir` of a manifest entry with `ciCapable: true`.
           # .wizard-root marks monorepo roots that should not be recursed into.
-          WORKFLOW_DIRS=$(jq -r '.workflows[] | select(.ci == true) | .dir' apps/manifest.json)
+          WORKFLOW_DIRS=$(jq -r '.workflows[] | select(.ciCapable == true) | .dir' apps/manifest.json)
           APPS=""
           for wf in $WORKFLOW_DIRS; do
             [ -d "apps/$wf" ] || continue

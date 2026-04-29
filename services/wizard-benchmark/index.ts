@@ -105,7 +105,7 @@ Usage:
   pnpm benchmark --region <us|eu>    Specify PostHog region (default: us)
 
 Available commands:
-${WIZARD_COMMANDS.filter((c) => c.ci)
+${WIZARD_COMMANDS.filter((c) => c.ciCapable)
   .map((c) => `  ${commandToInvocation(c.id).padEnd(28)}  ${c.description}`)
   .join("\n")}
 
@@ -153,10 +153,10 @@ async function selectApp(apps: App[]): Promise<App> {
 }
 
 async function selectCommand(): Promise<WizardCommand> {
-  // Benchmark always uses --ci, so only CI commands are valid.
-  const available = WIZARD_COMMANDS.filter((c) => c.ci);
+  // Benchmark always uses --ci, so only CI-capable commands are valid.
+  const available = WIZARD_COMMANDS.filter((c) => c.ciCapable);
   if (available.length === 0) {
-    console.error("No CI commands available.");
+    console.error("No CI-capable wizard commands available.");
     process.exit(1);
   }
 
@@ -274,7 +274,7 @@ async function main(): Promise<void> {
       );
       process.exit(1);
     }
-    if (!found.ci) {
+    if (!found.ciCapable) {
       console.error(
         `Command "${found.id}" does not support CI mode (benchmark requires --ci).`,
       );

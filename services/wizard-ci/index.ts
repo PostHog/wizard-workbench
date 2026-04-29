@@ -759,8 +759,8 @@ async function main(): Promise<void> {
       console.error(`Unknown command: ${opts.command}`);
       process.exit(1);
     }
-    if (!found.ci) {
-      console.error(`Command "${found.id}" is not enabled for CI.`);
+    if (!found.ciCapable) {
+      console.error(`Command "${found.id}" does not support CI mode.`);
       process.exit(1);
     }
     command = found;
@@ -770,15 +770,15 @@ async function main(): Promise<void> {
       command = inferred;
       appArg = appArg.slice(command.appsDir.length + 1);
     } else {
-      const first = WIZARD_COMMANDS.find((c) => c.ci);
+      const first = WIZARD_COMMANDS.find((c) => c.ciCapable);
       if (!first) {
-        console.error("No CI commands available.");
+        console.error("No CI-capable wizard commands available.");
         process.exit(1);
       }
       command = first;
     }
-    if (!command.ci) {
-      console.error(`Command "${command.id}" is not enabled for CI.`);
+    if (!command.ciCapable) {
+      console.error(`Command "${command.id}" does not support CI mode.`);
       process.exit(1);
     }
   } else {
