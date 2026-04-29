@@ -3,10 +3,12 @@
 namespace App\Providers;
 
 use App\Models\Subscription;
+use App\Services\PostHogService;
 use App\Support\Branding;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Cashier\Cashier;
+use PostHog\PostHog;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,7 +17,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(PostHogService::class, function () {
+            return new PostHogService();
+        });
     }
 
     /**
@@ -25,6 +29,11 @@ class AppServiceProvider extends ServiceProvider
     {
 
         Cashier::useSubscriptionModel(Subscription::class);
+
+        PostHog::init(
+            config('posthog.api_key'),
+            ['host' => config('posthog.host')]
+        );
 
         config([
             'app.name' => Branding::name(),
