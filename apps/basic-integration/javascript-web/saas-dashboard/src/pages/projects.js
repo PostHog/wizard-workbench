@@ -2,6 +2,7 @@ import { api } from '../api.js';
 import { router } from '../router.js';
 import { renderShell } from '../components/shell.js';
 import { showModal } from '../components/modal.js';
+import posthog from '../posthog.js';
 
 export async function renderProjects() {
   renderShell('projects');
@@ -75,8 +76,10 @@ export async function renderProjects() {
 
           try {
             const project = await api.createProject(name, desc);
+            posthog.capture('project_created', { project_id: project.id, project_name: project.name });
             router.navigate(`/projects/${project.id}`);
           } catch (err) {
+            posthog.captureException(err);
             alert(err.message);
           }
         });
@@ -89,7 +92,10 @@ export async function renderProjects() {
         e.stopPropagation();
         const id = btn.dataset.id;
         if (confirm('Delete this project and all its tasks?')) {
+          const projectEl = content.querySelector(`.table-row[data-id="${id}"] .col-name a`);
+          const projectName = projectEl?.textContent || id;
           await api.deleteProject(id);
+          posthog.capture('project_deleted', { project_id: id, project_name: projectName });
           renderProjects();
         }
       });
