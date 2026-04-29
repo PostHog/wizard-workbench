@@ -4,8 +4,8 @@
  *
  * Usage:
  *   pnpm wizard-ci                              # Interactive selection
- *   pnpm wizard-ci --app next-js/15-app-router-saas
- *   pnpm wizard-ci --app next-js/15-app-router-saas --local
+ *   pnpm wizard-ci --app basic-integration/next-js/15-app-router-saas
+ *   pnpm wizard-ci --app basic-integration/next-js/15-app-router-saas --local
  *
  * For running all apps, use the wizard-trigger GitHub workflow.
  */
