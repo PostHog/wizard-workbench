@@ -6,4 +6,6 @@ export const environment = {
   defaultLanguage: 'de-DE',
   supportedLanguages: ['de-DE', 'en-US', 'es-ES', 'fr-FR', 'it-IT'],
   buildYear: 2024,
+  posthogKey: env['posthog_key'] || '',
+  posthogHost: env['posthog_host'] || 'https://us.i.posthog.com',
 };
