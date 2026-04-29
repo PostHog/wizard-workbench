@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { usePostHog } from '@posthog/react'
 
 export function useMutation<TVariables, TData, TError = Error>(opts: {
   fn: (variables: TVariables) => Promise<TData>
@@ -11,6 +12,7 @@ export function useMutation<TVariables, TData, TError = Error>(opts: {
   const [status, setStatus] = React.useState<
     'idle' | 'pending' | 'success' | 'error'
   >('idle')
+  const posthog = usePostHog()
 
   const mutate = React.useCallback(
     async (variables: TVariables): Promise<TData | undefined> => {
@@ -26,6 +28,7 @@ export function useMutation<TVariables, TData, TError = Error>(opts: {
         setData(data)
         return data
       } catch (err: any) {
+        posthog.captureException(err)
         setStatus('error')
         setError(err)
       }
