@@ -1,3 +1,4 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
@@ -8,6 +9,7 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -53,6 +55,13 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    app.posthog_client = Posthog(
+        api_key=app.config['POSTHOG_PROJECT_TOKEN'],
+        host=app.config['POSTHOG_HOST'],
+        enable_exception_autocapture=True,
+    )
+    atexit.register(app.posthog_client.shutdown)
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
