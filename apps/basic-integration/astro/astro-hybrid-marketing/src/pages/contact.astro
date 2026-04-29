@@ -55,38 +55,57 @@ import Layout from '../layouts/Layout.astro';
   </section>
 </Layout>
 
-<script>
-  const form = document.getElementById('contact-form') as HTMLFormElement;
-  const messageDiv = document.getElementById('form-message') as HTMLDivElement;
+<script is:inline>
+  var form = document.getElementById('contact-form');
+  var messageDiv = document.getElementById('form-message');
 
-  form?.addEventListener('submit', async (e) => {
+  form?.addEventListener('submit', async function (e) {
     e.preventDefault();
 
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
+    var formData = new FormData(form);
+    var data = Object.fromEntries(formData.entries());
+
+    window.posthog?.capture('contact_form_submitted', {
+      interest: data.interest,
+    });
 
     try {
-      const response = await fetch('/api/contact', {
+      var sessionId = window.posthog?.get_session_id?.() || null;
+
+      var response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-PostHog-Session-Id': sessionId || '',
         },
         body: JSON.stringify(data),
       });
 
-      const result = await response.json();
+      var result = await response.json();
 
       if (response.ok) {
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
+        window.posthog?.capture('contact_form_succeeded', {
+          interest: data.interest,
+        });
       } else {
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
+        window.posthog?.capture('contact_form_failed', {
+          interest: data.interest,
+          error: result.error || 'unknown',
+        });
       }
     } catch (error) {
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
+      window.posthog?.capture('contact_form_failed', {
+        interest: data.interest,
+        error: 'network_error',
+      });
+      window.posthog?.captureException(error);
     }
   });
 </script>
