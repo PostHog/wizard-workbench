@@ -11,7 +11,7 @@
     "test:evaluator": "tsx --test services/pr-evaluator/evaluator.test.ts"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
+    "@anthropic-ai/claude-agent-sdk": "0.2.73",
     "@octokit/rest": "^21.0.0",
     "dotenv": "^16.4.0",
     "posthog-node": "^5.28.1",
