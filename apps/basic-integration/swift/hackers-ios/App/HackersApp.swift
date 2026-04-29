@@ -5,8 +5,21 @@
 //  Copyright © 2025 Weiran Zhang. All rights reserved.
 //
 
+import PostHog
 import Shared
 import SwiftUI
+
+enum PostHogEnv: String {
+    case projectToken = "POSTHOG_PROJECT_TOKEN"
+    case host = "POSTHOG_HOST"
+
+    var value: String {
+        guard let value = ProcessInfo.processInfo.environment[rawValue] else {
+            fatalError("Set \(rawValue) in the Xcode scheme environment variables.")
+        }
+        return value
+    }
+}
 
 @main
 struct HackersApp: App {
@@ -16,6 +29,12 @@ struct HackersApp: App {
 
     // Keep AppDelegate for legacy services and setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
+    init() {
+        let config = PostHogConfig(apiKey: PostHogEnv.projectToken.value, host: PostHogEnv.host.value)
+        config.captureApplicationLifecycleEvents = true
+        PostHogSDK.shared.setup(config)
+    }
 
     var body: some Scene {
         WindowGroup {
