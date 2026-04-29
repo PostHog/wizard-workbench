@@ -1,0 +1,25 @@
+{
+  "workflows": [
+    {
+      "id": "default",
+      "dir": "basic-integration",
+      "label": "PostHog Integration",
+      "description": "Set up PostHog in a new or existing project",
+      "ci": true
+    },
+    {
+      "id": "revenue",
+      "dir": "revenue",
+      "label": "Revenue Analytics",
+      "description": "Wire Stripe + PostHog for revenue tracking",
+      "ci": true
+    },
+    {
+      "id": "skill",
+      "dir": "misc",
+      "label": "Skill",
+      "description": "Run a skill by ID from context mill",
+      "ci": false
+    }
+  ]
+}

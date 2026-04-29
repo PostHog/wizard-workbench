@@ -1,10 +1,13 @@
 /**
  * Registry of wizard commands the workbench can run.
  *
- * Each entry maps to a yargs subcommand in bin.ts (or the default integration
- * flow when `id === 'default'`). Adding a new wizard command to the workbench
- * picker only requires appending to this list.
+ * Sourced from `apps/manifest.json`. Each entry maps to a yargs subcommand in
+ * bin.ts (or the default integration flow when `id === 'default'`).
  */
+
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export interface WizardCommand {
   /** Subcommand ID. 'default' means the main integration flow (no subcommand). */
@@ -13,34 +16,40 @@ export interface WizardCommand {
   label: string;
   /** One-line description shown next to the label. */
   description: string;
-  /** Whether this command supports the --ci flag for non-interactive runs. */
-  ciCapable?: boolean;
+  /** Whether this command runs in CI. */
+  ci?: boolean;
   /** Subdirectory under apps/ to scan for test apps. */
   appsDir: string;
 }
 
-export const WIZARD_COMMANDS: WizardCommand[] = [
-  {
-    id: 'default',
-    label: 'PostHog Integration',
-    description: 'Set up PostHog in a new or existing project',
-    ciCapable: true,
-    appsDir: 'basic-integration',
-  },
-  {
-    id: 'revenue',
-    label: 'Revenue Analytics',
-    description: 'Wire Stripe + PostHog for revenue tracking',
-    ciCapable: true,
-    appsDir: 'revenue',
-  },
-  {
-    id: 'skill',
-    label: 'Skill',
-    description: 'Run a skill by ID from context mill',
-    appsDir: 'misc',
-  },
-];
+interface ManifestEntry {
+  id: string;
+  dir: string;
+  label: string;
+  description: string;
+  ci?: boolean;
+}
+
+interface Manifest {
+  workflows: ManifestEntry[];
+}
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const MANIFEST_PATH = join(__dirname, "..", "apps", "manifest.json");
+
+function loadManifest(): WizardCommand[] {
+  const raw = readFileSync(MANIFEST_PATH, "utf8");
+  const manifest = JSON.parse(raw) as Manifest;
+  return manifest.workflows.map((w) => ({
+    id: w.id,
+    label: w.label,
+    description: w.description,
+    ci: w.ci ?? false,
+    appsDir: w.dir,
+  }));
+}
+
+export const WIZARD_COMMANDS: WizardCommand[] = loadManifest();
 
 /**
  * Convert a command id to the subcommand string the wizard binary expects.
@@ -67,4 +76,15 @@ export function commandToInvocation(id: string, skillId?: string): string {
 
 export function findCommand(id: string): WizardCommand | undefined {
   return WIZARD_COMMANDS.find((c) => c.id === id);
+}
+
+/**
+ * Find a command whose appsDir matches the first segment of an app path.
+ * e.g. "basic-integration/angular/foo" → command with appsDir "basic-integration".
+ */
+export function findCommandByAppPath(appPath: string): WizardCommand | undefined {
+  const slash = appPath.indexOf("/");
+  if (slash <= 0) return undefined;
+  const prefix = appPath.slice(0, slash);
+  return WIZARD_COMMANDS.find((c) => c.appsDir === prefix);
 }

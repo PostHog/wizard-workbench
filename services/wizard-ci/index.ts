@@ -43,6 +43,7 @@ import {
   commandToSubcommand,
   commandToInvocation,
   findCommand,
+  findCommandByAppPath,
   type WizardCommand,
 } from "../wizard-commands.js";
 import {
@@ -747,26 +748,39 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Resolve command: from --command flag, default for non-interactive, or picker
+  // Resolve command: from --command flag, inferred from --app prefix, or picker.
+  // --app may be passed as "<appsDir>/<rest>" (e.g. from CI matrix); in that
+  // case the leading segment selects the command and is stripped before lookup.
   let command: WizardCommand;
+  let appArg = opts.app;
   if (opts.command) {
     const found = findCommand(opts.command);
     if (!found) {
       console.error(`Unknown command: ${opts.command}`);
       process.exit(1);
     }
-    if (!found.ciCapable) {
-      console.error(`Command "${found.id}" does not support CI mode.`);
+    if (!found.ci) {
+      console.error(`Command "${found.id}" is not enabled for CI.`);
       process.exit(1);
     }
     command = found;
-  } else if (opts.app) {
-    const first = WIZARD_COMMANDS.find((c) => c.ciCapable);
-    if (!first) {
-      console.error("No CI-capable wizard commands available.");
+  } else if (appArg) {
+    const inferred = findCommandByAppPath(appArg);
+    if (inferred) {
+      command = inferred;
+      appArg = appArg.slice(command.appsDir.length + 1);
+    } else {
+      const first = WIZARD_COMMANDS.find((c) => c.ci);
+      if (!first) {
+        console.error("No CI commands available.");
+        process.exit(1);
+      }
+      command = first;
+    }
+    if (!command.ci) {
+      console.error(`Command "${command.id}" is not enabled for CI.`);
       process.exit(1);
     }
-    command = first;
   } else {
     command = await selectCommand(true);
   }
@@ -781,8 +795,8 @@ async function main(): Promise<void> {
 
   // Resolve app: from --app flag or interactive picker
   let target: App;
-  if (opts.app) {
-    const found = apps.find((a) => a.name === opts.app || a.name.endsWith(opts.app!));
+  if (appArg) {
+    const found = apps.find((a) => a.name === appArg || a.name.endsWith(appArg!));
     if (!found) {
       console.error(`App not found: ${opts.app}`);
       console.log("Available:", apps.map((a) => a.name).join(", "));

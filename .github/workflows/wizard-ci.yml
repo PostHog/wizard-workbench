@@ -230,20 +230,25 @@ jobs:
       - name: Find available apps
         id: find-apps
         run: |
-          # Apps live under apps/{workflow}/{framework}/{app}
-          # .wizard-root marks monorepo roots that should not be recursed into
+          # Apps live under apps/{workflow}/{framework}/{app}, where {workflow}
+          # is the `dir` of a manifest entry with `ci: true`.
+          # .wizard-root marks monorepo roots that should not be recursed into.
+          WORKFLOW_DIRS=$(jq -r '.workflows[] | select(.ci == true) | .dir' apps/manifest.json)
           APPS=""
-          while IFS= read -r dir; do
-            if [ -f "$dir/.wizard-root" ]; then
-              APPS="$APPS
+          for wf in $WORKFLOW_DIRS; do
+            [ -d "apps/$wf" ] || continue
+            while IFS= read -r dir; do
+              if [ -f "$dir/.wizard-root" ]; then
+                APPS="$APPS
           $(echo "$dir" | sed 's|apps/||')"
-            else
-              for app in "$dir"/*/; do
-                [ -d "$app" ] && APPS="$APPS
+              else
+                for app in "$dir"/*/; do
+                  [ -d "$app" ] && APPS="$APPS
           $(echo "${app%/}" | sed 's|apps/||')"
-              done
-            fi
-          done < <(find apps -mindepth 2 -maxdepth 2 -type d | sort)
+                done
+              fi
+            done < <(find "apps/$wf" -mindepth 1 -maxdepth 1 -type d | sort)
+          done
 
           APPS=$(echo "$APPS" | sed '/^$/d' | sort)
 
