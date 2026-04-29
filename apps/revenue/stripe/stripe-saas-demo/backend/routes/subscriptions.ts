@@ -15,6 +15,8 @@ subscriptionsRouter.post("/", async (req, res) => {
       return;
     }
 
+    const posthogDistinctId = userId ? getUser(userId)?.posthogDistinctId : undefined;
+
     if (userId) {
       const user = getUser(userId);
       if (user) {
@@ -28,6 +30,7 @@ subscriptionsRouter.post("/", async (req, res) => {
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
       expand: ["latest_invoice.payment_intent"],
+      ...(posthogDistinctId ? { metadata: { posthog_person_distinct_id: posthogDistinctId } } : {}),
     });
 
     const invoice = subscription.latest_invoice as any;
