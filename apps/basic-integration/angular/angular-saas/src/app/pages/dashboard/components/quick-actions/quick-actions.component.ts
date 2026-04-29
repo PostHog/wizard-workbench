@@ -1,5 +1,6 @@
 import { Component, output, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
+import { PostHogService } from '@core/services';
 import { HotToastService } from '@ngxpert/hot-toast';
 
 interface QuickAction {
@@ -81,6 +82,7 @@ interface QuickAction {
 export class QuickActionsComponent {
   private readonly router = inject(Router);
   private readonly toast = inject(HotToastService);
+  private readonly posthogService = inject(PostHogService);
 
   newProject = output<void>();
   addMember = output<void>();
@@ -93,6 +95,12 @@ export class QuickActionsComponent {
   ];
 
   onAction(actionId: string) {
+    const action = this.actions.find((a) => a.id === actionId);
+    this.posthogService.posthog.capture('quick_action_clicked', {
+      action_id: actionId,
+      action_label: action?.label,
+    });
+
     switch (actionId) {
       case 'new-project':
         this.newProject.emit();
