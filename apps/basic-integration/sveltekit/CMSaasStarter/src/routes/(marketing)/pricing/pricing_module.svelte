@@ -1,5 +1,6 @@
 <script lang="ts">
   import { pricingPlans } from "./pricing_plans"
+  import posthog from "posthog-js"
 
   interface Props {
     // Module context
@@ -15,6 +16,14 @@
     currentPlanId = "",
     center = true,
   }: Props = $props()
+
+  function trackPlanClick(planId: string, planName: string) {
+    posthog.capture("plan_cta_clicked", {
+      plan_id: planId,
+      plan_name: planName,
+      call_to_action: callToAction,
+    })
+  }
 </script>
 
 <div
@@ -57,6 +66,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() => trackPlanClick(plan.id, plan.name)}
               >
                 {callToAction}
               </a>
