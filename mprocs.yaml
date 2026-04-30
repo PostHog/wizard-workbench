@@ -61,6 +61,12 @@ procs:
     autostart: false
     env_file: .env
 
+  playground:
+    # Launch the wizard TUI playground
+    shell: "source .env && cd $WIZARD_PATH && pnpm try --playground"
+    autostart: false
+    stop_signal: SIGTERM
+
   # ═══════════════════════════════════════════════════════════════════════════
   # WIZARD BENCHMARK - Run wizard with benchmark tracking
   # ═══════════════════════════════════════════════════════════════════════════
@@ -120,4 +126,3 @@ procs:
     shell: "pnpm yara-scan"
     autostart: false
     env_file: .env
-
