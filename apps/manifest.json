@@ -1,0 +1,33 @@
+{
+  "workflows": [
+    {
+      "id": "default",
+      "dir": "basic-integration",
+      "label": "PostHog Integration",
+      "description": "Set up PostHog in a new or existing project",
+      "ciCapable": true
+    },
+    {
+      "id": "revenue",
+      "dir": "revenue",
+      "label": "Revenue Analytics",
+      "description": "Wire Stripe + PostHog for revenue tracking",
+      "ciCapable": true
+    },
+    {
+      "id": "audit",
+      "dir": "audit",
+      "label": "Audit",
+      "description": "Audit an existing PostHog integration for correctness and best practices",
+      "ciCapable": true,
+      "appsDir": "audit"
+    },
+    {
+      "id": "skill",
+      "dir": "misc",
+      "label": "Skill",
+      "description": "Run a skill by ID from context mill",
+      "ciCapable": false
+    }
+  ]
+}
