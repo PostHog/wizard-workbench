@@ -1,4 +1,10 @@
 import Fastify from 'fastify';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const fastify = Fastify({ logger: true });
 
@@ -39,6 +45,14 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+
+  posthog.identify({ distinctId: author, properties: { name: author } });
+  posthog.capture({
+    distinctId: author,
+    event: 'post_created',
+    properties: { post_id: post.id, title: post.title },
+  });
+
   return reply.status(201).send(post);
 });
 
@@ -63,9 +77,28 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   }
 
   const { title, body, published } = request.body || {};
+  const wasPublished = post.published;
   if (title !== undefined) post.title = title;
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
+
+  if (published === true && !wasPublished) {
+    posthog.capture({
+      distinctId: post.author,
+      event: 'post_published',
+      properties: { post_id: post.id, title: post.title },
+    });
+  } else if (title !== undefined || body !== undefined) {
+    posthog.capture({
+      distinctId: post.author,
+      event: 'post_updated',
+      properties: {
+        post_id: post.id,
+        title: post.title,
+        fields_updated: [title !== undefined && 'title', body !== undefined && 'body'].filter(Boolean),
+      },
+    });
+  }
 
   return post;
 });
@@ -78,13 +111,19 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
     return reply.status(404).send({ error: 'Post not found' });
   }
 
-  const postId = posts[index].id;
+  const post = posts[index];
   posts.splice(index, 1);
 
   // Remove associated comments
   for (let i = comments.length - 1; i >= 0; i--) {
-    if (comments[i].post_id === postId) comments.splice(i, 1);
+    if (comments[i].post_id === post.id) comments.splice(i, 1);
   }
+
+  posthog.capture({
+    distinctId: post.author,
+    event: 'post_deleted',
+    properties: { post_id: post.id, title: post.title },
+  });
 
   return reply.status(204).send();
 });
@@ -111,7 +150,20 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+
+  posthog.identify({ distinctId: author, properties: { name: author } });
+  posthog.capture({
+    distinctId: author,
+    event: 'comment_added',
+    properties: { comment_id: comment.id, post_id: post.id, post_title: post.title },
+  });
+
   return reply.status(201).send(comment);
+});
+
+fastify.setErrorHandler((err, request, reply) => {
+  posthog.captureException(err);
+  reply.send(err);
 });
 
 const PORT = process.env.PORT || 3001;
@@ -121,4 +173,14 @@ fastify.listen({ port: PORT }, (err) => {
     fastify.log.error(err);
     process.exit(1);
   }
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
 });
