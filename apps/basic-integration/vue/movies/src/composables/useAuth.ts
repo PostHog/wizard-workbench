@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import posthog from 'posthog-js'
 
 const AUTH_KEY = 'auth-user'
 
@@ -18,8 +19,11 @@ export function useAuth() {
     user.value = sanitizedUsername
     localStorage.setItem(AUTH_KEY, sanitizedUsername)
     
+    posthog.identify(sanitizedUsername)
+    posthog.capture('user_logged_in', { username: sanitizedUsername })
+
     await router.push('/')
-    
+
     return {
       success: true,
       user: sanitizedUsername,
@@ -27,6 +31,8 @@ export function useAuth() {
   }
 
   const logout = async () => {
+    posthog.capture('user_logged_out')
+    posthog.reset()
     user.value = null
     localStorage.removeItem(AUTH_KEY)
     await router.push('/login')
