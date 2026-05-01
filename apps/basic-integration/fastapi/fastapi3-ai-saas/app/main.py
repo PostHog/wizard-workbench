@@ -2,6 +2,7 @@
 
 from contextlib import asynccontextmanager
 
+import posthog
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -20,7 +21,14 @@ async def lifespan(app: FastAPI):
     # Initialize database
     init_db()
 
+    # Initialize PostHog
+    posthog.api_key = settings.posthog_api_key
+    posthog.host = settings.posthog_host
+
     yield
+
+    # Flush PostHog events on shutdown
+    posthog.flush()
 
 
 app = FastAPI(
