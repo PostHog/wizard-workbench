@@ -10,7 +10,7 @@
     </div>
     <div class="plan-actions">
       <span class="plan-price"> ${{ currentPlanDetails()?.price }}<span class="period">/month</span> </span>
-      <button class="btn-outline">Manage Subscription</button>
+      <button class="btn-outline" (click)="onManageSubscriptionClicked()">Manage Subscription</button>
     </div>
   </div>
 
@@ -35,7 +35,7 @@
             </li>
           }
         </ul>
-        <button [class.btn-primary]="plan.recommended && plan.id !== currentPlan()" [class.btn-outline]="!plan.recommended || plan.id === currentPlan()" [disabled]="plan.id === currentPlan()">
+        <button [class.btn-primary]="plan.recommended && plan.id !== currentPlan()" [class.btn-outline]="!plan.recommended || plan.id === currentPlan()" [disabled]="plan.id === currentPlan()" (click)="onUpgradeClicked(plan)">
           {{ plan.id === currentPlan() ? 'Current Plan' : 'Upgrade' }}
         </button>
       </div>
