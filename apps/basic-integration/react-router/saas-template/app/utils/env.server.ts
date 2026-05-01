@@ -16,6 +16,8 @@ const schema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string(),
   SUPABASE_PROJECT_ID: z.string(),
   SUPABASE_SERVICE_ROLE_KEY: z.string(),
+  VITE_PUBLIC_POSTHOG_HOST: z.url(),
+  VITE_PUBLIC_POSTHOG_TOKEN: z.string(),
   VITE_SUPABASE_ANON_KEY: z.string(),
   VITE_SUPABASE_URL: z.url(),
 });
