@@ -25,6 +25,7 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -90,6 +91,18 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
+
+  const posthog = getPostHogClient();
+  posthog.identify({
+    distinctId: String(foundUser.id),
+    properties: { email: foundUser.email, name: foundUser.name },
+  });
+  posthog.capture({
+    distinctId: String(foundUser.id),
+    event: 'user_signed_in',
+    properties: { email: foundUser.email },
+  });
+  await posthog.shutdown();
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -212,6 +225,21 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     setSession(createdUser)
   ]);
 
+  const posthog = getPostHogClient();
+  posthog.identify({
+    distinctId: String(createdUser.id),
+    properties: { email: createdUser.email },
+  });
+  posthog.capture({
+    distinctId: String(createdUser.id),
+    event: 'user_signed_up',
+    properties: {
+      email: createdUser.email,
+      via_invitation: Boolean(inviteId),
+    },
+  });
+  await posthog.shutdown();
+
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
     const priceId = formData.get('priceId') as string;
@@ -282,6 +310,13 @@ export const updatePassword = validatedActionWithUser(
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PASSWORD)
     ]);
 
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'password_updated',
+    });
+    await posthog.shutdown();
+
     return {
       success: 'Password updated successfully.'
     };
@@ -312,6 +347,14 @@ export const deleteAccount = validatedActionWithUser(
       user.id,
       ActivityType.DELETE_ACCOUNT
     );
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'account_deleted',
+      properties: { email: user.email },
+    });
+    await posthog.shutdown();
 
     // Soft delete
     await db
@@ -354,6 +397,14 @@ export const updateAccount = validatedActionWithUser(
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
 
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'account_updated',
+      properties: { name, email },
+    });
+    await posthog.shutdown();
+
     return { name, success: 'Account updated successfully.' };
   }
 );
@@ -386,6 +437,14 @@ export const removeTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.REMOVE_TEAM_MEMBER
     );
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'team_member_removed',
+      properties: { team_id: userWithTeam.teamId, removed_member_id: memberId },
+    });
+    await posthog.shutdown();
 
     return { success: 'Team member removed successfully' };
   }
@@ -453,6 +512,14 @@ export const inviteTeamMember = validatedActionWithUser(
 
     // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
     // await sendInvitationEmail(email, userWithTeam.team.name, role)
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'team_member_invited',
+      properties: { team_id: userWithTeam.teamId, invited_email: email, role },
+    });
+    await posthog.shutdown();
 
     return { success: 'Invitation sent successfully' };
   }
