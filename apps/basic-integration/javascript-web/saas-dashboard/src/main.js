@@ -1,3 +1,4 @@
+import { posthog } from './posthog.js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -40,3 +41,14 @@ router.notFound(() => {
 // --- Start ---
 
 router.start();
+
+// Capture pageviews on hash-based route changes
+window.addEventListener('hashchange', () => {
+  posthog.capture('$pageview');
+});
+
+// Re-identify user if already logged in on page load
+if (store.state.currentUser) {
+  const user = store.state.currentUser;
+  posthog.identify(user.id, { name: user.name, email: user.email, role: user.role });
+}
