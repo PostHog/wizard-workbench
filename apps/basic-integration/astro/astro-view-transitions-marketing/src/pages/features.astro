@@ -62,3 +62,20 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupFeaturesPage() {
+    var cards = document.querySelectorAll('.feature-card');
+    cards.forEach(function(card) {
+      card.removeEventListener('click', card._phHandler);
+      card._phHandler = function() {
+        var feature = card.querySelector('h3')?.textContent?.trim();
+        window.posthog?.capture('feature_card_clicked', { feature: feature });
+      };
+      card.addEventListener('click', card._phHandler);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupFeaturesPage);
+  document.addEventListener('astro:page-load', setupFeaturesPage);
+</script>
