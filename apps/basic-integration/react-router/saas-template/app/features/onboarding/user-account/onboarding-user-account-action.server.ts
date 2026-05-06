@@ -1,4 +1,5 @@
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import type { PostHog } from "posthog-node";
 import { href, redirect } from "react-router";
 
 import { requireUserNeedsOnboarding } from "../onboarding-helpers.server";
@@ -49,6 +50,11 @@ export async function onboardingUserAccountAction({
     id: user.id,
     user: { imageUrl, name: result.data.name },
   });
+
+  const posthog = (context as Record<string, unknown>).posthog as
+    | PostHog
+    | undefined;
+  posthog?.capture({ event: "user_onboarding_completed" });
 
   const { inviteLinkInfo, headers: inviteLinkHeaders } =
     await getInviteInfoForAuthRoutes(request);

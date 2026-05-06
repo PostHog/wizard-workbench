@@ -1,3 +1,4 @@
+import type { PostHog } from "posthog-node";
 import { data, redirect } from "react-router";
 import { z } from "zod";
 
@@ -67,6 +68,9 @@ export async function billingAction({
       organizationMembershipContext,
     );
     const i18n = getInstance(context);
+    const posthog = (context as Record<string, unknown>).posthog as
+      | PostHog
+      | undefined;
 
     const result = await validateFormData(request, schema);
 
@@ -97,6 +101,15 @@ export async function billingAction({
           customerId: organization.stripeCustomerId,
           organizationSlug: params.organizationSlug,
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
+        });
+
+        posthog?.capture({
+          event: "subscription_cancelled",
+          properties: {
+            organization_id: organization.id,
+            organization_slug: organization.slug,
+            subscription_id: organization.stripeSubscriptions[0].stripeId,
+          },
         });
 
         return redirect(cancelSession.url);
@@ -187,6 +200,15 @@ export async function billingAction({
             subscription: { cancelAtPeriodEnd: false },
           });
         }
+
+        posthog?.capture({
+          event: "subscription_resumed",
+          properties: {
+            organization_id: organization.id,
+            organization_slug: organization.slug,
+            subscription_id: organization.stripeSubscriptions[0]?.stripeId,
+          },
+        });
 
         const toast = await createToastHeaders({
           title: i18n.t(

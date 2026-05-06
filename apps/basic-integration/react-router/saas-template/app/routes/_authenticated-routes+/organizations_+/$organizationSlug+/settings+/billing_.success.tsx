@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconRosetteDiscountCheck } from "@tabler/icons-react";
 import confetti from "canvas-confetti";
 import { useEffect } from "react";
@@ -36,12 +37,17 @@ export const meta: Route.MetaFunction = ({ loaderData }) => [
 ];
 
 export default function BillingSuccessRoute({ params }: Route.ComponentProps) {
+  const posthog = usePostHog();
   const { t } = useTranslation("billing", {
     keyPrefix: "billingSuccessPage",
   });
   const { organizationSlug } = params;
 
   useEffect(() => {
+    posthog?.capture("subscription_checkout_completed", {
+      organization_slug: organizationSlug,
+    });
+
     const end = Date.now() + 2 * 1000; // 3 seconds
     const colors = ["#3b82f6", "#22c55e", "#eab308", "#ef4444"];
     let everyOther = true;
@@ -73,7 +79,7 @@ export default function BillingSuccessRoute({ params }: Route.ComponentProps) {
     };
 
     frame();
-  }, []);
+  }, [organizationSlug, posthog]);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-4 py-4 md:py-6 lg:px-6">

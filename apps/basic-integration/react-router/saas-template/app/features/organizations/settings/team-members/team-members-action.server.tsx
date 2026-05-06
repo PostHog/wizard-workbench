@@ -1,6 +1,7 @@
 import { report } from "@conform-to/react/future";
 import { createId } from "@paralleldrive/cuid2";
 import { addDays } from "date-fns";
+import type { PostHog } from "posthog-node";
 import { data } from "react-router";
 import { z } from "zod";
 
@@ -56,6 +57,9 @@ export async function teamMembersAction({
       organizationMembershipContext,
     );
     const i18n = getInstance(context);
+    const posthog = (context as Record<string, unknown>).posthog as
+      | PostHog
+      | undefined;
 
     if (role === OrganizationMembershipRole.member) {
       throw forbidden();
@@ -361,6 +365,15 @@ export async function teamMembersAction({
             }),
           });
         }
+
+        posthog?.capture({
+          event: "member_invited",
+          properties: {
+            invited_role: body.role,
+            organization_id: organization.id,
+            organization_slug: organization.slug,
+          },
+        });
 
         const toastHeaders = await createToastHeaders({
           title: i18n.t(

@@ -1,5 +1,6 @@
 import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { createId } from "@paralleldrive/cuid2";
+import type { PostHog } from "posthog-node";
 import { redirect } from "react-router";
 
 import { createOrganizationFormSchema } from "./create-organization-schemas";
@@ -49,6 +50,18 @@ export async function createOrganizationAction({
       slug: slugify(result.data.name),
     },
     userId: user.id,
+  });
+
+  const posthog = (context as Record<string, unknown>).posthog as
+    | PostHog
+    | undefined;
+  posthog?.capture({
+    event: "organization_created",
+    properties: {
+      organization_id: organization.id,
+      organization_name: organization.name,
+      organization_slug: organization.slug,
+    },
   });
 
   return redirect(`/organizations/${organization.slug}`, { headers });
