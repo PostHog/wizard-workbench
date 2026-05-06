@@ -167,6 +167,7 @@ export interface WizardOptions {
   apiKey?: string;
   command?: string;
   skillId?: string;
+  areas?: string;
 }
 
 /**
@@ -193,6 +194,9 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
   }
   if (options.skillId) {
     args.push(`--skill=${options.skillId}`);
+  }
+  if (options.areas) {
+    args.push(`--areas=${options.areas}`);
   }
   args.push("--local-mcp");
 

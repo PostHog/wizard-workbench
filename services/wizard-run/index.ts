@@ -112,6 +112,13 @@ async function main(): Promise<void> {
     }
   }
 
+  // If the audit command was selected, optionally prompt for --areas
+  let auditAreas: string | undefined;
+  if (command.id === 'audit') {
+    const input = await prompt('Audit areas (e.g. "web analytics, feature flags") — leave blank for all: ');
+    if (input) auditAreas = input;
+  }
+
   const scopedAppsDir = join(APPS_DIR, command.appsDir);
   const apps = findApps(scopedAppsDir);
   if (apps.length === 0) {
@@ -135,6 +142,7 @@ async function main(): Promise<void> {
     region: opts.region,
     command: commandToSubcommand(command.id),
     skillId,
+    areas: auditAreas,
   });
 
   if (!result.success) {
