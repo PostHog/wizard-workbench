@@ -1,7 +1,31 @@
 """Simulated AI summarizer for meeting transcripts."""
 
 import re
+import os
+import atexit
 from typing import List, Tuple
+
+from dotenv import load_dotenv
+from posthog import Posthog
+
+load_dotenv()
+
+
+def _initialize_posthog():
+    project_token = os.getenv('POSTHOG_PROJECT_TOKEN')
+    if not project_token:
+        return None
+    client = Posthog(
+        project_token,
+        host=os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com'),
+        enable_exception_autocapture=True
+    )
+    return client
+
+
+posthog_client = _initialize_posthog()
+if posthog_client:
+    atexit.register(posthog_client.shutdown)
 
 
 class AISummarizer:
@@ -38,6 +62,19 @@ class AISummarizer:
         # Estimate duration (roughly 150 words per minute speaking rate)
         word_count = len(text.split())
         duration_minutes = max(1, round(word_count / 150))
+
+        if posthog_client:
+            posthog_client.capture(
+                distinct_id='system',
+                event='transcript_analyzed',
+                properties={
+                    'word_count': word_count,
+                    'duration_minutes': duration_minutes,
+                    'participant_count': len(participants),
+                    'action_item_count': len(action_items),
+                    'key_point_count': len(key_points)
+                }
+            )
 
         return summary, action_items, key_points, participants, duration_minutes
 

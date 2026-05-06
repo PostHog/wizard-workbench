@@ -2,11 +2,35 @@
 """User Management Service - A pure Python background service for managing users."""
 
 import uuid
+import os
+import atexit
 from datetime import datetime
 from typing import Optional
 
+from dotenv import load_dotenv
+from posthog import Posthog
+
 from database import UserDatabase
 from models import User
+
+load_dotenv()
+
+
+def _initialize_posthog():
+    project_token = os.getenv('POSTHOG_PROJECT_TOKEN')
+    if not project_token:
+        return None
+    client = Posthog(
+        project_token,
+        host=os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com'),
+        enable_exception_autocapture=True
+    )
+    return client
+
+
+posthog_client = _initialize_posthog()
+if posthog_client:
+    atexit.register(posthog_client.shutdown)
 
 
 class UserService:
@@ -36,6 +60,16 @@ class UserService:
 
         if self.db.create_user(user):
             print(f"✓ User registered: {username} ({email})")
+            if posthog_client:
+                posthog_client.set(
+                    distinct_id=user.user_id,
+                    properties={'username': username, 'is_active': True}
+                )
+                posthog_client.capture(
+                    distinct_id=user.user_id,
+                    event='user_registered',
+                    properties={'has_full_name': full_name is not None}
+                )
             return user
         else:
             print(f"✗ Failed to register user: {username} (email or username already exists)")
@@ -63,6 +97,12 @@ class UserService:
 
         if success:
             print(f"✓ User deactivated: {user_id}")
+            if posthog_client:
+                posthog_client.capture(
+                    distinct_id=user_id,
+                    event='user_deactivated',
+                    properties={'reason': reason}
+                )
         else:
             print(f"✗ Failed to deactivate user: {user_id}")
 
@@ -77,6 +117,12 @@ class UserService:
 
             if success:
                 print(f"✓ User deleted: {user_id}")
+                if posthog_client:
+                    posthog_client.capture(
+                        distinct_id=user_id,
+                        event='user_deleted',
+                        properties={'reason': reason}
+                    )
                 return True
 
         print(f"✗ Failed to delete user: {user_id}")
