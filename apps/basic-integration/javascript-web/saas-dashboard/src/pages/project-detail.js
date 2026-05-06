@@ -2,6 +2,7 @@ import { api } from '../api.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
 import { showModal } from '../components/modal.js';
+import { posthog } from '../analytics.js';
 
 const STATUS_OPTIONS = ['todo', 'in_progress', 'done'];
 const PRIORITY_OPTIONS = ['low', 'medium', 'high'];
@@ -16,8 +17,10 @@ export async function renderProjectDetail({ id }) {
     const project = await api.getProject(id);
     const members = await api.getTeamMembers();
 
+    posthog.capture('project_viewed', { project_id: project.id, project_name: project.name, project_status: project.status });
     render(project, members);
   } catch (err) {
+    posthog.captureException(err, { level: 'error', tags: { context: 'load_project' } });
     content.innerHTML = `<div class="error-message">${err.message}</div>`;
   }
 }
@@ -105,10 +108,12 @@ function render(project, members) {
 
         try {
           await api.addTask(project.id, title, priority);
+          posthog.capture('task_added', { project_id: project.id, priority });
           document.getElementById('modal-overlay')?.remove();
           const updated = await api.getProject(project.id);
           render(updated, members);
         } catch (err) {
+          posthog.captureException(err, { level: 'error', tags: { context: 'add_task' } });
           alert(err.message);
         }
       });
@@ -119,6 +124,7 @@ function render(project, members) {
   content.querySelectorAll('.move-task').forEach((btn) => {
     btn.addEventListener('click', async () => {
       await api.updateTaskStatus(project.id, btn.dataset.taskId, btn.dataset.status);
+      posthog.capture('task_status_updated', { project_id: project.id, task_id: btn.dataset.taskId, new_status: btn.dataset.status });
       const updated = await api.getProject(project.id);
       render(updated, members);
     });
@@ -136,6 +142,7 @@ function render(project, members) {
         modalEl.querySelectorAll('.assign-option').forEach((opt) => {
           opt.addEventListener('click', async () => {
             await api.assignTask(project.id, btn.dataset.taskId, opt.dataset.assignee || null);
+            posthog.capture('task_assigned', { project_id: project.id, task_id: btn.dataset.taskId, assigned: !!opt.dataset.assignee });
             document.getElementById('modal-overlay')?.remove();
             const updated = await api.getProject(project.id);
             render(updated, members);
@@ -149,6 +156,7 @@ function render(project, members) {
   content.querySelectorAll('.delete-task').forEach((btn) => {
     btn.addEventListener('click', async () => {
       await api.deleteTask(project.id, btn.dataset.taskId);
+      posthog.capture('task_deleted', { project_id: project.id, task_id: btn.dataset.taskId });
       const updated = await api.getProject(project.id);
       render(updated, members);
     });

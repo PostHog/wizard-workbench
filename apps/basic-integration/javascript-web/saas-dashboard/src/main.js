@@ -1,3 +1,4 @@
+import { posthog } from './analytics.js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -6,6 +7,16 @@ import { renderProjects } from './pages/projects.js';
 import { renderProjectDetail } from './pages/project-detail.js';
 import { renderSettings } from './pages/settings.js';
 import { renderActivity } from './pages/activity.js';
+
+// Identify already-logged-in user on page refresh
+const currentUser = store.state.currentUser;
+if (currentUser) {
+  posthog.identify(currentUser.id, {
+    email: currentUser.email,
+    name: currentUser.name,
+    role: currentUser.role,
+  });
+}
 
 /**
  * Auth guard — redirects to login if no user is logged in.
