@@ -4,6 +4,7 @@ from typing import Annotated, Optional
 
 from fastapi import Cookie, Depends, HTTPException, status
 from itsdangerous import BadSignature, URLSafeSerializer
+from posthog import Posthog
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -52,7 +53,14 @@ def create_session_token(user_id: int) -> str:
     return serializer.dumps({"user_id": user_id})
 
 
+def get_posthog() -> Posthog:
+    """Get the PostHog client."""
+    from app.main import posthog_client
+    return posthog_client
+
+
 # Type aliases for cleaner dependency injection
 CurrentUser = Annotated[Optional[User], Depends(get_current_user)]
 RequiredUser = Annotated[User, Depends(require_auth)]
 DbSession = Annotated[Session, Depends(get_db)]
+PostHogClient = Annotated[Posthog, Depends(get_posthog)]
