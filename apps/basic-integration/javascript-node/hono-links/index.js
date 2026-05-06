@@ -1,5 +1,11 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const app = new Hono();
 
@@ -26,6 +32,29 @@ app.get('/api/links', (c) => {
     result = result.filter((l) => l.favorite);
   }
 
+  const distinctId = c.req.header('x-posthog-distinct-id') || 'anonymous';
+  if (search) {
+    posthog.capture({
+      distinctId,
+      event: 'links searched',
+      properties: { query: search, result_count: result.length },
+    });
+  }
+  if (tag) {
+    posthog.capture({
+      distinctId,
+      event: 'links filtered by tag',
+      properties: { tag, result_count: result.length },
+    });
+  }
+  if (favoritesOnly === 'true') {
+    posthog.capture({
+      distinctId,
+      event: 'favorites viewed',
+      properties: { result_count: result.length },
+    });
+  }
+
   return c.json({ links: result, total: result.length });
 });
 
@@ -47,6 +76,20 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  const distinctId = c.req.header('x-posthog-distinct-id') || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'link saved',
+    properties: {
+      link_id: link.id,
+      url: link.url,
+      title: link.title,
+      tag_count: link.tags.length,
+      has_description: link.description.length > 0,
+    },
+  });
+
   return c.json(link, 201);
 });
 
@@ -76,6 +119,16 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  const distinctId = c.req.header('x-posthog-distinct-id') || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'link updated',
+    properties: {
+      link_id: link.id,
+      updated_fields: Object.keys(body),
+    },
+  });
+
   return c.json(link);
 });
 
@@ -87,7 +140,18 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
+  const deletedLink = links[index];
   links.splice(index, 1);
+
+  const distinctId = c.req.header('x-posthog-distinct-id') || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'link deleted',
+    properties: {
+      link_id: deletedLink.id,
+    },
+  });
+
   return c.body(null, 204);
 });
 
@@ -100,6 +164,11 @@ app.get('/api/tags', (c) => {
     }
   }
   return c.json({ tags: tagCounts });
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
 });
 
 const PORT = process.env.PORT || 3002;
