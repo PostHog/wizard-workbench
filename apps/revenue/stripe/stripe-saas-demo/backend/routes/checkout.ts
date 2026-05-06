@@ -21,8 +21,9 @@ checkoutRouter.post("/", async (req, res) => {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${frontendUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${frontendUrl}/?canceled=true`,
-      client_reference_id: userId,
+      client_reference_id: customerEmail,
       customer_email: customerEmail,
+      metadata: { posthog_person_distinct_id: customerEmail },
     });
 
     res.json({ url: session.url });
