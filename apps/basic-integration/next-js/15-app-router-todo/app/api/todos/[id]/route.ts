@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
 import { z } from 'zod';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 const updateTodoSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -59,6 +60,19 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    const distinctId = request.headers.get('x-posthog-distinct-id') ?? 'anonymous';
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId,
+      event: 'todo_updated',
+      properties: {
+        todo_id: todoId,
+        completed: updatedTodo.completed,
+        source: 'api',
+      },
+    });
+    await posthog.shutdown();
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -93,6 +107,18 @@ export async function DELETE(
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
+
+    const distinctId = request.headers.get('x-posthog-distinct-id') ?? 'anonymous';
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId,
+      event: 'todo_deleted',
+      properties: {
+        todo_id: todoId,
+        source: 'api',
+      },
+    });
+    await posthog.shutdown();
 
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
