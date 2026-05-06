@@ -61,3 +61,27 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupHomePage() {
+    var trialBtn = document.querySelector('.hero-buttons .btn-primary');
+    var docsBtn = document.querySelector('.hero-buttons .btn-secondary');
+
+    trialBtn?.removeEventListener('click', handleTrialClick);
+    trialBtn?.addEventListener('click', handleTrialClick);
+
+    docsBtn?.removeEventListener('click', handleDocsClick);
+    docsBtn?.addEventListener('click', handleDocsClick);
+  }
+
+  function handleTrialClick() {
+    window.posthog?.capture('start_free_trial_clicked', { location: 'hero' });
+  }
+
+  function handleDocsClick() {
+    window.posthog?.capture('hero_docs_clicked');
+  }
+
+  document.addEventListener('DOMContentLoaded', setupHomePage);
+  document.addEventListener('astro:page-load', setupHomePage);
+</script>
