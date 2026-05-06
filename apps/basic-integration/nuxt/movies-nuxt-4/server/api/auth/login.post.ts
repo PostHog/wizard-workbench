@@ -21,6 +21,19 @@ export default defineEventHandler(async (event) => {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
+    const sessionId = getHeader(event, 'x-posthog-session-id')
+    const distinctId = getHeader(event, 'x-posthog-distinct-id')
+    const posthog = useServerPostHog()
+    posthog.capture({
+      distinctId: distinctId ?? sanitizedUsername,
+      event: 'server_login',
+      properties: {
+        $session_id: sessionId,
+        username: sanitizedUsername,
+        source: 'api',
+      },
+    })
+
     return {
       success: true,
       user: sanitizedUsername,
