@@ -38,8 +38,10 @@ export async function createCheckoutSession({
     customer: team.stripeCustomerId || undefined,
     client_reference_id: user.id.toString(),
     allow_promotion_codes: true,
+    metadata: { posthog_person_distinct_id: String(user.id) },
     subscription_data: {
-      trial_period_days: 14
+      trial_period_days: 14,
+      metadata: { posthog_person_distinct_id: String(user.id) }
     }
   });
 
