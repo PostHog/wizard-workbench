@@ -15,6 +15,14 @@
       "ciCapable": true
     },
     {
+      "id": "audit",
+      "dir": "audit",
+      "label": "Audit",
+      "description": "Audit an existing PostHog integration for correctness and best practices",
+      "ciCapable": true,
+      "appsDir": "audit"
+    },
+    {
       "id": "skill",
       "dir": "misc",
       "label": "Skill",
