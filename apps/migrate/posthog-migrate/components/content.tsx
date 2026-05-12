@@ -276,7 +276,7 @@ export function Content() {
     <div className="mx-auto max-w-3xl space-y-8 px-8 py-12 md:py-20">
       <main className="space-y-8">
         <section>
-          <h1 className="mb-4 font-bold text-4xl tracking-tight">hogkilla</h1>
+          <h1 className="mb-4 font-bold text-4xl tracking-tight">posthog-migrate</h1>
           <p className="text-lg leading-relaxed text-zinc-700 dark:text-zinc-300">
             A real app wired up with{" "}
             <span className="font-semibold text-blue-400">LaunchDarkly</span>,{" "}

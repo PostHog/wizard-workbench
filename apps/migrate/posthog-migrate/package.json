@@ -1,5 +1,5 @@
 {
-  "name": "hogkilla",
+  "name": "posthog-migrate",
   "version": "0.1.0",
   "private": true,
   "description": "A playground showing how bloated a LaunchDarkly + Amplitude + Braintrust stack gets, and why you should use PostHog instead.",
@@ -10,9 +10,9 @@
     "observability",
     "posthog"
   ],
-  "homepage": "https://github.com/richardsolomou/hogkilla",
+  "homepage": "https://github.com/richardsolomou/posthog-migrate",
   "bugs": {
-    "url": "https://github.com/richardsolomou/hogkilla/issues"
+    "url": "https://github.com/richardsolomou/posthog-migrate/issues"
   },
   "license": "MIT",
   "author": {
@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/richardsolomou/hogkilla"
+    "url": "https://github.com/richardsolomou/posthog-migrate"
   },
   "type": "module",
   "scripts": {

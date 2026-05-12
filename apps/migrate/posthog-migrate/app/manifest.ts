@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "hogkilla",
-    short_name: "hogkilla",
+    name: "posthog-migrate",
+    short_name: "posthog-migrate",
     icons: [
       {
         src: "/favicon.ico",

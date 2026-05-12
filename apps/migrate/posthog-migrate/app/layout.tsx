@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "hogkilla",
+  title: "posthog-migrate",
   description:
     "See how bloated a LaunchDarkly + Amplitude stack gets. Then switch to PostHog.",
 };

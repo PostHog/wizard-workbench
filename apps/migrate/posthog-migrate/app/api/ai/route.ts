@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: openai("gpt-4o-mini"),
     system:
-      "You are a helpful assistant embedded in a demo app called hogkilla. " +
+      "You are a helpful assistant embedded in a demo app called posthog-migrate. " +
       "Keep responses brief (1-2 sentences). Be witty.",
     messages: await convertToModelMessages(messages),
     experimental_telemetry: {

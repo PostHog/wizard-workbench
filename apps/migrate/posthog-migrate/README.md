@@ -1,4 +1,4 @@
-# hogkilla
+# posthog-migrate
 
 A playground app showing how bloated a multi-vendor observability stack gets, and why you should use PostHog instead.
 
@@ -38,8 +38,8 @@ NEXT_PUBLIC_AMPLITUDE_API_KEY=
 
 # Braintrust + OpenAI (LLM analytics)
 BRAINTRUST_API_KEY=
-PROJECT_NAME=hogkilla
-BRAINTRUST_PROJECT_NAME=hogkilla
+PROJECT_NAME=posthog-migrate
+BRAINTRUST_PROJECT_NAME=posthog-migrate
 OPENAI_API_KEY=
 ```
 
