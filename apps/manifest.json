@@ -23,6 +23,14 @@
       "appsDir": "audit"
     },
     {
+      "id": "migrate",
+      "dir": "migrate",
+      "label": "Migrate",
+      "description": "Migrate from another analytics provider to PostHog",
+      "ciCapable": true,
+      "appsDir": "migrate"
+    },
+    {
       "id": "skill",
       "dir": "misc",
       "label": "Skill",

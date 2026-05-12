@@ -1,9 +1,6 @@
 [submodule "apps/audit/cal-diy"]
 	path = apps/audit/cal-diy
 	url = https://github.com/calcom/cal.diy.git
-[submodule "apps/audit/dub"]
-	path = apps/audit/dub
-	url = https://github.com/dubinc/dub.git
 [submodule "apps/audit/posthog-demo-3000"]
 	path = apps/audit/posthog-demo-3000
 	url = https://github.com/PostHog/posthog-demo-3000.git
