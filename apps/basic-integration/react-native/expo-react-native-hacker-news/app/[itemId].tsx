@@ -18,10 +18,12 @@ import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { usePostHog } from "posthog-react-native";
 
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -72,7 +74,13 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable onPress={() => {
+              posthog.capture("user_profile_viewed", {
+                username: item.by,
+                source: "item_detail",
+              });
+              router.push(`/users/${item.by}`);
+            }}>
               <Text
                 style={{
                   fontSize: 16,
@@ -163,6 +171,11 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture("item_external_link_opened", {
+                    item_id: item.id,
+                    url: item.url,
+                    host: new URL(item.url).host,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +207,14 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog.capture("comment_thread_navigated", {
+                  from_item_id: item.id,
+                  to_item_id: parentItem.id,
+                  parent_title: (parentItem.title || parentItem.text || "").slice(0, 100),
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
