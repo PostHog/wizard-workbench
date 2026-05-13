@@ -5,7 +5,7 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.dependencies import DbSession, RequiredUser
+from app.dependencies import DbSession, PostHogClient, RequiredUser
 from app.models import Generation
 
 router = APIRouter(prefix="/api")
@@ -44,6 +44,7 @@ async def generate_content(
     request: GenerateRequest,
     current_user: RequiredUser,
     db: DbSession,
+    posthog: PostHogClient,
 ):
     """Generate AI content (mock implementation).
 
@@ -54,6 +55,16 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        posthog.capture(
+            distinct_id=str(current_user.id),
+            event="content_generation_failed",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_needed": credits_needed,
+                "credits_available": current_user.credits,
+                "failure_reason": "insufficient_credits",
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -74,6 +85,17 @@ async def generate_content(
         prompt=request.prompt,
         result=mock_content,
         credits_used=credits_needed,
+    )
+
+    posthog.capture(
+        distinct_id=str(current_user.id),
+        event="content_generated",
+        properties={
+            "generation_type": request.generation_type,
+            "credits_used": credits_needed,
+            "credits_remaining": current_user.credits,
+            "prompt_length": len(request.prompt),
+        },
     )
 
     return GenerateResponse(

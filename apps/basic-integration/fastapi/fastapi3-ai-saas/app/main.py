@@ -1,10 +1,12 @@
 """Acme AI - FastAPI SaaS Application."""
 
+import atexit
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from posthog import Posthog
 
 from app.config import get_settings
 from app.database import init_db
@@ -12,6 +14,13 @@ from app.routers import auth, generate, pages, api_keys, usage, settings as sett
 
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
+
+posthog_client = Posthog(
+    project_api_key=settings.posthog_project_token,
+    host=settings.posthog_host,
+    enable_exception_autocapture=True,
+)
+atexit.register(posthog_client.shutdown)
 
 
 @asynccontextmanager
@@ -21,6 +30,9 @@ async def lifespan(app: FastAPI):
     init_db()
 
     yield
+
+    # Flush PostHog events on shutdown
+    posthog_client.flush()
 
 
 app = FastAPI(
