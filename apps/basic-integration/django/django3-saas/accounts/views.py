@@ -1,3 +1,4 @@
+import posthog
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -15,9 +16,29 @@ class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+        with posthog.new_context():
+            posthog.identify_context(str(user.id))
+            posthog.tag('username', user.username)
+            posthog.tag('date_joined', user.date_joined.isoformat())
+            posthog.capture('user_logged_in', properties={
+                'login_method': 'email',
+            })
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            user_id = str(request.user.id)
+            with posthog.new_context():
+                posthog.identify_context(user_id)
+                posthog.capture('user_logged_out')
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -49,6 +70,13 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            with posthog.new_context():
+                posthog.identify_context(str(user.id))
+                posthog.tag('username', user.username)
+                posthog.tag('date_joined', user.date_joined.isoformat())
+                posthog.capture('user_registered', properties={
+                    'registration_method': 'email',
+                })
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +91,11 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            with posthog.new_context():
+                posthog.identify_context(str(request.user.id))
+                posthog.capture('profile_updated', properties={
+                    'fields_updated': list(form.changed_data),
+                })
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
