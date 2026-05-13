@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@astrojs/node": "^9.0.0",
-    "astro": "^5.0.0"
+    "astro": "^5.0.0",
+    "posthog-js": "^1.373.4",
+    "posthog-node": "^5.34.1"
   }
 }
