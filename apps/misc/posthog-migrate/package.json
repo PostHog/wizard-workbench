@@ -1,0 +1,75 @@
+{
+  "name": "posthog-migrate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A playground showing how bloated a LaunchDarkly + Amplitude + Braintrust stack gets, and why you should use PostHog instead.",
+  "keywords": [
+    "amplitude",
+    "braintrust",
+    "launchdarkly",
+    "observability",
+    "posthog"
+  ],
+  "homepage": "https://github.com/richardsolomou/posthog-migrate",
+  "bugs": {
+    "url": "https://github.com/richardsolomou/posthog-migrate/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Richard Solomou",
+    "email": "richard@solomou.dev",
+    "url": "https://solomou.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/richardsolomou/posthog-migrate"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "check-types": "tsc --noEmit",
+    "lint": "oxlint --quiet",
+    "format": "oxfmt \"**/*.{js,mjs,ts,tsx,json,css}\"",
+    "format:check": "oxfmt --check \"**/*.{js,mjs,ts,tsx,json,css}\"",
+    "fix": "oxlint --fix --fix-suggestions --quiet && pnpm format",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.48",
+    "@ai-sdk/react": "^3.0.140",
+    "@amplitude/unified": "^1.0.13",
+    "@braintrust/otel": "^0.2.0",
+    "@ras-sh/ui": "^0.0.6",
+    "@vercel/otel": "^2.1.1",
+    "ai": "^6.0.138",
+    "launchdarkly-react-client-sdk": "^3.9.0",
+    "next": "^16.2.1",
+    "next-themes": "^0.4.6",
+    "posthog-js": "^1.372.10",
+    "posthog-node": "^5.33.4",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@ras-sh/typescript-config": "^0.0.3",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "oxfmt": "^0.35.0",
+    "oxlint": "^1.8.0",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^6.0.2"
+  },
+  "lint-staged": {
+    "*.{js,jsx,mjs,ts,tsx}": [
+      "oxlint --fix --fix-suggestions --quiet",
+      "oxfmt"
+    ],
+    "*.{json,css}": "oxfmt"
+  }
+}

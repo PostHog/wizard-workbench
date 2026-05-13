@@ -1,0 +1,60 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "react", "react-perf", "promise", "oxc", "import"],
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": ["node_modules", "dist", "build", ".next", "out", "convex/_generated"],
+  "rules": {
+    "no-constant-condition": "off",
+    "no-prototype-builtins": "off",
+    "require-await": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/no-unescaped-entities": "off",
+    "react/jsx-no-target-blank": "off",
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/no-inferrable-types": "off",
+    "@typescript-eslint/ban-ts-comment": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "no-unused-vars": [
+      "error",
+      {
+        "ignoreRestSiblings": true,
+        "destructuredArrayIgnorePattern": "^_$"
+      }
+    ],
+    "no-useless-spread": "error",
+    "no-accumulating-spread": "error",
+    "no-useless-fallback-in-spread": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "react-hooks/rules-of-hooks": "error",
+    "react/jsx-curly-brace-presence": [
+      "error",
+      {
+        "props": "never",
+        "children": "never",
+        "propElementValues": "always"
+      }
+    ],
+    "no-console": [
+      "error",
+      {
+        "allow": ["info", "warn", "error"]
+      }
+    ],
+    "no-debugger": "error",
+    "react/self-closing-comp": [
+      "error",
+      {
+        "component": true,
+        "html": true
+      }
+    ],
+    "@typescript-eslint/prefer-ts-expect-error": "error",
+    "curly": "error",
+    "no-constant-binary-expression": "error",
+    "no-useless-rename": "error",
+    "no-useless-call": "error",
+    "no-else-return": "warn"
+  }
+}

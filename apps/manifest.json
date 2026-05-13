@@ -36,6 +36,13 @@
       "label": "Skill",
       "description": "Run a skill by ID from context mill",
       "ciCapable": false
+    },
+    {
+      "id": "concierge",
+      "dir": "misc",
+      "label": "Concierge",
+      "description": "Run the concierge workflow",
+      "ciCapable": false
     }
   ]
 }
