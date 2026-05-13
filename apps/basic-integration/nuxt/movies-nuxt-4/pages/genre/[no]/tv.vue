@@ -9,6 +9,16 @@ const items: Media[] = reactive([])
 
 const list = await getGenreList(type)
 const name = list.find(item => item.id === +no.value)?.name
+const posthog = usePostHog()
+
+onMounted(() => {
+  posthog?.capture('genre_browsed', {
+    genre_id: no.value,
+    genre_name: name,
+    media_type: type,
+  })
+})
+
 async function fetch(page: number) {
   const data = await getMediaByGenre(type, no.value, page)
   items.push(...data.results)

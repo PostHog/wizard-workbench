@@ -6,7 +6,13 @@ const props = defineProps<{
 }>()
 
 const showModal = useIframeModal()
+const posthog = usePostHog()
 function play() {
+  posthog?.capture('video_played', {
+    video_name: props.item.name,
+    video_type: props.item.type,
+    video_key: props.item.key,
+  })
   return showModal(getVideoLink(props.item)!)
 }
 </script>
