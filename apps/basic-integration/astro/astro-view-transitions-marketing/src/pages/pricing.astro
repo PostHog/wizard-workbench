@@ -62,4 +62,34 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
   </section>
+
+<script is:inline>
+  function setupPricingPage() {
+    var cards = document.querySelectorAll('.pricing-card');
+    cards.forEach(function(card) {
+      var planName = card.querySelector('h3')?.textContent?.trim() || '';
+      var btn = card.querySelector('.btn');
+
+      if (!btn) return;
+
+      var isEnterprise = planName === 'Enterprise';
+      var newHandler = isEnterprise ? handleContactSales : handlePlanClick;
+
+      btn.removeEventListener('click', btn._posthogHandler);
+      btn._posthogHandler = function() { newHandler(planName); };
+      btn.addEventListener('click', btn._posthogHandler);
+    });
+  }
+
+  function handlePlanClick(planName) {
+    window.posthog?.capture('pricing_plan_clicked', { plan: planName });
+  }
+
+  function handleContactSales(planName) {
+    window.posthog?.capture('contact_sales_clicked', { plan: planName });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupPricingPage);
+  document.addEventListener('astro:page-load', setupPricingPage);
+</script>
 </Layout>
