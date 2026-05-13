@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
@@ -17,7 +18,10 @@ new class extends Component
             'password' => ['required', 'string', 'current_password'],
         ]);
 
-        tap(Auth::user(), $logout(...))->delete();
+        $user = Auth::user();
+        PostHogService::capture((string) $user->id, 'user_account_deleted');
+
+        tap($user, $logout(...))->delete();
 
         $this->redirect('/', navigate: true);
     }

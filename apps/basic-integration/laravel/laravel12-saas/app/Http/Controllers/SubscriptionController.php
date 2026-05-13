@@ -7,6 +7,7 @@ use App\Actions\Billing\GetSubscriptionSummary;
 use App\Actions\Billing\RedirectToBillingPortal;
 use App\Actions\Billing\SwapPlan;
 use App\Domains\Billing\PlanCatalog;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -15,7 +16,10 @@ class SubscriptionController extends Controller
     public function index(Request $request, PlanCatalog $catalog, GetSubscriptionSummary $summary)
     {
         $plans = $catalog->all();
-        $data = $summary($request->user());
+        $user = $request->user();
+        $data = $summary($user);
+
+        PostHogService::capture((string) $user->id, 'subscription_page_viewed');
 
         return view('subscriptions.index', [
             'plans' => $plans,
@@ -32,6 +36,12 @@ class SubscriptionController extends Controller
         if (!CheckoutPlan::isStripeConfigured()) {
             return $this->createStubSubscription($user, $plan);
         }
+
+        PostHogService::capture((string) $user->id, 'subscription_checkout_started', [
+            'plan_id' => $plan->id,
+            'plan_name' => $plan->name,
+            'plan_price' => $plan->price,
+        ]);
 
         $checkoutSession = $checkoutPlan($user, $plan);
 
@@ -58,6 +68,13 @@ class SubscriptionController extends Controller
             'amount' => $plan->price ?? 0,
         ]);
 
+        PostHogService::capture((string) $user->id, 'subscription_checkout_started', [
+            'plan_id' => $plan->id,
+            'plan_name' => $plan->name,
+            'plan_price' => $plan->price ?? 0,
+            'demo_mode' => true,
+        ]);
+
         return redirect()->route('dashboard')->with('success', 'Demo subscription created for ' . $plan->name . '. (Stripe not configured)');
     }
 
@@ -69,6 +86,12 @@ class SubscriptionController extends Controller
         if ($user->subscribed('default')) {
             try {
                 $swapPlan($user, $plan);
+
+                PostHogService::capture((string) $user->id, 'subscription_plan_swapped', [
+                    'plan_id' => $plan->id,
+                    'plan_name' => $plan->name,
+                    'plan_price' => $plan->price,
+                ]);
 
                 return redirect()->route('subscribe')->with('success', 'Your subscription has been updated to '.$plan->name.'.');
             } catch (Exception $e) {
