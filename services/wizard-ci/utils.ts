@@ -40,10 +40,14 @@ export {
 // Re-export high-level operations from shared service
 export {
   pushAndCreatePR,
+  commitAndCreatePR,
   switchOrCreateBranch,
   deleteBranches,
+  resolveRepoIdentity,
   type PushAndPROptions,
   type PushAndPRResult,
+  type CommitAndPROptions,
+  type CommitAndPRResult,
   type SwitchOrCreateBranchOptions,
   type SwitchOrCreateBranchResult,
   type DeleteBranchesResult,

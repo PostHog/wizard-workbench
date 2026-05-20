@@ -23,10 +23,13 @@ import {
   checkout,
   getCurrentBranch,
   getRepoRoot,
+  getRemoteUrl,
+  git,
   listBranches,
   pushAndCreatePR,
-  switchOrCreateBranch,
+  commitAndCreatePR,
   deleteBranches,
+  resolveRepoIdentity,
   formatMs,
   shortId,
   extractPRNumber,
@@ -498,6 +501,11 @@ async function runCI(
   const repoRoot = getRepoRoot(WORKBENCH);
   const appRelativePath = relative(repoRoot, app.path);
 
+  // Capture the base SHA before the wizard runs anything. The API commit
+  // path needs this as `expectedHeadOid`; capturing it later risks drift
+  // if anything on the runner moves HEAD between wizard and commit steps.
+  const baseSha = git("rev-parse HEAD", repoRoot);
+
   console.log(`\n${"─".repeat(50)}`);
   console.log(`Running CI: ${app.name}`);
   console.log(`${"─".repeat(50)}\n`);
@@ -631,46 +639,43 @@ async function runCI(
     console.log();
   }
 
-  // 4. Create branch and commit only app files
-  console.log("[4/5] Creating branch and committing...");
-  const originalBranch = getCurrentBranch(repoRoot);
+  // 4. Build branch name and commit via signed-commit API path
+  //
+  // Commits go through GitHub's createCommitOnBranch GraphQL mutation
+  // (authenticated with the App installation token) so they're auto-signed
+  // and pass the "verified signatures" branch ruleset. The local checkout
+  // is NOT switched — the branch only exists on the remote.
+  //
+  // The parallel local-eval path above still uses `commitPath` locally
+  // because the evaluator reads the local branch and doesn't need signed
+  // commits. Don't unify the two paths or CI will break again.
+  console.log("[4/5] Creating signed commit on remote branch...");
 
-  // Switch to existing or create new branch
-  // If --branch was specified with a value, use it; if empty string, it was already prompted in push-only mode
+  // Token for API authentication. In CI, GH_TOKEN is the App installation
+  // token (see .github/workflows/wizard-ci.yml). Locally, fall back to
+  // `gh auth token` — fine for local CLI runs against repos that don't
+  // enforce signing.
+  let token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+  if (!token) {
+    try {
+      const { execSync } = await import("child_process");
+      token = execSync("gh auth token", { encoding: "utf-8", stdio: "pipe" }).trim();
+    } catch {
+      console.error("      No GH_TOKEN/GITHUB_TOKEN env var and `gh auth token` failed.");
+      return false;
+    }
+  }
+
+  const remoteUrl = getRemoteUrl(repoRoot, opts.remote);
+  const repoIdentity = resolveRepoIdentity(remoteUrl);
+  if (!repoIdentity) {
+    console.error(`      Could not resolve repo owner/name (remote: ${remoteUrl ?? "none"}).`);
+    return false;
+  }
+
   const generateBranchName = () => `wizard-ci-${triggerId}-${app.name.replace(/\//g, "-")}`;
   const specifiedBranch = opts.branch && opts.branch !== "" ? opts.branch : undefined;
-  let branchResult;
-  try {
-    branchResult = switchOrCreateBranch({
-      repoRoot,
-      branchName: specifiedBranch,
-      generateName: generateBranchName,
-    });
-    if (!branchResult.created) {
-      console.log(`      Reusing branch: ${branchResult.branch}`);
-    }
-  } catch (e) {
-    console.error(`      Failed to switch/create branch: ${e}`);
-    checkout(repoRoot, originalBranch);
-    return false;
-  }
-
-  const branchName = branchResult.branch;
-
-  try {
-    // Only commit files within the app directory
-    const hash = commitPath(repoRoot, appRelativePath, `wizard-ci: ${app.name}`);
-    console.log(`      Branch: ${branchName}`);
-    console.log(`      Commit: ${hash}\n`);
-  } catch (e) {
-    console.error(`      Failed to commit: ${e}`);
-    checkout(repoRoot, originalBranch);
-    return false;
-  }
-
-  // 5. Push and create PR
-  console.log("[5/5] Pushing and creating PR...");
-  console.log(`      Remote: ${opts.remote}`);
+  const branchName = specifiedBranch || generateBranchName();
 
   const prMeta: PRMetadata = {
     appName: app.name,
@@ -682,38 +687,37 @@ async function runCI(
     ...getSourceInfo(),
   };
 
-  const prResult = pushAndCreatePR({
+  const prResult = await commitAndCreatePR({
+    repoOwner: repoIdentity.owner,
+    repoName: repoIdentity.name,
     repoRoot,
     branch: branchName,
-    remote: opts.remote,
-    base: opts.base,
+    baseBranch: opts.base,
+    baseSha,
+    relativePath: appRelativePath,
+    commitMessage: `wizard-ci: ${app.name}`,
     title: buildPRTitle(prMeta),
     body: buildPRBody(prMeta),
     draft: true,
-    deleteBranchAfter: opts.deleteBranch,
-    returnToBranch: originalBranch,
+    token,
   });
 
   if (!prResult.success) {
     console.error(`      ${prResult.error}`);
-    checkout(repoRoot, originalBranch);
     return false;
   }
 
+  console.log(`      Branch: ${branchName}`);
+  if (prResult.commitSha) {
+    console.log(`      Commit: ${prResult.commitSha.slice(0, 7)} (signed)`);
+  }
   console.log(`      PR: ${prResult.prUrl}\n`);
 
   // Run evaluation if requested
   let evalInfo: EvaluationInfo | undefined;
   if (opts.evaluate && prResult.prUrl) {
-    console.log("[6/6] Running PR evaluation...");
+    console.log("[5/5] Running PR evaluation...");
     evalInfo = await runEvaluation(prResult.prUrl, command.id);
-  }
-
-  if (opts.deleteBranch) {
-    console.log(`      Deleted local branch: ${branchName}\n`);
-  } else {
-    // Return to original branch
-    checkout(repoRoot, originalBranch);
   }
 
   // Print summary if evaluation was run

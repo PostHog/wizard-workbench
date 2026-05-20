@@ -50,14 +50,31 @@ export {
 // High-level operations
 export {
   pushAndCreatePR,
+  commitAndCreatePR,
   switchOrCreateBranch,
   deleteBranches,
   type PushAndPROptions,
   type PushAndPRResult,
+  type CommitAndPROptions,
+  type CommitAndPRResult,
   type SwitchOrCreateBranchOptions,
   type SwitchOrCreateBranchResult,
   type DeleteBranchesResult,
 } from "./operations.js";
+
+// API-commit primitives (signed-commit path)
+export {
+  createSignedCommit,
+  collectFileChanges,
+  resolveRepoIdentity,
+  type ApiCommitOptions,
+  type ApiCommitResult,
+  type FileAddition,
+  type FileDeletion,
+  type CollectChangesOptions,
+  type CollectChangesResult,
+  type RepoIdentity,
+} from "./api-commits.js";
 
 // Shared types
 export type { PRData, PRFile } from "./types.js";
