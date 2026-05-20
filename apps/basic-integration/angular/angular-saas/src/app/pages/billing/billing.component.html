@@ -35,7 +35,7 @@
             </li>
           }
         </ul>
-        <button [class.btn-primary]="plan.recommended && plan.id !== currentPlan()" [class.btn-outline]="!plan.recommended || plan.id === currentPlan()" [disabled]="plan.id === currentPlan()">
+        <button [class.btn-primary]="plan.recommended && plan.id !== currentPlan()" [class.btn-outline]="!plan.recommended || plan.id === currentPlan()" [disabled]="plan.id === currentPlan()" (click)="plan.id !== currentPlan() && onUpgradeClick(plan)">
           {{ plan.id === currentPlan() ? 'Current Plan' : 'Upgrade' }}
         </button>
       </div>
