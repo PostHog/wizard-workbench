@@ -6,6 +6,7 @@
  */
 import { push, checkout, createBranch, deleteBranch, branchExists } from "./git.js";
 import { createPR } from "./gh-cli.js";
+import { collectFileChanges, createSignedCommit } from "./api-commits.js";
 
 // ============================================================================
 // Push and PR creation
@@ -68,6 +69,92 @@ export function pushAndCreatePR(opts: PushAndPROptions): PushAndPRResult {
   }
 
   return { success: true, prUrl };
+}
+
+// ============================================================================
+// API commit + PR creation (signed commits via GraphQL)
+// ============================================================================
+
+export interface CommitAndPROptions {
+  repoOwner: string;
+  repoName: string;
+  repoRoot: string;
+  branch: string;
+  baseBranch: string;
+  baseSha: string;
+  relativePath: string;
+  commitMessage: string;
+  title: string;
+  body: string;
+  draft?: boolean;
+  token: string;
+}
+
+export interface CommitAndPRResult {
+  success: boolean;
+  prUrl?: string;
+  commitSha?: string;
+  error?: string;
+  noChanges?: boolean;
+}
+
+/**
+ * Create a signed commit on a new remote branch via the GitHub GraphQL
+ * createCommitOnBranch mutation, then open a PR with `gh pr create`.
+ *
+ * Replaces the local-commit + push flow for environments where branch
+ * protection requires verified signatures. Local working-tree changes
+ * within `relativePath` are bundled into a single signed commit; the
+ * caller's checkout is NOT modified.
+ */
+export async function commitAndCreatePR(opts: CommitAndPROptions): Promise<CommitAndPRResult> {
+  const {
+    repoOwner,
+    repoName,
+    repoRoot,
+    branch,
+    baseBranch,
+    baseSha,
+    relativePath,
+    commitMessage,
+    title,
+    body,
+    draft = false,
+    token,
+  } = opts;
+
+  const { additions, deletions } = collectFileChanges({ repoRoot, relativePath });
+  if (additions.length === 0 && deletions.length === 0) {
+    return { success: false, noChanges: true, error: "No changes to commit" };
+  }
+
+  let commitSha: string;
+  try {
+    const result = await createSignedCommit({
+      repoOwner,
+      repoName,
+      branch,
+      baseSha,
+      message: commitMessage,
+      additions,
+      deletions,
+      token,
+    });
+    commitSha = result.commitSha;
+  } catch (e) {
+    return { success: false, error: `Failed to create signed commit: ${e}` };
+  }
+
+  let prUrl: string;
+  try {
+    // The local checkout was not switched to `branch` — it only exists on
+    // the remote — so we must tell gh which head to use.
+    prUrl = createPR({ cwd: repoRoot, title, body, base: baseBranch, head: branch, draft });
+  } catch (e) {
+    return { success: false, commitSha, error: `Failed to create PR: ${e}` };
+  }
+
+  return { success: true, prUrl, commitSha };
 }
 
 // ============================================================================
