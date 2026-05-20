@@ -6,10 +6,10 @@
  * are automatically signed by GitHub and pass branch protection rules that
  * require verified signatures.
  */
+import { execSync } from "child_process";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { Octokit } from "@octokit/rest";
-import { getChangedFilesInPath } from "./git.js";
 
 // ============================================================================
 // Types
@@ -54,11 +54,6 @@ export interface CollectChangesResult {
 // Working-tree → fileChanges
 // ============================================================================
 
-/**
- * Parse a `git status --porcelain` line into a {status, path} record.
- * Porcelain format: `XY <path>` where X is the index column and Y the
- * working-tree column. Renames look like `R<old> -> <new>`.
- */
 interface PorcelainEntry {
   index: string;
   worktree: string;
@@ -66,26 +61,44 @@ interface PorcelainEntry {
   oldPath?: string;
 }
 
-function parsePorcelainLine(line: string): PorcelainEntry | null {
-  if (line.length < 3) return null;
-  const index = line[0];
-  const worktree = line[1];
-  const rest = line.slice(3);
+/**
+ * Read porcelain v1 entries scoped to `relativePath`, using -z (NUL-
+ * separated) so the parser doesn't have to worry about whitespace in
+ * paths or about a leading-space first line getting trimmed.
+ *
+ * Each entry from -z output is `XY <space> <path>` (no newline). Renames
+ * use TWO records: the first record (new path), then the next (old path).
+ */
+function readPorcelainEntries(repoRoot: string, relativePath: string): PorcelainEntry[] {
+  // -uall expands untracked directories to individual files; without it,
+  // an untracked dir appears as a single trailing-slash entry that would
+  // make readFileSync fail with EISDIR.
+  const raw = execSync(`git status -z -uall --porcelain=v1 -- "${relativePath}"`, {
+    cwd: repoRoot,
+    encoding: "utf-8",
+    stdio: "pipe",
+  });
 
-  // Rename: "R<old> -> <new>" or "R  old -> new"
-  if (index === "R" || worktree === "R") {
-    const arrow = rest.indexOf(" -> ");
-    if (arrow !== -1) {
-      return {
-        index,
-        worktree,
-        oldPath: rest.slice(0, arrow),
-        path: rest.slice(arrow + 4),
-      };
+  const records = raw.split("\0").filter((r) => r.length > 0);
+  const entries: PorcelainEntry[] = [];
+
+  for (let i = 0; i < records.length; i++) {
+    const record = records[i];
+    if (record.length < 3) continue;
+    const index = record[0];
+    const worktree = record[1];
+    const path = record.slice(3);
+
+    if (index === "R" || worktree === "R") {
+      // Next record is the old path
+      const oldPath = records[++i];
+      entries.push({ index, worktree, path, oldPath });
+      continue;
     }
+    entries.push({ index, worktree, path });
   }
 
-  return { index, worktree, path: rest };
+  return entries;
 }
 
 /**
@@ -99,22 +112,17 @@ function parsePorcelainLine(line: string): PorcelainEntry | null {
  */
 export function collectFileChanges(opts: CollectChangesOptions): CollectChangesResult {
   const { repoRoot, relativePath } = opts;
-  const lines = getChangedFilesInPath(repoRoot, relativePath);
+  const entries = readPorcelainEntries(repoRoot, relativePath);
 
   const additions: FileAddition[] = [];
   const deletions: FileDeletion[] = [];
   const seen = new Set<string>();
 
-  for (const line of lines) {
-    const entry = parsePorcelainLine(line);
-    if (!entry) continue;
-
-    const status = (entry.index + entry.worktree).trim();
+  for (const entry of entries) {
     const isDeletion = entry.index === "D" || entry.worktree === "D";
     const isRename = entry.index === "R" || entry.worktree === "R";
 
     if (isRename && entry.oldPath) {
-      // Rename: delete old, add new
       if (!seen.has(entry.oldPath)) {
         deletions.push({ path: entry.oldPath });
         seen.add(entry.oldPath);
@@ -133,10 +141,6 @@ export function collectFileChanges(opts: CollectChangesOptions): CollectChangesR
       }
       continue;
     }
-
-    // Untracked, added, modified, type-changed: read from disk
-    // Skip if status string is unexpected/empty
-    if (status.length === 0 && entry.index !== "?" && entry.worktree !== "?") continue;
 
     if (!seen.has(entry.path)) {
       additions.push({ path: entry.path, contents: readFileSync(join(repoRoot, entry.path)) });
