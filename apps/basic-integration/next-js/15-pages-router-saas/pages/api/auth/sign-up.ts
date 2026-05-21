@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -159,6 +160,24 @@ export default async function handler(
       teamId: teamId,
       role: userRole
     };
+
+    const distinctId = (req.headers['x-posthog-distinct-id'] as string) || createdUser.email;
+    const sessionId = req.headers['x-posthog-session-id'] as string | undefined;
+
+    const posthog = getPostHogClient();
+    posthog.identify({
+      distinctId,
+      properties: { email: createdUser.email },
+    });
+    posthog.capture({
+      distinctId,
+      event: 'sign_up_succeeded',
+      properties: {
+        email: createdUser.email,
+        via_invite: !!inviteId,
+        ...(sessionId && { $session_id: sessionId }),
+      },
+    });
 
     await Promise.all([
       db.insert(teamMembers).values(newTeamMember),
