@@ -3,6 +3,11 @@ class Cards::PublishesController < ApplicationController
 
   def create
     @card.publish
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_created",
+      properties: { card_id: @card.id, board_id: @board.id }
+    )
 
     if add_another_param?
       card = @board.cards.create!(status: :drafted)
