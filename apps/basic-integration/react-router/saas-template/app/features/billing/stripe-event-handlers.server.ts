@@ -21,6 +21,7 @@ import {
   updateStripeSubscriptionScheduleFromAPIInDatabase,
 } from "./stripe-subscription-schedule-model.server";
 import { stripeAdmin } from "~/features/billing/stripe-admin.server";
+import { captureServerEvent } from "~/lib/posthog-server";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const ok = () => Response.json({ message: "OK" });
@@ -121,6 +122,19 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
           organizationId: organization.id,
         });
       }
+
+      await captureServerEvent({
+        distinctId: organization.id,
+        event: "checkout_completed",
+        properties: {
+          billing_email: event.data.object.customer_details?.email,
+          organization_id: organization.id,
+          stripe_customer_id:
+            typeof event.data.object.customer === "string"
+              ? event.data.object.customer
+              : undefined,
+        },
+      });
     } else {
       console.error("No organization ID found in checkout session metadata");
       prettyPrint(event);
@@ -177,6 +191,21 @@ export const handleStripeCustomerSubscriptionDeletedEvent = async (
 ) => {
   try {
     await updateStripeSubscriptionFromAPIInDatabase(event.data.object);
+
+    const customerId =
+      typeof event.data.object.customer === "string"
+        ? event.data.object.customer
+        : event.data.object.customer.id;
+
+    await captureServerEvent({
+      distinctId: customerId,
+      event: "subscription_cancelled",
+      properties: {
+        cancel_at_period_end: event.data.object.cancel_at_period_end,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: event.data.object.id,
+      },
+    });
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);
