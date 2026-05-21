@@ -15,10 +15,12 @@ subscriptionsRouter.post("/", async (req, res) => {
       return;
     }
 
+    let posthogPersonDistinctId: string | undefined;
     if (userId) {
       const user = getUser(userId);
       if (user) {
         console.log(`Creating subscription for user ${user.email} (${user.id})`);
+        posthogPersonDistinctId = user.posthogDistinctId;
       }
     }
 
@@ -28,6 +30,7 @@ subscriptionsRouter.post("/", async (req, res) => {
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
       expand: ["latest_invoice.payment_intent"],
+      ...(posthogPersonDistinctId && { metadata: { posthog_person_distinct_id: posthogPersonDistinctId } }),
     });
 
     const invoice = subscription.latest_invoice as any;
