@@ -18,13 +18,13 @@ export function toggleLikedPost(postId: string): boolean {
   if (typeof window === 'undefined') return false
   const liked = getLikedPosts()
   const isLiked = liked.has(postId)
-  
+
   if (isLiked) {
     liked.delete(postId)
   } else {
     liked.add(postId)
   }
-  
+
   localStorage.setItem(STORAGE_KEYS.LIKED_POSTS, JSON.stringify(Array.from(liked)))
   return !isLiked
 }
@@ -82,4 +82,3 @@ export function setPosts(count: number): void {
   if (typeof window === 'undefined') return
   localStorage.setItem(STORAGE_KEYS.POSTS, count.toString())
 }
-
