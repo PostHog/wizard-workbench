@@ -13,6 +13,8 @@ import { Activities } from "@/components/posts/user-activities/UserActivities";
 
 import { getUserDetailsQueryKey, getUserQueryFn } from "@/constants/user";
 import { Avatar } from "@/components/Avatar";
+import { posthog } from "@/src/config/posthog";
+import { useEffect } from "react";
 
 export default function UserDetails() {
   const { userId } = useLocalSearchParams();
@@ -26,6 +28,10 @@ export default function UserDetails() {
     queryKey: getUserDetailsQueryKey(userId),
     queryFn: getUserQueryFn,
   });
+
+  useEffect(() => {
+    posthog.capture("user_profile_viewed", { user_id: userId });
+  }, [userId]);
 
   return (
     <View style={styles.page}>

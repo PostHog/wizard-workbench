@@ -18,6 +18,7 @@ import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { posthog } from "@/src/config/posthog";
 
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
@@ -120,6 +121,11 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog.capture("item_upvoted", {
+                  item_id: item.id,
+                  title: item.title,
+                  score: item.score,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -163,6 +169,11 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture("item_external_link_opened", {
+                    item_id: item.id,
+                    title: item.title,
+                    url: item.url,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
