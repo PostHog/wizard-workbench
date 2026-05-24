@@ -21,6 +21,32 @@ export function prompt(question: string): Promise<string> {
   });
 }
 
+/**
+ * Numbered single-select prompt over a small list of choices.
+ * If there's only one choice, returns it without prompting.
+ */
+export async function promptChoice(
+  question: string,
+  choices: readonly string[],
+): Promise<string | undefined> {
+  if (choices.length === 0) return undefined;
+  if (choices.length === 1) return choices[0];
+
+  console.log(`${question}\n`);
+  choices.forEach((c, i) => console.log(`  ${i + 1}) ${c}`));
+  console.log();
+
+  const selection = await prompt(`Enter number (1-${choices.length}): `);
+  const index = parseInt(selection, 10) - 1;
+
+  if (index < 0 || index >= choices.length) {
+    console.error("Invalid selection");
+    return undefined;
+  }
+
+  return choices[index];
+}
+
 export async function selectCommand(ciMode: boolean): Promise<WizardCommand> {
   const available = ciMode
     ? WIZARD_COMMANDS.filter((c) => c.ciCapable)

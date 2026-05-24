@@ -62,13 +62,28 @@ export function commandToSubcommand(id: string): string | undefined {
 }
 
 /**
+ * Migrate variants the workbench knows how to drive. Keep in sync with the
+ * wizard's `--product` choices (src/lib/workflows/migration/index.ts +
+ * bin.ts).
+ */
+export const MIGRATE_PRODUCTS = ['statsig'] as const;
+export type MigrateProduct = (typeof MIGRATE_PRODUCTS)[number];
+
+/**
  * Render a command as the literal CLI invocation that will be run.
  * e.g. 'default' → "posthog-wizard", 'revenue' → "posthog-wizard revenue",
- * 'skill' → "posthog-wizard --skill=<skill-id>".
+ * 'skill' → "posthog-wizard --skill=<skill-id>",
+ * 'migrate' → "posthog-wizard migrate --product=<product>".
  */
-export function commandToInvocation(id: string, skillId?: string): string {
+export function commandToInvocation(
+  id: string,
+  extra?: { skillId?: string; product?: string },
+): string {
   if (id === 'skill') {
-    return `wizard --skill=${skillId || '<skill-id>'}`;
+    return `wizard --skill=${extra?.skillId || '<skill-id>'}`;
+  }
+  if (id === 'migrate') {
+    return `wizard migrate --product=${extra?.product || '<product>'}`;
   }
   const sub = commandToSubcommand(id);
   return sub ? `wizard ${sub}` : 'wizard';

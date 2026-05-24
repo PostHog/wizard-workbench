@@ -22,9 +22,10 @@ import {
   commandToSubcommand,
   commandToInvocation,
   findCommand,
+  MIGRATE_PRODUCTS,
   type WizardCommand,
 } from "../wizard-commands.js";
-import { prompt, selectCommand, selectApp } from "./picker.js";
+import { prompt, promptChoice, selectCommand, selectApp } from "./picker.js";
 
 const WORKBENCH = join(import.meta.dirname, "../..");
 const APPS_DIR = join(WORKBENCH, "apps");
@@ -112,6 +113,19 @@ async function main(): Promise<void> {
     }
   }
 
+  // If the migrate command was selected, prompt for the source SDK
+  let product: string | undefined;
+  if (command.id === 'migrate') {
+    product = await promptChoice(
+      'Migrate from which source SDK?',
+      MIGRATE_PRODUCTS as readonly string[],
+    );
+    if (!product) {
+      console.error("Source SDK is required for migrate.");
+      process.exit(1);
+    }
+  }
+
   const scopedAppsDir = join(APPS_DIR, command.appsDir);
   const apps = findApps(scopedAppsDir);
   if (apps.length === 0) {
@@ -122,7 +136,7 @@ async function main(): Promise<void> {
   const selectedApp = await selectApp(apps);
 
   console.log();
-  console.log(`Command: ${commandToInvocation(command.id, skillId)}`);
+  console.log(`Command: ${commandToInvocation(command.id, { skillId, product })}`);
   console.log(`App:     ${selectedApp.name}`);
   console.log(`Path:    ${selectedApp.path}`);
   if (opts.ci) {
@@ -135,6 +149,7 @@ async function main(): Promise<void> {
     region: opts.region,
     command: commandToSubcommand(command.id),
     skillId,
+    product,
   });
 
   if (!result.success) {

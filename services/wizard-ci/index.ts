@@ -66,6 +66,7 @@ interface Options {
   app?: string;
   command?: string;
   skillId?: string;
+  product?: string;
   triggerId?: string;
   local: boolean;
   base: string;
@@ -256,6 +257,7 @@ function parseArgs(): Options {
     const arg = args[i];
     if (arg === "--app" || arg === "-a") opts.app = args[++i];
     else if (arg === "--command" || arg === "-c") opts.command = args[++i];
+    else if (arg === "--product") opts.product = args[++i];
     else if (arg === "--trigger-id" || arg === "-t") opts.triggerId = args[++i];
     else if (arg === "--local" || arg === "-l") opts.local = true;
     else if (arg === "--base") opts.base = args[++i];
@@ -285,6 +287,7 @@ Usage:
   pnpm wizard-ci                     Interactive command + app selection
   pnpm wizard-ci --app <name>        Test specific app
   pnpm wizard-ci --command <id>      Wizard command (default: first CI-capable)
+  pnpm wizard-ci --product <id>      Source SDK for the migrate command (e.g. statsig)
   pnpm wizard-ci --trigger-id <id>   Trigger ID (inherited from orchestrator)
   pnpm wizard-ci --local             Skip PR creation
   pnpm wizard-ci --base <branch>     Base branch for PR (default: main)
@@ -544,6 +547,7 @@ async function runCI(
   const result = await runWizard(app.path, {
     ci: true,
     command: commandToSubcommand(command.id),
+    product: command.id === "migrate" ? opts.product : undefined,
   });
   console.log();
 
@@ -787,6 +791,13 @@ async function main(): Promise<void> {
     }
   } else {
     command = await selectCommand(true);
+  }
+
+  if (command.id === "migrate" && !opts.product) {
+    console.error(
+      "Command \"migrate\" requires --product=<id> (e.g. --product=statsig).",
+    );
+    process.exit(1);
   }
 
   const scopedAppsDir = join(APPS_DIR, command.appsDir);
