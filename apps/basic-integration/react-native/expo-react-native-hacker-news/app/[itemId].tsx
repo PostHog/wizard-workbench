@@ -7,6 +7,7 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
+import { useEffect } from "react";
 import * as Haptics from "expo-haptics";
 import { useQuery } from "@tanstack/react-query";
 import RenderHTML from "react-native-render-html";
@@ -18,6 +19,7 @@ import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { posthog } from "@/src/config/posthog";
 
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
@@ -31,6 +33,18 @@ export default function ItemDetails() {
     queryKey: getItemDetailsQueryKey(itemId),
     queryFn: getItemQueryFn,
   });
+
+  useEffect(() => {
+    if (item) {
+      posthog.capture('item_details_viewed', {
+        item_id: item.id,
+        item_type: item.type,
+        title: item.title,
+        score: item.score,
+        comment_count: item.kids?.length || 0,
+      });
+    }
+  }, [item?.id]);
 
   const { data: parentItem } = useQuery({
     queryKey: getItemDetailsQueryKey(item?.parent || 0),
@@ -120,6 +134,7 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog.capture('item_upvote_tapped', { item_id: item.id, score: item.score });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -163,6 +178,7 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture('item_external_link_opened', { item_id: item.id, url: item.url });
                   Linking.openURL(item.url);
                 }}
               >
