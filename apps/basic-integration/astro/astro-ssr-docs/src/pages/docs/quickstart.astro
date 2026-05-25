@@ -50,12 +50,25 @@ console.log('Extracted data:', document.data);</code></pre>
 
   <h2>What's Next?</h2>
   <ul>
-    <li>Learn about <a href="/docs/workflows">Workflow Automation</a></li>
-    <li>Explore the full <a href="/docs/api">API Reference</a></li>
-    <li>Set up <a href="/docs/api/authentication">Authentication</a> for production</li>
+    <li>Learn about <a href="/docs/workflows" class="next-step-link">Workflow Automation</a></li>
+    <li>Explore the full <a href="/docs/api" class="next-step-link">API Reference</a></li>
+    <li>Set up <a href="/docs/api/authentication" class="next-step-link">Authentication</a> for production</li>
   </ul>
 
   <div class="render-info">
     Server-rendered at: {renderTime}
   </div>
+
+  <script is:inline>
+    window.posthog?.capture('quickstart_viewed');
+
+    document.querySelectorAll('.next-step-link').forEach(function(link) {
+      link.addEventListener('click', function() {
+        window.posthog?.capture('quickstart_next_steps_clicked', {
+          destination: link.getAttribute('href'),
+          link_text: link.textContent,
+        });
+      });
+    });
+  </script>
 </DocsLayout>
