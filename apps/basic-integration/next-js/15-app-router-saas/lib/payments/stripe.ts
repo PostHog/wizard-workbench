@@ -7,6 +7,7 @@ import {
   updateTeamSubscription
 } from '@/lib/db/queries';
 import { stripeStub } from './stripe-stub';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 // Use stub if STRIPE_MODE=stub or if STRIPE_SECRET_KEY is missing/invalid
 const useStub =
@@ -36,6 +37,13 @@ export async function createCheckoutSession({
   if (!team || !user) {
     redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
   }
+
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: user.id.toString(),
+    event: 'checkout_started',
+    properties: { price_id: priceId, team_id: team?.id },
+  });
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
@@ -141,6 +149,9 @@ export async function handleSubscriptionChange(
     return;
   }
 
+  const posthog = getPostHogClient();
+  const distinctId = `stripe_customer_${customerId}`;
+
   if (status === 'active' || status === 'trialing') {
     const plan = subscription.items.data[0]?.plan;
     await updateTeamSubscription(team.id, {
@@ -149,12 +160,31 @@ export async function handleSubscriptionChange(
       planName: (plan?.product as Stripe.Product).name,
       subscriptionStatus: status
     });
+    posthog.capture({
+      distinctId,
+      event: 'subscription_updated',
+      properties: {
+        team_id: team.id,
+        subscription_id: subscriptionId,
+        subscription_status: status,
+        plan_name: (plan?.product as Stripe.Product)?.name,
+      },
+    });
   } else if (status === 'canceled' || status === 'unpaid') {
     await updateTeamSubscription(team.id, {
       stripeSubscriptionId: null,
       stripeProductId: null,
       planName: null,
       subscriptionStatus: status
+    });
+    posthog.capture({
+      distinctId,
+      event: 'subscription_canceled',
+      properties: {
+        team_id: team.id,
+        subscription_id: subscriptionId,
+        subscription_status: status,
+      },
     });
   }
 }
