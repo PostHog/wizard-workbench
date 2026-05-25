@@ -1,3 +1,4 @@
+import { PostHog } from "posthog-node";
 import type { Stripe } from "stripe";
 
 import { updateOrganizationInDatabaseById } from "../organizations/organizations-model.server";
@@ -163,6 +164,27 @@ export const handleStripeCustomerSubscriptionCreatedEvent = async (
 ) => {
   try {
     await createStripeSubscriptionInDatabase(event.data.object);
+
+    const subscription = event.data.object;
+    const customerId =
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : subscription.customer.id;
+    const posthog = new PostHog(process.env.VITE_POSTHOG_TOKEN!, {
+      flushAt: 1,
+      flushInterval: 0,
+      host: process.env.VITE_POSTHOG_HOST!,
+    });
+    posthog.capture({
+      distinctId: customerId,
+      event: "subscription_created",
+      properties: {
+        customer_id: customerId,
+        status: subscription.status,
+        subscription_id: subscription.id,
+      },
+    });
+    await posthog.shutdown().catch(() => {});
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);

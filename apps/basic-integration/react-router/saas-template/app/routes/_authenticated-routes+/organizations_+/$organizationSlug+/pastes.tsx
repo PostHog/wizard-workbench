@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Route } from "./+types/pastes";
 import { canCreatePaste } from "~/features/pastebin/paste-helpers.server";
 import { organizationMembershipContext } from "~/features/organizations/organizations-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { prisma } from "~/utils/database.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -93,6 +94,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 export async function action({ params, request, context }: Route.ActionArgs) {
   const { organizationSlug } = params;
   const { user, organization, headers } = context.get(organizationMembershipContext);
+  const posthog = (context as PostHogContext).posthog;
 
   if (organization.slug !== organizationSlug) {
     throw redirect(href("/organizations/:organizationSlug/pastes", { organizationSlug: organization.slug }));
@@ -135,6 +137,8 @@ export async function action({ params, request, context }: Route.ActionArgs) {
         },
       });
 
+      posthog?.capture({ event: "paste_created", properties: { paste_id: paste.id, organization_id: organization.id, language: paste.language, is_public: paste.isPublic } });
+
       return redirect(
         href("/organizations/:organizationSlug/pastes/:pasteId", {
           organizationSlug: organization.slug,
@@ -161,6 +165,8 @@ export async function action({ params, request, context }: Route.ActionArgs) {
       await prisma.paste.delete({
         where: { id: body.pasteId },
       });
+
+      posthog?.capture({ event: "paste_deleted", properties: { paste_id: body.pasteId, organization_id: organization.id } });
 
       return redirect(
         href("/organizations/:organizationSlug/pastes", {
