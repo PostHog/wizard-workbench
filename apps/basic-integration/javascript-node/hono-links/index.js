@@ -1,5 +1,11 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const app = new Hono();
 
@@ -31,23 +37,43 @@ app.get('/api/links', (c) => {
 
 // Save a new link
 app.post('/api/links', async (c) => {
-  const { url, title, tags = [], description = '' } = await c.req.json();
+  const distinctId = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'anonymous';
 
-  if (!url || !title) {
-    return c.json({ error: 'url and title are required' }, 400);
+  try {
+    const { url, title, tags = [], description = '' } = await c.req.json();
+
+    if (!url || !title) {
+      return c.json({ error: 'url and title are required' }, 400);
+    }
+
+    const link = {
+      id: nextId++,
+      url,
+      title,
+      description,
+      tags,
+      favorite: false,
+      created_at: new Date().toISOString(),
+    };
+    links.push(link);
+
+    posthog.capture({
+      distinctId,
+      event: 'link saved',
+      properties: {
+        link_id: link.id,
+        url: link.url,
+        title: link.title,
+        tags: link.tags,
+        has_description: link.description.length > 0,
+      },
+    });
+
+    return c.json(link, 201);
+  } catch (err) {
+    posthog.captureException(err, distinctId, { route: 'POST /api/links' });
+    throw err;
   }
-
-  const link = {
-    id: nextId++,
-    url,
-    title,
-    description,
-    tags,
-    favorite: false,
-    created_at: new Date().toISOString(),
-  };
-  links.push(link);
-  return c.json(link, 201);
 });
 
 // Get a single link
@@ -63,31 +89,81 @@ app.get('/api/links/:id', (c) => {
 
 // Update a link
 app.patch('/api/links/:id', async (c) => {
-  const link = links.find((l) => l.id === parseInt(c.req.param('id'), 10));
+  const distinctId = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'anonymous';
 
-  if (!link) {
-    return c.json({ error: 'Link not found' }, 404);
+  try {
+    const link = links.find((l) => l.id === parseInt(c.req.param('id'), 10));
+
+    if (!link) {
+      return c.json({ error: 'Link not found' }, 404);
+    }
+
+    const body = await c.req.json();
+    const wasFavorite = link.favorite;
+
+    if (body.url !== undefined) link.url = body.url;
+    if (body.title !== undefined) link.title = body.title;
+    if (body.description !== undefined) link.description = body.description;
+    if (body.tags !== undefined) link.tags = body.tags;
+    if (body.favorite !== undefined) link.favorite = body.favorite;
+
+    if (!wasFavorite && link.favorite) {
+      posthog.capture({
+        distinctId,
+        event: 'link favorited',
+        properties: {
+          link_id: link.id,
+          url: link.url,
+          title: link.title,
+          tags: link.tags,
+        },
+      });
+    }
+
+    posthog.capture({
+      distinctId,
+      event: 'link updated',
+      properties: {
+        link_id: link.id,
+        url: link.url,
+        title: link.title,
+        tags: link.tags,
+        favorite: link.favorite,
+        fields_updated: Object.keys(body),
+      },
+    });
+
+    return c.json(link);
+  } catch (err) {
+    posthog.captureException(err, distinctId, { route: 'PATCH /api/links/:id' });
+    throw err;
   }
-
-  const body = await c.req.json();
-  if (body.url !== undefined) link.url = body.url;
-  if (body.title !== undefined) link.title = body.title;
-  if (body.description !== undefined) link.description = body.description;
-  if (body.tags !== undefined) link.tags = body.tags;
-  if (body.favorite !== undefined) link.favorite = body.favorite;
-
-  return c.json(link);
 });
 
 // Delete a link
 app.delete('/api/links/:id', (c) => {
+  const distinctId = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'anonymous';
+
   const index = links.findIndex((l) => l.id === parseInt(c.req.param('id'), 10));
 
   if (index === -1) {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [deleted] = links.splice(index, 1);
+
+  posthog.capture({
+    distinctId,
+    event: 'link deleted',
+    properties: {
+      link_id: deleted.id,
+      url: deleted.url,
+      title: deleted.title,
+      tags: deleted.tags,
+      was_favorite: deleted.favorite,
+    },
+  });
+
   return c.body(null, 204);
 });
 
@@ -106,4 +182,14 @@ const PORT = process.env.PORT || 3002;
 
 serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Hono links API running on http://localhost:${PORT}`);
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
 });
