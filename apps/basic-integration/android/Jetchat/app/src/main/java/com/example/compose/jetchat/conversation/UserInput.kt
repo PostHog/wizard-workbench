@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -284,7 +285,12 @@ private fun UserInputSelector(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.EMOJI) },
+            onClick = {
+                onSelectorChange(InputSelector.EMOJI)
+                if (currentInputSelector != InputSelector.EMOJI) {
+                    PostHog.capture(event = "emoji_selector_opened")
+                }
+            },
             icon = painterResource(id = R.drawable.ic_mood),
             selected = currentInputSelector == InputSelector.EMOJI,
             description = stringResource(id = R.string.emoji_selector_bt_desc),
@@ -446,14 +452,17 @@ private fun UserInputText(
             onStartRecording = {
                 val consumed = !isRecordingMessage
                 isRecordingMessage = true
+                PostHog.capture(event = "voice_recording_started")
                 consumed
             },
             onFinishRecording = {
                 // handle end of recording
                 isRecordingMessage = false
+                PostHog.capture(event = "voice_recording_completed")
             },
             onCancelRecording = {
                 isRecordingMessage = false
+                PostHog.capture(event = "voice_recording_cancelled")
             },
             modifier = Modifier.fillMaxHeight(),
         )
@@ -648,7 +657,13 @@ fun EmojiTable(onTextAdded: (String) -> Unit, modifier: Modifier = Modifier) {
                     val emoji = emojis[x * EMOJI_COLUMNS + y]
                     Text(
                         modifier = Modifier
-                            .clickable(onClick = { onTextAdded(emoji) })
+                            .clickable(onClick = {
+                                onTextAdded(emoji)
+                                PostHog.capture(
+                                    event = "emoji_sent",
+                                    properties = mapOf("emoji" to emoji),
+                                )
+                            })
                             .sizeIn(minWidth = 42.dp, minHeight = 42.dp)
                             .padding(8.dp),
                         text = emoji,
