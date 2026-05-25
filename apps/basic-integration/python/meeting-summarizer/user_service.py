@@ -7,6 +7,7 @@ from typing import Optional
 
 from database import UserDatabase
 from models import User
+from posthog_client import posthog_client
 
 
 class UserService:
@@ -36,6 +37,15 @@ class UserService:
 
         if self.db.create_user(user):
             print(f"✓ User registered: {username} ({email})")
+            if posthog_client:
+                posthog_client.set(distinct_id=user.user_id, properties={
+                    'username': user.username,
+                    'email': user.email,
+                })
+                posthog_client.capture(distinct_id=user.user_id, event='user_registered', properties={
+                    'has_full_name': bool(full_name),
+                    'has_metadata': bool(metadata),
+                })
             return user
         else:
             print(f"✗ Failed to register user: {username} (email or username already exists)")
@@ -52,6 +62,10 @@ class UserService:
 
         if success:
             print(f"✓ User profile updated: {user_id}")
+            if posthog_client:
+                posthog_client.capture(distinct_id=user_id, event='user_profile_updated', properties={
+                    'fields_updated': len(updates),
+                })
         else:
             print(f"✗ Failed to update user profile: {user_id}")
 
@@ -63,6 +77,8 @@ class UserService:
 
         if success:
             print(f"✓ User deactivated: {user_id}")
+            if posthog_client:
+                posthog_client.capture(distinct_id=user_id, event='user_deactivated')
         else:
             print(f"✗ Failed to deactivate user: {user_id}")
 
@@ -77,6 +93,8 @@ class UserService:
 
             if success:
                 print(f"✓ User deleted: {user_id}")
+                if posthog_client:
+                    posthog_client.capture(distinct_id=user_id, event='user_deleted')
                 return True
 
         print(f"✗ Failed to delete user: {user_id}")
