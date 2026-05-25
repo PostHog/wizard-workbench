@@ -21,12 +21,13 @@ let package = Package(
     dependencies: [
         .package(path: "../../Domain"),
         .package(path: "../../Shared"),
-        .package(path: "../../DesignSystem")
+        .package(path: "../../DesignSystem"),
+        .package(url: "https://github.com/PostHog/posthog-ios", from: "3.58.3")
     ],
     targets: [
         .target(
             name: "Comments",
-            dependencies: ["Domain", "Shared", "DesignSystem"],
+            dependencies: ["Domain", "Shared", "DesignSystem", .product(name: "PostHog", package: "posthog-ios")],
         ),
         .testTarget(
             name: "CommentsTests",

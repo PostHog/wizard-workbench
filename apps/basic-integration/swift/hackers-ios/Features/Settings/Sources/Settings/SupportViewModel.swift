@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -114,6 +115,11 @@ public final class SupportViewModel: @unchecked Sendable {
     private func handle(result: SupportPurchaseResult, for product: SupportProduct) {
         switch result {
         case .success:
+            PostHogSDK.shared.capture("support_purchased", properties: [
+                "product_id": product.id,
+                "product_kind": product.kind == .subscription ? "subscription" : "tip",
+                "product_name": product.displayName,
+            ])
             switch product.kind {
             case .subscription:
                 alertInfo = AlertInfo(
@@ -132,7 +138,10 @@ public final class SupportViewModel: @unchecked Sendable {
                 message: "Your purchase is pending approval from Apple. It will complete automatically once confirmed."
             )
         case .userCancelled:
-            break
+            PostHogSDK.shared.capture("support_purchase_cancelled", properties: [
+                "product_id": product.id,
+                "product_kind": product.kind == .subscription ? "subscription" : "tip",
+            ])
         }
     }
 
