@@ -23,7 +23,7 @@ const AsyncWrapper = defineComponent({
 <template>
   <div>
     <AsyncWrapper v-slot="{ item }">
-      <NuxtLink 
+      <NuxtLink
         :to="`/${type}/${item.id}`"
         :aria-label="`View ${item.title || item.name}`"
       >

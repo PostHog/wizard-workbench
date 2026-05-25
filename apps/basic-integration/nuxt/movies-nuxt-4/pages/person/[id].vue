@@ -1,6 +1,14 @@
 <script setup lang="ts">
 const id = useRouteParam<string>('id')
 const person = await getPerson(id.value)
+const posthog = usePostHog()
+
+onMounted(() => {
+  posthog?.capture('person_profile_viewed', {
+    person_id: id.value,
+    person_name: person.name,
+  })
+})
 
 const $img = useImage()
 

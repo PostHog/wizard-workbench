@@ -6,13 +6,21 @@ const props = defineProps<{
 }>()
 
 const showModal = useIframeModal()
+const posthog = usePostHog()
+
 function play() {
+  posthog?.capture('video_played', {
+    video_id: props.item.id,
+    video_name: props.item.name,
+    video_type: props.item.type,
+    video_key: props.item.key,
+  })
   return showModal(getVideoLink(props.item)!)
 }
 </script>
 
 <template>
-  <button pb2 text-left data-testid="play-button" @click="play()" :aria-label="`Play ${props.item.name}`">
+  <button pb2 text-left data-testid="play-button" :aria-label="`Play ${props.item.name}`" @click="play()">
     <span
       block bg-gray4:10 p1 flex
       class="aspect-16/9"
