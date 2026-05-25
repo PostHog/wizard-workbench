@@ -14,6 +14,14 @@ class Identity < ApplicationRecord
   validates :email_address, format: { with: URI::MailTo::EMAIL_REGEXP }
   normalizes :email_address, with: ->(value) { value.strip.downcase.presence }
 
+  def posthog_distinct_id
+    email_address
+  end
+
+  def posthog_properties
+    { email: email_address, created_at: created_at&.iso8601 }
+  end
+
   def self.find_by_permissable_access_token(token, method:)
     if (access_token = AccessToken.find_by(token: token)) && access_token.allows?(method)
       access_token.identity
