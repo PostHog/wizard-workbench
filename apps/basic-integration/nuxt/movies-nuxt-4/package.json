@@ -19,6 +19,8 @@
   },
   "dependencies": {
     "@nuxtjs/html-validator": "^1.8.2",
+    "@posthog/nuxt": "^1.7.43",
+    "posthog-node": "^5.35.2",
     "vue-router-better-scroller": "^0.0.0"
   },
   "devDependencies": {
