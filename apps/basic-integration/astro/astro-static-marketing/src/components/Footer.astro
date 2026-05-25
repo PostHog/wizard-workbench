@@ -2,6 +2,18 @@
 const currentYear = new Date().getFullYear();
 ---
 
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.footer-link').forEach(function (link) {
+      link.addEventListener('click', function () {
+        window.posthog?.capture('footer_link_clicked', {
+          link_label: link.textContent?.trim()
+        });
+      });
+    });
+  });
+</script>
+
 <footer class="footer">
   <div class="container footer-inner">
     <ul class="footer-links">
