@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from posthog import capture
 
 from app.dependencies import CurrentUser, DbSession, RequiredUser
 from app.models import Generation, APIKey, Activity
@@ -42,6 +43,16 @@ async def dashboard(request: Request, current_user: RequiredUser, db: DbSession)
         APIKey.user_id == current_user.id,
         APIKey.is_active == True
     ).count()
+
+    capture(
+        "dashboard_viewed",
+        properties={
+            "total_generations": total_generations,
+            "total_credits_used": total_credits_used,
+            "credits_remaining": current_user.credits,
+            "api_key_count": api_key_count,
+        },
+    )
 
     # Recent activity
     recent_activity = (
