@@ -1,4 +1,6 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { usePostHog } from '@posthog/react'
 import { NotFound } from '~/components/NotFound'
 import { PostErrorComponent } from '~/components/PostError'
 import { fetchInvoice, markInvoicePaid } from '~/utils/invoices'
@@ -15,10 +17,36 @@ export const Route = createFileRoute('/posts/$postId')({
 function PostComponent() {
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
+
+  useEffect(() => {
+    posthog.capture('invoice_viewed', {
+      invoice_id: invoice.id,
+      invoice_title: invoice.title,
+      invoice_amount: invoice.amount,
+      invoice_status: invoice.status,
+    })
+  }, [invoice.id])
 
   const handleMarkAsPaid = async () => {
-    await markInvoicePaid({ data: String(invoice.id) })
-    router.invalidate()
+    try {
+      await markInvoicePaid({
+        data: {
+          invoiceId: String(invoice.id),
+          distinctId: posthog.get_distinct_id(),
+          sessionId: posthog.get_session_id() ?? undefined,
+        },
+      })
+      posthog.capture('invoice_paid', {
+        invoice_id: invoice.id,
+        invoice_title: invoice.title,
+        invoice_amount: invoice.amount,
+      })
+      router.invalidate()
+    } catch (err) {
+      posthog.captureException(err)
+      throw err
+    }
   }
 
   if (!invoice) {
