@@ -9,6 +9,7 @@ from app.auth.forms import LoginForm, RegistrationForm, \
     ResetPasswordRequestForm, ResetPasswordForm
 from app.models import User
 from app.auth.email import send_password_reset_email
+from app import posthog_client
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -23,6 +24,9 @@ def login():
             flash(_('Invalid username or password'))
             return redirect(url_for('auth.login'))
         login_user(user, remember=form.remember_me.data)
+        if posthog_client:
+            posthog_client.identify(user.username, properties={'username': user.username})
+            posthog_client.capture(user.username, 'user_logged_in', properties={'login_method': 'password'})
         next_page = request.args.get('next')
         if not next_page or urlsplit(next_page).netloc != '':
             next_page = url_for('main.index')
@@ -32,6 +36,8 @@ def login():
 
 @bp.route('/logout')
 def logout():
+    if posthog_client and current_user.is_authenticated:
+        posthog_client.capture(current_user.username, 'user_logged_out')
     logout_user()
     return redirect(url_for('main.index'))
 
@@ -46,6 +52,9 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
+        if posthog_client:
+            posthog_client.identify(user.username, properties={'username': user.username})
+            posthog_client.capture(user.username, 'user_registered', properties={'signup_method': 'form'})
         flash(_('Congratulations, you are now a registered user!'))
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html', title=_('Register'),
@@ -62,6 +71,8 @@ def reset_password_request():
             sa.select(User).where(User.email == form.email.data))
         if user:
             send_password_reset_email(user)
+            if posthog_client:
+                posthog_client.capture(user.username, 'password_reset_requested')
         flash(
             _('Check your email for the instructions to reset your password'))
         return redirect(url_for('auth.login'))
@@ -80,6 +91,8 @@ def reset_password(token):
     if form.validate_on_submit():
         user.set_password(form.password.data)
         db.session.commit()
+        if posthog_client:
+            posthog_client.capture(user.username, 'password_reset_completed')
         flash(_('Your password has been reset.'))
         return redirect(url_for('auth.login'))
     return render_template('auth/reset_password.html', form=form)
