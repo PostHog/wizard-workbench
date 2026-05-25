@@ -4,6 +4,7 @@
 #####
 [versions]
 accompanist = "0.37.3"
+posthog = "3.31.0"
 android-material3 = "1.14.0-alpha09"
 androidGradlePlugin = "9.0.0"
 androidx-activity-compose = "1.12.3"
@@ -144,6 +145,7 @@ horologist-media-data = { module = "com.google.android.horologist:horologist-med
 horologist-media-ui = { module = "com.google.android.horologist:horologist-media-ui", version.ref = "horologist" }
 horologist-roboscreenshots = { module = "com.google.android.horologist:horologist-roboscreenshots", version.ref = "horologist" }
 junit = { module = "junit:junit", version.ref = "junit" }
+posthog-android = { module = "com.posthog:posthog-android", version.ref = "posthog" }
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", version.ref = "kotlin" }
 kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinx_immutable" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
