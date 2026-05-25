@@ -3,6 +3,7 @@ import { DashboardLayout } from '@/components/dashboard-layout';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
 import { verifyToken } from '@/lib/auth/session';
+import posthog from 'posthog-js';
 import {
   Card,
   CardContent,
@@ -26,6 +27,11 @@ function ManageSubscription() {
 
   async function handleManageSubscription() {
     try {
+      posthog.capture('subscription_management_opened', {
+        plan_name: teamData?.planName,
+        subscription_status: teamData?.subscriptionStatus,
+      });
+
       const response = await fetch('/api/stripe/customer-portal', {
         method: 'POST',
         headers: {
@@ -39,6 +45,7 @@ function ManageSubscription() {
         window.location.href = result.url;
       }
     } catch (err) {
+      posthog.captureException(err);
       console.error('Failed to open customer portal');
     }
   }
@@ -102,9 +109,12 @@ function TeamMembers() {
           return;
         }
 
+        posthog.capture('team_member_removed', { member_id: memberId });
+
         // Refresh team data
         mutate('/api/team');
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred');
       }
     });
@@ -207,10 +217,13 @@ function InviteTeamMember() {
           return;
         }
 
+        posthog.capture('team_member_invited', { email: data.email, role: data.role });
+
         setSuccess(result.success);
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred');
       }
     });
