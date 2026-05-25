@@ -5,6 +5,7 @@ import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -76,17 +77,31 @@ export async function GET(request: NextRequest) {
       throw new Error('User is not associated with any team.');
     }
 
+    const planName = (plan.product as Stripe.Product).name;
+
     await db
       .update(teams)
       .set({
         stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
         stripeProductId: productId,
-        planName: (plan.product as Stripe.Product).name,
+        planName,
         subscriptionStatus: subscription.status,
         updatedAt: new Date(),
       })
       .where(eq(teams.id, userTeam[0].teamId));
+
+    getPostHogClient().capture({
+      distinctId: userId,
+      event: 'checkout_completed',
+      properties: {
+        plan_name: planName,
+        product_id: productId,
+        subscription_id: subscriptionId,
+        subscription_status: subscription.status,
+        team_id: userTeam[0].teamId,
+      },
+    });
 
     await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
