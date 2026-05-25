@@ -1,6 +1,7 @@
 // src/routes/auth/callback/+server.js
 import { redirect } from "@sveltejs/kit"
 import { isAuthApiError } from "@supabase/supabase-js"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const GET = async ({ url, locals: { supabase } }) => {
   const code = url.searchParams.get("code")
@@ -16,6 +17,22 @@ export const GET = async ({ url, locals: { supabase } }) => {
         throw error
       }
     }
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (user) {
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "user_signed_in",
+      properties: {
+        $set: { email: user.email },
+        provider: user.app_metadata?.provider ?? "email",
+      },
+    })
+    await posthog.flush()
   }
 
   const next = url.searchParams.get("next")
