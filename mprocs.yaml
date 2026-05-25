@@ -29,6 +29,15 @@ procs:
     stop_signal: SIGTERM
     env_file: .env
 
+  wizard-build-dev:
+    # Dev build of the wizard: points OAuth + host at http://localhost:8010
+    # and uses POSTHOG_DEV_CLIENT_ID. Stop wizard-build before starting this
+    # (they share dist/) and start your local PostHog on :8010.
+    shell: "source .env && cd $WIZARD_PATH && NODE_ENV=development pnpm build && NODE_ENV=development pnpm build:watch"
+    autostart: false
+    stop_signal: SIGTERM
+    env_file: .env
+
 
   # ═══════════════════════════════════════════════════════════════════════════
   # WIZARD RUNS - Execute wizard on test apps (press 's' to start)
