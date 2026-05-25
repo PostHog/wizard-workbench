@@ -58,6 +58,7 @@ import Layout from '../layouts/Layout.astro';
 <script>
   const form = document.getElementById('contact-form') as HTMLFormElement;
   const messageDiv = document.getElementById('form-message') as HTMLDivElement;
+  const ph = (window as any).posthog;
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -66,10 +67,15 @@ import Layout from '../layouts/Layout.astro';
     const data = Object.fromEntries(formData.entries());
 
     try {
+      const sessionId: string = ph?.get_session_id?.() || '';
+      const distinctId: string = ph?.get_distinct_id?.() || '';
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-PostHog-Session-Id': sessionId,
+          'X-PostHog-Distinct-Id': distinctId,
         },
         body: JSON.stringify(data),
       });
@@ -79,14 +85,30 @@ import Layout from '../layouts/Layout.astro';
       if (response.ok) {
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
+        ph?.identify(data.email as string, {
+          name: data.name as string,
+          email: data.email as string,
+          company: (data.company as string) || undefined,
+        });
+        ph?.capture('contact_form_submitted', {
+          interest: data.interest,
+          has_company: Boolean(data.company),
+        });
         form.reset();
       } else {
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
+        ph?.capture('contact_form_failed', {
+          interest: data.interest,
+          error: result.error || 'unknown',
+          status: response.status,
+        });
       }
     } catch (error) {
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
+      ph?.capture('contact_form_failed', { error: 'network_error' });
+      ph?.captureException(error);
     }
   });
 </script>
