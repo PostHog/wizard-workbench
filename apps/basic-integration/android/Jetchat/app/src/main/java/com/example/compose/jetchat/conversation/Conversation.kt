@@ -91,6 +91,7 @@ import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -202,6 +203,13 @@ fun ConversationContent(
                 onMessageSent = { content ->
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
+                    )
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "channel" to uiState.channelName,
+                            "message_length" to content.length,
+                        ),
                     )
                 },
                 resetScroll = {
@@ -526,7 +534,13 @@ fun ClickableMessage(message: Message, isUserMe: Boolean, authorClicked: (String
                 .firstOrNull()
                 ?.let { annotation ->
                     when (annotation.tag) {
-                        SymbolAnnotationType.LINK.name -> uriHandler.openUri(annotation.item)
+                        SymbolAnnotationType.LINK.name -> {
+                            PostHog.capture(
+                                event = "message_link_opened",
+                                properties = mapOf("url" to annotation.item),
+                            )
+                            uriHandler.openUri(annotation.item)
+                        }
                         SymbolAnnotationType.PERSON.name -> authorClicked(annotation.item)
                         else -> Unit
                     }

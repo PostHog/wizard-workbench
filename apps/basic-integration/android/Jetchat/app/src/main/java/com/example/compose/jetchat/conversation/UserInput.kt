@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -648,7 +649,10 @@ fun EmojiTable(onTextAdded: (String) -> Unit, modifier: Modifier = Modifier) {
                     val emoji = emojis[x * EMOJI_COLUMNS + y]
                     Text(
                         modifier = Modifier
-                            .clickable(onClick = { onTextAdded(emoji) })
+                            .clickable(onClick = {
+                                PostHog.capture(event = "emoji_inserted", properties = mapOf("emoji" to emoji))
+                                onTextAdded(emoji)
+                            })
                             .sizeIn(minWidth = 42.dp, minHeight = 42.dp)
                             .padding(8.dp),
                         text = emoji,

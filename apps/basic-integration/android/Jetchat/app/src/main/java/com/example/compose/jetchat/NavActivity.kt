@@ -40,6 +40,7 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.compose.jetchat.auth.LoginScreen
 import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -95,6 +96,7 @@ class NavActivity : AppCompatActivity() {
                                 scope.launch {
                                     drawerState.close()
                                 }
+                                PostHog.capture(event = "channel_switched", properties = mapOf("channel" to it))
                                 selectedMenu = it
                             },
                             onProfileClicked = {
