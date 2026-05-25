@@ -23,7 +23,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-
         Cashier::useSubscriptionModel(Subscription::class);
 
         config([
