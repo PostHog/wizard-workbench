@@ -23,6 +23,13 @@
       "appsDir": "audit"
     },
     {
+      "id": "migrate",
+      "dir": "migrate",
+      "label": "Migrate to PostHog",
+      "description": "Migrate an existing analytics or feature-flag vendor (e.g. Statsig) to PostHog",
+      "ciCapable": true
+    },
+    {
       "id": "skill",
       "dir": "misc",
       "label": "Skill",

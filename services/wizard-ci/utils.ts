@@ -171,6 +171,8 @@ export interface WizardOptions {
   apiKey?: string;
   command?: string;
   skillId?: string;
+  /** Source-SDK variant for the `migrate` command — appended as --product=<id>. */
+  product?: string;
 }
 
 /**
@@ -197,6 +199,9 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
   }
   if (options.skillId) {
     args.push(`--skill=${options.skillId}`);
+  }
+  if (options.product) {
+    args.push(`--product=${options.product}`);
   }
   args.push("--local-mcp");
 
