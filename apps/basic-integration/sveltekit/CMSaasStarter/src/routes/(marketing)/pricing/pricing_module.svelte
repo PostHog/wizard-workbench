@@ -1,5 +1,6 @@
 <script lang="ts">
   import { pricingPlans } from "./pricing_plans"
+  import posthog from "posthog-js"
 
   interface Props {
     // Module context
@@ -15,6 +16,14 @@
     currentPlanId = "",
     center = true,
   }: Props = $props()
+
+  function handlePlanClick(plan: (typeof pricingPlans)[number]) {
+    posthog.capture("plan_selected", {
+      plan_id: plan.id,
+      plan_name: plan.name,
+      plan_price: plan.price,
+    })
+  }
 </script>
 
 <div
@@ -22,7 +31,7 @@
     ? 'place-content-center'
     : ''} flex-wrap"
 >
-  {#each pricingPlans as plan}
+  {#each pricingPlans as plan (plan.id)}
     <div
       class="flex-none card card-bordered {plan.id === highlightedPlanId
         ? 'border-primary'
@@ -36,7 +45,7 @@
         <div class="mt-auto pt-4 text-sm text-gray-600">
           Plan Includes:
           <ul class="list-disc list-inside mt-2 space-y-1">
-            {#each plan.features as feature}
+            {#each plan.features as feature (feature)}
               <li class="">{feature}</li>
             {/each}
             <ul></ul>
@@ -57,6 +66,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() => handlePlanClick(plan)}
               >
                 {callToAction}
               </a>
