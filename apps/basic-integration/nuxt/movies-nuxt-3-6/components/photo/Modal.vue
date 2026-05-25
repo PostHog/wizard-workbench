@@ -3,12 +3,17 @@ import type { Image } from '~/types'
 
 const images = ref<Image[] | null>(null)
 const index = ref(0)
+const { $posthog: posthog } = useNuxtApp()
 
 const current = computed(() => images.value?.[index.value])
 
 provideImageModal((img, idx) => {
   images.value = img
   index.value = idx
+  posthog?.capture('photo_viewed', {
+    photo_index: idx,
+    total_photos: img.length,
+  })
 })
 
 function prev() {
