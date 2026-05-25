@@ -1,4 +1,6 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { usePostHog } from '@posthog/react'
 import { NotFound } from '~/components/NotFound'
 import { PostErrorComponent } from '~/components/PostError'
 import { fetchInvoice, markInvoicePaid } from '~/utils/invoices'
@@ -15,8 +17,23 @@ export const Route = createFileRoute('/posts/$postId')({
 function PostComponent() {
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
+
+  useEffect(() => {
+    if (invoice) {
+      posthog.capture('invoice_viewed', {
+        invoice_id: invoice.id,
+        invoice_status: invoice.status,
+        invoice_amount: invoice.amount,
+      })
+    }
+  }, [invoice?.id])
 
   const handleMarkAsPaid = async () => {
+    posthog.capture('invoice_paid', {
+      invoice_id: invoice.id,
+      invoice_amount: invoice.amount,
+    })
     await markInvoicePaid({ data: String(invoice.id) })
     router.invalidate()
   }
@@ -81,6 +98,13 @@ function PostComponent() {
           params={{
             postId: String(invoice.id),
           }}
+          onClick={() =>
+            posthog.capture('invoice_deep_view_opened', {
+              invoice_id: invoice.id,
+              invoice_status: invoice.status,
+              invoice_amount: invoice.amount,
+            })
+          }
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           View Full Details
