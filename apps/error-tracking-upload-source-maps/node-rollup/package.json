@@ -7,7 +7,7 @@
     "build": "rollup -c"
   },
   "dependencies": {
-    "posthog-node": "^4.18.0"
+    "posthog-node": "^5.35.4"
   },
   "devDependencies": {
     "dotenv": "^17.4.2",
