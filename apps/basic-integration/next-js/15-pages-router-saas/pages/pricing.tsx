@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import posthog from 'posthog-js';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
 
 interface Price {
@@ -76,6 +77,8 @@ function PricingCard({
 
     startTransition(async () => {
       try {
+        posthog.capture('checkout_started', { price_id: priceId, plan_name: name });
+
         const response = await fetch('/api/stripe/create-checkout', {
           method: 'POST',
           headers: {
@@ -92,6 +95,7 @@ function PricingCard({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         console.error('Checkout error:', err);
       }
     });
