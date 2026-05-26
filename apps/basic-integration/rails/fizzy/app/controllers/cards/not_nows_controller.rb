@@ -6,6 +6,12 @@ class Cards::NotNowsController < ApplicationController
     @card.postpone
     refresh_stream_if_needed
 
+    PostHog.capture(
+      distinct_id: Current.identity.email_address,
+      event: "card_postponed",
+      properties: { card_id: @card.id, card_number: @card.number, board_id: @board.id }
+    )
+
     respond_to do |format|
       format.turbo_stream
       format.json { head :no_content }
