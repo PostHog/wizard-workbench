@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-APPS := next next-no-posthog react-vite rust node-rollup node-rollup-typescript-plugin
+APPS := next next-no-posthog react-vite rust node-rollup node-rollup-typescript-plugin node-webpack
 
 .PHONY: $(APPS) source-maps
 $(APPS):
