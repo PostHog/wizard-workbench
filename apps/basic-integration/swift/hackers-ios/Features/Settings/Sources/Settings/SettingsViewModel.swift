@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -64,16 +65,22 @@ public final class SettingsViewModel: @unchecked Sendable {
         switch keyPath {
         case \.safariReaderMode:
             settingsUseCase.safariReaderMode = value as! Bool
+            PostHogSDK.shared.capture("setting_changed", properties: ["setting_name": "safari_reader_mode", "new_value": String(describing: value)])
         case \.openInDefaultBrowser:
             settingsUseCase.openInDefaultBrowser = value as! Bool
+            PostHogSDK.shared.capture("setting_changed", properties: ["setting_name": "open_in_default_browser", "new_value": String(describing: value)])
         case \.showThumbnails:
             settingsUseCase.showThumbnails = value as! Bool
+            PostHogSDK.shared.capture("setting_changed", properties: ["setting_name": "show_thumbnails", "new_value": String(describing: value)])
         case \.rememberFeedCategory:
             settingsUseCase.rememberFeedCategory = value as! Bool
+            PostHogSDK.shared.capture("setting_changed", properties: ["setting_name": "remember_feed_category", "new_value": String(describing: value)])
         case \.textSize:
             settingsUseCase.textSize = value as! TextSize
+            PostHogSDK.shared.capture("setting_changed", properties: ["setting_name": "text_size", "new_value": String(describing: value)])
         case \.compactFeedDesign:
             settingsUseCase.compactFeedDesign = value as! Bool
+            PostHogSDK.shared.capture("setting_changed", properties: ["setting_name": "compact_feed_design", "new_value": String(describing: value)])
         default:
             break
         }
