@@ -1,5 +1,6 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
 import { HoneypotInputs } from "remix-utils/honeypot/react";
@@ -34,6 +35,7 @@ export function ContactSalesTeam({
   const { form, fields } = useForm(contactSalesFormSchema, {
     lastResult,
   });
+  const posthog = usePostHog();
 
   return (
     <Card>
@@ -150,7 +152,12 @@ export function ContactSalesTeam({
               {t("submitDisclaimer")}
             </p>
 
-            <Button name="intent" type="submit" value={CONTACT_SALES_INTENT}>
+            <Button
+              name="intent"
+              onClick={() => posthog?.capture("contact_sales_submitted")}
+              type="submit"
+              value={CONTACT_SALES_INTENT}
+            >
               {isContactingSales ? (
                 <>
                   <Spinner />

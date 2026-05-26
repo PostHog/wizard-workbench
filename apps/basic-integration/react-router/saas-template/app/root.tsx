@@ -32,6 +32,7 @@ import {
   localeCookie,
 } from "./features/localization/i18next-middleware.server";
 import { useToast } from "./hooks/use-toast";
+import { posthogMiddleware } from "./lib/posthog-middleware";
 import { cn } from "./lib/utils";
 import { ClientHintCheck, getHints } from "./utils/client-hints";
 import { combineHeaders } from "./utils/combine-headers.server";
@@ -63,7 +64,11 @@ export const shouldRevalidate = ({
   return defaultShouldRevalidate;
 };
 
-export const middleware = [securityMiddleware, i18nextMiddleware];
+export const middleware = [
+  securityMiddleware,
+  i18nextMiddleware,
+  posthogMiddleware,
+];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { colorScheme, honeypotInputProps, toastData } = await promiseHash({

@@ -1,5 +1,6 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
@@ -60,6 +61,7 @@ export function EmailInviteCard({
 
   const hydrated = useHydrated();
   const disabled = isInvitingByEmail || organizationIsFull;
+  const posthog = usePostHog();
 
   return (
     <Card>
@@ -163,6 +165,7 @@ export function EmailInviteCard({
           disabled={disabled}
           form={form.props.id}
           name="intent"
+          onClick={() => posthog?.capture("member_invited_by_email")}
           type="submit"
           value={INVITE_BY_EMAIL_INTENT}
         >

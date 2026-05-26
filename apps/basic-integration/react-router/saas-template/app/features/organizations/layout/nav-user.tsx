@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import {
   IconLogout,
   IconRosetteDiscountCheck,
@@ -38,6 +39,7 @@ export function NavUser({ user }: NavUserProps) {
     keyPrefix: "layout.navUser",
   });
   const hydrated = useHydrated();
+  const posthog = usePostHog();
 
   return (
     <SidebarMenu>
@@ -121,6 +123,7 @@ export function NavUser({ user }: NavUserProps) {
                   <button
                     className="w-full"
                     name="intent"
+                    onClick={() => posthog?.reset()}
                     type="submit"
                     value="logout"
                   />

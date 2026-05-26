@@ -1,5 +1,6 @@
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { usePostHog } from "@posthog/react";
 import { IconBuilding } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { data, Form, useNavigation } from "react-router";
@@ -88,6 +89,7 @@ export default function OrganizationOnboardingRoute({
   );
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const posthog = usePostHog();
 
   return (
     <Form
@@ -389,6 +391,9 @@ export default function OrganizationOnboardingRoute({
           <Field>
             <Button
               name="intent"
+              onClick={() =>
+                posthog?.capture("onboarding_organization_submitted")
+              }
               type="submit"
               value={ONBOARDING_ORGANIZATION_INTENT}
             >

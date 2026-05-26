@@ -1,6 +1,7 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { usePostHog } from "@posthog/react";
 import { IconBuilding } from "@tabler/icons-react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, href, Link } from "react-router";
@@ -51,6 +52,7 @@ export function CreateOrganizationFormCard({
       lastResult,
     },
   );
+  const posthog = usePostHog();
 
   return (
     <div className="flex flex-col gap-6">
@@ -145,6 +147,7 @@ export function CreateOrganizationFormCard({
             disabled={isCreatingOrganization}
             form={form.id}
             name="intent"
+            onClick={() => posthog?.capture("organization_created")}
             type="submit"
             value={CREATE_ORGANIZATION_INTENT}
           >
