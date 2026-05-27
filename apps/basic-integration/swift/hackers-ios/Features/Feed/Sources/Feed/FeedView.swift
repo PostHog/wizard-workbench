@@ -7,6 +7,7 @@
 
 import DesignSystem
 import Domain
+import PostHog
 import Shared
 import SwiftUI
 
@@ -315,7 +316,14 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
             )
         }
 
-        Button { ContentSharePresenter.shared.sharePost(post) } label: {
+        Button {
+            ContentSharePresenter.shared.sharePost(post)
+            PostHogSDK.shared.capture("post_shared", properties: [
+                "post_id": post.id,
+                "post_title": post.title,
+                "post_type": post.postType.rawValue,
+            ])
+        } label: {
             Label("Share", systemImage: "square.and.arrow.up")
         }
     }
@@ -369,6 +377,13 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
             navigationStore.showPost(post)
             return
         }
+
+        PostHogSDK.shared.capture("post_link_opened", properties: [
+            "post_id": post.id,
+            "post_title": post.title,
+            "post_type": post.postType.rawValue,
+            "url": post.url.absoluteString,
+        ])
 
         if isSidebar {
             navigationStore.showPost(post)
