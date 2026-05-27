@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'App path (e.g., "next-js/15-app-router-saas"), category (e.g., "next-js"), or "all"'
+        description: 'App path (e.g. "basic-integration/next-js/15-app-router-saas"), framework (e.g. "basic-integration/next-js"), category (e.g. "basic-integration"), "sample", or "all".'
         required: false
         type: string
         default: ''
@@ -217,8 +217,27 @@ jobs:
       - name: Find available apps
         id: find-apps
         run: |
-          # List all apps using the fixed directory structure: apps/{framework}/{app}
-          APPS=$(ls -d apps/*/* 2>/dev/null | sed 's|apps/||' | sort)
+          # Apps live under apps/{workflow}/{framework}/{app}, where {workflow}
+          # is the `dir` of a manifest entry with `ciCapable: true`.
+          # .wizard-root marks monorepo roots that should not be recursed into.
+          WORKFLOW_DIRS=$(jq -r '.workflows[] | select(.ciCapable == true) | .dir' apps/manifest.json)
+          APPS=""
+          for wf in $WORKFLOW_DIRS; do
+            [ -d "apps/$wf" ] || continue
+            while IFS= read -r dir; do
+              if [ -f "$dir/.wizard-root" ]; then
+                APPS="$APPS
+          $(echo "$dir" | sed 's|apps/||')"
+              else
+                for app in "$dir"/*/; do
+                  [ -d "$app" ] && APPS="$APPS
+          $(echo "${app%/}" | sed 's|apps/||')"
+                done
+              fi
+            done < <(find "apps/$wf" -mindepth 1 -maxdepth 1 -type d | sort)
+          done
+
+          APPS=$(echo "$APPS" | sed '/^$/d' | sort)
 
           # Convert to JSON array
           APPS_JSON=$(echo "$APPS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
@@ -234,16 +253,21 @@ jobs:
           AVAILABLE: ${{ steps.find-apps.outputs.apps }}
         run: |
           if [ -z "$INPUT_APP" ] || [ "$INPUT_APP" = "all" ]; then
-            # Run all apps
             SELECTED="$AVAILABLE"
             echo "Running all apps"
+          elif [ "$INPUT_APP" = "sample" ]; then
+            # One app per framework (second path segment)
+            SELECTED=$(echo "$AVAILABLE" | jq -c '
+              group_by(split("/")[1]) | map(.[0])
+            ')
+            echo "Running sample (one per framework)"
           else
             # Check if it's an exact app match
             if echo "$AVAILABLE" | jq -e --arg app "$INPUT_APP" 'index($app) != null' > /dev/null; then
               SELECTED="[\"$INPUT_APP\"]"
               echo "Running single app: $INPUT_APP"
             else
-              # Check if it's a category/prefix (e.g., "next-js" matches "next-js/15-app-router-todo")
+              # Check if it's a prefix match (workflow or framework)
               MATCHED=$(echo "$AVAILABLE" | jq -c --arg prefix "$INPUT_APP/" '[.[] | select(startswith($prefix))]')
               MATCH_COUNT=$(echo "$MATCHED" | jq 'length')
 
@@ -254,9 +278,6 @@ jobs:
                 echo "::error::App or category '$INPUT_APP' not found."
                 echo "Available apps:"
                 echo "$AVAILABLE" | jq -r '.[]'
-                echo ""
-                echo "Available categories:"
-                echo "$AVAILABLE" | jq -r '.[]' | cut -d'/' -f1 | sort -u
                 exit 1
               fi
             fi
@@ -326,7 +347,7 @@ jobs:
     steps:
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
         with:
           app-id: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_APP_ID }}
           private-key: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_PRIVATE_KEY }}
@@ -392,7 +413,8 @@ jobs:
   wizard-ci:
     needs: [discover, notify-start, notify-pr-start]
     if: always() && needs.discover.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ${{ contains(matrix.app, 'swift/') && 'macos-latest' || 'ubuntu-latest' }}
+    timeout-minutes: 60
     permissions:
       contents: read
       id-token: write
@@ -402,13 +424,13 @@ jobs:
       matrix:
         app: ${{ fromJson(needs.discover.outputs.apps) }}
     outputs:
-      pr_url: ${{ steps.run-wizard.outputs.pr_url }}
-      pr_number: ${{ steps.run-wizard.outputs.pr_number }}
+      pr_url: ${{ steps.process-results.outputs.pr_url }}
+      pr_number: ${{ steps.process-results.outputs.pr_number }}
 
     steps:
       - name: Generate GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
         with:
           app-id: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_APP_ID }}
           private-key: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_PRIVATE_KEY }}
@@ -432,10 +454,23 @@ jobs:
 
       - name: Install GitHub CLI
         run: |
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y gh
+          if command -v gh > /dev/null 2>&1; then
+            echo "gh already installed: $(gh --version | head -1)"
+            exit 0
+          fi
+
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            brew update
+            brew install gh
+          elif [ "$RUNNER_OS" = "Linux" ]; then
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+          else
+            echo "Unsupported runner OS: $RUNNER_OS"
+            exit 1
+          fi
 
       - name: Clone and build Wizard CLI
         run: |
@@ -515,58 +550,128 @@ jobs:
           cd $CONTEXT_MILL_PATH
           npm run dev &
           CONTEXT_MILL_PID=$!
+          disown $CONTEXT_MILL_PID
 
-          # Wait for context-mill server to be ready
+          # Wait for context-mill server to be ready (retry every 30s, max 2 minutes)
           echo "Waiting for context-mill server to start..."
-          for i in {1..30}; do
-            if curl -s http://localhost:8765/context-mill-mcp-resources.zip > /dev/null 2>&1; then
-              echo "Context Mill server is ready"
-              break
+          CONTEXT_MILL_READY=false
+          for attempt in 1 2 3 4; do
+            for i in {1..30}; do
+              if curl -s http://localhost:8765/context-mill-mcp-resources.zip > /dev/null 2>&1; then
+                echo "Context Mill server is ready"
+                CONTEXT_MILL_READY=true
+                break 2
+              fi
+              sleep 1
+            done
+            if [ "$attempt" -lt 4 ]; then
+              echo "::warning::Context Mill not ready after $((attempt * 30))s, retrying..."
             fi
-            sleep 1
           done
+          if [ "$CONTEXT_MILL_READY" = "false" ]; then
+            echo "::warning::Context Mill server failed to start after 2 minutes"
+          fi
 
           # Start MCP server in background (consumes from local examples server)
           cd $MCP_PATH
           pnpm dev:local-resources &
           MCP_PID=$!
+          disown $MCP_PID
 
-          # Wait for MCP server to be ready
+          # Wait for MCP server to be ready (retry every 30s, max 2 minutes)
           echo "Waiting for MCP server to start..."
-          for i in {1..30}; do
-            if curl -s http://localhost:8787/mcp > /dev/null 2>&1; then
-              echo "MCP server is ready"
-              break
+          MCP_READY=false
+          for attempt in 1 2 3 4; do
+            for i in {1..30}; do
+              if curl -s http://localhost:8787/mcp > /dev/null 2>&1; then
+                echo "MCP server is ready"
+                MCP_READY=true
+                break 2
+              fi
+              sleep 1
+            done
+            if [ "$attempt" -lt 4 ]; then
+              echo "::warning::MCP server not ready after $((attempt * 30))s, retrying..."
             fi
-            sleep 1
           done
-
-          # Run wizard-ci (always runs in CI mode internally)
-          cd $GITHUB_WORKSPACE
-          CMD="pnpm wizard-ci --app ${{ matrix.app }} --base ${{ needs.discover.outputs.input_base_branch }}"
-          if [ -n "${{ needs.discover.outputs.trigger_id }}" ]; then
-            CMD="$CMD --trigger-id ${{ needs.discover.outputs.trigger_id }}"
-          fi
-          if [ "${{ needs.discover.outputs.input_evaluate }}" = "true" ]; then
-            CMD="$CMD --evaluate"
+          if [ "$MCP_READY" = "false" ]; then
+            echo "::warning::MCP server failed to start after 2 minutes"
           fi
 
-          $CMD 2>&1 | tee wizard-output.log
-          WIZARD_EXIT=${PIPESTATUS[0]}
+          echo "mcp_pid=$MCP_PID" >> $GITHUB_OUTPUT
+          echo "context_mill_pid=$CONTEXT_MILL_PID" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          # PostHog credentials
+          POSTHOG_REGION: ${{ needs.discover.outputs.input_posthog_region }}
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
+          # Dependency paths
+          WIZARD_PATH: ${{ env.WIZARD_PATH }}
+          CONTEXT_MILL_PATH: ${{ env.CONTEXT_MILL_PATH }}
+          MCP_PATH: ${{ env.MCP_PATH }}
+          # Dependency refs (for PR body)
+          WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
+          CONTEXT_MILL_REF: ${{ needs.discover.outputs.input_context_mill_ref }}
+          POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
+          # Source info (for PR body)
+          CI_SOURCE: ${{ needs.discover.outputs.input_source }}
+          # Enable YARA security scanner report
+          POSTHOG_WIZARD_YARA_REPORT: 'true'
+          # PostHog tracking for eval analytics
+          POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
+
+      - name: Execute wizard
+        id: execute-wizard
+        continue-on-error: true
+        run: |
+          CMD_ARGS=(pnpm wizard-ci --app "$MATRIX_APP" --base "$INPUT_BASE_BRANCH")
+          if [ -n "$TRIGGER_ID" ]; then
+            CMD_ARGS+=(--trigger-id "$TRIGGER_ID")
+          fi
+          if [ "$INPUT_EVALUATE" = "true" ]; then
+            CMD_ARGS+=(--evaluate)
+          fi
+          "${CMD_ARGS[@]}" 2>&1 | tee wizard-output.log
+        env:
+          MATRIX_APP: ${{ matrix.app }}
+          INPUT_BASE_BRANCH: ${{ needs.discover.outputs.input_base_branch }}
+          TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
+          INPUT_EVALUATE: ${{ needs.discover.outputs.input_evaluate }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          POSTHOG_REGION: ${{ needs.discover.outputs.input_posthog_region }}
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
+          WIZARD_PATH: ${{ env.WIZARD_PATH }}
+          CONTEXT_MILL_PATH: ${{ env.CONTEXT_MILL_PATH }}
+          MCP_PATH: ${{ env.MCP_PATH }}
+          WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
+          CONTEXT_MILL_REF: ${{ needs.discover.outputs.input_context_mill_ref }}
+          POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
+          CI_SOURCE: ${{ needs.discover.outputs.input_source }}
+          POSTHOG_WIZARD_YARA_REPORT: 'true'
+          POSTHOG_WIZARD_LOG_DIR: /tmp
+          POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
+
+      - name: Process results
+        id: process-results
+        if: always()
+        run: |
+          if [ "$WIZARD_OUTCOME" != "success" ]; then
+            echo "::warning::Wizard exited with failure for $MATRIX_APP"
+          fi
 
           # Save resources zips from running server (for artifact upload)
           curl -s http://localhost:8765/context-mill-mcp-resources.zip -o context-mill-mcp-resources.zip || true
           curl -s http://localhost:8765/skills-mcp-resources.zip -o skills-mcp-resources.zip || true
 
           # Stop servers
-          kill $MCP_PID 2>/dev/null || true
-          kill $CONTEXT_MILL_PID 2>/dev/null || true
+          kill "$MCP_PID" 2>/dev/null || true
+          kill "$CONTEXT_MILL_PID" 2>/dev/null || true
 
           # Extract PR URL
-          PR_URL=$(grep -oP 'PR: \K(https://github.com/[^\s]+)' wizard-output.log || true)
+          PR_URL=$(sed -n 's#.*PR: \(https://github.com/[^[:space:]]*\).*#\1#p' wizard-output.log | head -1 || true)
           if [ -n "$PR_URL" ]; then
             echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
-            PR_NUM=$(echo $PR_URL | grep -oP '/pull/\K\d+')
+            PR_NUM=$(echo "$PR_URL" | sed -n 's#.*/pull/\([0-9][0-9]*\).*#\1#p')
             echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
           fi
 
@@ -612,27 +717,11 @@ jobs:
             echo "yara_violation_count=0" >> $GITHUB_OUTPUT
             echo "No YARA report file found"
           fi
-
-          exit $WIZARD_EXIT
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          # PostHog credentials
-          POSTHOG_REGION: ${{ needs.discover.outputs.input_posthog_region }}
-          POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
-          # Dependency paths
-          WIZARD_PATH: ${{ env.WIZARD_PATH }}
-          CONTEXT_MILL_PATH: ${{ env.CONTEXT_MILL_PATH }}
-          MCP_PATH: ${{ env.MCP_PATH }}
-          # Dependency refs (for PR body)
-          WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
-          CONTEXT_MILL_REF: ${{ needs.discover.outputs.input_context_mill_ref }}
-          POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
-          # Source info (for PR body)
-          CI_SOURCE: ${{ needs.discover.outputs.input_source }}
-          # Enable YARA security scanner report
-          POSTHOG_WIZARD_YARA_REPORT: 'true'
-          # PostHog tracking for eval analytics
-          POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
+          WIZARD_OUTCOME: ${{ steps.execute-wizard.outcome }}
+          MATRIX_APP: ${{ matrix.app }}
+          MCP_PID: ${{ steps.run-wizard.outputs.mcp_pid }}
+          CONTEXT_MILL_PID: ${{ steps.run-wizard.outputs.context_mill_pid }}
 
       - name: Configure AWS credentials
         if: always() && !env.ACT
@@ -648,28 +737,36 @@ jobs:
         if: always() && !env.ACT
         continue-on-error: true
         run: |
-          TRIGGER_ID="${{ needs.discover.outputs.trigger_id }}"
-          SAFE_APP="${{ matrix.app }}"
+          SAFE_APP="$MATRIX_APP"
           SAFE_APP="${SAFE_APP//\//-}"
-          S3_PREFIX="s3://${{ secrets.AWS_WIZARD_ARTIFACTS_BUCKET }}/${TRIGGER_ID}/${SAFE_APP}"
+          S3_PREFIX="s3://${AWS_BUCKET}/${TRIGGER_ID}/${SAFE_APP}"
 
-          aws s3 cp wizard-output.log "${S3_PREFIX}/wizard-output.log" || true
           aws s3 cp context-mill-mcp-resources.zip "${S3_PREFIX}/context-mill-mcp-resources.zip" || true
           aws s3 cp skills-mcp-resources.zip "${S3_PREFIX}/skills-mcp-resources.zip" || true
 
-          YARA_JSON="/tmp/posthog-wizard-yara-report.json"
-          if [ -f "$YARA_JSON" ]; then
-            aws s3 cp "$YARA_JSON" "${S3_PREFIX}/yara-report.json" || true
+          WIZARD_LOG="${POSTHOG_WIZARD_LOG_DIR}/posthog-wizard.log"
+          if [ -f "$WIZARD_LOG" ]; then
+            aws s3 cp "$WIZARD_LOG" "${S3_PREFIX}/posthog-wizard.log" || true
           fi
 
+          YARA_JSON="/tmp/posthog-wizard-yara-report.json"
+          if [ -f "$YARA_JSON" ]; then
+            aws s3 cp "$YARA_JSON" "${S3_PREFIX}/posthog-wizard-yara-report.json" || true
+          fi
+        env:
+          MATRIX_APP: ${{ matrix.app }}
+          TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
+          AWS_BUCKET: ${{ secrets.AWS_WIZARD_ARTIFACTS_BUCKET }}
+          POSTHOG_WIZARD_LOG_DIR: /tmp
+
       - name: Label and close PR
-        if: steps.run-wizard.outputs.pr_number
+        if: steps.process-results.outputs.pr_number
         run: |
           gh pr edit "$PR_NUMBER" --add-label "CI/CD"
           gh pr close "$PR_NUMBER"
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PR_NUMBER: ${{ steps.run-wizard.outputs.pr_number }}
+          PR_NUMBER: ${{ steps.process-results.outputs.pr_number }}
 
       - name: Summary
         if: always()
@@ -706,9 +803,9 @@ jobs:
           WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
           CONTEXT_MILL_REF: ${{ needs.discover.outputs.input_context_mill_ref }}
           POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
-          PR_URL: ${{ steps.run-wizard.outputs.pr_url }}
-          YARA_REPORT: ${{ steps.run-wizard.outputs.yara_report }}
-          YARA_VIOLATIONS: ${{ steps.run-wizard.outputs.yara_violations }}
+          PR_URL: ${{ steps.process-results.outputs.pr_url }}
+          YARA_REPORT: ${{ steps.process-results.outputs.yara_report }}
+          YARA_VIOLATIONS: ${{ steps.process-results.outputs.yara_violations }}
 
       - name: Get job ID
         if: always() && (needs.notify-start.outputs.thread_ts != '' || needs.discover.outputs.input_notify_pr == 'true')
@@ -763,9 +860,9 @@ jobs:
               ]
             }"
         env:
-          WIZARD_CONFIDENCE: ${{ steps.run-wizard.outputs.confidence_score }}
-          PR_URL: ${{ steps.run-wizard.outputs.pr_url }}
-          PR_NUMBER: ${{ steps.run-wizard.outputs.pr_number }}
+          WIZARD_CONFIDENCE: ${{ steps.process-results.outputs.confidence_score }}
+          PR_URL: ${{ steps.process-results.outputs.pr_url }}
+          PR_NUMBER: ${{ steps.process-results.outputs.pr_number }}
           JOB_ID: ${{ steps.job-id.outputs.job_id }}
           APP: ${{ matrix.app }}
           SERVER_URL: ${{ github.server_url }}
@@ -778,7 +875,7 @@ jobs:
       - name: Generate token for source repo
         if: always() && needs.discover.outputs.input_notify_pr == 'true' && needs.discover.outputs.input_source_pr_number != ''
         id: source-repo-token
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
         with:
           app-id: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_APP_ID }}
           private-key: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_PRIVATE_KEY }}
@@ -793,15 +890,15 @@ jobs:
           SOURCE_PR_NUMBER: ${{ needs.discover.outputs.input_source_pr_number }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
           APP: ${{ matrix.app }}
-          WIZARD_CONFIDENCE: ${{ steps.run-wizard.outputs.confidence_score }}
-          WIZARD_PR_URL: ${{ steps.run-wizard.outputs.pr_url }}
-          WIZARD_PR_NUMBER: ${{ steps.run-wizard.outputs.pr_number }}
+          WIZARD_CONFIDENCE: ${{ steps.process-results.outputs.confidence_score }}
+          WIZARD_PR_URL: ${{ steps.process-results.outputs.pr_url }}
+          WIZARD_PR_NUMBER: ${{ steps.process-results.outputs.pr_number }}
           JOB_ID: ${{ steps.job-id.outputs.job_id }}
           SERVER_URL: ${{ github.server_url }}
           GITHUB_REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
-          YARA_REPORT: ${{ steps.run-wizard.outputs.yara_report }}
-          YARA_VIOLATIONS: ${{ steps.run-wizard.outputs.yara_violations }}
+          YARA_REPORT: ${{ steps.process-results.outputs.yara_report }}
+          YARA_VIOLATIONS: ${{ steps.process-results.outputs.yara_violations }}
         with:
           github-token: ${{ steps.source-repo-token.outputs.token }}
           script: |
