@@ -1,10 +1,26 @@
+import { useEffect } from 'react'
 import { Navigate } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
 import { getAllUsers, getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
 import type { Route } from './+types/stats'
 
 export default function Stats() {
   const { user } = useAuth()
+  const posthog = usePostHog()
+
+  useEffect(() => {
+    if (!user) return
+    const cu = getCurrentUser() || user
+    const allU = getAllUsers()
+    const lb = [...allU].sort((a, b) => b.totalPoints - a.totalPoints).slice(0, 10)
+    const rank = lb.findIndex((u) => u.id === cu.id) + 1
+    posthog?.capture('leaderboard_viewed', {
+      user_rank: rank || null,
+      total_points: cu.totalPoints,
+      claimed_countries: cu.claimedCountries.length,
+    })
+  }, [user?.id])
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -12,8 +28,7 @@ export default function Stats() {
 
   const currentUser = getCurrentUser() || user
   const allUsers = getAllUsers()
-  
-  // Sort users by points for leaderboard
+
   const leaderboard = [...allUsers]
     .sort((a, b) => b.totalPoints - a.totalPoints)
     .slice(0, 10)
