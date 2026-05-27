@@ -13,15 +13,18 @@ const count = ref<undefined | number>()
 
 const items = ref<Media[]>([])
 const currentSearch = ref(input.value)
+const posthog = usePostHog()
 
 function search() {
   if (currentSearch.value === input.value)
     return
 
-  currentSearch.value = input.value.toString()
+  const query = input.value.toString()
+  currentSearch.value = query
   count.value = undefined
   items.value = []
   router.replace({ query: { s: input.value } })
+  posthog?.capture('media_searched', { query })
 }
 
 async function fetch(page: number) {
