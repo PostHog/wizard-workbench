@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
+import * as React from 'react'
 import { z } from 'zod'
 import { fetchUserById } from '../utils/mockTodos'
+import { usePostHog } from '@posthog/react'
 
 const roles = ['Admin', 'Member', 'Viewer', 'Editor', 'Manager']
 
@@ -21,6 +23,13 @@ export const Route = createFileRoute('/dashboard/users/user')({
 
 function UserComponent() {
   const { user } = Route.useLoaderData()
+  const posthog = usePostHog()
+
+  React.useEffect(() => {
+    if (user) {
+      posthog.capture('team_member_viewed', { user_id: user.id, user_name: user.name })
+    }
+  }, [user?.id])
 
   if (!user) {
     return <div className="p-6">User not found</div>
