@@ -15,6 +15,7 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
@@ -22,6 +23,7 @@ import { redirectWithToast } from "~/utils/toast.server";
 export async function loader({ request, context }: Route.LoaderArgs) {
   try {
     const { supabase, headers } = context.get(anonymousContext);
+    const posthog = (context as unknown as PostHogContext).posthog;
     const i18n = getInstance(context);
     const { inviteLinkInfo, headers: inviteLinkHeaders } =
       await getValidInviteLinkInfo(request);
@@ -110,6 +112,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
             userAccountId: maybeUser.id,
           });
 
+          posthog?.capture({
+            event: "invite_accepted",
+            properties: {
+              invite_type: "email",
+              organization_id: emailInviteInfo.organizationId,
+              organization_name: emailInviteInfo.organizationName,
+            },
+          });
+
           return redirectWithToast(
             href("/organizations/:organizationSlug/dashboard", {
               organizationSlug: emailInviteInfo.organizationSlug,
@@ -144,6 +155,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
             organizationId: inviteLinkInfo.organizationId,
             request,
             userAccountId: maybeUser.id,
+          });
+
+          posthog?.capture({
+            event: "invite_accepted",
+            properties: {
+              invite_type: "link",
+              organization_id: inviteLinkInfo.organizationId,
+              organization_name: inviteLinkInfo.organizationName,
+            },
           });
 
           return redirectWithToast(

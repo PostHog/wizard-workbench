@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
@@ -46,6 +47,7 @@ export function CreateSubscriptionModalContent({
   const { t: tModal } = useTranslation("billing", {
     keyPrefix: "noCurrentPlanModal",
   });
+  const posthog = usePostHog();
   const [billingPeriod, setBillingPeriod] = useState("annual");
 
   const navigation = useNavigation();
@@ -107,7 +109,21 @@ export function CreateSubscriptionModalContent({
   );
 
   return (
-    <Form method="post" replace>
+    <Form
+      method="post"
+      onSubmit={(e) => {
+        const lookupKey = (
+          e.currentTarget.elements.namedItem(
+            "lookupKey",
+          ) as HTMLInputElement | null
+        )?.value;
+        posthog?.capture("subscription_checkout_started", {
+          billing_period: billingPeriod,
+          lookup_key: lookupKey,
+        });
+      }}
+      replace
+    >
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>
