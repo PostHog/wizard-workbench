@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -38,12 +39,18 @@ export function Login({
       inviteId: formData.get('inviteId') as string
     };
 
+    posthog.capture(mode === 'signin' ? 'sign_in_submitted' : 'sign_up_submitted', {
+      email: data.email,
+    });
+
     startTransition(async () => {
       try {
         const response = await fetch(`/api/auth/${mode === 'signin' ? 'sign-in' : 'sign-up'}`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id(),
+            'X-POSTHOG-SESSION-ID': posthog.get_session_id() ?? '',
           },
           body: JSON.stringify(data)
         });
@@ -51,10 +58,17 @@ export function Login({
         const result = await response.json();
 
         if (!response.ok) {
+          posthog.captureException(new Error(result.error || 'Auth error'), {
+            mode,
+          });
           setError(result.error || 'An error occurred');
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
           return;
+        }
+
+        if (result.userId) {
+          posthog.identify(String(result.userId), { email: data.email });
         }
 
         if (result.success && result.redirectTo) {
@@ -64,6 +78,7 @@ export function Login({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err as Error, { mode });
         setError('An unexpected error occurred. Please try again.');
       }
     });
