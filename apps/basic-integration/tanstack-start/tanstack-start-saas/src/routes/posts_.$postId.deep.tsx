@@ -1,4 +1,5 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 import { NotFound } from '~/components/NotFound'
 import { PostErrorComponent } from '~/components/PostError'
 import { fetchInvoice, markInvoicePaid } from '~/utils/invoices'
@@ -12,10 +13,22 @@ export const Route = createFileRoute('/posts_/$postId/deep')({
 function PostDeepComponent() {
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
 
   const handleMarkAsPaid = async () => {
-    await markInvoicePaid({ data: String(invoice.id) })
-    router.invalidate()
+    try {
+      await markInvoicePaid({ data: String(invoice.id) })
+      posthog.capture('invoice_paid', {
+        invoice_id: invoice.id,
+        invoice_title: invoice.title,
+        invoice_amount: invoice.amount,
+        source: 'full_details',
+      })
+      router.invalidate()
+    } catch (err) {
+      posthog.captureException(err)
+      throw err
+    }
   }
 
   if (!invoice) {
