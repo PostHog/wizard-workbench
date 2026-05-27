@@ -44,10 +44,25 @@ class Sessions::MagicLinksController < ApplicationController
       clear_pending_authentication_token
       start_new_session_for magic_link.identity
 
+      track_sign_in(magic_link.identity)
+
       respond_to do |format|
         format.html { redirect_to after_sign_in_url(magic_link) }
         format.json { render json: { session_token: session_token, requires_signup_completion: requires_signup_completion?(magic_link) } }
       end
+    end
+
+    def track_sign_in(identity)
+      PostHog.identify(
+        distinct_id: identity.email_address,
+        properties: { email: identity.email_address }
+      )
+
+      PostHog.capture(
+        distinct_id: identity.email_address,
+        event: "signed_in",
+        properties: { login_method: "magic_link" }
+      )
     end
 
     def email_address_mismatch
