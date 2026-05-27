@@ -13,6 +13,7 @@ import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
@@ -22,6 +23,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -72,7 +74,15 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              onPress={() => {
+                posthog.capture("item_author_tapped", {
+                  item_id: item.id,
+                  author: item.by,
+                });
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -120,6 +130,11 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog.capture("item_upvoted", {
+                  item_id: item.id,
+                  item_title: item.title,
+                  score: item.score ?? 0,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -163,7 +178,12 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
-                  Linking.openURL(item.url);
+                  posthog.capture("item_link_opened", {
+                    item_id: item.id,
+                    item_title: item.title,
+                    url_host: new URL(item.url!).host,
+                  });
+                  Linking.openURL(item.url!);
                 }}
               >
                 <Link2 color="black" width={16} />
