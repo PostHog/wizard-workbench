@@ -413,15 +413,11 @@ jobs:
   wizard-ci:
     needs: [discover, notify-start, notify-pr-start]
     if: always() && needs.discover.result == 'success'
-<<<<<<< HEAD
     runs-on: ${{ contains(matrix.app, 'swift/') && 'macos-latest' || 'ubuntu-latest' }}
     timeout-minutes: 60
-=======
-    runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
->>>>>>> 6eb2cadca (Scope id-token permission to wizard-ci job only)
     strategy:
       fail-fast: false
       max-parallel: 10
@@ -652,6 +648,7 @@ jobs:
           POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
           POSTHOG_WIZARD_YARA_REPORT: 'true'
+          POSTHOG_WIZARD_LOG_DIR: /tmp
           POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
 
       - name: Process results
@@ -740,19 +737,27 @@ jobs:
         if: always() && !env.ACT
         continue-on-error: true
         run: |
-          TRIGGER_ID="${{ needs.discover.outputs.trigger_id }}"
-          SAFE_APP="${{ matrix.app }}"
+          SAFE_APP="$MATRIX_APP"
           SAFE_APP="${SAFE_APP//\//-}"
-          S3_PREFIX="s3://${{ secrets.AWS_WIZARD_ARTIFACTS_BUCKET }}/${TRIGGER_ID}/${SAFE_APP}"
+          S3_PREFIX="s3://${AWS_BUCKET}/${TRIGGER_ID}/${SAFE_APP}"
 
-          aws s3 cp wizard-output.log "${S3_PREFIX}/wizard-output.log" || true
           aws s3 cp context-mill-mcp-resources.zip "${S3_PREFIX}/context-mill-mcp-resources.zip" || true
           aws s3 cp skills-mcp-resources.zip "${S3_PREFIX}/skills-mcp-resources.zip" || true
 
+          WIZARD_LOG="${POSTHOG_WIZARD_LOG_DIR}/posthog-wizard.log"
+          if [ -f "$WIZARD_LOG" ]; then
+            aws s3 cp "$WIZARD_LOG" "${S3_PREFIX}/posthog-wizard.log" || true
+          fi
+
           YARA_JSON="/tmp/posthog-wizard-yara-report.json"
           if [ -f "$YARA_JSON" ]; then
-            aws s3 cp "$YARA_JSON" "${S3_PREFIX}/yara-report.json" || true
+            aws s3 cp "$YARA_JSON" "${S3_PREFIX}/posthog-wizard-yara-report.json" || true
           fi
+        env:
+          MATRIX_APP: ${{ matrix.app }}
+          TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
+          AWS_BUCKET: ${{ secrets.AWS_WIZARD_ARTIFACTS_BUCKET }}
+          POSTHOG_WIZARD_LOG_DIR: /tmp
 
       - name: Label and close PR
         if: steps.process-results.outputs.pr_number
