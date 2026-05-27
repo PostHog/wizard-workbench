@@ -65,11 +65,27 @@ import Layout from '../layouts/Layout.astro';
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
+    const ph = (window as any).posthog;
+    ph?.identify(data.email as string, {
+      name: data.name as string,
+      company: (data.company as string) || undefined,
+    });
+
+    ph?.capture('contact_form_submitted', {
+      interest: data.interest,
+      has_company: Boolean(data.company),
+    });
+
     try {
+      const sessionId = ph?.get_session_id?.() || null;
+      const distinctId = ph?.get_distinct_id?.() || null;
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(sessionId ? { 'X-PostHog-Session-Id': sessionId } : {}),
+          ...(distinctId ? { 'X-PostHog-Distinct-Id': distinctId } : {}),
         },
         body: JSON.stringify(data),
       });
