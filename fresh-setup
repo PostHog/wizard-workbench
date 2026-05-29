@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 #
-# wizard-workbench setup
+# wizard-workbench fresh-setup
+#
+# For a FRESH start: you've just cloned wizard-workbench and do NOT already
+# have the dependency repos (context-mill, wizard, posthog) cloned, nor their
+# packages installed. If you already have those, you don't need this — copy
+# .env.example to .env and edit the paths by hand (see "Manual setup" in the
+# README).
 #
 # Gets a fresh machine from `git clone` to a runnable `phrocs` stack:
 #   1. Checks prerequisites (node, pnpm, git, brew)
@@ -31,7 +37,7 @@ for arg in "$@"; do
     --skip-posthog) SKIP_POSTHOG=1 ;;
     --non-interactive) INTERACTIVE=0 ;;
     -h|--help)
-      sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
