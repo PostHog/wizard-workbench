@@ -60,23 +60,39 @@ The workbench can run the entire Wizard stack in local development mode, with ho
 
 ### Setup
 
-Install [phrocs](https://github.com/PostHog/posthog/tree/master/tools/phrocs)
+**Starting fresh?** If you've just cloned wizard-workbench and don't already have the dependency repos (`context-mill`, `wizard`, `posthog`) cloned or their packages installed, run:
 
 ```bash
-brew tap posthog/tap && brew install phrocs
+bash fresh-setup
 ```
 
-Install dependencies in this repo:
+This installs `phrocs`, clones `context-mill`, `wizard`, and `posthog` **as siblings next to this repo** (e.g. `../context-mill`), writes your `.env` with the right paths, prompts for an optional PostHog API key, and runs `pnpm install` everywhere.
 
-```bash
+macOS only for now.
+
+Flags: 
+`--force` overwrites an existing .env, 
+`--skip-posthog` skips the (large) monorepo clone, 
+`--non-interactive` skips the API key prompt.
+
+> **Already have the repos / your own setup?** You don't need `fresh-setup` — it's for clean machines. Use the manual steps below to point `.env` at wherever your repos already live (any path works; they don't have to be siblings). `fresh-setup` is also safe to re-run: it skips repos that are already cloned and leaves an existing `.env` alone unless you pass `--force`.
+
+<details> <summary>Manual setup (if you'd rather do it yourself, or already have the repos)</summary>
+Install phrocs:
+```
+brew tap posthog/tap && brew install phrocs
+```
+Install dependencies in this repo:
+```
 pnpm install
 ```
 
-Copy and edit `.env` with your repo paths and API key:
+Copy and edit .env with your repo paths and API key:
 
-```bash
+```
 cp .env.example .env
 ```
+</details>
 
 ### Environment Variables
 
