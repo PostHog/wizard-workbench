@@ -59,24 +59,37 @@ The workbench can run the entire Wizard stack in local development mode, with ho
 ![local dev stack](https://res.cloudinary.com/dmukukwp6/image/upload/q_auto,f_auto/pasted_image_2026_01_26_T20_15_17_777_Z_473d28d6e1.png)
 
 ### Setup
-
-Install [phrocs](https://github.com/PostHog/posthog/tree/master/tools/phrocs)
+One command:
 
 ```bash
-brew tap posthog/tap && brew install phrocs
+bash setup
 ```
 
-Install dependencies in this repo:
+This installs `phrocs`, clones `context-mill`, `wizard`, and `posthog` next to this repo, writes your `.env` with the right paths, prompts for an optional PostHog API key, and runs `pnpm install` everywhere. 
 
-```bash
+macOS only for now.
+
+Flags: 
+`--force` overwrites an existing .env, 
+`--skip-posthog` skips the (large) monorepo clone, 
+`--non-interactive` skips the API key prompt.
+
+<details> <summary>Manual setup (if you'd rather do it yourself)</summary>
+Install phrocs:
+```
+brew tap posthog/tap && brew install phrocs
+```
+Install dependencies in this repo:
+```
 pnpm install
 ```
 
-Copy and edit `.env` with your repo paths and API key:
+Copy and edit .env with your repo paths and API key:
 
-```bash
+```
 cp .env.example .env
 ```
+</details>
 
 ### Environment Variables
 
