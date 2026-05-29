@@ -1,0 +1,16 @@
+{
+  "name": "node-raw",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --env-file=.env dist/index.js"
+  },
+  "dependencies": {
+    "posthog-node": "^5.35.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
