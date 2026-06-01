@@ -482,7 +482,11 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Building wizard"
-          pnpm build
+          # build:ci inlines NODE_ENV=ci so the binary keeps --ci enabled
+          # (published builds disable it). Otherwise the --ci runs below fail
+          # with "Unknown argument: ci". Requires a wizard ref that has the
+          # build:ci script (PostHog/wizard#499 or later).
+          pnpm build:ci
           echo "::endgroup::"
 
           echo "WIZARD_PATH=$HOME/wizard" >> $GITHUB_ENV
