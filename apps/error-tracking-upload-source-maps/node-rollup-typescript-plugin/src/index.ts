@@ -5,6 +5,6 @@ const client = new PostHog(process.env.POSTHOG_KEY ?? '', {
   host: process.env.POSTHOG_HOST,
 })
 
-client.capture({ distinctId: 'node-rollup', event: 'hello' })
+client.capture({ distinctId: 'node-rollup-typescript-plugin', event: 'hello' })
 
 await client.shutdown()
