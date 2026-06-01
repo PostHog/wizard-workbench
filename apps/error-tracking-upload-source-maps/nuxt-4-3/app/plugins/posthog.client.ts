@@ -10,7 +10,7 @@ export default defineNuxtPlugin(() => {
 
   return {
     provide: {
-      posthog,
+      posthogClient: posthog
     },
   };
 });

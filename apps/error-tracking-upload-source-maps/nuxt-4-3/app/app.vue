@@ -1,9 +1,9 @@
 <script setup lang="ts">
-const { $posthog } = useNuxtApp();
+const { $posthogClient } = useNuxtApp();
 
 function captureEvent() {
-  if ($posthog) {
-    $posthog().capture("button_clicked");
+  if ($posthogClient) {
+    $posthogClient().capture("button_clicked");
   }
 }
 </script>
