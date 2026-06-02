@@ -1,0 +1,10 @@
+{
+  "name": "react-native-app",
+  "version": "0.0.1",
+  "private": true,
+  "//": "Minimal React Native marker: the `react-native` dependency makes the wizard's source-maps detection pick the `react-native` variant, which it reports as unsupported-platform. No app code on purpose. See the wizard's detect.ts (pickJsVariant).",
+  "dependencies": {
+    "react": "18.2.0",
+    "react-native": "0.74.0"
+  }
+}

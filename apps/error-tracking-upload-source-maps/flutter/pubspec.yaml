@@ -1,0 +1,15 @@
+# Minimal Flutter marker so source-maps platform detection picks "flutter".
+# Intentionally just this one file — no lib/, no real project — to exercise the
+# wizard's "unsupported-platform" intro screen. See the wizard's detect.ts
+# (hasPubspec -> variant "flutter").
+name: flutter_app
+description: Source-maps platform-detection fixture.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
