@@ -1,5 +1,5 @@
 name: 'Setup Wizard Dependencies'
-description: 'Clone, build, and cache the wizard CLI, context-mill, and PostHog MCP. Restores each from a cache keyed on the dependency''s resolved commit SHA, building only on a miss.'
+description: 'Clone, build, and cache the wizard CLI, context-mill, and PostHog MCP. Restores each from a cache keyed on the dependency''s resolved commit SHA, building only on a miss. Prerequisite: the caller must have Node.js and pnpm already set up (this action shells out to pnpm/npm but does not install the toolchain).'
 
 inputs:
   wizard_ref:
@@ -35,13 +35,18 @@ runs:
         # branch (e.g. main/master) moves. A ref that is already a full SHA is
         # used verbatim.
         resolve_sha() {
-          local repo="$1" ref="$2"
+          local repo="$1" ref="$2" sha
           if printf '%s' "$ref" | grep -Eq '^[0-9a-f]{40}$'; then
             printf '%s' "$ref"
             return
           fi
-          git ls-remote "https://x-access-token:${APP_TOKEN}@github.com/PostHog/${repo}.git" "$ref" \
-            | awk 'NR==1{print $1}'
+          sha=$(git ls-remote "https://x-access-token:${APP_TOKEN}@github.com/PostHog/${repo}.git" "$ref" \
+            | awk 'NR==1{print $1}')
+          if [ -z "$sha" ]; then
+            echo "::error::Could not resolve ref '$ref' for PostHog/$repo to a commit SHA" >&2
+            return 1
+          fi
+          printf '%s' "$sha"
         }
         WIZARD_SHA=$(resolve_sha wizard "$WIZARD_REF")
         CONTEXT_MILL_SHA=$(resolve_sha context-mill "$CONTEXT_MILL_REF")
@@ -66,16 +71,21 @@ runs:
       if: steps.cache-wizard.outputs.cache-hit != 'true'
       shell: bash
       env:
-        WIZARD_REF: ${{ inputs.wizard_ref }}
+        WIZARD_SHA: ${{ steps.resolve.outputs.wizard_sha }}
       run: |
-        echo "::group::Cloning wizard repo"
+        echo "::group::Fetching wizard repo at $WIZARD_SHA"
+        # Fetch the exact resolved SHA (works for branch/tag/commit inputs alike,
+        # unlike `clone --branch` which rejects a commit SHA) and pins to the
+        # same commit the cache key is built from.
         rm -rf "$HOME/wizard"
-        git clone --depth 1 --branch "$WIZARD_REF" \
-          https://github.com/PostHog/wizard.git "$HOME/wizard"
+        git init -q "$HOME/wizard"
+        cd "$HOME/wizard"
+        git remote add origin https://github.com/PostHog/wizard.git
+        git fetch --depth 1 origin "$WIZARD_SHA"
+        git checkout -q FETCH_HEAD
         echo "::endgroup::"
 
         echo "::group::Installing wizard dependencies"
-        cd "$HOME/wizard"
         pnpm install --frozen-lockfile
         echo "::endgroup::"
 
@@ -86,6 +96,9 @@ runs:
         # build:ci script (PostHog/wizard#499 or later).
         pnpm build:ci
         echo "::endgroup::"
+
+        # Drop the .git dir before caching — not needed to run, just bloat.
+        rm -rf "$HOME/wizard/.git"
 
     - name: Save wizard cache
       if: inputs.save_cache == 'true' && steps.cache-wizard.outputs.cache-hit != 'true'
@@ -110,7 +123,7 @@ runs:
       if: steps.cache-context-mill.outputs.cache-hit != 'true'
       shell: bash
       env:
-        CONTEXT_MILL_REF: ${{ inputs.context_mill_ref }}
+        CONTEXT_MILL_SHA: ${{ steps.resolve.outputs.context_mill_sha }}
         APP_TOKEN: ${{ inputs.app_token }}
       run: |
         echo "::group::Configure git auth for private deps"
@@ -124,20 +137,25 @@ runs:
           "ssh://git@github.com/PostHog/warlock"
         echo "::endgroup::"
 
-        echo "::group::Cloning context-mill repo"
+        echo "::group::Fetching context-mill repo at $CONTEXT_MILL_SHA"
         rm -rf "$HOME/context-mill"
-        git clone --depth 1 --branch "$CONTEXT_MILL_REF" \
-          https://github.com/PostHog/context-mill.git "$HOME/context-mill"
+        git init -q "$HOME/context-mill"
+        cd "$HOME/context-mill"
+        git remote add origin https://github.com/PostHog/context-mill.git
+        git fetch --depth 1 origin "$CONTEXT_MILL_SHA"
+        git checkout -q FETCH_HEAD
         echo "::endgroup::"
 
         echo "::group::Installing context-mill dependencies"
-        cd "$HOME/context-mill"
         npm install
         echo "::endgroup::"
 
         echo "::group::Building context-mill MCP resources"
         npm run build
         echo "::endgroup::"
+
+        # Drop the .git dir before caching — not needed to run, just bloat.
+        rm -rf "$HOME/context-mill/.git"
 
     - name: Save context-mill cache
       if: inputs.save_cache == 'true' && steps.cache-context-mill.outputs.cache-hit != 'true'
@@ -162,21 +180,22 @@ runs:
       if: steps.cache-posthog.outputs.cache-hit != 'true'
       shell: bash
       env:
-        POSTHOG_REF: ${{ inputs.posthog_ref }}
+        POSTHOG_SHA: ${{ steps.resolve.outputs.posthog_sha }}
       run: |
-        echo "::group::Cloning PostHog monorepo"
+        echo "::group::Fetching PostHog monorepo at $POSTHOG_SHA"
         rm -rf "$HOME/posthog"
-        git clone --depth 1 --branch "$POSTHOG_REF" \
-          https://github.com/PostHog/posthog.git "$HOME/posthog"
+        git init -q "$HOME/posthog"
+        cd "$HOME/posthog"
+        git remote add origin https://github.com/PostHog/posthog.git
+        git fetch --depth 1 origin "$POSTHOG_SHA"
+        git checkout -q FETCH_HEAD
         echo "::endgroup::"
 
         echo "::group::Installing PostCSS dependencies (required for UI apps build)"
-        cd "$HOME/posthog"
         pnpm add -Dw autoprefixer postcss-preset-env cssnano
         echo "::endgroup::"
 
         echo "::group::Installing MCP dependencies"
-        cd "$HOME/posthog"
         pnpm install --frozen-lockfile
         echo "::endgroup::"
 
@@ -184,6 +203,9 @@ runs:
         cd "$HOME/posthog/services/mcp"
         pnpm build
         echo "::endgroup::"
+
+        # Drop the .git dir before caching — not needed to run, just bloat.
+        rm -rf "$HOME/posthog/.git"
 
     - name: Save posthog cache
       if: inputs.save_cache == 'true' && steps.cache-posthog.outputs.cache-hit != 'true'
