@@ -5,8 +5,10 @@
   "description": "A native Node.js HTTP contacts API for testing the javascript_node wizard skill",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "start": "node --env-file .env index.js",
+    "dev": "node --env-file .env --watch index.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "posthog-node": "^5.35.14"
+  }
 }
