@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { followerPackages } from '@/lib/data/fake-data'
 import type { Route } from './+types/buy-followers'
@@ -6,6 +6,7 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { addFollowers, addPurchasedFollowers } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import { usePostHog } from '@posthog/react'
 
 export const meta: Route.MetaFunction = () => {
   const siteUrl = SITE_URL || 'https://clouthub.fake'
@@ -20,25 +21,39 @@ export const meta: Route.MetaFunction = () => {
 
 export default function BuyFollowers() {
   const navigate = useNavigate()
+  const posthog = usePostHog()
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
+
+  useEffect(() => {
+    posthog?.capture('buy_followers_page_viewed')
+  }, [])
 
   const handlePurchase = () => {
     if (selectedPackage === null) return
     setPurchased(true)
-    
+
     setTimeout(() => {
       const pkg = followerPackages[selectedPackage]
       const totalFollowers = pkg.amount + pkg.bonus
-      
+
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
-      
-      alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
+
+      posthog?.capture('followers_purchased', {
+        package_amount: pkg.amount,
+        package_bonus: pkg.bonus,
+        package_price: pkg.price,
+        total_followers: totalFollowers,
+      })
+
+      alert(
+        `Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`
+      )
       setPurchased(false)
       setSelectedPackage(null)
-      
+
       // Navigate to profile to see the updated count
       navigate('/profile')
     }, 1500)
@@ -49,9 +64,7 @@ export default function BuyFollowers() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-6 text-center">
           <h1 className="text-4xl font-bold text-primary mb-2">Buy Fake Followers</h1>
-          <p className="text-primary/50">
-            Get the fake clout you deserve! All followers are 100% fake bots.
-          </p>
+          <p className="text-primary/50">Get the fake clout you deserve! All followers are 100% fake bots.</p>
         </div>
 
         <div className="bg-red-500/10 border-2 border-red-500/50 rounded-lg p-6 mb-6">
@@ -60,8 +73,8 @@ export default function BuyFollowers() {
             <div>
               <h2 className="text-xl font-bold text-primary mb-1">Legal Disclaimer</h2>
               <p className="text-primary/70 text-sm">
-                This is a fake app. You cannot actually buy followers here. 
-                This is a satirical demonstration. Please don't try to buy fake followers in real life.
+                This is a fake app. You cannot actually buy followers here. This is a satirical demonstration. Please
+                don't try to buy fake followers in real life.
               </p>
             </div>
           </div>
@@ -75,38 +88,34 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => {
+                  setSelectedPackage(index)
+                  posthog?.capture('follower_package_selected', {
+                    package_amount: pkg.amount,
+                    package_bonus: pkg.bonus,
+                    package_price: pkg.price,
+                    total_followers: totalFollowers,
+                  })
+                }}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
-                  isSelected
-                    ? 'border-accent bg-accent/10'
-                    : 'border-primary/20 hover:border-primary/40'
+                  isSelected ? 'border-accent bg-accent/10' : 'border-primary/20 hover:border-primary/40'
                 )}
               >
                 <div className="text-center mb-4">
-                  <div className="text-3xl font-bold text-primary mb-1">
-                    {totalFollowers.toLocaleString()}
-                  </div>
+                  <div className="text-3xl font-bold text-primary mb-1">{totalFollowers.toLocaleString()}</div>
                   <div className="text-sm text-primary/50">Fake Followers</div>
                   {pkg.bonus > 0 && (
-                    <div className="text-xs text-accent mt-1">
-                      +{pkg.bonus.toLocaleString()} bonus!
-                    </div>
+                    <div className="text-xs text-accent mt-1">+{pkg.bonus.toLocaleString()} bonus!</div>
                   )}
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-accent mb-2">
-                    ${pkg.price.toFixed(2)}
-                  </div>
+                  <div className="text-2xl font-bold text-accent mb-2">${pkg.price.toFixed(2)}</div>
                   <div className="text-xs text-primary/50">
                     ${(pkg.price / totalFollowers).toFixed(4)} per fake follower
                   </div>
                 </div>
-                {isSelected && (
-                  <div className="mt-4 text-center text-accent font-bold">
-                    ✓ Selected
-                  </div>
-                )}
+                {isSelected && <div className="mt-4 text-center text-accent font-bold">✓ Selected</div>}
               </div>
             )
           })}
@@ -148,8 +157,8 @@ export default function BuyFollowers() {
             {purchased
               ? 'Processing... (Fake)'
               : selectedPackage === null
-              ? 'Select a package first'
-              : 'Buy Fake Followers (Fake Button)'}
+                ? 'Select a package first'
+                : 'Buy Fake Followers (Fake Button)'}
           </button>
 
           <p className="text-center text-primary/30 text-xs mt-4">
@@ -160,4 +169,3 @@ export default function BuyFollowers() {
     </div>
   )
 }
-
