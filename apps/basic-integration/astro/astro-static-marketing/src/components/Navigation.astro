@@ -8,14 +8,27 @@ const currentPath = Astro.url.pathname;
       <span>NeuralFlow</span> AI
     </a>
     <ul class="nav-links">
-      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]}>Features</a></li>
-      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
-      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
-      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]} data-nav-link="features">Features</a></li>
+      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]} data-nav-link="pricing">Pricing</a></li>
+      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]} data-nav-link="about">About</a></li>
+      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]} data-nav-link="docs">Docs</a></li>
+      <li><a href="#" class="nav-cta" id="nav-cta">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('nav-cta')?.addEventListener('click', function () {
+      window.posthog?.capture('nav_get_started_clicked');
+    });
+    document.querySelectorAll('[data-nav-link]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        window.posthog?.capture('nav_link_clicked', { destination: el.getAttribute('data-nav-link') });
+      });
+    });
+  });
+</script>
 
 <style>
   .nav-link.active {

@@ -5,13 +5,23 @@ const currentYear = new Date().getFullYear();
 <footer class="footer">
   <div class="container footer-inner">
     <ul class="footer-links">
-      <li><a href="/features" class="footer-link">Features</a></li>
-      <li><a href="/pricing" class="footer-link">Pricing</a></li>
-      <li><a href="/about" class="footer-link">About</a></li>
-      <li><a href="/docs" class="footer-link">Docs</a></li>
-      <li><a href="#" class="footer-link">Privacy</a></li>
-      <li><a href="#" class="footer-link">Terms</a></li>
+      <li><a href="/features" class="footer-link" data-footer-link="Features">Features</a></li>
+      <li><a href="/pricing" class="footer-link" data-footer-link="Pricing">Pricing</a></li>
+      <li><a href="/about" class="footer-link" data-footer-link="About">About</a></li>
+      <li><a href="/docs" class="footer-link" data-footer-link="Docs">Docs</a></li>
+      <li><a href="#" class="footer-link" data-footer-link="Privacy">Privacy</a></li>
+      <li><a href="#" class="footer-link" data-footer-link="Terms">Terms</a></li>
     </ul>
     <p class="footer-copy">&copy; {currentYear} NeuralFlow AI. All rights reserved.</p>
   </div>
 </footer>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-footer-link]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        window.posthog?.capture('footer_link_clicked', { link: el.getAttribute('data-footer-link') });
+      });
+    });
+  });
+</script>
