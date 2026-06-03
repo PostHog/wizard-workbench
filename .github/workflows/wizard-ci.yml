@@ -669,7 +669,6 @@ jobs:
           POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
           POSTHOG_WIZARD_YARA_REPORT: 'true'
-          POSTHOG_WIZARD_LOG_DIR: /tmp
           POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
 
       - name: Process results
@@ -765,7 +764,7 @@ jobs:
           aws s3 cp context-mill-mcp-resources.zip "${S3_PREFIX}/context-mill-mcp-resources.zip" || true
           aws s3 cp skills-mcp-resources.zip "${S3_PREFIX}/skills-mcp-resources.zip" || true
 
-          WIZARD_LOG="${POSTHOG_WIZARD_LOG_DIR}/posthog-wizard.log"
+          WIZARD_LOG="/tmp/posthog-wizard.log"
           if [ -f "$WIZARD_LOG" ]; then
             aws s3 cp "$WIZARD_LOG" "${S3_PREFIX}/posthog-wizard.log" || true
           fi
@@ -778,7 +777,6 @@ jobs:
           MATRIX_APP: ${{ matrix.app }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
           AWS_BUCKET: ${{ secrets.AWS_WIZARD_ARTIFACTS_BUCKET }}
-          POSTHOG_WIZARD_LOG_DIR: /tmp
 
       - name: Label and close PR
         if: steps.process-results.outputs.pr_number
