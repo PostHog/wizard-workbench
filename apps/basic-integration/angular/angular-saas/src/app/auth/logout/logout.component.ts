@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/cor
 import { Router } from '@angular/router';
 import { AuthenticationService } from '@app/auth/services/authentication.service';
 import { CredentialsService } from '@app/auth/services/credentials.service';
+import { PostHogService } from '@app/services/posthog.service';
 
 @Component({
   selector: 'app-logout',
@@ -13,6 +14,7 @@ export class LogoutComponent implements OnInit {
   private readonly authService = inject(AuthenticationService);
   private readonly router = inject(Router);
   private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PostHogService);
 
   ngOnInit() {
     if (!this.credentialsService.isAuthenticated()) {
@@ -21,8 +23,10 @@ export class LogoutComponent implements OnInit {
         window.location.reload();
       });
     } else {
+      this.posthogService.posthog.capture('user_logged_out');
       this.authService.logout().subscribe({
         next: () => {
+          this.posthogService.posthog.reset();
           this.credentialsService.setCredentials();
           this.router.navigate(['/login']).then(() => {
             window.location.reload();
