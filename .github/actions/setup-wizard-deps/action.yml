@@ -1,0 +1,197 @@
+name: 'Setup Wizard Dependencies'
+description: 'Clone, build, and cache the wizard CLI, context-mill, and PostHog MCP. Restores each from a cache keyed on the dependency''s resolved commit SHA, building only on a miss.'
+
+inputs:
+  wizard_ref:
+    description: 'Wizard repo branch/tag/sha'
+    required: true
+  context_mill_ref:
+    description: 'Context Mill repo branch/tag/sha'
+    required: true
+  posthog_ref:
+    description: 'PostHog repo branch/tag/sha (for MCP)'
+    required: true
+  app_token:
+    description: 'GitHub App token with access to the private warlock dependency'
+    required: true
+  save_cache:
+    description: 'Save freshly built dependencies back to the cache. Set on the warm-up job only; matrix jobs restore read-only.'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Resolve dependency SHAs
+      id: resolve
+      shell: bash
+      env:
+        WIZARD_REF: ${{ inputs.wizard_ref }}
+        CONTEXT_MILL_REF: ${{ inputs.context_mill_ref }}
+        POSTHOG_REF: ${{ inputs.posthog_ref }}
+        APP_TOKEN: ${{ inputs.app_token }}
+      run: |
+        # Resolve each ref to a concrete commit SHA so the cache key busts when a
+        # branch (e.g. main/master) moves. A ref that is already a full SHA is
+        # used verbatim.
+        resolve_sha() {
+          local repo="$1" ref="$2"
+          if printf '%s' "$ref" | grep -Eq '^[0-9a-f]{40}$'; then
+            printf '%s' "$ref"
+            return
+          fi
+          git ls-remote "https://x-access-token:${APP_TOKEN}@github.com/PostHog/${repo}.git" "$ref" \
+            | awk 'NR==1{print $1}'
+        }
+        WIZARD_SHA=$(resolve_sha wizard "$WIZARD_REF")
+        CONTEXT_MILL_SHA=$(resolve_sha context-mill "$CONTEXT_MILL_REF")
+        POSTHOG_SHA=$(resolve_sha posthog "$POSTHOG_REF")
+        echo "wizard_sha=$WIZARD_SHA" >> "$GITHUB_OUTPUT"
+        echo "context_mill_sha=$CONTEXT_MILL_SHA" >> "$GITHUB_OUTPUT"
+        echo "posthog_sha=$POSTHOG_SHA" >> "$GITHUB_OUTPUT"
+        echo "Resolved SHAs:"
+        echo "  wizard ($WIZARD_REF) -> $WIZARD_SHA"
+        echo "  context-mill ($CONTEXT_MILL_REF) -> $CONTEXT_MILL_SHA"
+        echo "  posthog ($POSTHOG_REF) -> $POSTHOG_SHA"
+
+    # ------------------------------------------------------------------ wizard
+    - name: Restore wizard cache
+      id: cache-wizard
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ~/wizard
+        key: wizard-${{ runner.os }}-${{ steps.resolve.outputs.wizard_sha }}
+
+    - name: Build wizard
+      if: steps.cache-wizard.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        WIZARD_REF: ${{ inputs.wizard_ref }}
+      run: |
+        echo "::group::Cloning wizard repo"
+        rm -rf "$HOME/wizard"
+        git clone --depth 1 --branch "$WIZARD_REF" \
+          https://github.com/PostHog/wizard.git "$HOME/wizard"
+        echo "::endgroup::"
+
+        echo "::group::Installing wizard dependencies"
+        cd "$HOME/wizard"
+        pnpm install --frozen-lockfile
+        echo "::endgroup::"
+
+        echo "::group::Building wizard"
+        # build:ci inlines NODE_ENV=ci so the binary keeps --ci enabled
+        # (published builds disable it). Otherwise the --ci runs below fail
+        # with "Unknown argument: ci". Requires a wizard ref that has the
+        # build:ci script (PostHog/wizard#499 or later).
+        pnpm build:ci
+        echo "::endgroup::"
+
+    - name: Save wizard cache
+      if: inputs.save_cache == 'true' && steps.cache-wizard.outputs.cache-hit != 'true'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ~/wizard
+        key: wizard-${{ runner.os }}-${{ steps.resolve.outputs.wizard_sha }}
+
+    - name: Export WIZARD_PATH
+      shell: bash
+      run: echo "WIZARD_PATH=$HOME/wizard" >> "$GITHUB_ENV"
+
+    # ------------------------------------------------------------ context-mill
+    - name: Restore context-mill cache
+      id: cache-context-mill
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ~/context-mill
+        key: context-mill-${{ runner.os }}-${{ steps.resolve.outputs.context_mill_sha }}
+
+    - name: Build context-mill
+      if: steps.cache-context-mill.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        CONTEXT_MILL_REF: ${{ inputs.context_mill_ref }}
+        APP_TOKEN: ${{ inputs.app_token }}
+      run: |
+        echo "::group::Configure git auth for private deps"
+        # context-mill depends on the private @posthog/warlock repo. Rewrite its
+        # clone URL to use the App token over HTTPS so the install can fetch it.
+        git config --global \
+          url."https://x-access-token:${APP_TOKEN}@github.com/PostHog/warlock".insteadOf \
+          "https://github.com/PostHog/warlock"
+        git config --global \
+          url."https://x-access-token:${APP_TOKEN}@github.com/PostHog/warlock".insteadOf \
+          "ssh://git@github.com/PostHog/warlock"
+        echo "::endgroup::"
+
+        echo "::group::Cloning context-mill repo"
+        rm -rf "$HOME/context-mill"
+        git clone --depth 1 --branch "$CONTEXT_MILL_REF" \
+          https://github.com/PostHog/context-mill.git "$HOME/context-mill"
+        echo "::endgroup::"
+
+        echo "::group::Installing context-mill dependencies"
+        cd "$HOME/context-mill"
+        npm install
+        echo "::endgroup::"
+
+        echo "::group::Building context-mill MCP resources"
+        npm run build
+        echo "::endgroup::"
+
+    - name: Save context-mill cache
+      if: inputs.save_cache == 'true' && steps.cache-context-mill.outputs.cache-hit != 'true'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ~/context-mill
+        key: context-mill-${{ runner.os }}-${{ steps.resolve.outputs.context_mill_sha }}
+
+    - name: Export CONTEXT_MILL_PATH
+      shell: bash
+      run: echo "CONTEXT_MILL_PATH=$HOME/context-mill" >> "$GITHUB_ENV"
+
+    # ----------------------------------------------------------- posthog (MCP)
+    - name: Restore posthog cache
+      id: cache-posthog
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ~/posthog
+        key: posthog-${{ runner.os }}-${{ steps.resolve.outputs.posthog_sha }}
+
+    - name: Build PostHog MCP
+      if: steps.cache-posthog.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        POSTHOG_REF: ${{ inputs.posthog_ref }}
+      run: |
+        echo "::group::Cloning PostHog monorepo"
+        rm -rf "$HOME/posthog"
+        git clone --depth 1 --branch "$POSTHOG_REF" \
+          https://github.com/PostHog/posthog.git "$HOME/posthog"
+        echo "::endgroup::"
+
+        echo "::group::Installing PostCSS dependencies (required for UI apps build)"
+        cd "$HOME/posthog"
+        pnpm add -Dw autoprefixer postcss-preset-env cssnano
+        echo "::endgroup::"
+
+        echo "::group::Installing MCP dependencies"
+        cd "$HOME/posthog"
+        pnpm install --frozen-lockfile
+        echo "::endgroup::"
+
+        echo "::group::Building MCP UI apps"
+        cd "$HOME/posthog/services/mcp"
+        pnpm build
+        echo "::endgroup::"
+
+    - name: Save posthog cache
+      if: inputs.save_cache == 'true' && steps.cache-posthog.outputs.cache-hit != 'true'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ~/posthog
+        key: posthog-${{ runner.os }}-${{ steps.resolve.outputs.posthog_sha }}
+
+    - name: Export MCP_PATH
+      shell: bash
+      run: echo "MCP_PATH=$HOME/posthog/services/mcp" >> "$GITHUB_ENV"
