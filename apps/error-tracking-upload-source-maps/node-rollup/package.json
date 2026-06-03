@@ -1,0 +1,16 @@
+{
+  "name": "node-rollup",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "dependencies": {
+    "posthog-node": "^5.35.4"
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2",
+    "rollup": "^4.30.1"
+  }
+}
