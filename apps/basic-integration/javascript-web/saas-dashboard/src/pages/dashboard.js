@@ -2,6 +2,7 @@ import { Chart, DoughnutController, ArcElement, Tooltip, Legend, BarController, 
 import { api } from '../api.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
+import posthog from '../posthog.js';
 
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend, BarController, BarElement, CategoryScale, LinearScale);
 
@@ -52,6 +53,11 @@ export async function renderDashboard() {
       api.getProjects(),
       api.getActivities(),
     ]);
+    posthog.capture('dashboard viewed', {
+      active_projects: stats.activeProjects,
+      total_tasks: stats.totalTasks,
+      completion_rate: stats.completionRate,
+    });
     const activeProjects = projects.filter((p) => p.status === 'active');
     const recentActivities = activities.slice(0, 5);
 
