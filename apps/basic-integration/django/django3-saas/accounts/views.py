@@ -1,3 +1,6 @@
+import posthog
+from posthog import new_context, identify_context, tag, capture
+
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -15,9 +18,28 @@ class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+        with new_context():
+            identify_context(str(user.id))
+            tag('username', user.username)
+            tag('is_staff', user.is_staff)
+            capture('user_logged_in', properties={
+                'login_method': 'email',
+            })
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('user_logged_out')
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -50,6 +72,15 @@ def register(request):
             user = form.save()
             login(request, user)
             messages.success(request, 'Registration successful. Welcome!')
+
+            with new_context():
+                identify_context(str(user.id))
+                tag('username', user.username)
+                tag('is_staff', user.is_staff)
+                capture('user_registered', properties={
+                    'has_company': bool(user.company_name),
+                })
+
             return redirect('dashboard:index')
     else:
         form = RegisterForm()
@@ -64,6 +95,11 @@ def settings(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Settings updated.')
+
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('profile_updated')
+
             return redirect('accounts:settings')
     else:
         form = ProfileForm(instance=request.user)
