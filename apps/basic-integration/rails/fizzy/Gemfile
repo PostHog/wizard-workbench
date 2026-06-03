@@ -34,6 +34,8 @@ gem "aws-sdk-s3", require: false
 gem "web-push"
 gem "net-http-persistent"
 gem "zip_kit"
+gem "posthog-ruby"
+gem "posthog-rails"
 gem "mittens"
 gem "useragent", bc: "useragent"
 

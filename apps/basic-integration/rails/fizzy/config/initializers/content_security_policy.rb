@@ -50,8 +50,8 @@ Rails.application.configure do
 
   config.content_security_policy do |policy|
     policy.default_src :self, *sources.(:default_src)
-    policy.script_src :self, *sources.(:script_src)
-    policy.connect_src :self, *sources.(:connect_src)
+    policy.script_src :self, "https://*.posthog.com", *sources.(:script_src)
+    policy.connect_src :self, "https://*.posthog.com", *sources.(:connect_src)
     policy.frame_src :self, *sources.(:frame_src)
 
     # Don't fight user tools: permit inline styles, data:/https: sources, and
