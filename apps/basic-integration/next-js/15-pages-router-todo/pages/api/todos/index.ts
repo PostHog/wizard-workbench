@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -29,6 +30,20 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         title: validatedData.title,
         description: validatedData.description,
         completed: validatedData.completed,
+      });
+
+      const distinctId = (req.headers['x-posthog-distinct-id'] as string) || 'anonymous';
+      const sessionId = req.headers['x-posthog-session-id'] as string | undefined;
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId,
+        event: 'server_todo_created',
+        properties: {
+          todo_id: newTodo.id,
+          todo_title: newTodo.title,
+          has_description: !!newTodo.description,
+          ...(sessionId ? { $session_id: sessionId } : {}),
+        },
       });
 
       return res.status(201).json(newTodo);
