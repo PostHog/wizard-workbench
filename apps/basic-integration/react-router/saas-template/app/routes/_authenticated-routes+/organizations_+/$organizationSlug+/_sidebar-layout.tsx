@@ -1,3 +1,5 @@
+import { usePostHog } from "@posthog/react";
+import { useEffect } from "react";
 import type { ShouldRevalidateFunctionArgs, UIMatch } from "react-router";
 import { data, href, Outlet, redirect, useMatches } from "react-router";
 import { promiseHash } from "remix-utils/promise";
@@ -70,6 +72,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
   return data(
     {
       defaultSidebarOpen,
+      posthogUser: { id: user.id, email: user.email, name: user.name },
       ...mapOnboardingUserToOrganizationLayoutProps({
         organizationSlug: params.organizationSlug,
         user,
@@ -102,7 +105,17 @@ export default function OrganizationLayoutRoute({
     navUserProps,
     notificationButtonProps,
     organizationSwitcherProps,
+    posthogUser,
   } = loaderData;
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    posthog?.identify(posthogUser.id, {
+      email: posthogUser.email,
+      name: posthogUser.name,
+    });
+  }, [posthog, posthogUser.id, posthogUser.email, posthogUser.name]);
+
   const breadcrumbs = findBreadcrumbs(
     matches as UIMatch<{ breadcrumb?: { title: string; to: string } }>[],
   );

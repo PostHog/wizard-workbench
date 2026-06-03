@@ -21,6 +21,7 @@ import {
   updateStripeSubscriptionScheduleFromAPIInDatabase,
 } from "./stripe-subscription-schedule-model.server";
 import { stripeAdmin } from "~/features/billing/stripe-admin.server";
+import { createPostHogClient } from "~/lib/posthog-server";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const ok = () => Response.json({ message: "OK" });
@@ -121,6 +122,22 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
           organizationId: organization.id,
         });
       }
+
+      const posthog = createPostHogClient();
+      posthog.capture({
+        distinctId: event.data.object.metadata.organizationId,
+        event: "checkout_completed",
+        properties: {
+          amount_total: event.data.object.amount_total,
+          currency: event.data.object.currency,
+          organization_id: event.data.object.metadata.organizationId,
+          stripe_customer_id:
+            typeof event.data.object.customer === "string"
+              ? event.data.object.customer
+              : null,
+        },
+      });
+      await posthog.shutdown().catch(() => {});
     } else {
       console.error("No organization ID found in checkout session metadata");
       prettyPrint(event);
@@ -177,6 +194,22 @@ export const handleStripeCustomerSubscriptionDeletedEvent = async (
 ) => {
   try {
     await updateStripeSubscriptionFromAPIInDatabase(event.data.object);
+
+    const organizationId = event.data.object.metadata?.organizationId;
+    const posthog = createPostHogClient();
+    posthog.capture({
+      distinctId: organizationId ?? event.data.object.id,
+      event: "subscription_deleted",
+      properties: {
+        organization_id: organizationId ?? null,
+        stripe_customer_id:
+          typeof event.data.object.customer === "string"
+            ? event.data.object.customer
+            : null,
+        stripe_subscription_id: event.data.object.id,
+      },
+    });
+    await posthog.shutdown().catch(() => {});
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);
