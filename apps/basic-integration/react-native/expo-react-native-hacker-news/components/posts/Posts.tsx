@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { FlatList, ListRenderItem, View } from "react-native";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { usePostHog } from "posthog-react-native";
 
 import { Post } from "@/components/posts/Post";
 import { Spinner } from "@/components/Spinner";
@@ -26,6 +27,7 @@ const ItemSeparatorComponent = () => (
 );
 
 export const Posts = ({ storyType }: { storyType: StoryType }) => {
+  const posthog = usePostHog();
   const storyListQuery = useQuery({
     queryKey: ["storyIds", storyType],
     queryFn: async () => {
@@ -37,7 +39,7 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
     },
   });
 
-  const { data, hasNextPage, fetchNextPage, isLoading } = useInfiniteQuery({
+  const { data, hasNextPage, fetchNextPage, isLoading, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["storyDetails", storyType],
     queryFn: async ({ pageParam = 0 }) => {
       if (!storyListQuery.data) return [];
@@ -78,7 +80,14 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
       data={posts}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage && !isFetchingNextPage) {
+          posthog.capture("more_stories_loaded", {
+            feed_type: storyType,
+            page: data?.pages.length ?? 0,
+            total_loaded: posts?.length ?? 0,
+          });
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}
