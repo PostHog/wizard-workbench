@@ -1,6 +1,12 @@
 <script lang="ts">
   import PricingModule from "./pricing_module.svelte"
   import { WebsiteName } from "./../../../config"
+  import posthog from "posthog-js"
+  import { onMount } from "svelte"
+
+  onMount(() => {
+    posthog.capture("pricing_page_viewed")
+  })
 
   type PlanFeatureRow = {
     name: string
