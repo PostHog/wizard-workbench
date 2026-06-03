@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -18,7 +19,7 @@ new #[Layout('layouts.guest')] class extends Component
     /**
      * Handle an incoming registration request.
      */
-    public function register(): void
+    public function register(PostHogService $posthog): void
     {
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -31,6 +32,11 @@ new #[Layout('layouts.guest')] class extends Component
         event(new Registered($user = User::create($validated)));
 
         Auth::login($user);
+
+        $posthog->identify($user->email, $user->getPostHogProperties());
+        $posthog->capture($user->email, 'user_registered', [
+            'signup_method' => 'form',
+        ]);
 
         $this->redirect(route('dashboard', absolute: false), navigate: false);
     }
