@@ -60,23 +60,39 @@ The workbench can run the entire Wizard stack in local development mode, with ho
 
 ### Setup
 
-Install [phrocs](https://github.com/PostHog/posthog/tree/master/tools/phrocs)
+**Starting fresh?** If you've just cloned wizard-workbench and don't already have the dependency repos (`context-mill`, `wizard`, `posthog`) cloned or their packages installed, run:
 
 ```bash
-brew tap posthog/tap && brew install phrocs
+bash fresh-setup
 ```
 
-Install dependencies in this repo:
+This installs `phrocs`, clones `context-mill`, `wizard`, and `posthog` **as siblings next to this repo** (e.g. `../context-mill`), writes your `.env` with the right paths, prompts for an optional PostHog API key, and runs `pnpm install` everywhere.
 
-```bash
+macOS only for now.
+
+Flags: 
+`--force` overwrites an existing .env, 
+`--skip-posthog` skips the (large) monorepo clone, 
+`--non-interactive` skips the API key prompt.
+
+> **Already have the repos / your own setup?** You don't need `fresh-setup` — it's for clean machines. Use the manual steps below to point `.env` at wherever your repos already live (any path works; they don't have to be siblings). `fresh-setup` is also safe to re-run: it skips repos that are already cloned and leaves an existing `.env` alone unless you pass `--force`.
+
+<details> <summary>Manual setup (if you'd rather do it yourself, or already have the repos)</summary>
+Install phrocs:
+```
+brew tap posthog/tap && brew install phrocs
+```
+Install dependencies in this repo:
+```
 pnpm install
 ```
 
-Copy and edit `.env` with your repo paths and API key:
+Copy and edit .env with your repo paths and API key:
 
-```bash
+```
 cp .env.example .env
 ```
+</details>
 
 ### Environment Variables
 
@@ -124,6 +140,47 @@ Use keyboard shortcuts in phrocs: `r` to run/restart, `s` to stop, `q` to quit.
 | `wizard-ci-evaluate-pr` | Evaluate an existing PR or local branch |
 | `mitmproxy` | HTTPS-intercepting proxy on port 8888 |
 | `wizard-run-proxy` | Run wizard with all fetch traffic routed through the proxy |
+
+---
+
+## Pointing at prod vs. local backends
+
+Four knobs control where wizard traffic lands. Two are hardwired by the workbench, two are configurable:
+
+| Knob | Default | Configurable? |
+|------|---------|---------------|
+| Wizard → MCP worker | `localhost:8787` | No — `--local-mcp` is always passed (`services/wizard-ci/utils.ts`) |
+| Wizard → context-mill skills | `localhost:8765` | No — same flag |
+| MCP worker → PostHog backend | Prod US/EU | **Yes** — `$MCP_PATH/.dev.vars` |
+| Wizard → LLM gateway | `gateway.us.posthog.com/wizard` | No — baked in at wizard build time |
+
+### Point MCP worker at prod PostHog (default)
+
+In `$MCP_PATH/.dev.vars`, keep these commented out:
+
+```
+# POSTHOG_API_BASE_URL=http://localhost:8010
+# POSTHOG_MCP_APPS_ANALYTICS_BASE_URL=http://localhost:8010
+# POSTHOG_ANALYTICS_HOST=http://localhost:8010
+```
+
+Restart the `mcp` proc.
+
+### Point MCP worker at local PostHog
+
+1. Start a local PostHog Django on `:8010` (`./bin/start` in the `posthog/` repo).
+2. Uncomment the three lines above.
+3. Restart the `mcp` proc.
+
+### Point wizard at local LLM gateway
+
+Requires a wizard code change. The gateway URL is locked at build time — `wizard/tsdown.config.ts` hard-codes `NODE_ENV=production`, and `agent-interface.ts:697` unconditionally overwrites `ANTHROPIC_BASE_URL` at runtime.
+
+To enable it:
+
+1. In `wizard/tsdown.config.ts`, change `NODE_ENV: 'production'` to `NODE_ENV: process.env.NODE_ENV ?? 'production'`.
+2. Rebuild with `NODE_ENV=development pnpm build`.
+3. Start `llm-gateway` locally on `:3308` (no workbench proc does this today — run it from the `posthog/services/llm-gateway` repo yourself).
 
 ---
 
