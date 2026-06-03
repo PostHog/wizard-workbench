@@ -6,6 +6,11 @@ import { renderProjects } from './pages/projects.js';
 import { renderProjectDetail } from './pages/project-detail.js';
 import { renderSettings } from './pages/settings.js';
 import { renderActivity } from './pages/activity.js';
+import { identifyUser } from './posthog.js';
+
+if (store.state.currentUser) {
+  identifyUser(store.state.currentUser);
+}
 
 /**
  * Auth guard — redirects to login if no user is logged in.
