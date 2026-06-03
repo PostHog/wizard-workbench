@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.dependencies import CurrentUser, DbSession, RequiredUser
 from app.models import Generation, APIKey, Activity
+from app.posthog import posthog_client
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -50,6 +51,15 @@ async def dashboard(request: Request, current_user: RequiredUser, db: DbSession)
         .order_by(Activity.created_at.desc())
         .limit(5)
         .all()
+    )
+
+    posthog_client.capture(
+        "dashboard_viewed",
+        distinct_id=str(current_user.id),
+        properties={
+            "total_generations": total_generations,
+            "credits_remaining": current_user.credits,
+        },
     )
 
     return templates.TemplateResponse(

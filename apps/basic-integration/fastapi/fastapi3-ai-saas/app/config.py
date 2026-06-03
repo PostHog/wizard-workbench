@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     session_cookie_name: str = "session_token"
     session_max_age: int = 86400 * 7  # 7 days
 
+    # PostHog
+    posthog_project_token: str = ""
+    posthog_host: str = "https://us.i.posthog.com"
+    posthog_disabled: bool = False
+
     # Credits
     default_credits: int = 100
 
