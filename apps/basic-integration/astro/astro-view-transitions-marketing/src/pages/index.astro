@@ -14,8 +14,8 @@ import Layout from '../layouts/Layout.astro';
         and automated insights. Built for teams that move fast.
       </p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Start Free Trial</a>
-        <a href="/docs" class="btn btn-secondary">Read the Docs</a>
+        <a href="#" class="btn btn-primary" id="hero-trial-btn">Start Free Trial</a>
+        <a href="/docs" class="btn btn-secondary" id="hero-docs-btn">Read the Docs</a>
       </div>
     </div>
   </section>
@@ -60,4 +60,26 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
   </section>
+
+<script is:inline>
+  function setupIndexCtas() {
+    var trialBtn = document.getElementById('hero-trial-btn');
+    var docsBtn = document.getElementById('hero-docs-btn');
+
+    trialBtn?.removeEventListener('click', trialBtn._phHandler);
+    trialBtn._phHandler = function() {
+      window.posthog?.capture('cta_clicked', { cta_text: 'Start Free Trial', cta_location: 'hero' });
+    };
+    trialBtn?.addEventListener('click', trialBtn._phHandler);
+
+    docsBtn?.removeEventListener('click', docsBtn._phHandler);
+    docsBtn._phHandler = function() {
+      window.posthog?.capture('cta_clicked', { cta_text: 'Read the Docs', cta_location: 'hero' });
+    };
+    docsBtn?.addEventListener('click', docsBtn._phHandler);
+  }
+
+  document.addEventListener('DOMContentLoaded', setupIndexCtas);
+  document.addEventListener('astro:page-load', setupIndexCtas);
+</script>
 </Layout>
