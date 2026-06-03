@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -11,6 +12,9 @@ interface ContactFormData {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  const sessionId = request.headers.get('X-PostHog-Session-Id');
+  const distinctId = request.headers.get('X-PostHog-Distinct-Id');
+
   try {
     const data: ContactFormData = await request.json();
 
@@ -45,6 +49,30 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    const posthog = getPostHogServer();
+    const resolvedDistinctId = distinctId || data.email;
+
+    posthog.capture({
+      distinctId: resolvedDistinctId,
+      event: 'contact_form_completed',
+      properties: {
+        $session_id: sessionId || undefined,
+        name: data.name,
+        email: data.email,
+        company: data.company || undefined,
+        interest: data.interest,
+      },
+    });
+
+    posthog.identify({
+      distinctId: resolvedDistinctId,
+      properties: {
+        name: data.name,
+        email: data.email,
+        company: data.company || undefined,
+      },
+    });
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -54,6 +82,17 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contact form error:', error);
+
+    const posthog = getPostHogServer();
+    posthog.capture({
+      distinctId: distinctId || 'anonymous',
+      event: 'contact_form_failed',
+      properties: {
+        $session_id: sessionId || undefined,
+        error: error instanceof Error ? error.message : 'unknown_error',
+      },
+    });
+
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
