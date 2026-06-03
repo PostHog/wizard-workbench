@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -30,6 +31,27 @@ export const POST: APIRoute = async ({ request }) => {
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    const sessionId = request.headers.get('X-PostHog-Session-Id');
+    const posthog = getPostHogServer();
+    posthog.capture({
+      distinctId: data.email,
+      event: 'contact_form_received',
+      properties: {
+        $session_id: sessionId || undefined,
+        interest: data.interest,
+        has_company: !!data.company,
+        source: 'api',
+      },
+    });
+    posthog.identify({
+      distinctId: data.email,
+      properties: {
+        name: data.name,
+        email: data.email,
+        company: data.company || undefined,
+      },
+    });
 
     // In a real app, you would:
     // 1. Send to a CRM or email service
