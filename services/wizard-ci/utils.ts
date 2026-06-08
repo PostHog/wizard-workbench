@@ -208,13 +208,13 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
   if (options.ci) {
     // Validate CI mode requirements - read from options first, then env vars, with fallback
     const region = options.region || (process.env.POSTHOG_REGION as "us" | "eu") || "us";
-    const apiKey = options.apiKey || process.env.POSTHOG_PERSONAL_API_KEY;
+    const apiKey = options.apiKey || process.env.WIZARD_API_KEY;
 
     if (!apiKey) {
       return Promise.resolve({
         success: false,
         duration: 0,
-        error: "CI mode requires POSTHOG_PERSONAL_API_KEY to be defined in .env file",
+        error: "CI mode requires WIZARD_API_KEY to be defined in .env file",
       });
     }
 

@@ -101,7 +101,7 @@ cp .env.example .env
 | `CONTEXT_MILL_PATH` | Yes | Path to your local context-mill repo (e.g., `~/development/context-mill`) |
 | `MCP_PATH` | Yes | Path to MCP service (e.g., `~/development/posthog/services/mcp`) |
 | `WIZARD_PATH` | Yes | Path to your local wizard repo (e.g., `~/development/wizard`) |
-| `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key for wizard CI mode and PR evaluator |
+| `WIZARD_API_KEY` | For CI | PostHog personal API key for wizard CI mode and PR evaluator |
 | `POSTHOG_REGION` | No | PostHog region (`us` or `eu`). Defaults to `us`. Can also be set via `--region` flag or workflow input. |
 
 Make sure you've set up and installed dependencies for all required repos.

@@ -151,14 +151,14 @@ async function main(): Promise<void> {
     }
   }
 
-  // Validate environment - uses PostHog LLM gateway with POSTHOG_PERSONAL_API_KEY
-  if (!process.env.POSTHOG_PERSONAL_API_KEY) {
-    console.error("Error: POSTHOG_PERSONAL_API_KEY environment variable is required");
+  // Validate environment - uses PostHog LLM gateway with WIZARD_API_KEY
+  if (!process.env.WIZARD_API_KEY) {
+    console.error("Error: WIZARD_API_KEY environment variable is required");
     process.exit(1);
   }
   const region = process.env.POSTHOG_REGION || "us";
   // Configure the Claude Agent SDK to use PostHog's LLM gateway
-  configureGateway(process.env.POSTHOG_PERSONAL_API_KEY, region);
+  configureGateway(process.env.WIZARD_API_KEY, region);
 
   // For local branch mode, always use test-run (can't post to GitHub without a PR)
   if (hasBranch && !args.testRun) {
