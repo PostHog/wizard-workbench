@@ -128,7 +128,7 @@ else
   # macOS sed needs the -i '' form.
   sed -i '' \
     -e "s|^CONTEXT_MILL_PATH=.*|CONTEXT_MILL_PATH=$PARENT/context-mill|" \
-    -e "s|^COMMANDMENTS_PATH=.*|COMMANDMENTS_PATH=$PARENT/context-mill/transformation-config/commandments.yaml|" \
+    -e "s|^COMMANDMENTS_PATH=.*|COMMANDMENTS_PATH=$PARENT/context-mill/context/commandments.yaml|" \
     -e "s|^MCP_PATH=.*|MCP_PATH=$PARENT/posthog/services/mcp|" \
     -e "s|^WIZARD_PATH=.*|WIZARD_PATH=$PARENT/wizard|" \
     "$ENV_FILE"
