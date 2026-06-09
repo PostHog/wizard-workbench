@@ -1,4 +1,4 @@
-# Fallback copy of context-mill/transformation-config/commandments.yaml — fetched from GitHub at runtime, this is only used if the fetch fails
+# Fallback copy of context-mill/context/commandments.yaml — fetched from GitHub at runtime, this is only used if the fetch fails
 # Tag-based rules that get folded into skill descriptions
 # Skills collect all commandments matching their tags
 

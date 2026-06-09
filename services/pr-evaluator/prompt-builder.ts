@@ -28,29 +28,50 @@ const PROMPTS_BY_COMMAND: Record<string, { rubric: string; outputFormat: string 
 
 // Commandments loading: fetch from GitHub > COMMANDMENTS_PATH env var > vendored fallback
 const VENDORED_COMMANDMENTS = join(__dirname, "prompts/commandments.yaml");
-const GITHUB_COMMANDMENTS_URL =
-  "https://raw.githubusercontent.com/PostHog/context-mill/main/transformation-config/commandments.yaml";
+// Try the post-rename `context/` path first, fall back to `transformation-config/`
+// so this works whether or not the context-mill rename has landed on main.
+const GITHUB_COMMANDMENTS_URLS = [
+  "https://raw.githubusercontent.com/PostHog/context-mill/main/context/commandments.yaml",
+  "https://raw.githubusercontent.com/PostHog/context-mill/main/transformation-config/commandments.yaml",
+];
 
 // Docs loading: fetch integration config from context-mill to get tag -> doc URL mapping
-const GITHUB_INTEGRATION_CONFIG_URL =
-  "https://raw.githubusercontent.com/PostHog/context-mill/main/transformation-config/skills/integration/config.yaml";
+const GITHUB_INTEGRATION_CONFIG_URLS = [
+  "https://raw.githubusercontent.com/PostHog/context-mill/main/context/skills/integration/config.yaml",
+  "https://raw.githubusercontent.com/PostHog/context-mill/main/transformation-config/skills/integration/config.yaml",
+];
+
+/**
+ * Fetch the first URL that returns OK. Treats network errors and non-2xx as
+ * "try next URL". Returns null only when every URL failed.
+ */
+async function fetchFirstOk(urls: string[]): Promise<{ url: string; body: string } | null> {
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      if (response.ok) {
+        return { url, body: await response.text() };
+      }
+    } catch {
+      // fall through to next URL
+    }
+  }
+  return null;
+}
 
 let _commandmentsCache: string | null = null;
 
 async function fetchCommandments(): Promise<string> {
   if (_commandmentsCache) return _commandmentsCache;
 
-  // 1. Try fetching latest from GitHub
-  try {
-    const response = await fetch(GITHUB_COMMANDMENTS_URL, { signal: AbortSignal.timeout(5000) });
-    if (response.ok) {
-      _commandmentsCache = await response.text();
-      console.log("Loaded commandments from GitHub (latest)");
-      return _commandmentsCache;
-    }
-  } catch {
-    console.warn("Warning: Could not fetch commandments from GitHub, trying local fallbacks");
+  // 1. Try fetching latest from GitHub (tries both context/ and transformation-config/)
+  const fetched = await fetchFirstOk(GITHUB_COMMANDMENTS_URLS);
+  if (fetched) {
+    _commandmentsCache = fetched.body;
+    console.log(`Loaded commandments from GitHub (latest): ${fetched.url}`);
+    return _commandmentsCache;
   }
+  console.warn("Warning: Could not fetch commandments from GitHub, trying local fallbacks");
 
   // 2. Try COMMANDMENTS_PATH env var (local context-mill checkout)
   if (process.env.COMMANDMENTS_PATH) {
@@ -107,16 +128,13 @@ let _docsConfigCache: string | null = null;
 async function fetchIntegrationConfig(): Promise<string> {
   if (_docsConfigCache) return _docsConfigCache;
 
-  try {
-    const response = await fetch(GITHUB_INTEGRATION_CONFIG_URL, { signal: AbortSignal.timeout(5000) });
-    if (response.ok) {
-      _docsConfigCache = await response.text();
-      console.log("Loaded integration config from GitHub (latest)");
-      return _docsConfigCache;
-    }
-  } catch {
-    console.warn("Warning: Could not fetch integration config from GitHub");
+  const fetched = await fetchFirstOk(GITHUB_INTEGRATION_CONFIG_URLS);
+  if (fetched) {
+    _docsConfigCache = fetched.body;
+    console.log(`Loaded integration config from GitHub (latest): ${fetched.url}`);
+    return _docsConfigCache;
   }
+  console.warn("Warning: Could not fetch integration config from GitHub");
 
   return "";
 }
