@@ -11,14 +11,14 @@ class Subscription extends CashierSubscription
     {
         static::creating(function ($subscription) {
             // Skip Stripe API call if not configured (demo mode)
-            if (CheckoutPlan::isStripeConfigured() && !str_starts_with($subscription->stripe_id, 'sub_demo_')) {
+            if (CheckoutPlan::isStripeConfigured() && ! str_starts_with($subscription->stripe_id, 'sub_demo_')) {
                 $subscription->updateAmount();
             }
         });
 
         static::updating(function ($subscription) {
             // Skip Stripe API call if not configured (demo mode)
-            if (CheckoutPlan::isStripeConfigured() && !str_starts_with($subscription->stripe_id, 'sub_demo_')) {
+            if (CheckoutPlan::isStripeConfigured() && ! str_starts_with($subscription->stripe_id, 'sub_demo_')) {
                 $subscription->updateAmount();
             }
         });

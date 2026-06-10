@@ -17,6 +17,15 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @auth
+        <script>
+            window.posthogUser = {
+                id: "{{ auth()->id() }}",
+                email: "{{ auth()->user()->email }}",
+                name: "{{ auth()->user()->name }}"
+            };
+        </script>
+        @endauth
         @livewireStyles
     </head>
     <body class="min-h-screen antialiased">

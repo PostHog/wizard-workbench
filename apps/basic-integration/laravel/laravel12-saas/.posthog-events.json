@@ -1,0 +1,64 @@
+[
+  {
+    "event": "user_signed_up",
+    "description": "Fired when a new user completes registration",
+    "properties": {
+      "method": "email | google | <provider>"
+    },
+    "files": [
+      "resources/views/livewire/pages/auth/register.blade.php",
+      "app/Http/Controllers/Auth/SocialiteController.php"
+    ]
+  },
+  {
+    "event": "user_logged_in",
+    "description": "Fired when an existing user successfully logs in",
+    "properties": {
+      "method": "email | google | <provider>"
+    },
+    "files": [
+      "resources/views/livewire/pages/auth/login.blade.php",
+      "app/Http/Controllers/Auth/SocialiteController.php"
+    ]
+  },
+  {
+    "event": "subscription_started",
+    "description": "Fired when a user initiates checkout for a subscription plan",
+    "properties": {
+      "plan_id": "integer",
+      "plan_name": "string",
+      "plan_price": "number"
+    },
+    "files": [
+      "app/Http/Controllers/SubscriptionController.php"
+    ]
+  },
+  {
+    "event": "subscription_plan_changed",
+    "description": "Fired when an existing subscriber swaps to a different plan",
+    "properties": {
+      "plan_id": "integer",
+      "plan_name": "string",
+      "plan_price": "number"
+    },
+    "files": [
+      "app/Http/Controllers/SubscriptionController.php"
+    ]
+  },
+  {
+    "event": "profile_updated",
+    "description": "Fired when a user saves changes to their profile information",
+    "properties": {},
+    "files": [
+      "resources/views/livewire/profile/update-profile-information-form.blade.php"
+    ]
+  },
+  {
+    "event": "account_deleted",
+    "description": "Fired when a user permanently deletes their account",
+    "properties": {},
+    "files": [
+      "resources/views/livewire/profile/delete-user-form.blade.php"
+    ]
+  }
+]

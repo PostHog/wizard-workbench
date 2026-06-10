@@ -1,9 +1,11 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
+use PostHog\PostHog;
 
 new #[Layout('layouts.guest')] class extends Component
 {
@@ -19,6 +21,12 @@ new #[Layout('layouts.guest')] class extends Component
         $this->form->authenticate();
 
         Session::regenerate();
+
+        PostHog::capture([
+            'distinctId' => (string) Auth::id(),
+            'event' => 'user_logged_in',
+            'properties' => ['method' => 'email'],
+        ]);
 
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: false);
     }

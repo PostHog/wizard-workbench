@@ -16,6 +16,7 @@
         "vite": "^6.3.2"
     },
     "dependencies": {
-        "alpinejs": "^3.14.1"
+        "alpinejs": "^3.14.1",
+        "posthog-js": "^1.386.0"
     }
 }
