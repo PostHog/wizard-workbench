@@ -1,3 +1,4 @@
+import posthog from 'posthog-js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -18,6 +19,17 @@ function requireAuth(handler) {
     }
     handler(params);
   };
+}
+
+posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_KEY, {
+  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+  defaults: '2026-01-30',
+});
+
+// If a user is already logged in on page load, re-identify them
+if (store.state.currentUser) {
+  const user = store.state.currentUser;
+  posthog.identify(user.id, { name: user.name, email: user.email, role: user.role });
 }
 
 // --- Routes ---
