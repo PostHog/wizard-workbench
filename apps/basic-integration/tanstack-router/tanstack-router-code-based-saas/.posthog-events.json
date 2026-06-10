@@ -1,0 +1,25 @@
+[
+  {
+    "event": "user_signed_in",
+    "description": "User submits the login form",
+    "properties": ["username"]
+  },
+  {
+    "event": "user_signed_out",
+    "description": "User clicks the sign-out button (from login page or profile page)"
+  },
+  {
+    "event": "invoice_created",
+    "description": "User submits the create invoice form",
+    "properties": ["title"]
+  },
+  {
+    "event": "invoice_updated",
+    "description": "User submits the save-changes form on an existing invoice",
+    "properties": ["invoice_id"]
+  },
+  {
+    "event": "upgrade_clicked",
+    "description": "User clicks the Upgrade button on the profile/account page"
+  }
+]

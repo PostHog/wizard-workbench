@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import * as React from 'react'
 import ReactDOM from 'react-dom/client'
+import './posthog'
+import posthog from 'posthog-js'
 import {
   ErrorComponent,
   Link,
@@ -453,8 +455,10 @@ function InvoicesIndexComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            const title = formData.get('title') as string
+            posthog.capture('invoice_created', { title })
             createInvoiceMutation.mutate({
-              title: formData.get('title') as string,
+              title,
               body: formData.get('body') as string,
             })
           }}
@@ -578,6 +582,7 @@ function InvoiceComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            posthog.capture('invoice_updated', { invoice_id: invoice.id })
             updateInvoiceMutation.mutate({
               id: invoice.id,
               title: formData.get('title') as string,
@@ -1049,7 +1054,10 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={() => posthog.capture('upgrade_clicked')}
+            >
               Upgrade
             </button>
           </div>
@@ -1067,6 +1075,7 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                posthog.capture('user_signed_out')
                 auth.logout()
                 router.invalidate()
               }}
@@ -1103,6 +1112,7 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog.capture('user_signed_in', { username })
     router.invalidate()
   }
 
@@ -1138,6 +1148,7 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('user_signed_out')
                 auth.logout()
                 router.invalidate()
               }}
@@ -1244,6 +1255,13 @@ const routeTree = rootRoute.addChildren([
   pathlessLayoutRoute.addChildren([pathlessLayoutARoute, pathlessLayoutBRoute]),
 ])
 
+function GlobalErrorComponent({ error }: { error: Error }) {
+  React.useEffect(() => {
+    posthog.captureException(error)
+  }, [error])
+  return <ErrorComponent error={error} />
+}
+
 const router = createRouter({
   routeTree,
   defaultPendingComponent: () => (
@@ -1251,7 +1269,7 @@ const router = createRouter({
       <Spinner />
     </div>
   ),
-  defaultErrorComponent: ({ error }) => <ErrorComponent error={error} />,
+  defaultErrorComponent: GlobalErrorComponent,
   context: {
     auth: undefined!, // We'll inject this when we render
   },
@@ -1271,10 +1289,12 @@ const auth: Auth = {
   login: (username: string) => {
     auth.username = username
     auth.status = 'loggedIn'
+    posthog.identify(username, { name: username })
   },
   logout: () => {
     auth.status = 'loggedOut'
     auth.username = undefined
+    posthog.reset()
   },
 }
 
