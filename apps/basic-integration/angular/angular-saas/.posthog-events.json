@@ -1,0 +1,80 @@
+[
+  {
+    "event": "user_logged_in",
+    "description": "Fired when a user successfully logs in",
+    "properties": ["username"],
+    "file": "src/app/auth/login/login.component.ts"
+  },
+  {
+    "event": "user_logged_out",
+    "description": "Fired when a user successfully logs out",
+    "properties": [],
+    "file": "src/app/auth/logout/logout.component.ts"
+  },
+  {
+    "event": "profile_updated",
+    "description": "Fired when a user saves their profile",
+    "properties": [],
+    "file": "src/app/pages/profile/profile.component.ts"
+  },
+  {
+    "event": "account_settings_saved",
+    "description": "Fired when account settings are saved",
+    "properties": [],
+    "file": "src/app/pages/settings/components/account-settings/account-settings.component.ts"
+  },
+  {
+    "event": "notification_preferences_saved",
+    "description": "Fired when notification preferences are saved",
+    "properties": ["productUpdates", "weeklyDigest", "teamActivity", "desktop", "sound"],
+    "file": "src/app/pages/settings/components/notification-settings/notification-settings.component.ts"
+  },
+  {
+    "event": "preferences_saved",
+    "description": "Fired when display preferences are saved",
+    "properties": ["isDarkMode", "isCompactView", "dateFormat", "timezone", "landingPage"],
+    "file": "src/app/pages/settings/components/preferences-settings/preferences-settings.component.ts"
+  },
+  {
+    "event": "tfa_toggled",
+    "description": "Fired when two-factor authentication is enabled or disabled",
+    "properties": ["enabled"],
+    "file": "src/app/pages/settings/components/security-settings/security-settings.component.ts"
+  },
+  {
+    "event": "session_revoked",
+    "description": "Fired when a specific active session is revoked",
+    "properties": ["device"],
+    "file": "src/app/pages/settings/components/security-settings/security-settings.component.ts"
+  },
+  {
+    "event": "all_sessions_revoked",
+    "description": "Fired when all other sessions are revoked at once",
+    "properties": [],
+    "file": "src/app/pages/settings/components/security-settings/security-settings.component.ts"
+  },
+  {
+    "event": "user_viewed",
+    "description": "Fired when a user row is clicked in the users list",
+    "properties": [],
+    "file": "src/app/pages/users/list/list.component.ts"
+  },
+  {
+    "event": "project_created",
+    "description": "Fired when a new project is created via the modal",
+    "properties": ["name", "status"],
+    "file": "src/app/shared/components/create-project-modal/create-project-modal.component.ts"
+  },
+  {
+    "event": "team_member_added",
+    "description": "Fired when a new team member is added via the modal",
+    "properties": ["role"],
+    "file": "src/app/shared/components/add-member-modal/add-member-modal.component.ts"
+  },
+  {
+    "event": "quick_action_clicked",
+    "description": "Fired when any quick action button is clicked on the dashboard",
+    "properties": ["action"],
+    "file": "src/app/pages/dashboard/components/quick-actions/quick-actions.component.ts"
+  }
+]

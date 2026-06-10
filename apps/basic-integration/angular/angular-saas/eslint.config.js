@@ -60,7 +60,6 @@ module.exports = tseslint.config(
       '@angular-eslint/no-output-native': 'error',
       '@angular-eslint/no-inputs-metadata-property': 'error',
       '@angular-eslint/no-outputs-metadata-property': 'error',
-      '@angular-eslint/no-host-metadata-property': 'error',
       '@angular-eslint/no-input-rename': 'error',
       '@angular-eslint/no-output-rename': 'error',
       '@angular-eslint/use-lifecycle-interface': 'error',

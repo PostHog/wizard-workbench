@@ -3,6 +3,7 @@ import { Observable, of } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PostHogService } from '@core/services';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,10 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  constructor(
+    private readonly _credentialsService: CredentialsService,
+    private readonly _posthog: PostHogService,
+  ) {}
 
   /**
    * Authenticates the user.
@@ -42,6 +46,12 @@ export class AuthenticationService {
       lastName,
     });
     this._credentialsService.setCredentials(credentials, context.remember);
+    this._posthog.identify(credentials.id, {
+      username: credentials.username,
+      email: credentials.email,
+      firstName: credentials.firstName,
+      lastName: credentials.lastName,
+    });
 
     return of(credentials);
   }

@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../modal/modal.component';
 import { DataService } from '@app/@core/services/data.service';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { PostHogService } from '@app/@core/services';
 
 interface MemberForm {
   name: string;
@@ -159,6 +160,7 @@ interface MemberForm {
 export class AddMemberModalComponent {
   private readonly dataService = inject(DataService);
   private readonly toast = inject(HotToastService);
+  private readonly _posthog = inject(PostHogService);
 
   isOpen = input(false);
   close = output<void>();
@@ -198,6 +200,7 @@ export class AddMemberModalComponent {
       avatar: current.avatar,
     });
 
+    this._posthog.capture('team_member_added', { role: current.role });
     this.toast.success(`${current.name} added to the team!`);
     this.resetForm();
     this.created.emit();
