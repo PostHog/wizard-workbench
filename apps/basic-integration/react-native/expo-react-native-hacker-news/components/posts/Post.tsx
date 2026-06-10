@@ -9,6 +9,7 @@ import {
 import { useMemo } from "react";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { usePostHog } from "posthog-react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link2, MessageSquareText } from "lucide-react-native";
 
@@ -17,6 +18,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export const Post = ({ id, title, url, score, text, kids }: Item) => {
   const QC = useQueryClient();
+  const posthog = usePostHog();
 
   const isExternal = useMemo(() => {
     return text === undefined;
@@ -34,8 +36,22 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
-          if (isExternal) Linking.openURL(url);
-          else await navigateToDetails();
+          if (isExternal) {
+            posthog.capture("external_link_opened", {
+              item_id: id,
+              url,
+              title,
+            });
+            Linking.openURL(url);
+          } else {
+            posthog.capture("story_clicked", {
+              item_id: id,
+              title,
+              score,
+              comment_count: kids?.length ?? 0,
+            });
+            await navigateToDetails();
+          }
         }}
       >
         <Text style={{ color: "black", fontSize: 20, fontWeight: 500 }}>
@@ -46,6 +62,11 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog.capture("story_upvoted", {
+              item_id: id,
+              title,
+              score,
+            });
             await Haptics.notificationAsync(
               Haptics.NotificationFeedbackType.Success
             );
@@ -66,6 +87,11 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog.capture("comments_button_tapped", {
+              item_id: id,
+              title,
+              comment_count: kids?.length ?? 0,
+            });
             await navigateToDetails();
           }}
         >
