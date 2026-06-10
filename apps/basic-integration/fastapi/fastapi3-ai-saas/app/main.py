@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.database import init_db
+from app.posthog import posthog
 from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
 
 settings = get_settings()
@@ -21,6 +22,9 @@ async def lifespan(app: FastAPI):
     init_db()
 
     yield
+
+    # Shutdown PostHog
+    posthog.shutdown()
 
 
 app = FastAPI(
@@ -36,6 +40,15 @@ app.include_router(pages.router)
 app.include_router(api_keys.router)
 app.include_router(usage.router)
 app.include_router(settings_router.router)
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Forward all unhandled exceptions to PostHog error tracking."""
+    posthog.capture_exception(exc, distinct_id="server")
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"error": "Internal server error"}, status_code=500)
+    return templates.TemplateResponse(request, "500.html", status_code=500)
 
 
 @app.exception_handler(404)

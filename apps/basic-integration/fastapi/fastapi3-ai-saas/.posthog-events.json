@@ -1,0 +1,50 @@
+[
+  {
+    "event": "user_signed_up",
+    "description": "Fires when a new user completes registration",
+    "properties": ["credits"],
+    "file": "app/routers/auth.py"
+  },
+  {
+    "event": "user_logged_in",
+    "description": "Fires when an existing user authenticates successfully",
+    "properties": [],
+    "file": "app/routers/auth.py"
+  },
+  {
+    "event": "content_generated",
+    "description": "Fires when AI content is successfully generated",
+    "properties": ["generation_type", "credits_used", "credits_remaining"],
+    "file": "app/routers/generate.py"
+  },
+  {
+    "event": "generation_failed",
+    "description": "Fires when content generation fails (e.g. insufficient credits)",
+    "properties": ["reason", "generation_type", "credits_needed", "credits_available"],
+    "file": "app/routers/generate.py"
+  },
+  {
+    "event": "api_key_created",
+    "description": "Fires when a user creates a new API key",
+    "properties": ["key_name"],
+    "file": "app/routers/api_keys.py"
+  },
+  {
+    "event": "api_key_revoked",
+    "description": "Fires when a user deactivates an API key",
+    "properties": ["key_id"],
+    "file": "app/routers/api_keys.py"
+  },
+  {
+    "event": "settings_updated",
+    "description": "Fires when a user successfully updates their profile settings",
+    "properties": ["field"],
+    "file": "app/routers/settings.py"
+  },
+  {
+    "event": "password_changed",
+    "description": "Fires when a user successfully changes their password",
+    "properties": [],
+    "file": "app/routers/settings.py"
+  }
+]
