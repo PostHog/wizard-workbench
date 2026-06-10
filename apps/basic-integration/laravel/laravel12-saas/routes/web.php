@@ -3,11 +3,20 @@
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ThemeController;
+use App\Services\PostHogService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'marketing.home')->name('home');
 Route::view('/features', 'marketing.features')->name('features');
-Route::view('/pricing', 'marketing.pricing')->name('pricing');
+Route::get('/pricing', function (Request $request, PostHogService $posthog) {
+    // PostHog: Track pricing page view (top of subscription funnel)
+    if ($request->user()) {
+        $posthog->capture($request->user()->email, 'pricing_viewed');
+    }
+
+    return view('marketing.pricing');
+})->name('pricing');
 
 Route::get('/og/default.svg', function () {
     return response()
@@ -19,9 +28,14 @@ Route::middleware(['auth'])->group(function () {   // EnsureUserIsSubscribed::cl
     Route::view('/dashboard', 'dashboard')->name('dashboard');
 });
 
-Route::view('settings', 'profile')
-    ->middleware(['auth'])
-    ->name('profile');
+Route::get('settings', function (PostHogService $posthog) {
+    $user = auth()->user();
+
+    // PostHog: Track profile/settings view
+    $posthog->capture($user->email, 'profile_viewed');
+
+    return view('profile');
+})->middleware(['auth'])->name('profile');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/subscribe', [SubscriptionController::class, 'index'])->name('subscribe');

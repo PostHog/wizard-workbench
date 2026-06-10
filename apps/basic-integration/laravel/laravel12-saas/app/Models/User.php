@@ -65,4 +65,14 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     {
         return str_ends_with($this->email, '@mvpable.com');
     }
+
+    public function getPostHogProperties(): array
+    {
+        return [
+            'email' => $this->email,
+            'name' => $this->name,
+            'provider' => $this->provider,
+            'date_joined' => $this->created_at?->toISOString(),
+        ];
+    }
 }
