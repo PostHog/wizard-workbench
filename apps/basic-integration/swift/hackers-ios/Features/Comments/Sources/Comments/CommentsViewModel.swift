@@ -184,6 +184,7 @@ public final class CommentsViewModel: @unchecked Sendable {
 
         do {
             try await voteUseCase.upvote(post: currentPost)
+            PostHogManager.shared.capture("post_voted", properties: ["post_id": currentPost.id, "post_title": currentPost.title, "source": "comments"])
         } catch {
             currentPost.upvoted = false
             currentPost.score -= 1
@@ -199,6 +200,8 @@ public final class CommentsViewModel: @unchecked Sendable {
         var updatedPost = currentPost
         updatedPost.isBookmarked = newState
         post = updatedPost
+        let event = newState ? "post_bookmarked" : "post_unbookmarked"
+        PostHogManager.shared.capture(event, properties: ["post_id": currentPost.id, "post_title": currentPost.title])
         return newState
     }
 
@@ -211,6 +214,7 @@ public final class CommentsViewModel: @unchecked Sendable {
 
         do {
             try await voteUseCase.upvote(comment: comment, for: post)
+            PostHogManager.shared.capture("comment_voted", properties: ["comment_id": comment.id, "post_id": post.id])
         } catch {
             comment.upvoted = false
             throw error

@@ -163,6 +163,7 @@ public final class FeedViewModel: @unchecked Sendable {
     public func vote(on post: Domain.Post, upvote: Bool) async throws {
         if upvote {
             try await voteUseCase.upvote(post: post)
+            PostHogManager.shared.capture("post_voted", properties: ["post_id": post.id, "post_title": post.title, "source": "feed"])
         }
         // Unvote removed; do nothing when upvote == false
     }
@@ -218,6 +219,7 @@ public final class FeedViewModel: @unchecked Sendable {
     public func changePostType(_ newType: Domain.PostType) async {
         guard postType != newType else { return }
 
+        PostHogManager.shared.capture("feed_category_changed", properties: ["category": newType.rawValue])
         postType = newType
         persistLastFeedCategoryIfNeeded()
         reset(clearPosts: true)  // Clear posts immediately to prevent flash of old data
@@ -257,6 +259,8 @@ public final class FeedViewModel: @unchecked Sendable {
     public func toggleBookmark(for post: Domain.Post) async -> Bool {
         let newState = await bookmarksController.toggle(post: post)
         await handleBookmarksUpdate(postId: post.id, isBookmarked: newState)
+        let event = newState ? "post_bookmarked" : "post_unbookmarked"
+        PostHogManager.shared.capture(event, properties: ["post_id": post.id, "post_title": post.title])
         return newState
     }
 
@@ -303,6 +307,8 @@ public final class FeedViewModel: @unchecked Sendable {
             guard let self else { return }
             do {
                 let results = try await self.searchUseCase.searchPosts(query: currentQuery)
+                if Task.isCancelled { return }
+                PostHogManager.shared.capture("post_searched", properties: ["query": trimmed])
                 if Task.isCancelled { return }
                 await self.bookmarksController.refreshBookmarks()
                 let annotated = await MainActor.run {

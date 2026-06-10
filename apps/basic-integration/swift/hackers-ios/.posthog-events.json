@@ -1,0 +1,88 @@
+{
+  "events": [
+    {
+      "name": "post_voted",
+      "description": "User upvotes a post",
+      "properties": {
+        "post_id": "Int — HN post identifier",
+        "post_title": "String — title of the post",
+        "source": "String — 'feed' or 'comments'"
+      },
+      "files": [
+        "Features/Feed/Sources/Feed/FeedViewModel.swift",
+        "Features/Comments/Sources/Comments/CommentsViewModel.swift"
+      ]
+    },
+    {
+      "name": "comment_voted",
+      "description": "User upvotes a comment",
+      "properties": {
+        "comment_id": "Int — HN comment identifier",
+        "post_id": "Int — identifier of the parent post"
+      },
+      "files": [
+        "Features/Comments/Sources/Comments/CommentsViewModel.swift"
+      ]
+    },
+    {
+      "name": "post_bookmarked",
+      "description": "User bookmarks a post",
+      "properties": {
+        "post_id": "Int — HN post identifier",
+        "post_title": "String — title of the post"
+      },
+      "files": [
+        "Features/Feed/Sources/Feed/FeedViewModel.swift",
+        "Features/Comments/Sources/Comments/CommentsViewModel.swift"
+      ]
+    },
+    {
+      "name": "post_unbookmarked",
+      "description": "User removes a bookmark from a post",
+      "properties": {
+        "post_id": "Int — HN post identifier",
+        "post_title": "String — title of the post"
+      },
+      "files": [
+        "Features/Feed/Sources/Feed/FeedViewModel.swift",
+        "Features/Comments/Sources/Comments/CommentsViewModel.swift"
+      ]
+    },
+    {
+      "name": "feed_category_changed",
+      "description": "User switches to a different feed category (Top, Ask, Show, Jobs, etc.)",
+      "properties": {
+        "category": "String — PostType rawValue e.g. 'news', 'ask', 'show', 'jobs', 'newest', 'best', 'active', 'bookmarks'"
+      },
+      "files": [
+        "Features/Feed/Sources/Feed/FeedViewModel.swift"
+      ]
+    },
+    {
+      "name": "post_searched",
+      "description": "User submits a search query (fires once per completed search, after debounce)",
+      "properties": {
+        "query": "String — search terms entered by the user"
+      },
+      "files": [
+        "Features/Feed/Sources/Feed/FeedViewModel.swift"
+      ]
+    },
+    {
+      "name": "user_logged_in",
+      "description": "User successfully authenticates with HN credentials",
+      "properties": {},
+      "files": [
+        "Features/Authentication/Sources/Authentication/LoginViewModel.swift"
+      ]
+    },
+    {
+      "name": "user_logged_out",
+      "description": "User logs out",
+      "properties": {},
+      "files": [
+        "Features/Authentication/Sources/Authentication/LoginViewModel.swift"
+      ]
+    }
+  ]
+}

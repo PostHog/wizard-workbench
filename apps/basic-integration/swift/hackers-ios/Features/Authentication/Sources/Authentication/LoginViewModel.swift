@@ -6,6 +6,7 @@
 //
 
 import Domain
+import Shared
 import SwiftUI
 
 @MainActor
@@ -61,6 +62,7 @@ public final class LoginViewModel {
             try await onLogin(username, password)
             isAuthenticated = true
             currentUsername = username
+            PostHogManager.shared.capture("user_logged_in")
             return true
         } catch {
             showAlert = true
@@ -73,5 +75,6 @@ public final class LoginViewModel {
         onLogout()
         isAuthenticated = false
         currentUsername = nil
+        PostHogManager.shared.capture("user_logged_out")
     }
 }

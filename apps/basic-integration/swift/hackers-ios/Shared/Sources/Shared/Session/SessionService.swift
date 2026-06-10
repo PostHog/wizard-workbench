@@ -64,6 +64,7 @@ public final class SessionService: AuthenticationServiceProtocol {
     public func authenticate(username: String, password: String) async throws -> AuthenticationState {
         try await authenticationUseCase.authenticate(username: username, password: password)
         user = await authenticationUseCase.getCurrentUser()
+        PostHogManager.shared.identify(username: username)
         return .authenticated
     }
 
@@ -71,7 +72,10 @@ public final class SessionService: AuthenticationServiceProtocol {
         Task { [weak self] in
             guard let self else { return }
             try? await authenticationUseCase.logout()
-            await MainActor.run { self.user = nil }
+            await MainActor.run {
+                self.user = nil
+                PostHogManager.shared.reset()
+            }
         }
     }
 
