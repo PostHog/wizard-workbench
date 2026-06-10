@@ -10,11 +10,12 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { customerPortalAction } from '@/lib/payments/actions';
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { TeamDataWithMembers, User } from '@/lib/db/schema';
 import { removeTeamMember, inviteTeamMember } from '@/app/(login)/actions';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import posthog from 'posthog-js';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -61,7 +62,11 @@ function ManageSubscription() {
               </p>
             </div>
             <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={() => posthog.capture('subscription_managed')}
+              >
                 Manage Subscription
               </Button>
             </form>
@@ -99,6 +104,12 @@ function TeamMembers() {
     ActionState,
     FormData
   >(removeTeamMember, {});
+
+  useEffect(() => {
+    if (removeState.success) {
+      posthog.capture('team_member_removed');
+    }
+  }, [removeState.success]);
 
   const getUserDisplayName = (user: Pick<User, 'id' | 'name' | 'email'>) => {
     return user.name || user.email || 'Unknown User';
@@ -194,6 +205,12 @@ function InviteTeamMember() {
     ActionState,
     FormData
   >(inviteTeamMember, {});
+
+  useEffect(() => {
+    if (inviteState.success) {
+      posthog.capture('team_member_invited');
+    }
+  }, [inviteState.success]);
 
   return (
     <Card>

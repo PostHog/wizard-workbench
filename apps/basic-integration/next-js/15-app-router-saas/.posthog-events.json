@@ -1,0 +1,49 @@
+{
+  "events": [
+    {
+      "event": "pricing_plan_selected",
+      "description": "User clicks Get Started on a pricing card",
+      "trigger": "onClick on the submit button in the pricing form",
+      "file": "app/(dashboard)/pricing/submit-button.tsx",
+      "properties": {
+        "plan_name": "Name of the pricing plan (e.g. Base, Plus)"
+      }
+    },
+    {
+      "event": "subscription_managed",
+      "description": "User clicks Manage Subscription to access the Stripe customer portal",
+      "trigger": "onClick on the Manage Subscription button",
+      "file": "app/(dashboard)/dashboard/page.tsx"
+    },
+    {
+      "event": "team_member_removed",
+      "description": "User successfully removes a team member",
+      "trigger": "useEffect on removeState.success after removeTeamMember server action",
+      "file": "app/(dashboard)/dashboard/page.tsx"
+    },
+    {
+      "event": "team_member_invited",
+      "description": "User successfully sends a team invitation",
+      "trigger": "useEffect on inviteState.success after inviteTeamMember server action",
+      "file": "app/(dashboard)/dashboard/page.tsx"
+    },
+    {
+      "event": "account_updated",
+      "description": "User successfully updates their name or email",
+      "trigger": "useEffect on state.success after updateAccount server action",
+      "file": "app/(dashboard)/dashboard/general/page.tsx"
+    },
+    {
+      "event": "password_updated",
+      "description": "User successfully updates their password",
+      "trigger": "useEffect on passwordState.success after updatePassword server action",
+      "file": "app/(dashboard)/dashboard/security/page.tsx"
+    },
+    {
+      "event": "account_deleted",
+      "description": "User confirms account deletion (captured on submit click; action redirects away)",
+      "trigger": "onClick on the Delete Account submit button",
+      "file": "app/(dashboard)/dashboard/security/page.tsx"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { updateAccount } from '@/app/(login)/actions';
 import { User } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -77,6 +78,12 @@ export default function GeneralPage() {
     updateAccount,
     {}
   );
+
+  useEffect(() => {
+    if (state.success) {
+      posthog.capture('account_updated');
+    }
+  }, [state.success]);
 
   return (
     <section className="flex-1 p-4 lg:p-8">
