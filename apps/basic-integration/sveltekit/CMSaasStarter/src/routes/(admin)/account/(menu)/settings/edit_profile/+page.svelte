@@ -22,6 +22,7 @@
   title="Edit Profile"
   successTitle="Saved Profile"
   formTarget="/account/api?/updateProfile"
+  captureEvent="profile_updated"
   fields={[
     {
       id: "fullName",

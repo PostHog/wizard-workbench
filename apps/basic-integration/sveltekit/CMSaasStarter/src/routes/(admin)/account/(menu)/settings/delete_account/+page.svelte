@@ -20,6 +20,7 @@
   title="Delete Account"
   editable={true}
   dangerous={true}
+  captureEvent="account_deleted"
   message="Deleting your account can not be undone. You are currently logged in as '{session
     ?.user?.email}'"
   saveButtonTitle="Delete Account"

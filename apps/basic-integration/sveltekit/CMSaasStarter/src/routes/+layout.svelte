@@ -3,11 +3,18 @@
   import { navigating } from "$app/stores"
   import { expoOut } from "svelte/easing"
   import { slide } from "svelte/transition"
+  import { browser } from "$app/environment"
+  import { initPostHog } from "$lib/posthog.client"
+
   interface Props {
     children?: import("svelte").Snippet
   }
 
   let { children }: Props = $props()
+
+  if (browser) {
+    initPostHog()
+  }
 </script>
 
 {#if $navigating}

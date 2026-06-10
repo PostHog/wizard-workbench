@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invalidate } from "$app/navigation"
   import { onMount } from "svelte"
+  import posthog from "posthog-js"
 
   let { data, children } = $props()
 
@@ -10,13 +11,20 @@
   })
 
   onMount(() => {
-    const { data } = supabase.auth.onAuthStateChange((event, _session) => {
+    if (data.user) {
+      posthog.identify(data.user.id, {
+        email: data.user.email,
+        name: data.profile?.full_name,
+      })
+    }
+
+    const { data: authData } = supabase.auth.onAuthStateChange((event, _session) => {
       if (_session?.expires_at !== session?.expires_at) {
         invalidate("supabase:auth")
       }
     })
 
-    return () => data.subscription.unsubscribe()
+    return () => authData.subscription.unsubscribe()
   })
 </script>
 

@@ -1,0 +1,58 @@
+{
+  "events": [
+    {
+      "event": "signed_in",
+      "description": "User successfully signs in (fires on Supabase SIGNED_IN auth state change on the sign-in page)",
+      "file": "src/routes/(marketing)/login/sign_in/+page.svelte"
+    },
+    {
+      "event": "signed_up",
+      "description": "User completes sign-up (fires on Supabase SIGNED_IN auth state change on the sign-up page, covers OAuth sign-ups)",
+      "file": "src/routes/(marketing)/login/sign_up/+page.svelte"
+    },
+    {
+      "event": "contact_form_submitted",
+      "description": "User submits the contact us form successfully",
+      "file": "src/routes/(marketing)/contact_us/+page.svelte"
+    },
+    {
+      "event": "plan_selected",
+      "description": "User clicks the CTA button on a pricing plan card",
+      "properties": {
+        "plan_id": "string — internal plan identifier",
+        "plan_name": "string — human-readable plan name"
+      },
+      "file": "src/routes/(marketing)/pricing/pricing_module.svelte"
+    },
+    {
+      "event": "profile_created",
+      "description": "User submits the create profile form for the first time after sign-up",
+      "file": "src/routes/(admin)/account/create_profile/+page.svelte"
+    },
+    {
+      "event": "signed_out",
+      "description": "User is successfully signed out (fires before posthog.reset())",
+      "file": "src/routes/(admin)/account/sign_out/+page.svelte"
+    },
+    {
+      "event": "profile_updated",
+      "description": "User saves changes to their profile (name, company, website)",
+      "file": "src/routes/(admin)/account/(menu)/settings/edit_profile/+page.svelte"
+    },
+    {
+      "event": "email_update_requested",
+      "description": "User requests an email address change (confirmation emails sent to both addresses)",
+      "file": "src/routes/(admin)/account/(menu)/settings/change_email/+page.svelte"
+    },
+    {
+      "event": "password_changed",
+      "description": "User changes their password via the change password form",
+      "file": "src/routes/(admin)/account/(menu)/settings/change_password/+page.svelte"
+    },
+    {
+      "event": "account_deleted",
+      "description": "User confirms account deletion by submitting the delete account form",
+      "file": "src/routes/(admin)/account/(menu)/settings/delete_account/+page.svelte"
+    }
+  ]
+}

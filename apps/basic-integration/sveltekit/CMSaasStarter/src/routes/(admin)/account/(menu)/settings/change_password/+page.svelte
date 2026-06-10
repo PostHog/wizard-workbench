@@ -54,6 +54,7 @@
     title="Change Password"
     editable={true}
     saveButtonTitle="Change Password"
+    captureEvent="password_changed"
     successTitle="Password Changed"
     successBody="On next sign in, use your new password."
     formTarget="/account/api?/updatePassword"

@@ -2,6 +2,7 @@
   import { enhance, applyAction } from "$app/forms"
   import { page } from "$app/stores"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import posthog from "posthog-js"
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -34,6 +35,7 @@
     editButtonTitle?: string | null
     editLink?: string | null
     saveButtonTitle?: string
+    captureEvent?: string
   }
 
   let {
@@ -48,6 +50,7 @@
     editButtonTitle = null,
     editLink = null,
     saveButtonTitle = "Save",
+    captureEvent = "",
   }: Props = $props()
 
   const handleSubmit: SubmitFunction = () => {
@@ -57,6 +60,7 @@
       await applyAction(result)
       loading = false
       if (result.type === "success") {
+        if (captureEvent) posthog.capture(captureEvent)
         showSuccess = true
       }
     }
