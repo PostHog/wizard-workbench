@@ -1,0 +1,68 @@
+[
+  {
+    "event": "user_signed_up",
+    "description": "Fires when a new user completes signup and their account is created.",
+    "file": "app/controllers/signups/completions_controller.rb",
+    "properties": ["account_id"]
+  },
+  {
+    "event": "user_logged_in",
+    "description": "Fires when a user successfully authenticates via magic link.",
+    "file": "app/controllers/sessions/magic_links_controller.rb",
+    "properties": []
+  },
+  {
+    "event": "user_logged_out",
+    "description": "Fires when a user explicitly destroys their session.",
+    "file": "app/controllers/sessions_controller.rb",
+    "properties": []
+  },
+  {
+    "event": "board_created",
+    "description": "Fires when a user creates a new board.",
+    "file": "app/controllers/boards_controller.rb",
+    "properties": ["board_id", "board_name"]
+  },
+  {
+    "event": "board_deleted",
+    "description": "Fires when a user deletes a board.",
+    "file": "app/controllers/boards_controller.rb",
+    "properties": ["board_id", "board_name"]
+  },
+  {
+    "event": "card_published",
+    "description": "Fires when a user publishes a card (primary card creation action).",
+    "file": "app/controllers/cards/publishes_controller.rb",
+    "properties": ["card_id", "board_id"]
+  },
+  {
+    "event": "card_closed",
+    "description": "Fires when a user closes/resolves a card.",
+    "file": "app/controllers/cards/closures_controller.rb",
+    "properties": ["card_id", "board_id"]
+  },
+  {
+    "event": "card_reopened",
+    "description": "Fires when a user reopens a previously closed card.",
+    "file": "app/controllers/cards/closures_controller.rb",
+    "properties": ["card_id", "board_id"]
+  },
+  {
+    "event": "comment_added",
+    "description": "Fires when a user posts a comment on a card.",
+    "file": "app/controllers/cards/comments_controller.rb",
+    "properties": ["card_id", "board_id", "comment_id"]
+  },
+  {
+    "event": "card_assigned",
+    "description": "Fires when a user assigns a card to a team member.",
+    "file": "app/controllers/cards/assignments_controller.rb",
+    "properties": ["card_id", "board_id", "assignee_id"]
+  },
+  {
+    "event": "card_triaged",
+    "description": "Fires when a user triages a card into a board column.",
+    "file": "app/controllers/cards/triages_controller.rb",
+    "properties": ["card_id", "board_id", "column_id"]
+  }
+]
