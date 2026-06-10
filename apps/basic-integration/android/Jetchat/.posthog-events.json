@@ -1,0 +1,72 @@
+[
+  {
+    "event": "user_logged_in",
+    "description": "User submits the login form",
+    "file": "app/src/main/java/com/example/compose/jetchat/NavActivity.kt",
+    "properties": []
+  },
+  {
+    "event": "user_logged_out",
+    "description": "User taps Logout in the navigation drawer",
+    "file": "app/src/main/java/com/example/compose/jetchat/NavActivity.kt",
+    "properties": []
+  },
+  {
+    "event": "chat_switched",
+    "description": "User selects a different chat channel from the navigation drawer",
+    "file": "app/src/main/java/com/example/compose/jetchat/NavActivity.kt",
+    "properties": [
+      { "name": "channel", "type": "string", "example": "composers" }
+    ]
+  },
+  {
+    "event": "profile_viewed",
+    "description": "User navigates to a profile screen from the drawer or by tapping a message avatar",
+    "file": "app/src/main/java/com/example/compose/jetchat/NavActivity.kt",
+    "properties": [
+      { "name": "user_id", "type": "string", "example": "me" }
+    ]
+  },
+  {
+    "event": "message_sent",
+    "description": "User sends a chat message (via Send button or keyboard action)",
+    "file": "app/src/main/java/com/example/compose/jetchat/conversation/UserInput.kt",
+    "properties": [
+      { "name": "message_length", "type": "number", "example": 42 }
+    ]
+  },
+  {
+    "event": "input_selector_opened",
+    "description": "User taps one of the input toolbar buttons (emoji, dm, picture, map, phone)",
+    "file": "app/src/main/java/com/example/compose/jetchat/conversation/UserInput.kt",
+    "properties": [
+      { "name": "selector", "type": "string", "example": "emoji" }
+    ]
+  },
+  {
+    "event": "voice_recording_started",
+    "description": "User long-presses the record button to begin a voice message",
+    "file": "app/src/main/java/com/example/compose/jetchat/conversation/UserInput.kt",
+    "properties": []
+  },
+  {
+    "event": "voice_recording_finished",
+    "description": "User releases the record button to complete a voice message",
+    "file": "app/src/main/java/com/example/compose/jetchat/conversation/UserInput.kt",
+    "properties": []
+  },
+  {
+    "event": "voice_recording_cancelled",
+    "description": "User swipes left while recording to cancel the voice message",
+    "file": "app/src/main/java/com/example/compose/jetchat/conversation/UserInput.kt",
+    "properties": []
+  },
+  {
+    "event": "message_link_clicked",
+    "description": "User taps a hyperlink inside a chat message bubble",
+    "file": "app/src/main/java/com/example/compose/jetchat/conversation/Conversation.kt",
+    "properties": [
+      { "name": "url", "type": "string", "example": "https://example.com" }
+    ]
+  }
+]

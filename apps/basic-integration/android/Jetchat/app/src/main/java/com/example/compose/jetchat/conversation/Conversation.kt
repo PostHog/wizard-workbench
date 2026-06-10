@@ -89,6 +89,7 @@ import androidx.compose.ui.unit.dp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
+import com.posthog.PostHog
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
 import kotlinx.coroutines.launch
@@ -526,7 +527,10 @@ fun ClickableMessage(message: Message, isUserMe: Boolean, authorClicked: (String
                 .firstOrNull()
                 ?.let { annotation ->
                     when (annotation.tag) {
-                        SymbolAnnotationType.LINK.name -> uriHandler.openUri(annotation.item)
+                        SymbolAnnotationType.LINK.name -> {
+                            PostHog.capture("message_link_clicked", properties = mapOf("url" to annotation.item))
+                            uriHandler.openUri(annotation.item)
+                        }
                         SymbolAnnotationType.PERSON.name -> authorClicked(annotation.item)
                         else -> Unit
                     }

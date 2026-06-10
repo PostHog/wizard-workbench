@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -164,6 +165,7 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                     textFieldFocusState = focused
                 },
                 onMessageSent = {
+                    PostHog.capture("message_sent", properties = mapOf("message_length" to textState.text.length))
                     onMessageSent(textState.text)
                     // Reset text field and close keyboard
                     textState = TextFieldValue()
@@ -173,9 +175,15 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                 focusState = textFieldFocusState,
             )
             UserInputSelector(
-                onSelectorChange = { currentInputSelector = it },
+                onSelectorChange = {
+                    if (it != InputSelector.NONE) {
+                        PostHog.capture("input_selector_opened", properties = mapOf("selector" to it.name.lowercase()))
+                    }
+                    currentInputSelector = it
+                },
                 sendMessageEnabled = textState.text.isNotBlank(),
                 onMessageSent = {
+                    PostHog.capture("message_sent", properties = mapOf("message_length" to textState.text.length))
                     onMessageSent(textState.text)
                     // Reset text field and close keyboard
                     textState = TextFieldValue()
@@ -446,14 +454,16 @@ private fun UserInputText(
             onStartRecording = {
                 val consumed = !isRecordingMessage
                 isRecordingMessage = true
+                if (consumed) PostHog.capture("voice_recording_started")
                 consumed
             },
             onFinishRecording = {
-                // handle end of recording
                 isRecordingMessage = false
+                PostHog.capture("voice_recording_finished")
             },
             onCancelRecording = {
                 isRecordingMessage = false
+                PostHog.capture("voice_recording_cancelled")
             },
             modifier = Modifier.fillMaxHeight(),
         )
