@@ -1,0 +1,67 @@
+[
+  {
+    "event": "user_registered",
+    "description": "User successfully completed registration and was logged in",
+    "file": "accounts/views.py"
+  },
+  {
+    "event": "profile_updated",
+    "description": "User saved changes to their profile/settings",
+    "file": "accounts/views.py"
+  },
+  {
+    "event": "password_reset_requested",
+    "description": "User submitted the password reset form",
+    "file": "accounts/views.py"
+  },
+  {
+    "event": "checkout_started",
+    "description": "User initiated a Stripe checkout session for a plan",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "subscription_created",
+    "description": "Subscription created directly (demo mode) after plan selection",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "plan_changed",
+    "description": "User successfully changed their subscription plan",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "subscription_canceled",
+    "description": "User canceled their active subscription",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "billing_portal_accessed",
+    "description": "User was redirected to the Stripe billing portal",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "checkout_completed",
+    "description": "Stripe webhook confirmed a successful checkout session",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "payment_failed",
+    "description": "Stripe webhook reported a failed invoice payment",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "project_created",
+    "description": "User created a new project",
+    "file": "dashboard/views.py"
+  },
+  {
+    "event": "project_updated",
+    "description": "User saved edits to an existing project",
+    "file": "dashboard/views.py"
+  },
+  {
+    "event": "project_deleted",
+    "description": "User deleted a project",
+    "file": "dashboard/views.py"
+  }
+]

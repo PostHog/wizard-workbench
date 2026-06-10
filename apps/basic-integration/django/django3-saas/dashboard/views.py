@@ -5,6 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Project, ActivityLog
 from .forms import ProjectForm
+from config.posthog import posthog
 
 
 @login_required
@@ -60,6 +61,9 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            posthog.capture(str(request.user.id), 'project_created', {
+                'project_name': project.name,
+            })
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +87,9 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            posthog.capture(str(request.user.id), 'project_updated', {
+                'project_name': project.name,
+            })
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -105,6 +112,9 @@ def delete_project(request, pk):
             description=f'Deleted project: {name}'
         )
 
+        posthog.capture(str(request.user.id), 'project_deleted', {
+            'project_name': name,
+        })
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
 
