@@ -11,6 +11,7 @@ definePageMeta({
 const route = useRoute()
 const type = computed(() => route.params.type as MediaType || 'movie')
 const id = computed(() => route.params.id as string)
+const posthog = usePostHog()
 
 const [item, recommendations] = await Promise.all([
   getMedia(type.value, id.value),
@@ -24,6 +25,14 @@ useHead({
     { name: 'description', content: item.overview },
     { property: 'og:image', content: $img(`/tmdb${item.poster_path}`, { width: 1200, height: 630 }) },
   ],
+})
+
+onMounted(() => {
+  posthog?.capture('media_detail_viewed', {
+    media_type: type.value,
+    media_id: id.value,
+    media_title: item.name || item.title,
+  })
 })
 </script>
 

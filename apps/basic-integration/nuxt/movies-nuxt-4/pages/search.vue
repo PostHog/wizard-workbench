@@ -10,6 +10,7 @@ const router = useRouter()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
+const posthog = usePostHog()
 
 const items = ref<Media[]>([])
 const currentSearch = ref(input.value)
@@ -31,6 +32,12 @@ async function fetch(page: number) {
     const data = await searchShows(currentSearch.value, page)
     count.value = data.total_results ?? count.value
     items.value.push(...data.results)
+    if (page === 1) {
+      posthog?.capture('media_searched', {
+        query: currentSearch.value,
+        result_count: data.total_results ?? 0,
+      })
+    }
   }
   catch (e: any) {
     error.value = e
