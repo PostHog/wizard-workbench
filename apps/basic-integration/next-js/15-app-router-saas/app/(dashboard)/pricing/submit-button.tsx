@@ -3,9 +3,11 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
+import { usePostHog } from 'posthog-js/react';
 
 export function SubmitButton() {
   const { pending } = useFormStatus();
+  const posthog = usePostHog();
 
   return (
     <Button
@@ -13,6 +15,7 @@ export function SubmitButton() {
       disabled={pending}
       variant="outline"
       className="w-full rounded-full"
+      onClick={() => posthog.capture('checkout_started')}
     >
       {pending ? (
         <>

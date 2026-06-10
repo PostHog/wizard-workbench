@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
+import { PostHogProvider } from '@/components/providers';
 
 export const metadata: Metadata = {
   title: 'Next.js SaaS Starter',
@@ -15,29 +16,31 @@ export const viewport: Viewport = {
 
 const manrope = Manrope({ subsets: ['latin'] });
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getUser();
+
   return (
     <html
       lang="en"
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
     >
       <body className="min-h-[100dvh] bg-gray-50">
-        <SWRConfig
-          value={{
-            fallback: {
-              // We do NOT await here
-              // Only components that read this data will suspend
-              '/api/user': getUser(),
-              '/api/team': getTeamForUser()
-            }
-          }}
-        >
-          {children}
-        </SWRConfig>
+        <PostHogProvider user={user}>
+          <SWRConfig
+            value={{
+              fallback: {
+                '/api/user': user,
+                '/api/team': getTeamForUser()
+              }
+            }}
+          >
+            {children}
+          </SWRConfig>
+        </PostHogProvider>
       </body>
     </html>
   );

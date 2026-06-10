@@ -10,6 +10,7 @@ import { updateAccount } from '@/app/(login)/actions';
 import { User } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import { usePostHog } from 'posthog-js/react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -77,6 +78,7 @@ export default function GeneralPage() {
     updateAccount,
     {}
   );
+  const posthog = usePostHog();
 
   return (
     <section className="flex-1 p-4 lg:p-8">
@@ -89,7 +91,11 @@ export default function GeneralPage() {
           <CardTitle>Account Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" action={formAction}>
+          <form
+            className="space-y-4"
+            action={formAction}
+            onSubmit={() => posthog.capture('account_updated')}
+          >
             <Suspense fallback={<AccountForm state={state} />}>
               <AccountFormWithData state={state} />
             </Suspense>

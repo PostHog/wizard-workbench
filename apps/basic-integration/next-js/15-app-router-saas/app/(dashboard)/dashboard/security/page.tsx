@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Lock, Trash2, Loader2 } from 'lucide-react';
 import { useActionState } from 'react';
 import { updatePassword, deleteAccount } from '@/app/(login)/actions';
+import { usePostHog } from 'posthog-js/react';
 
 type PasswordState = {
   currentPassword?: string;
@@ -33,6 +34,8 @@ export default function SecurityPage() {
     FormData
   >(deleteAccount, {});
 
+  const posthog = usePostHog();
+
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium bold text-gray-900 mb-6">
@@ -43,7 +46,11 @@ export default function SecurityPage() {
           <CardTitle>Password</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" action={passwordAction}>
+          <form
+            className="space-y-4"
+            action={passwordAction}
+            onSubmit={() => posthog.capture('password_updated')}
+          >
             <div>
               <Label htmlFor="current-password" className="mb-2">
                 Current Password
@@ -123,7 +130,11 @@ export default function SecurityPage() {
           <p className="text-sm text-gray-500 mb-4">
             Account deletion is non-reversable. Please proceed with caution.
           </p>
-          <form action={deleteAction} className="space-y-4">
+          <form
+            action={deleteAction}
+            className="space-y-4"
+            onSubmit={() => posthog.capture('account_deleted')}
+          >
             <div>
               <Label htmlFor="delete-password" className="mb-2">
                 Confirm Password

@@ -1,0 +1,47 @@
+[
+  {
+    "event": "user_signed_in",
+    "description": "User submits the sign in form",
+    "location": "app/(login)/login.tsx"
+  },
+  {
+    "event": "user_signed_up",
+    "description": "User submits the sign up form",
+    "location": "app/(login)/login.tsx"
+  },
+  {
+    "event": "user_signed_out",
+    "description": "User clicks sign out from the header dropdown menu",
+    "location": "app/(dashboard)/layout.tsx"
+  },
+  {
+    "event": "checkout_started",
+    "description": "User clicks Get Started on a pricing plan to begin Stripe checkout",
+    "location": "app/(dashboard)/pricing/submit-button.tsx"
+  },
+  {
+    "event": "account_updated",
+    "description": "User submits account information changes (name or email)",
+    "location": "app/(dashboard)/dashboard/general/page.tsx"
+  },
+  {
+    "event": "password_updated",
+    "description": "User submits a password change",
+    "location": "app/(dashboard)/dashboard/security/page.tsx"
+  },
+  {
+    "event": "account_deleted",
+    "description": "User submits account deletion with password confirmation",
+    "location": "app/(dashboard)/dashboard/security/page.tsx"
+  },
+  {
+    "event": "team_member_invited",
+    "description": "User submits a team member invitation with email and role",
+    "location": "app/(dashboard)/dashboard/page.tsx"
+  },
+  {
+    "event": "team_member_removed",
+    "description": "User removes a team member from the team",
+    "location": "app/(dashboard)/dashboard/page.tsx"
+  }
+]

@@ -15,6 +15,7 @@ import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
+import { usePostHog } from 'posthog-js/react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -22,8 +23,11 @@ function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const router = useRouter();
+  const posthog = usePostHog();
 
   async function handleSignOut() {
+    posthog.capture('user_signed_out');
+    posthog.reset();
     await signOut();
     mutate('/api/user');
     router.push('/');
