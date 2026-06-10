@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { View } from "react-native";
 import { Stack } from "expo-router";
 import {
@@ -7,11 +8,16 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { Colors } from "@/constants/Colors";
+import { initPostHog } from "@/lib/posthog";
 
 const queryClient = new QueryClient();
 
 export default function Layout() {
   const safeArea = useSafeAreaInsets();
+
+  useEffect(() => {
+    initPostHog();
+  }, []);
 
   return (
     <>

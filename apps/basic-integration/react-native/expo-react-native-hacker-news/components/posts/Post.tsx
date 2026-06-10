@@ -14,6 +14,7 @@ import { Link2, MessageSquareText } from "lucide-react-native";
 
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { capture } from "@/lib/posthog";
 
 export const Post = ({ id, title, url, score, text, kids }: Item) => {
   const QC = useQueryClient();
@@ -27,6 +28,7 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
       queryKey: getItemDetailsQueryKey(id),
       queryFn: getItemQueryFn,
     });
+    capture('post_opened', { item_id: id, title, score, comment_count: kids?.length ?? 0 });
     router.push({ pathname: `../${id.toString()}` });
   };
 
@@ -34,8 +36,10 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
-          if (isExternal) Linking.openURL(url);
-          else await navigateToDetails();
+          if (isExternal) {
+            capture('external_link_opened', { item_id: id, url, host: new URL(url).host });
+            Linking.openURL(url);
+          } else await navigateToDetails();
         }}
       >
         <Text style={{ color: "black", fontSize: 20, fontWeight: 500 }}>
@@ -46,6 +50,7 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            capture('post_upvoted', { item_id: id, score });
             await Haptics.notificationAsync(
               Haptics.NotificationFeedbackType.Success
             );
@@ -66,6 +71,7 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            capture('comments_opened', { item_id: id, comment_count: kids?.length ?? 0 });
             await navigateToDetails();
           }}
         >

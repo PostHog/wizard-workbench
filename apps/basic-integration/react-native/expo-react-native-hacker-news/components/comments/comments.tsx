@@ -9,6 +9,7 @@ import { Comment } from "@/components/comments/comment";
 import type { Item } from "@/shared/types";
 import { getItemDetails } from "@/api/endpoints";
 import { ITEMS_PER_PAGE } from "@/constants/pagination";
+import { capture } from "@/lib/posthog";
 
 type Props = Pick<Item, "id" | "kids"> & {
   children: ReactNode;
@@ -18,7 +19,7 @@ export const Comments = ({ id, kids, children }: Props) => {
   const { bottom } = useSafeAreaInsets();
   const { data, hasNextPage, isLoading, isFetchingNextPage, fetchNextPage } =
     useInfiniteQuery({
-      queryKey: [id, "comments"],
+      queryKey: [id, "comments", kids],
       queryFn: async ({ pageParam = 0 }) => {
         if (!kids) return [];
 
@@ -57,7 +58,10 @@ export const Comments = ({ id, kids, children }: Props) => {
       data={comments}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage) {
+          capture('comments_load_more', { item_id: id, page: data?.pages.length ?? 0 });
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}

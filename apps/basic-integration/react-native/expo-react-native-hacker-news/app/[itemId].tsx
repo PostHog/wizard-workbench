@@ -18,25 +18,27 @@ import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { capture } from "@/lib/posthog";
 
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
 
-  if (typeof itemId !== "string") {
-    return router.back();
-  }
-
   const { data: item } = useQuery({
-    queryKey: getItemDetailsQueryKey(itemId),
+    queryKey: getItemDetailsQueryKey(typeof itemId === "string" ? itemId : ""),
     queryFn: getItemQueryFn,
+    enabled: typeof itemId === "string",
   });
 
   const { data: parentItem } = useQuery({
     queryKey: getItemDetailsQueryKey(item?.parent || 0),
     queryFn: getItemQueryFn,
-    enabled: !!item?.parent && item.type === "comment",
+    enabled: typeof itemId === "string" && !!item?.parent && item.type === "comment",
   });
+
+  if (typeof itemId !== "string") {
+    return router.back();
+  }
 
   return (
     <View style={styles.page}>
@@ -72,7 +74,10 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable onPress={() => {
+              capture('user_profile_opened', { user_id: item.by, item_id: item.id });
+              router.push(`/users/${item.by}`);
+            }}>
               <Text
                 style={{
                   fontSize: 16,
@@ -120,6 +125,7 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                capture('item_upvoted', { item_id: item.id, score: item.score ?? 0 });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -163,6 +169,7 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  capture('item_external_link_opened', { item_id: item.id, url: item.url, host: new URL(item.url).host });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +201,10 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                capture('parent_item_navigated', { from_item_id: item.id, to_item_id: parentItem.id });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{

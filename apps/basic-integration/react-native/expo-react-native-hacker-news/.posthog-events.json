@@ -1,0 +1,62 @@
+[
+  {
+    "event": "post_opened",
+    "description": "User taps a post title to open its detail/comments view",
+    "file": "components/posts/Post.tsx"
+  },
+  {
+    "event": "external_link_opened",
+    "description": "User opens an external URL from a post in the feed list",
+    "file": "components/posts/Post.tsx"
+  },
+  {
+    "event": "post_upvoted",
+    "description": "User taps the upvote button on a post in the feed list",
+    "file": "components/posts/Post.tsx"
+  },
+  {
+    "event": "comments_opened",
+    "description": "User taps the comment count button on a post to open its discussion",
+    "file": "components/posts/Post.tsx"
+  },
+  {
+    "event": "posts_load_more",
+    "description": "User scrolls to end of feed, triggering the next page of posts",
+    "file": "components/posts/Posts.tsx"
+  },
+  {
+    "event": "story_type_changed",
+    "description": "User selects a different story feed type (top, best, ask, show)",
+    "file": "components/Select.tsx"
+  },
+  {
+    "event": "user_profile_opened",
+    "description": "User taps an author's name to open their profile",
+    "file": "app/[itemId].tsx"
+  },
+  {
+    "event": "item_upvoted",
+    "description": "User taps the upvote button on an item's detail page",
+    "file": "app/[itemId].tsx"
+  },
+  {
+    "event": "item_external_link_opened",
+    "description": "User opens the external URL linked from an item's detail page",
+    "file": "app/[itemId].tsx"
+  },
+  {
+    "event": "parent_item_navigated",
+    "description": "User taps the 'Commented on' card to navigate to the parent item",
+    "file": "app/[itemId].tsx"
+  },
+  {
+    "event": "comments_load_more",
+    "description": "User scrolls to end of comments, loading the next page",
+    "file": "components/comments/comments.tsx"
+  },
+  {
+    "event": "user_activities_load_more",
+    "description": "User scrolls to end of a user's activity feed, loading the next page",
+    "file": "components/posts/user-activities/UserActivities.tsx"
+  }
+]

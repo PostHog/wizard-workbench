@@ -12,6 +12,7 @@ import {
   type StoryType,
   MAP_STORY_TYPE_TO_STORY_ENDPOINTS,
 } from "@/constants/stories";
+import { capture } from "@/lib/posthog";
 
 const renderItem: ListRenderItem<Item> = ({ item }) => {
   return (
@@ -38,7 +39,7 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
   });
 
   const { data, hasNextPage, fetchNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ["storyDetails", storyType],
+    queryKey: ["storyDetails", storyType, storyListQuery.data],
     queryFn: async ({ pageParam = 0 }) => {
       if (!storyListQuery.data) return [];
 
@@ -78,7 +79,10 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
       data={posts}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage) {
+          capture('posts_load_more', { story_type: storyType, page: data?.pages.length ?? 0 });
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}

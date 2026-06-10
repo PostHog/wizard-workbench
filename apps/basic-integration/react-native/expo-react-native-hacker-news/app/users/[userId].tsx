@@ -18,14 +18,15 @@ export default function UserDetails() {
   const { userId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
 
+  const { data: user } = useQuery({
+    queryKey: getUserDetailsQueryKey(typeof userId === "string" ? userId : ""),
+    queryFn: getUserQueryFn,
+    enabled: typeof userId === "string",
+  });
+
   if (typeof userId !== "string") {
     return router.back();
   }
-
-  const { data: user } = useQuery({
-    queryKey: getUserDetailsQueryKey(userId),
-    queryFn: getUserQueryFn,
-  });
 
   return (
     <View style={styles.page}>
