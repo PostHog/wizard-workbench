@@ -1,13 +1,22 @@
 <script setup lang="ts">
+import posthog from 'posthog-js'
 import type { Person } from '~/types'
 
-defineProps<{
+const props = defineProps<{
   item: Person
 }>()
+
+function handleClick() {
+  posthog.capture('person_card_clicked', {
+    person_id: props.item.id,
+    person_name: props.item.name,
+    known_for: props.item.known_for_department,
+  })
+}
 </script>
 
 <template>
-  <NuxtLink :to="`/person/${item.id}`">
+  <NuxtLink :to="`/person/${item.id}`" @click="handleClick">
     <div
       block bg-gray4:10 p1
       class="aspect-10/16"

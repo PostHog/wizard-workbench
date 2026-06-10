@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
 
     // Demo auth: accepts any username and password
     const sanitizedUsername = username.trim()
-    
+
     setCookie(event, 'auth-user', sanitizedUsername, {
       httpOnly: false, // Allow client-side access for SSR
       secure: process.env.NODE_ENV === 'production',
@@ -25,10 +25,11 @@ export default defineEventHandler(async (event) => {
       success: true,
       user: sanitizedUsername,
     }
-  } catch (error: any) {
-    if (error.statusCode) {
+  }
+  catch (error: any) {
+    if (error.statusCode)
       throw error
-    }
+
     throw createError({
       statusCode: 500,
       message: 'An error occurred during login',

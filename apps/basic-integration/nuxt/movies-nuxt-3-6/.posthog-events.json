@@ -1,0 +1,52 @@
+[
+  {
+    "event": "login_submitted",
+    "description": "User submits the login form",
+    "file": "pages/login.vue"
+  },
+  {
+    "event": "login_failed",
+    "description": "Login attempt failed with an error",
+    "file": "pages/login.vue"
+  },
+  {
+    "event": "logout_clicked",
+    "description": "User clicks the logout button in the navbar",
+    "file": "components/NavBar.vue"
+  },
+  {
+    "event": "search_performed",
+    "description": "User executes a search query",
+    "file": "pages/search.vue"
+  },
+  {
+    "event": "trailer_played",
+    "description": "User clicks play on the hero trailer for a movie or TV show",
+    "file": "components/media/Hero.vue"
+  },
+  {
+    "event": "video_played",
+    "description": "User clicks play on a video card in the videos tab",
+    "file": "components/video/Card.vue"
+  },
+  {
+    "event": "media_tab_changed",
+    "description": "User switches between Overview, Videos, and Photos tabs on a media detail page",
+    "file": "components/media/Details.vue"
+  },
+  {
+    "event": "photo_modal_opened",
+    "description": "User opens the photo lightbox modal",
+    "file": "components/photo/Modal.vue"
+  },
+  {
+    "event": "media_card_clicked",
+    "description": "User clicks a media card to view its detail page",
+    "file": "components/media/Card.vue"
+  },
+  {
+    "event": "person_card_clicked",
+    "description": "User clicks a person card to view their profile",
+    "file": "components/person/Card.vue"
+  }
+]

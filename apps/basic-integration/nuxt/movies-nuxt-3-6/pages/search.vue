@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import posthog from 'posthog-js'
 import type { Media } from '~/types'
 
 const route = useRoute()
@@ -18,6 +19,7 @@ function search() {
   count.value = undefined
   items.value = []
   router.replace({ query: { s: input.value } })
+  posthog.capture('search_performed', { query: currentSearch.value })
 }
 
 async function fetch(page: number) {

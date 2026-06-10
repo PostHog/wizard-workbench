@@ -21,6 +21,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl,
+      posthogKey: process.env.NUXT_PUBLIC_POSTHOG_KEY,
+      posthogHost: process.env.NUXT_PUBLIC_POSTHOG_HOST,
     },
   },
   devtools: {

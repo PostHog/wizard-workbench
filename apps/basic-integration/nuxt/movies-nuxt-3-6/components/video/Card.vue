@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import posthog from 'posthog-js'
 import type { Video } from '~/types'
 
 const props = defineProps<{
@@ -7,6 +8,12 @@ const props = defineProps<{
 
 const showModal = useIframeModal()
 function play() {
+  posthog.capture('video_played', {
+    video_id: props.item.id,
+    video_name: props.item.name,
+    video_type: props.item.type,
+    video_key: props.item.key,
+  })
   return showModal(getVideoLink(props.item)!)
 }
 </script>

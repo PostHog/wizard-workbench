@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import posthog from 'posthog-js'
 import type { Media } from '~/types'
 import { formatTime } from '~/composables/utils'
 
@@ -12,8 +13,14 @@ const trailer = computed(() => getTrailer(props.item))
 
 const showModal = useIframeModal()
 function playTrailer() {
-  if (trailer.value)
+  if (trailer.value) {
+    posthog.capture('trailer_played', {
+      media_id: props.item.id,
+      media_title: props.item.title || props.item.name,
+      media_type: props.item.media_type,
+    })
     showModal(trailer.value)
+  }
 }
 
 const mounted = useMounted()
