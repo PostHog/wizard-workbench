@@ -7,6 +7,7 @@ from typing import Optional
 
 from database import UserDatabase
 from models import User
+from posthog_init import posthog
 
 
 class UserService:
@@ -35,6 +36,11 @@ class UserService:
         )
 
         if self.db.create_user(user):
+            posthog.identify(user_id, {
+                'email': email,
+                'username': username,
+                'name': full_name,
+            })
             print(f"✓ User registered: {username} ({email})")
             return user
         else:

@@ -23,6 +23,7 @@ import mimetypes
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+from posthog_init import posthog
 
 
 # Session management
@@ -274,6 +275,17 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
 
+                    posthog.identify(user.user_id, {
+                        'email': user.email,
+                        'username': user.username,
+                        'name': user.full_name,
+                    })
+
+                    posthog.capture(user.user_id, 'user_logged_in', {
+                        'email': user.email,
+                        'username': user.username,
+                    })
+
                     # Send response with session cookie
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
@@ -298,6 +310,9 @@ class SaaSHandler(BaseHTTPRequestHandler):
             if path == '/api/auth/logout':
                 session_id = self._get_session_id()
                 if session_id:
+                    current_user = self._get_current_user()
+                    if current_user:
+                        posthog.capture(current_user.user_id, 'user_logged_out')
                     self.sessions.delete_session(session_id)
 
                 self._set_headers(200, 'application/json')
@@ -332,6 +347,15 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_user(user):
+                    posthog.identify(user.user_id, {
+                        'email': user.email,
+                        'username': user.username,
+                        'name': user.full_name,
+                    })
+                    posthog.capture(current_user.user_id, 'user_created', {
+                        'new_user_email': user.email,
+                        'new_user_username': user.username,
+                    })
                     self._send_json(user.to_dict(), 201)
                 else:
                     self._send_json({'error': 'User already exists'}, 409)
@@ -370,6 +394,15 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    posthog.capture(current_user.user_id, 'meeting_created', {
+                        'meeting_id': meeting.meeting_id,
+                        'title': meeting.title,
+                        'participant_count': len(meeting.participants),
+                        'duration_minutes': meeting.duration_minutes,
+                        'action_item_count': len(meeting.action_items),
+                        'key_point_count': len(meeting.key_points),
+                        'word_count': len(meeting.transcript.split()),
+                    })
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -449,6 +482,9 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    posthog.capture(current_user.user_id, 'meeting_deleted', {
+                        'meeting_id': meeting_id,
+                    })
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
@@ -463,6 +499,17 @@ class SaaSHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         """Override to use logging module"""
         logging.info(f"{self.address_string()} - {format % args}")
+
+
+class MeetingSummarizerServer(HTTPServer):
+    def handle_error(self, request, client_address):
+        exc_type, exc_value, exc_tb = sys.exc_info()
+        if exc_value is not None:
+            try:
+                posthog.capture_exception(exc_value, distinct_id='server')
+            except Exception:
+                pass
+        super().handle_error(request, client_address)
 
 
 def setup_logging():
@@ -565,7 +612,7 @@ def main():
     port = 8000
 
     # Create and start server
-    server = HTTPServer((host, port), SaaSHandler)
+    server = MeetingSummarizerServer((host, port), SaaSHandler)
     logging.info(f"")
     logging.info(f"═══════════════════════════════════════════════════")
     logging.info(f"  AI Meeting Summarizer")

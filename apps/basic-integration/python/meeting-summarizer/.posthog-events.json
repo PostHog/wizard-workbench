@@ -1,0 +1,32 @@
+[
+  {
+    "event": "user_logged_in",
+    "description": "Fired when a user successfully authenticates",
+    "file": "server.py",
+    "properties": ["email", "username"]
+  },
+  {
+    "event": "user_logged_out",
+    "description": "Fired when a user ends their session",
+    "file": "server.py",
+    "properties": []
+  },
+  {
+    "event": "user_created",
+    "description": "Fired when an admin creates a new user account",
+    "file": "server.py",
+    "properties": ["new_user_email", "new_user_username"]
+  },
+  {
+    "event": "meeting_created",
+    "description": "Fired when a meeting transcript is submitted and summarized — the core value action",
+    "file": "server.py",
+    "properties": ["meeting_id", "title", "participant_count", "duration_minutes", "action_item_count", "key_point_count", "word_count"]
+  },
+  {
+    "event": "meeting_deleted",
+    "description": "Fired when a user permanently deletes a meeting",
+    "file": "server.py",
+    "properties": ["meeting_id"]
+  }
+]
