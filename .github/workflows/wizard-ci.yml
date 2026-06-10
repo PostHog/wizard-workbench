@@ -27,7 +27,7 @@ on:
       wizard_ref:
         description: 'Wizard repo branch/tag/sha'
         type: string
-        default: 'experiment/orchestrator-ci-flag-overrides'
+        default: 'experiment/orchestrator-ci-task-filter'
       context_mill_ref:
         description: 'Context Mill repo branch/tag/sha'
         type: string
