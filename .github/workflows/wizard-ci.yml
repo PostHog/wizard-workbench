@@ -27,11 +27,18 @@ on:
       wizard_ref:
         description: 'Wizard repo branch/tag/sha'
         type: string
-        default: 'main'
+        default: 'experiment/orchestrator-ci-flag-overrides'
       context_mill_ref:
         description: 'Context Mill repo branch/tag/sha'
         type: string
-        default: 'main'
+        default: 'experiment/orchestrator'
+      variant:
+        description: 'Wizard arm to test (orchestrator forces the wizard-orchestrator flag via CI-build-only overrides)'
+        type: choice
+        options:
+          - orchestrator
+          - linear
+        default: 'orchestrator'
       posthog_ref:
         description: 'PostHog repo branch/tag/sha (for MCP)'
         type: string
@@ -78,6 +85,7 @@ jobs:
       input_context_mill_ref: ${{ steps.resolve-inputs.outputs.context_mill_ref }}
       input_posthog_ref: ${{ steps.resolve-inputs.outputs.posthog_ref }}
       input_posthog_region: ${{ steps.resolve-inputs.outputs.posthog_region }}
+      input_variant: ${{ steps.resolve-inputs.outputs.variant }}
       input_source: ${{ steps.resolve-inputs.outputs.source }}
       input_notify_slack: ${{ steps.resolve-inputs.outputs.notify_slack }}
       # PR notification outputs (for upstream PR triggers)
@@ -98,6 +106,7 @@ jobs:
           CP_CONTEXT_MILL_REF: ${{ github.event.client_payload.context_mill_ref }}
           CP_POSTHOG_REF: ${{ github.event.client_payload.posthog_ref }}
           CP_POSTHOG_REGION: ${{ github.event.client_payload.posthog_region }}
+          CP_VARIANT: ${{ github.event.client_payload.variant }}
           CP_TRIGGER_ID: ${{ github.event.client_payload.trigger_id }}
           CP_SOURCE: ${{ github.event.client_payload.source }}
           CP_NOTIFY_SLACK: ${{ github.event.client_payload.notify_slack }}
@@ -112,6 +121,7 @@ jobs:
           INPUT_CONTEXT_MILL_REF: ${{ inputs.context_mill_ref }}
           INPUT_POSTHOG_REF: ${{ inputs.posthog_ref }}
           INPUT_POSTHOG_REGION: ${{ inputs.posthog_region }}
+          INPUT_VARIANT: ${{ inputs.variant }}
           INPUT_TRIGGER_ID: ${{ inputs.trigger_id }}
           INPUT_NOTIFY_SLACK: ${{ inputs.notify_slack }}
         run: |
@@ -123,6 +133,7 @@ jobs:
             CONTEXT_MILL_REF="main"
             POSTHOG_REF="master"
             POSTHOG_REGION="us"
+            VARIANT="orchestrator"
             TRIGGER_ID=""
             SOURCE="scheduled"
             NOTIFY_SLACK="true"
@@ -138,6 +149,7 @@ jobs:
             CONTEXT_MILL_REF="${CP_CONTEXT_MILL_REF:-main}"
             POSTHOG_REF="${CP_POSTHOG_REF:-master}"
             POSTHOG_REGION="${CP_POSTHOG_REGION:-us}"
+            VARIANT="${CP_VARIANT:-orchestrator}"
             TRIGGER_ID="${CP_TRIGGER_ID:-}"
             RAW_SOURCE="${CP_SOURCE:-dispatch}"
             case "$RAW_SOURCE" in
@@ -158,6 +170,7 @@ jobs:
             CONTEXT_MILL_REF="${INPUT_CONTEXT_MILL_REF:-main}"
             POSTHOG_REF="${INPUT_POSTHOG_REF:-master}"
             POSTHOG_REGION="${INPUT_POSTHOG_REGION:-us}"
+            VARIANT="${INPUT_VARIANT:-orchestrator}"
             TRIGGER_ID="${INPUT_TRIGGER_ID:-}"
             SOURCE="manual"
             NOTIFY_SLACK="${INPUT_NOTIFY_SLACK:-false}"
@@ -174,6 +187,7 @@ jobs:
           echo "context_mill_ref=$CONTEXT_MILL_REF" >> $GITHUB_OUTPUT
           echo "posthog_ref=$POSTHOG_REF" >> $GITHUB_OUTPUT
           echo "posthog_region=$POSTHOG_REGION" >> $GITHUB_OUTPUT
+          echo "variant=$VARIANT" >> $GITHUB_OUTPUT
           echo "trigger_id=$TRIGGER_ID" >> $GITHUB_OUTPUT
           echo "source=$SOURCE" >> $GITHUB_OUTPUT
           echo "notify_slack=$NOTIFY_SLACK" >> $GITHUB_OUTPUT
@@ -190,6 +204,7 @@ jobs:
           echo "  context_mill_ref: $CONTEXT_MILL_REF"
           echo "  posthog_ref: $POSTHOG_REF"
           echo "  posthog_region: $POSTHOG_REGION"
+          echo "  variant: $VARIANT"
           echo "  source: $SOURCE"
           echo "  notify_slack: $NOTIFY_SLACK"
           echo "  notify_pr: $NOTIFY_PR"
@@ -648,6 +663,9 @@ jobs:
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
           POSTHOG_WIZARD_YARA_REPORT: 'true'
           POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
+          # CI-build-only flag overrides: deterministic routing instead of live
+          # flags. The published wizard physically lacks this code path.
+          POSTHOG_WIZARD_CI_FLAG_OVERRIDES: ${{ needs.discover.outputs.input_variant == 'orchestrator' && '{"wizard-orchestrator":true}' || '' }}
 
       - name: Process results
         id: process-results

@@ -119,6 +119,9 @@ export function collectFileChanges(opts: CollectChangesOptions): CollectChangesR
   const seen = new Set<string>();
 
   for (const entry of entries) {
+    // The orchestrator's run-scratch area (queue.json, handoffs) lives inside
+    // the app dir but is wizard working state, not integration output.
+    if (entry.path.includes(".posthog-wizard/")) continue;
     const isDeletion = entry.index === "D" || entry.worktree === "D";
     const isRename = entry.index === "R" || entry.worktree === "R";
 
