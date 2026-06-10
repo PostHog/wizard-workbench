@@ -685,9 +685,11 @@ jobs:
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
           POSTHOG_WIZARD_YARA_REPORT: 'true'
           POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
-          # CI-build-only flag overrides: deterministic routing instead of live
-          # flags. The published wizard physically lacks this code path.
+          # CI-build-only overrides: deterministic routing instead of live
+          # flags, and CI's task policy (no dashboards in CI). The published
+          # wizard physically lacks both code paths.
           WIZARD_CI_FLAG_OVERRIDES: ${{ needs.discover.outputs.input_variant == 'orchestrator' && '{"wizard-orchestrator":true}' || '' }}
+          WIZARD_CI_EXCLUDE_TASKS: 'dashboard'
 
       - name: Process results
         id: process-results
