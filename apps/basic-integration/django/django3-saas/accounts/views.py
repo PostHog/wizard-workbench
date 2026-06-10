@@ -9,15 +9,39 @@ from django.contrib.auth.views import (
 from django.contrib import messages
 from django.urls import reverse_lazy
 from .forms import RegisterForm, LoginForm, ProfileForm
+from config.posthog import posthog
+
+
+def _identify_user(user):
+    posthog.identify(
+        distinct_id=str(user.id),
+        properties={
+            'email': user.email,
+            'name': user.get_full_name() or user.username,
+            'company_name': user.company_name,
+        },
+    )
 
 
 class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = form.get_user()
+        _identify_user(user)
+        posthog.capture(str(user.id), 'user_logged_in', {'email': user.email})
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            posthog.capture(str(request.user.id), 'user_logged_out')
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -49,6 +73,8 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            _identify_user(user)
+            posthog.capture(str(user.id), 'user_signed_up', {'email': user.email, 'username': user.username})
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +89,7 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            posthog.capture(str(request.user.id), 'profile_updated')
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:

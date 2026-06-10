@@ -1,0 +1,62 @@
+[
+  {
+    "event": "user_signed_up",
+    "description": "Fired when a new user completes registration",
+    "file": "accounts/views.py",
+    "properties": ["email", "username"]
+  },
+  {
+    "event": "user_logged_in",
+    "description": "Fired when a user successfully logs in",
+    "file": "accounts/views.py",
+    "properties": ["email"]
+  },
+  {
+    "event": "user_logged_out",
+    "description": "Fired when an authenticated user logs out",
+    "file": "accounts/views.py",
+    "properties": []
+  },
+  {
+    "event": "profile_updated",
+    "description": "Fired when a user saves changes to their profile settings",
+    "file": "accounts/views.py",
+    "properties": []
+  },
+  {
+    "event": "subscription_started",
+    "description": "Fired when a user successfully subscribes to a plan (demo mode)",
+    "file": "billing/views.py",
+    "properties": ["plan", "plan_slug", "interval", "price"]
+  },
+  {
+    "event": "plan_changed",
+    "description": "Fired when a user changes their subscription plan",
+    "file": "billing/views.py",
+    "properties": ["plan", "plan_slug", "interval"]
+  },
+  {
+    "event": "subscription_canceled",
+    "description": "Fired when a user cancels their active subscription",
+    "file": "billing/views.py",
+    "properties": ["plan", "plan_slug"]
+  },
+  {
+    "event": "project_created",
+    "description": "Fired when a user creates a new project",
+    "file": "dashboard/views.py",
+    "properties": ["project_name"]
+  },
+  {
+    "event": "project_updated",
+    "description": "Fired when a user edits an existing project",
+    "file": "dashboard/views.py",
+    "properties": ["project_name"]
+  },
+  {
+    "event": "project_deleted",
+    "description": "Fired when a user deletes a project",
+    "file": "dashboard/views.py",
+    "properties": ["project_name"]
+  }
+]
