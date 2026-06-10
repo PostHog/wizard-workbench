@@ -1,0 +1,26 @@
+[
+  {
+    "event": "todo created",
+    "trigger": "POST /api/todos succeeds (201)",
+    "properties": {
+      "todo_id": "ID of the newly created todo",
+      "title": "Title of the newly created todo"
+    }
+  },
+  {
+    "event": "todo updated",
+    "trigger": "PATCH /api/todos/:id succeeds (200)",
+    "properties": {
+      "todo_id": "ID of the updated todo",
+      "completed": "Completed status after the update",
+      "title_changed": "Whether the title was part of this update"
+    }
+  },
+  {
+    "event": "todo deleted",
+    "trigger": "DELETE /api/todos/:id succeeds (204)",
+    "properties": {
+      "todo_id": "ID of the deleted todo"
+    }
+  }
+]
