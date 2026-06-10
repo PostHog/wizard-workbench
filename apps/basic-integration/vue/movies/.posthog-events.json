@@ -1,0 +1,52 @@
+[
+  {
+    "event": "user_logged_in",
+    "description": "User successfully authenticates and is redirected to home",
+    "file": "src/composables/useAuth.ts"
+  },
+  {
+    "event": "user_logged_out",
+    "description": "User explicitly logs out of the application",
+    "file": "src/composables/useAuth.ts"
+  },
+  {
+    "event": "login_failed",
+    "description": "Login attempt fails due to validation error or exception",
+    "file": "src/views/LoginView.vue"
+  },
+  {
+    "event": "search_submitted",
+    "description": "User submits a search query for movies or TV shows",
+    "file": "src/views/SearchView.vue"
+  },
+  {
+    "event": "search_results_received",
+    "description": "Search completes and results (or zero results) are shown to the user",
+    "file": "src/views/SearchView.vue"
+  },
+  {
+    "event": "trailer_played",
+    "description": "User clicks the Watch Trailer button on a media detail page",
+    "file": "src/views/MediaDetailView.vue"
+  },
+  {
+    "event": "trailer_closed",
+    "description": "User closes the trailer modal",
+    "file": "src/views/MediaDetailView.vue"
+  },
+  {
+    "event": "media_load_failed",
+    "description": "Media detail page fails to fetch the requested item from the API",
+    "file": "src/views/MediaDetailView.vue"
+  },
+  {
+    "event": "media_card_clicked",
+    "description": "User clicks a media card to navigate to its detail page",
+    "file": "src/components/media/MediaCard.vue"
+  },
+  {
+    "event": "hero_media_clicked",
+    "description": "User clicks the hero item on a movie or TV list page",
+    "file": "src/views/MediaListView.vue"
+  }
+]

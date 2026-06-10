@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute } from 'vue-router'
 import type { MediaType } from '../types'
 import { QUERY_LIST } from '../constants/lists'
@@ -32,6 +33,14 @@ const heroItem = ref<any>({
 })
 const queries = computed(() => QUERY_LIST[mediaType.value] || [])
 
+function handleHeroClick() {
+  posthog.capture('hero_media_clicked', {
+    media_id: heroItem.value?.id,
+    media_type: mediaType.value,
+    media_title: heroItem.value?.title || heroItem.value?.name,
+  })
+}
+
 onMounted(async () => {
   try {
     if (queries.value.length > 0) {
@@ -50,7 +59,7 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen bg-black text-white">
     <div v-if="heroItem">
-      <router-link :to="`/${mediaType}/${heroItem.id}`">
+      <router-link :to="`/${mediaType}/${heroItem.id}`" @click="handleHeroClick">
         <MediaHero :item="heroItem" />
       </router-link>
     </div>

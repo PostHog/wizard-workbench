@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute } from 'vue-router'
 import type { Media } from '../types'
 import { getMedia, getRecommendations } from '../composables/useTMDB'
@@ -83,8 +84,8 @@ async function loadMedia() {
       recommendations.value = []
     }
   } catch (error) {
-    // Keep fake data if real data fails
     console.error('Error loading media:', error)
+    posthog.capture('media_load_failed', { media_type: type.value, media_id: id.value })
   } finally {
     loading.value = false
   }
@@ -102,11 +103,21 @@ watch(() => route.fullPath, () => {
 function playTrailer() {
   if (trailerUrl.value) {
     showModal.value = true
+    posthog.capture('trailer_played', {
+      media_id: item.value?.id,
+      media_type: type.value,
+      media_title: item.value?.title || item.value?.name,
+    })
   }
 }
 
 function closeModal() {
   showModal.value = false
+  posthog.capture('trailer_closed', {
+    media_id: item.value?.id,
+    media_type: type.value,
+    media_title: item.value?.title || item.value?.name,
+  })
 }
 </script>
 
