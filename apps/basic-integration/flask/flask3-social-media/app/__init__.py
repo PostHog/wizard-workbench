@@ -19,6 +19,7 @@ except ImportError:
     Redis = None
     rq = None
 from config import Config
+from app.posthog import posthog
 
 
 def get_locale():
@@ -45,6 +46,7 @@ def create_app(config_class=Config):
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
+    app.posthog = posthog
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if Elasticsearch and app.config['ELASTICSEARCH_URL'] else None
     if Redis and rq:

@@ -1,0 +1,74 @@
+[
+  {
+    "event": "user_signed_up",
+    "description": "User completes registration and account is created",
+    "file": "app/auth/routes.py",
+    "properties": ["username"]
+  },
+  {
+    "event": "user_logged_in",
+    "description": "User successfully authenticates with valid credentials",
+    "file": "app/auth/routes.py",
+    "properties": []
+  },
+  {
+    "event": "user_logged_out",
+    "description": "Authenticated user logs out",
+    "file": "app/auth/routes.py",
+    "properties": []
+  },
+  {
+    "event": "password_reset_requested",
+    "description": "User requests a password reset email (only fires when the email matches a known account)",
+    "file": "app/auth/routes.py",
+    "properties": []
+  },
+  {
+    "event": "password_reset_completed",
+    "description": "User submits a new password via a valid reset token",
+    "file": "app/auth/routes.py",
+    "properties": []
+  },
+  {
+    "event": "post_created",
+    "description": "User submits a new post on the home feed",
+    "file": "app/main/routes.py",
+    "properties": ["language"]
+  },
+  {
+    "event": "profile_updated",
+    "description": "User saves changes to their profile (username or about me)",
+    "file": "app/main/routes.py",
+    "properties": []
+  },
+  {
+    "event": "user_followed",
+    "description": "User follows another user",
+    "file": "app/main/routes.py",
+    "properties": ["followed_username"]
+  },
+  {
+    "event": "user_unfollowed",
+    "description": "User unfollows another user",
+    "file": "app/main/routes.py",
+    "properties": ["unfollowed_username"]
+  },
+  {
+    "event": "post_searched",
+    "description": "User submits a search query",
+    "file": "app/main/routes.py",
+    "properties": ["query"]
+  },
+  {
+    "event": "message_sent",
+    "description": "User sends a private message to another user",
+    "file": "app/main/routes.py",
+    "properties": ["recipient_username"]
+  },
+  {
+    "event": "posts_export_started",
+    "description": "User triggers an async export of their posts",
+    "file": "app/main/routes.py",
+    "properties": []
+  }
+]
