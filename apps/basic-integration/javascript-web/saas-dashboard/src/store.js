@@ -4,6 +4,7 @@
  * Provides a reactive-ish store: call store.save() after mutations
  * and re-render your current view.
  */
+import posthog from './posthog.js';
 
 const STORAGE_KEY = 'trackflow_data';
 
@@ -133,12 +134,18 @@ export const store = {
     state.currentUser = member;
     this.save();
     this.logActivity('logged_in', member.name);
+    posthog.identify(member.id, {
+      email: member.email,
+      name: member.name,
+      role: member.role,
+    });
     return true;
   },
 
   logout() {
     state.currentUser = null;
     this.save();
+    posthog.reset();
   },
 
   // --- Projects ---

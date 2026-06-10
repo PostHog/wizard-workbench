@@ -1,0 +1,62 @@
+[
+  {
+    "event": "user_signed_in",
+    "description": "User successfully signed in",
+    "properties": ["email"],
+    "file": "src/pages/login.js"
+  },
+  {
+    "event": "project_created",
+    "description": "User created a new project",
+    "properties": ["project_id", "project_name"],
+    "file": "src/pages/projects.js"
+  },
+  {
+    "event": "project_deleted",
+    "description": "User deleted a project",
+    "properties": ["project_id"],
+    "file": "src/pages/projects.js"
+  },
+  {
+    "event": "task_added",
+    "description": "User added a new task to a project",
+    "properties": ["project_id", "task_priority"],
+    "file": "src/pages/project-detail.js"
+  },
+  {
+    "event": "task_status_changed",
+    "description": "User moved a task to a different status column",
+    "properties": ["project_id", "task_id", "new_status"],
+    "file": "src/pages/project-detail.js"
+  },
+  {
+    "event": "task_assigned",
+    "description": "User assigned or unassigned a task",
+    "properties": ["project_id", "task_id", "assignee_id"],
+    "file": "src/pages/project-detail.js"
+  },
+  {
+    "event": "task_deleted",
+    "description": "User deleted a task",
+    "properties": ["project_id", "task_id"],
+    "file": "src/pages/project-detail.js"
+  },
+  {
+    "event": "theme_changed",
+    "description": "User changed the app theme",
+    "properties": ["theme"],
+    "file": "src/pages/settings.js"
+  },
+  {
+    "event": "notification_setting_changed",
+    "description": "User toggled an email notification setting",
+    "properties": ["setting", "enabled"],
+    "file": "src/pages/settings.js"
+  },
+  {
+    "event": "data_reset",
+    "description": "User reset all app data to defaults",
+    "properties": [],
+    "file": "src/pages/settings.js"
+  }
+]

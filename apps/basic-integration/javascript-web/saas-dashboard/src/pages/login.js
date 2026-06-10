@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { router } from '../router.js';
+import posthog from '../posthog.js';
 
 export function renderLogin() {
   const app = document.getElementById('app');
@@ -40,6 +41,7 @@ export function renderLogin() {
 
     try {
       await api.login(email);
+      posthog.capture('user_signed_in', { email });
       router.navigate('/dashboard');
     } catch (err) {
       errorEl.textContent = err.message;
