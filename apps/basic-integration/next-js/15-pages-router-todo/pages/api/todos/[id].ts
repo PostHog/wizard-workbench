@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -11,7 +12,7 @@ const updateTodoSchema = z.object({
 // GET /api/todos/[id] - Get a specific todo
 // PATCH /api/todos/[id] - Update a todo
 // DELETE /api/todos/[id] - Delete a todo
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
   const todoId = parseInt(id as string);
 
@@ -44,6 +45,20 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(404).json({ error: 'Todo not found' });
       }
 
+      const distinctId = (req.headers['x-posthog-distinct-id'] as string) || 'anonymous';
+      const sessionId = req.headers['x-posthog-session-id'] as string | undefined;
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId,
+        event: 'todo_updated_server',
+        properties: {
+          todo_id: todoId,
+          completed: updatedTodo.completed,
+          $session_id: sessionId,
+        },
+      });
+      await posthog.shutdown();
+
       return res.status(200).json(updatedTodo);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -64,6 +79,19 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!deleted) {
         return res.status(404).json({ error: 'Todo not found' });
       }
+
+      const distinctId = (req.headers['x-posthog-distinct-id'] as string) || 'anonymous';
+      const sessionId = req.headers['x-posthog-session-id'] as string | undefined;
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId,
+        event: 'todo_deleted_server',
+        properties: {
+          todo_id: todoId,
+          $session_id: sessionId,
+        },
+      });
+      await posthog.shutdown();
 
       return res.status(200).json({ message: 'Todo deleted successfully' });
     } catch (error) {
