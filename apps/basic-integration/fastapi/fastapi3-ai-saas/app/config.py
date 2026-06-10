@@ -2,11 +2,17 @@
 
 from functools import lru_cache
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # App
     app_name: str = "Acme AI"
@@ -25,9 +31,10 @@ class Settings(BaseSettings):
     # Credits
     default_credits: int = 100
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    # PostHog
+    posthog_project_token: str = "<ph_project_token>"
+    posthog_host: str = "https://us.i.posthog.com"
+    posthog_disabled: bool = False
 
 
 @lru_cache
