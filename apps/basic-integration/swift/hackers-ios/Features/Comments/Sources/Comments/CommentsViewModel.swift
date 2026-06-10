@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -162,6 +163,12 @@ public final class CommentsViewModel: @unchecked Sendable {
                 self.post?.commentsCount = commentCountExcludingStoryText
                 self.isPostLoading = false
                 self.onCommentsLoaded?(loadedComments)
+                PostHogSDK.shared.capture("post_opened", properties: [
+                    "post_id": annotatedPost.id,
+                    "post_title": annotatedPost.title,
+                    "comment_count": commentCountExcludingStoryText,
+                    "score": annotatedPost.score,
+                ])
             }
 
             return loadedComments
@@ -184,6 +191,10 @@ public final class CommentsViewModel: @unchecked Sendable {
 
         do {
             try await voteUseCase.upvote(post: currentPost)
+            PostHogSDK.shared.capture("post_upvoted", properties: [
+                "post_id": currentPost.id,
+                "post_title": currentPost.title,
+            ])
         } catch {
             currentPost.upvoted = false
             currentPost.score -= 1
