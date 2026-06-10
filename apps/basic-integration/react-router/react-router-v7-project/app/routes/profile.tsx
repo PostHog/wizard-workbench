@@ -1,6 +1,7 @@
 import { Link, Navigate } from 'react-router'
 import { useAuth } from '~/context/AuthContext'
 import { getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
+import posthog from '~/lib/posthog'
 import type { Route } from './+types/profile'
 
 export default function Profile() {
@@ -64,7 +65,7 @@ export default function Profile() {
                   View Stats
                 </Link>
                 <button
-                  onClick={logout}
+                  onClick={() => { posthog.capture('user_logged_out', { username: currentUser.username }); logout(); }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
                 >
                   Logout

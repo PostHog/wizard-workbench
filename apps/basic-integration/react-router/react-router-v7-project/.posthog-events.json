@@ -1,0 +1,44 @@
+[
+  {
+    "event": "user_logged_in",
+    "description": "User successfully logs in",
+    "properties": ["username"],
+    "file": "app/routes/login.tsx"
+  },
+  {
+    "event": "login_failed",
+    "description": "User login attempt fails due to invalid credentials",
+    "properties": ["username"],
+    "file": "app/routes/login.tsx"
+  },
+  {
+    "event": "user_signed_up",
+    "description": "User successfully creates a new account",
+    "properties": ["username", "email"],
+    "file": "app/routes/signup.tsx"
+  },
+  {
+    "event": "country_claimed",
+    "description": "User claims a country",
+    "properties": ["country", "region"],
+    "file": "app/routes/countries.tsx"
+  },
+  {
+    "event": "country_liked",
+    "description": "User likes a country",
+    "properties": ["country", "region"],
+    "file": "app/routes/countries.tsx"
+  },
+  {
+    "event": "country_visited",
+    "description": "User marks a country as visited",
+    "properties": ["country", "region"],
+    "file": "app/routes/countries.tsx"
+  },
+  {
+    "event": "user_logged_out",
+    "description": "User logs out",
+    "properties": ["username"],
+    "file": "app/routes/profile.tsx"
+  }
+]

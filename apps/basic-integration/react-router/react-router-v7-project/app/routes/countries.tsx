@@ -3,6 +3,7 @@ import type { Route } from "./+types/countries";
 import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
+import posthog from "~/lib/posthog";
 
 export async function clientLoader() {
   try {
@@ -138,6 +139,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         claimCountry(countryName);
+                        posthog.capture('country_claimed', { country: countryName, region: country.region });
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -151,6 +153,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         likeCountry(countryName);
+                        posthog.capture('country_liked', { country: countryName, region: country.region });
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -164,6 +167,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         visitCountry(countryName);
+                        posthog.capture('country_visited', { country: countryName, region: country.region });
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
