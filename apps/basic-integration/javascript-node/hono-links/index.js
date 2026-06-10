@@ -1,5 +1,11 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const app = new Hono();
 
@@ -26,12 +32,36 @@ app.get('/api/links', (c) => {
     result = result.filter((l) => l.favorite);
   }
 
+  if (tag || search || favoritesOnly === 'true') {
+    const distinctId = c.req.header('x-posthog-distinct-id') ?? 'anonymous';
+    posthog.capture({
+      distinctId,
+      event: 'links searched',
+      properties: {
+        tag: tag ?? null,
+        search: search ?? null,
+        favorites_only: favoritesOnly === 'true',
+        result_count: result.length,
+        $session_id: c.req.header('x-posthog-session-id'),
+      },
+    });
+  }
+
   return c.json({ links: result, total: result.length });
 });
 
 // Save a new link
 app.post('/api/links', async (c) => {
-  const { url, title, tags = [], description = '' } = await c.req.json();
+  let body;
+  try {
+    body = await c.req.json();
+  } catch (err) {
+    const distinctId = c.req.header('x-posthog-distinct-id') ?? 'anonymous';
+    posthog.captureException(err, distinctId);
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
+
+  const { url, title, tags = [], description = '' } = body;
 
   if (!url || !title) {
     return c.json({ error: 'url and title are required' }, 400);
@@ -47,6 +77,21 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  const distinctId = c.req.header('x-posthog-distinct-id') ?? 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'link saved',
+    properties: {
+      link_id: link.id,
+      url: link.url,
+      title: link.title,
+      tag_count: link.tags.length,
+      has_description: link.description.length > 0,
+      $session_id: c.req.header('x-posthog-session-id'),
+    },
+  });
+
   return c.json(link, 201);
 });
 
@@ -70,24 +115,49 @@ app.patch('/api/links/:id', async (c) => {
   }
 
   const body = await c.req.json();
-  if (body.url !== undefined) link.url = body.url;
-  if (body.title !== undefined) link.title = body.title;
-  if (body.description !== undefined) link.description = body.description;
-  if (body.tags !== undefined) link.tags = body.tags;
-  if (body.favorite !== undefined) link.favorite = body.favorite;
+  const updatedFields = [];
+  if (body.url !== undefined) { link.url = body.url; updatedFields.push('url'); }
+  if (body.title !== undefined) { link.title = body.title; updatedFields.push('title'); }
+  if (body.description !== undefined) { link.description = body.description; updatedFields.push('description'); }
+  if (body.tags !== undefined) { link.tags = body.tags; updatedFields.push('tags'); }
+  if (body.favorite !== undefined) { link.favorite = body.favorite; updatedFields.push('favorite'); }
+
+  const distinctId = c.req.header('x-posthog-distinct-id') ?? 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'link updated',
+    properties: {
+      link_id: link.id,
+      updated_fields: updatedFields,
+      is_favorite: link.favorite,
+      $session_id: c.req.header('x-posthog-session-id'),
+    },
+  });
 
   return c.json(link);
 });
 
 // Delete a link
 app.delete('/api/links/:id', (c) => {
-  const index = links.findIndex((l) => l.id === parseInt(c.req.param('id'), 10));
+  const id = parseInt(c.req.param('id'), 10);
+  const index = links.findIndex((l) => l.id === id);
 
   if (index === -1) {
     return c.json({ error: 'Link not found' }, 404);
   }
 
   links.splice(index, 1);
+
+  const distinctId = c.req.header('x-posthog-distinct-id') ?? 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'link deleted',
+    properties: {
+      link_id: id,
+      $session_id: c.req.header('x-posthog-session-id'),
+    },
+  });
+
   return c.body(null, 204);
 });
 
@@ -106,4 +176,14 @@ const PORT = process.env.PORT || 3002;
 
 serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Hono links API running on http://localhost:${PORT}`);
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
 });
