@@ -1,0 +1,52 @@
+[
+  {
+    "event": "cta_view_invoices_clicked",
+    "description": "User clicks the 'View Invoices' CTA button on the home page",
+    "file": "src/routes/index.tsx"
+  },
+  {
+    "event": "cta_manage_team_clicked",
+    "description": "User clicks the 'Manage Team' CTA button on the home page",
+    "file": "src/routes/index.tsx"
+  },
+  {
+    "event": "pending_invoice_clicked",
+    "description": "User clicks the 'View Invoice' link in the pending items alert on the home page",
+    "file": "src/routes/index.tsx"
+  },
+  {
+    "event": "invoice_created",
+    "description": "User successfully submits the create invoice form; includes title, amount, and due_date",
+    "file": "src/routes/posts.index.tsx"
+  },
+  {
+    "event": "invoice_create_failed",
+    "description": "Invoice creation fails with an error",
+    "file": "src/routes/posts.index.tsx"
+  },
+  {
+    "event": "invoice_selected",
+    "description": "User clicks an invoice in the sidebar list to view it; includes invoice_id, status, and amount",
+    "file": "src/routes/posts.tsx"
+  },
+  {
+    "event": "invoice_marked_paid",
+    "description": "User marks an invoice as paid; includes invoice_id, amount, and source indicating which view triggered it",
+    "file": "src/routes/posts.$postId.tsx"
+  },
+  {
+    "event": "invoice_full_details_opened",
+    "description": "User clicks 'View Full Details' to navigate to the deep invoice detail page; includes invoice_id and amount",
+    "file": "src/routes/posts.$postId.tsx"
+  },
+  {
+    "event": "invoice_pdf_download_clicked",
+    "description": "User clicks the 'Download PDF' button on the full invoice details page; includes invoice_id and amount",
+    "file": "src/routes/posts_.$postId.deep.tsx"
+  },
+  {
+    "event": "team_member_selected",
+    "description": "User clicks a team member in the sidebar list to view their profile; includes user_id and role",
+    "file": "src/routes/users.tsx"
+  }
+]

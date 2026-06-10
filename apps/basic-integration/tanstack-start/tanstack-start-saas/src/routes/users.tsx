@@ -1,4 +1,5 @@
 import { Link, Outlet, createFileRoute } from '@tanstack/react-router'
+import posthog from 'posthog-js'
 import { fetchUsers } from '../utils/users'
 
 export const Route = createFileRoute('/users')({
@@ -45,6 +46,12 @@ function UsersComponent() {
                 params={{
                   userId: String(user.id),
                 }}
+                onClick={() =>
+                  posthog.capture('team_member_selected', {
+                    user_id: user.id,
+                    role: roles[index % roles.length],
+                  })
+                }
                 className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                 activeProps={{
                   className:

@@ -12,6 +12,7 @@ import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary'
 import { NotFound } from '~/components/NotFound'
 import appCss from '~/styles/app.css?url'
 import { seo } from '~/utils/seo'
+import { initializePostHog } from '~/utils/posthog'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -73,6 +74,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  React.useEffect(() => {
+    initializePostHog()
+  }, [])
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm">

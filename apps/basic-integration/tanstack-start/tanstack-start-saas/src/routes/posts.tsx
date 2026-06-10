@@ -1,4 +1,5 @@
 import { Link, Outlet, createFileRoute } from '@tanstack/react-router'
+import posthog from 'posthog-js'
 import { fetchInvoices } from '../utils/invoices'
 
 export const Route = createFileRoute('/posts')({
@@ -34,6 +35,13 @@ function PostsComponent() {
                 key={invoice.id}
                 to="/posts/$postId"
                 params={{ postId: String(invoice.id) }}
+                onClick={() =>
+                  posthog.capture('invoice_selected', {
+                    invoice_id: invoice.id,
+                    status: invoice.status,
+                    amount: invoice.amount,
+                  })
+                }
                 className="block p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 activeProps={{
                   className:

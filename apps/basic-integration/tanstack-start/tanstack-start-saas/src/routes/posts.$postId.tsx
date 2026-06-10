@@ -1,4 +1,5 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import posthog from 'posthog-js'
 import { NotFound } from '~/components/NotFound'
 import { PostErrorComponent } from '~/components/PostError'
 import { fetchInvoice, markInvoicePaid } from '~/utils/invoices'
@@ -18,6 +19,11 @@ function PostComponent() {
 
   const handleMarkAsPaid = async () => {
     await markInvoicePaid({ data: String(invoice.id) })
+    posthog.capture('invoice_marked_paid', {
+      invoice_id: invoice.id,
+      amount: invoice.amount,
+      source: 'detail',
+    })
     router.invalidate()
   }
 
@@ -81,6 +87,12 @@ function PostComponent() {
           params={{
             postId: String(invoice.id),
           }}
+          onClick={() =>
+            posthog.capture('invoice_full_details_opened', {
+              invoice_id: invoice.id,
+              amount: invoice.amount,
+            })
+          }
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           View Full Details
