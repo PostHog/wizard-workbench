@@ -12,8 +12,11 @@ procs:
   mcp:
     # Use dev:local-resources to read from local context-mill server
     # Runs at http://localhost:8787
+    # autostart off: the MCP now runs in the posthog hogli stack (start:mcp:server,
+    # Hono runtime on :8787). Starting this wrangler-runtime pane too binds
+    # 127.0.0.1:8787 and shadows the Hono server for all localhost traffic.
     shell: "source .env && cd $MCP_PATH && pnpm build:ui-apps && pnpm run dev:local-resources"
-    autostart: true
+    autostart: false
     stop_signal: SIGTERM
 
   mcp-inspector:
