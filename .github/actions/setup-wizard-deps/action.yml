@@ -40,7 +40,11 @@ runs:
             printf '%s' "$ref"
             return
           fi
-          sha=$(git ls-remote "https://x-access-token:${APP_TOKEN}@github.com/PostHog/${repo}.git" "$ref" \
+          # Query the fully qualified refs only. A bare pattern like "master"
+          # also matches any branch whose tail is /master (e.g.
+          # refs/heads/codebeaver/master), which sorts first and wins.
+          sha=$(git ls-remote "https://x-access-token:${APP_TOKEN}@github.com/PostHog/${repo}.git" \
+            "refs/heads/$ref" "refs/tags/$ref" \
             | awk 'NR==1{print $1}')
           if [ -z "$sha" ]; then
             echo "::error::Could not resolve ref '$ref' for PostHog/$repo to a commit SHA" >&2
