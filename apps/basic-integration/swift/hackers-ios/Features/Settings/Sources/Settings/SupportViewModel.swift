@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -114,6 +115,12 @@ public final class SupportViewModel: @unchecked Sendable {
     private func handle(result: SupportPurchaseResult, for product: SupportProduct) {
         switch result {
         case .success:
+            let kindString = product.kind == .subscription ? "subscription" : "tip"
+            PostHogSDK.shared.capture("support_purchase_completed", properties: [
+                "product_id": product.id,
+                "product_kind": kindString,
+                "display_price": product.displayPrice,
+            ])
             switch product.kind {
             case .subscription:
                 alertInfo = AlertInfo(
