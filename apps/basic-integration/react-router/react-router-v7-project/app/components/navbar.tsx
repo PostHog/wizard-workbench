@@ -1,9 +1,17 @@
 import { NavLink, Link } from "react-router";
 import { useAuth } from "~/context/AuthContext";
 import { getAvatarUrl } from "~/lib/utils/auth";
+import { usePostHog } from '@posthog/react';
 
 export default function Navbar() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
+  const posthog = usePostHog();
+
+  const handleLogout = () => {
+    posthog?.capture('user_logged_out');
+    posthog?.reset();
+    logout();
+  };
 
   return (
     <header className="w-full px-8 text-gray-700 bg-white shadow-sm sticky top-0 z-50">
@@ -54,18 +62,26 @@ export default function Navbar() {
         </div>
         <div className="flex items-center gap-4">
           {isAuthenticated && user ? (
-            <Link
-              to="/profile"
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition"
-            >
-              <img
-                src={getAvatarUrl(user.username)}
-                alt={user.username}
-                className="w-8 h-8 rounded-full"
-              />
-              <span className="font-medium text-gray-700">{user.username}</span>
-              <span className="text-yellow-500">⭐ {user.totalPoints}</span>
-            </Link>
+            <>
+              <Link
+                to="/profile"
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition"
+              >
+                <img
+                  src={getAvatarUrl(user.username)}
+                  alt={user.username}
+                  className="w-8 h-8 rounded-full"
+                />
+                <span className="font-medium text-gray-700">{user.username}</span>
+                <span className="text-yellow-500">⭐ {user.totalPoints}</span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium"
+              >
+                Logout
+              </button>
+            </>
           ) : (
             <div className="flex gap-3">
               <Link
