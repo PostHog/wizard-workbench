@@ -2,10 +2,21 @@
 
 namespace App\Livewire;
 
+use App\Services\PostHogService;
 use Livewire\Component;
 
 class Dashboard extends Component
 {
+    public function mount(PostHogService $posthog): void
+    {
+        $user = auth()->user();
+
+        // PostHog: Track dashboard view
+        $posthog->capture($user->email, 'dashboard_viewed', [
+            'is_subscribed' => $user->subscribed('default'),
+        ]);
+    }
+
     public function render()
     {
         $user = auth()->user();
