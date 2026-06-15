@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -75,6 +76,12 @@ public final class SupportViewModel: @unchecked Sendable {
 
     public func purchase(product: SupportProduct) {
         processingProductId = product.id
+        PostHogSDK.shared.capture("support_purchase_started", properties: [
+            "product_id": product.id,
+            "product_name": product.displayName,
+            "product_kind": product.kind == .subscription ? "subscription" : "tip",
+            "price": product.displayPrice,
+        ])
         Task { @MainActor [weak self] in
             guard let self else { return }
             defer { self.processingProductId = nil }
@@ -114,6 +121,12 @@ public final class SupportViewModel: @unchecked Sendable {
     private func handle(result: SupportPurchaseResult, for product: SupportProduct) {
         switch result {
         case .success:
+            PostHogSDK.shared.capture("support_purchase_completed", properties: [
+                "product_id": product.id,
+                "product_name": product.displayName,
+                "product_kind": product.kind == .subscription ? "subscription" : "tip",
+                "price": product.displayPrice,
+            ])
             switch product.kind {
             case .subscription:
                 alertInfo = AlertInfo(
@@ -139,6 +152,7 @@ public final class SupportViewModel: @unchecked Sendable {
     private func handleRestore(result: SupportPurchaseResult) {
         switch result {
         case .success:
+            PostHogSDK.shared.capture("restore_purchases_completed")
             alertInfo = AlertInfo(
                 title: "Purchases Restored",
                 message: "Any existing supporter subscriptions or tips linked to your Apple ID are now active again."
