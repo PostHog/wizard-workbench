@@ -60,6 +60,7 @@ import com.example.compose.jetchat.data.colleagueProfile
 import com.example.compose.jetchat.data.meProfile
 import com.example.compose.jetchat.theme.JetchatTheme
 import com.example.compose.jetchat.widget.WidgetReceiver
+import com.posthog.PostHog
 
 @Composable
 fun JetchatDrawerContent(
@@ -77,9 +78,11 @@ fun JetchatDrawerContent(
         DividerItem()
         DrawerItemHeader("Chats")
         ChatItem("composers", selectedMenu == "composers") {
+            PostHog.capture(event = "chat_channel_selected", properties = mapOf("channel" to "composers"))
             onChatClicked("composers")
         }
         ChatItem("droidcon-nyc", selectedMenu == "droidcon-nyc") {
+            PostHog.capture(event = "chat_channel_selected", properties = mapOf("channel" to "droidcon-nyc"))
             onChatClicked("droidcon-nyc")
         }
         DividerItem(modifier = Modifier.padding(horizontal = 28.dp))
@@ -88,12 +91,14 @@ fun JetchatDrawerContent(
             "Ali Conors (you)", meProfile.photo,
             selectedMenu == meProfile.userId,
         ) {
+            PostHog.capture(event = "profile_viewed", properties = mapOf("profile_user_id" to meProfile.userId))
             onProfileClicked(meProfile.userId)
         }
         ProfileItem(
             "Taylor Brooks", colleagueProfile.photo,
             selectedMenu == colleagueProfile.userId,
         ) {
+            PostHog.capture(event = "profile_viewed", properties = mapOf("profile_user_id" to colleagueProfile.userId))
             onProfileClicked(colleagueProfile.userId)
         }
         if (widgetAddingIsSupported(LocalContext.current)) {
