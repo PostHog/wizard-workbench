@@ -4,6 +4,13 @@ class Cards::NotNowsController < ApplicationController
   def create
     capture_card_location
     @card.postpone
+
+    PostHog.capture(
+      distinct_id: Current.identity.email_address,
+      event: 'card_postponed',
+      properties: { board_name: @board.name, card_number: @card.number }
+    )
+
     refresh_stream_if_needed
 
     respond_to do |format|

@@ -4,6 +4,13 @@ class Cards::ClosuresController < ApplicationController
   def create
     capture_card_location
     @card.close
+
+    PostHog.capture(
+      distinct_id: Current.identity.email_address,
+      event: 'card_closed',
+      properties: { board_name: @board.name, card_number: @card.number }
+    )
+
     refresh_stream_if_needed
 
     respond_to do |format|
