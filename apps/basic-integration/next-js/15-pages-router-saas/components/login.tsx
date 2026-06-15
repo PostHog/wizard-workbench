@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -38,12 +39,17 @@ export function Login({
       inviteId: formData.get('inviteId') as string
     };
 
+    const distinctId = posthog.get_distinct_id();
+    const sessionId = posthog.get_session_id();
+
     startTransition(async () => {
       try {
         const response = await fetch(`/api/auth/${mode === 'signin' ? 'sign-in' : 'sign-up'}`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-POSTHOG-DISTINCT-ID': distinctId,
+            'X-POSTHOG-SESSION-ID': sessionId ?? '',
           },
           body: JSON.stringify(data)
         });
@@ -54,8 +60,19 @@ export function Login({
           setError(result.error || 'An error occurred');
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
+          posthog.captureException(new Error(result.error || 'Auth error'), {
+            mode,
+            email: data.email,
+          });
           return;
         }
+
+        posthog.identify(data.email, { email: data.email });
+        posthog.capture(mode === 'signin' ? 'sign_in_submitted' : 'sign_up_submitted', {
+          email: data.email,
+          has_price_id: Boolean(data.priceId),
+          has_invite_id: Boolean(data.inviteId),
+        });
 
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
@@ -64,6 +81,7 @@ export function Login({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred. Please try again.');
       }
     });
