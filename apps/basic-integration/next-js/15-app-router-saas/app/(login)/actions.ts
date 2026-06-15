@@ -25,6 +25,7 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -90,6 +91,23 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
+
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: foundUser.id.toString(),
+    event: 'user_signed_in',
+    properties: {
+      email: foundUser.email,
+      team_id: foundTeam?.id,
+    },
+  });
+  posthog.identify({
+    distinctId: foundUser.id.toString(),
+    properties: {
+      email: foundUser.email,
+      name: foundUser.name || undefined,
+    },
+  });
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -212,6 +230,24 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     setSession(createdUser)
   ]);
 
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: createdUser.id.toString(),
+    event: 'user_signed_up',
+    properties: {
+      email: createdUser.email,
+      team_id: teamId,
+      role: userRole,
+      via_invitation: !!inviteId,
+    },
+  });
+  posthog.identify({
+    distinctId: createdUser.id.toString(),
+    properties: {
+      email: createdUser.email,
+    },
+  });
+
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
     const priceId = formData.get('priceId') as string;
@@ -225,6 +261,13 @@ export async function signOut() {
   const user = (await getUser()) as User;
   const userWithTeam = await getUserWithTeam(user.id);
   await logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT);
+
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: user.id.toString(),
+    event: 'user_signed_out',
+  });
+
   (await cookies()).delete('session');
 }
 
@@ -312,6 +355,15 @@ export const deleteAccount = validatedActionWithUser(
       user.id,
       ActivityType.DELETE_ACCOUNT
     );
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'account_deleted',
+      properties: {
+        team_id: userWithTeam?.teamId,
+      },
+    });
 
     // Soft delete
     await db
