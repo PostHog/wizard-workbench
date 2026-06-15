@@ -3,6 +3,7 @@ import { Observable, of } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PostHogService } from '@app/services/posthog.service';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,10 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  constructor(
+    private readonly _credentialsService: CredentialsService,
+    private readonly _posthogService: PostHogService,
+  ) {}
 
   /**
    * Authenticates the user.
@@ -42,6 +46,16 @@ export class AuthenticationService {
       lastName,
     });
     this._credentialsService.setCredentials(credentials, context.remember);
+
+    this._posthogService.posthog.identify(credentials.id, {
+      username: credentials.username,
+      email: credentials.email,
+      firstName: credentials.firstName,
+      lastName: credentials.lastName,
+    });
+    this._posthogService.posthog.capture('user_logged_in', {
+      username: credentials.username,
+    });
 
     return of(credentials);
   }
@@ -86,6 +100,8 @@ export class AuthenticationService {
    * @return True if the user was logged out successfully.
    */
   logout(): Observable<any> {
+    this._posthogService.posthog.capture('user_logged_out');
+    this._posthogService.posthog.reset();
     return of(true);
   }
 }
