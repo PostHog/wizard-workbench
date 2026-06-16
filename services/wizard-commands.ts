@@ -52,12 +52,24 @@ function loadManifest(): WizardCommand[] {
 export const WIZARD_COMMANDS: WizardCommand[] = loadManifest();
 
 /**
+ * Family commands (e.g. `audit`) require a concrete leaf in non-interactive
+ * runs — after the CLI overhaul, bare `wizard audit` opens an interactive
+ * picker (or errors under `--ci`) instead of running an audit. Drive a
+ * sensible default leaf so CI keeps exercising the command. `all` runs the
+ * comprehensive audit so CI checks full integrations end-to-end.
+ */
+const FAMILY_DEFAULT_LEAF: Record<string, string> = { audit: 'all' };
+
+/**
  * Convert a command id to the subcommand string the wizard binary expects.
  * 'default' → undefined (no subcommand), 'skill' → undefined (uses --skill flag),
- * any other id → the id itself.
+ * a family id → "<family> <leaf>" (e.g. 'audit' → 'audit events'),
+ * any other id → the id itself. May be multi-token — callers must split on
+ * whitespace before pushing into an argv array.
  */
 export function commandToSubcommand(id: string): string | undefined {
   if (id === 'default' || id === 'skill') return undefined;
+  if (FAMILY_DEFAULT_LEAF[id]) return `${id} ${FAMILY_DEFAULT_LEAF[id]}`;
   return id;
 }
 
