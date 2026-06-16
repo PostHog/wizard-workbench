@@ -10,6 +10,9 @@
 [submodule "apps/audit/DemoHog3001"]
 	path = apps/audit/DemoHog3001
 	url = https://github.com/PostHog/DemoHog3001.git
-[submodule "apps/migrate/triplex"]
-	path = apps/migrate/triplex
+[submodule "apps/migrate/statsig/triplex"]
+	path = apps/migrate/statsig/triplex
 	url = https://github.com/pmndrs/triplex.git
+[submodule "apps/migrate/mixpanel/fire-saas"]
+	path = apps/migrate/mixpanel/fire-saas
+	url = git@github.com:AgentBurgundy/fire-saas.git
