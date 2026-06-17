@@ -10,6 +10,7 @@ import type { Route } from ".react-router/types/app/routes/organizations_+/+type
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { requireSupabaseUserExists } from "~/features/user-accounts/user-accounts-helpers.server";
 import { createSupabaseServerClient } from "~/features/user-authentication/supabase.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
@@ -26,6 +27,7 @@ export async function acceptInviteLinkAction({
   context,
 }: Route.ActionArgs) {
   try {
+    const posthog = (context as unknown as PostHogContext).posthog;
     const i18n = getInstance(context);
     const result = await validateFormData(request, acceptInviteLinkSchema);
     if (!result.success) return result.response;
@@ -70,6 +72,14 @@ export async function acceptInviteLinkAction({
               organizationId: link.organization.id,
               request,
               userAccountId: userAccount.id,
+            });
+
+            posthog?.capture({
+              event: "organization_invite_link_used",
+              properties: {
+                organization_id: link.organization.id,
+                organization_name: link.organization.name,
+              },
             });
 
             return redirectWithToast(

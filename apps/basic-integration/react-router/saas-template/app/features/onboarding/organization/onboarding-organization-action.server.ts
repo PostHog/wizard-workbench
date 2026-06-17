@@ -8,6 +8,7 @@ import type { Route } from ".react-router/types/app/routes/_authenticated-routes
 import { uploadOrganizationLogo } from "~/features/organizations/organizations-helpers.server";
 import { saveOrganizationWithOwnerToDatabase } from "~/features/organizations/organizations-model.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { slugify } from "~/utils/slugify.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -15,6 +16,7 @@ export async function onboardingOrganizationAction({
   request,
   context,
 }: Route.ActionArgs) {
+  const posthog = (context as unknown as PostHogContext).posthog;
   const { user, headers } = await requireUserNeedsOnboarding({
     context,
     request,
@@ -49,6 +51,19 @@ export async function onboardingOrganizationAction({
       slug: slugify(result.data.name),
     },
     userId: user.id,
+  });
+
+  posthog?.capture({
+    event: "onboarding_organization_completed",
+    properties: {
+      company_size: result.data.companySize,
+      company_types: result.data.companyTypes,
+      early_access_opt_in: result.data.earlyAccessOptIn,
+      has_logo: !!result.data.logo,
+      organization_id: organization.id,
+      organization_name: organization.name,
+      referral_sources: result.data.referralSources,
+    },
   });
 
   return redirect(`/organizations/${organization.slug}`, { headers });
