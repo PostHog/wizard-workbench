@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-
+import posthog from 'posthog-js'
 import { fetchInvoices } from '../utils/mockTodos'
 
 export const Route = createFileRoute('/dashboard/')({
   loader: () => fetchInvoices(),
+  onEnter: () => {
+    posthog.capture('dashboard_viewed')
+  },
   component: DashboardIndexComponent,
 })
 

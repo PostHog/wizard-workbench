@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
+import posthog from 'posthog-js'
+import { usePostHog } from '@posthog/react'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
 import { fetchInvoiceById, patchInvoice } from '../utils/mockTodos'
@@ -20,6 +22,9 @@ export const Route = createFileRoute('/dashboard/invoices/$invoiceId')({
       })
       .parse(search),
   loader: ({ params: { invoiceId } }) => fetchInvoiceById(invoiceId),
+  onEnter: ({ params: { invoiceId } }) => {
+    posthog.capture('invoice_viewed', { invoice_id: invoiceId })
+  },
   component: InvoiceComponent,
 })
 
@@ -28,6 +33,7 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthogHook = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
     onSuccess: () => router.invalidate(),
@@ -95,6 +101,10 @@ function InvoiceComponent() {
               title: formData.get('title') as string,
               body: formData.get('body') as string,
             })
+            posthogHook.capture('invoice_updated', {
+              invoice_id: invoice.id,
+              amount: invoice.id * 125,
+            })
           }}
           className="space-y-4"
         >
@@ -115,6 +125,7 @@ function InvoiceComponent() {
                   ...old,
                   showNotes: old.showNotes ? undefined : true,
                 })}
+                onClick={() => posthogHook.capture('invoice_notes_toggled', { invoice_id: invoice.id, notes_shown: !search.showNotes })}
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 params={true}
               >

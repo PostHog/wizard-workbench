@@ -1,6 +1,7 @@
 import { createFileRoute, Link, MatchRoute, Outlet, retainSearchParams, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
+import { usePostHog } from '@posthog/react'
 import { Spinner } from '../components/Spinner'
 import { fetchUsers } from '../utils/mockTodos'
 
@@ -35,6 +36,7 @@ function UsersComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const { usersView } = Route.useSearch()
   const { users } = Route.useLoaderData()
+  const posthog = usePostHog()
   const sortBy = usersView?.sortBy ?? 'name'
   const filterBy = usersView?.filterBy
 
@@ -110,6 +112,7 @@ function UsersComponent() {
                 key={user.id}
                 to="/dashboard/users/user"
                 search={{ userId: user.id }}
+                onClick={() => posthog.capture('team_member_viewed', { user_id: user.id, user_name: user.name })}
                 className="flex items-center gap-3 p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 activeProps={{ className: `bg-blue-50 dark:bg-blue-900/20 border-l-2 border-l-blue-600` }}
               >
