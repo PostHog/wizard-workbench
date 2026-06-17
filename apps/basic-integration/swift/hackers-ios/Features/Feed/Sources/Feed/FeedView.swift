@@ -7,6 +7,7 @@
 
 import DesignSystem
 import Domain
+import PostHog
 import Shared
 import SwiftUI
 
@@ -365,6 +366,12 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
     }
 
     private func handleLinkTap(post: Domain.Post) {
+        PostHogSDK.shared.capture("post_opened", properties: [
+            "post_id": post.id,
+            "post_title": post.title,
+            "post_type": post.postType.rawValue,
+        ])
+
         guard !isHackerNewsItemURL(post.url) else {
             navigationStore.showPost(post)
             return
@@ -467,6 +474,10 @@ struct PostRowView: View {
         let wasUpvoted = mutablePost.upvoted
 
         if wasUpvoted {
+            PostHogSDK.shared.capture("post_upvoted", properties: [
+                "post_id": post.id,
+                "post_title": post.title,
+            ])
             await MainActor.run {
                 onPostUpdated?(mutablePost)
             }
