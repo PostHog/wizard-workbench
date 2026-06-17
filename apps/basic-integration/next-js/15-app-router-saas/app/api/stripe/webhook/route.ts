@@ -1,6 +1,8 @@
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { NextRequest, NextResponse } from 'next/server';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { getTeamByStripeCustomerId } from '@/lib/db/queries';
 
 // Use a dummy webhook secret for stub mode
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_stub_secret';
@@ -23,10 +25,41 @@ export async function POST(request: NextRequest) {
 
   switch (event.type) {
     case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
+    case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+
+      const team = await getTeamByStripeCustomerId(subscription.customer as string);
+      if (team) {
+        const posthog = getPostHogClient();
+        const distinctId = `stripe_customer:${subscription.customer}`;
+        if (event.type === 'customer.subscription.deleted' || subscription.status === 'canceled') {
+          posthog.capture({
+            distinctId,
+            event: 'subscription_canceled',
+            properties: {
+              team_id: team.id,
+              stripe_customer_id: subscription.customer,
+              subscription_id: subscription.id,
+              plan_name: team.planName,
+            },
+          });
+        } else {
+          posthog.capture({
+            distinctId,
+            event: 'subscription_updated',
+            properties: {
+              team_id: team.id,
+              stripe_customer_id: subscription.customer,
+              subscription_id: subscription.id,
+              status: subscription.status,
+              plan_name: team.planName,
+            },
+          });
+        }
+      }
       break;
+    }
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
