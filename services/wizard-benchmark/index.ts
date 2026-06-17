@@ -215,10 +215,12 @@ function runBenchmark(
     });
   }
 
-  // Subcommand (e.g. 'revenue') must come before flags
+  // Subcommand (e.g. 'revenue', or a family leaf like 'audit events') must come
+  // before flags. Split on whitespace so multi-token subcommands become
+  // separate argv entries.
   const subcommand = commandToSubcommand(command.id);
   const args: string[] = [wizardBin];
-  if (subcommand) args.push(subcommand);
+  if (subcommand) args.push(...subcommand.split(' '));
   args.push(
     "--local-mcp",
     "--benchmark",

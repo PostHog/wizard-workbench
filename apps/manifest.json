@@ -8,7 +8,7 @@
       "ciCapable": true
     },
     {
-      "id": "revenue",
+      "id": "revenue-analytics",
       "dir": "revenue",
       "label": "Revenue Analytics",
       "description": "Wire Stripe + PostHog for revenue tracking",
