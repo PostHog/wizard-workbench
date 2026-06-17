@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useQuery } from "@tanstack/react-query";
+import { usePostHog } from "posthog-react-native";
 import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -22,6 +23,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -123,6 +125,12 @@ export default function ItemDetails() {
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
+                posthog.capture("story_upvote_tapped", {
+                  story_id: item.id,
+                  story_title: item.title,
+                  current_score: item.score,
+                  source: "detail",
+                });
               }}
             >
               <Text
@@ -163,6 +171,12 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture("story_link_opened", {
+                    story_id: item.id,
+                    story_title: item.title,
+                    url: item.url,
+                    source: "detail",
+                  });
                   Linking.openURL(item.url);
                 }}
               >
