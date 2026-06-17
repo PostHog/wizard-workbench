@@ -12,6 +12,12 @@ class Cards::CommentsController < ApplicationController
   def create
     @comment = @card.comments.create!(comment_params)
 
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_commented",
+      properties: { card_id: @card.id, card_number: @card.number, board_id: @card.board_id, comment_id: @comment.id }
+    )
+
     respond_to do |format|
       format.turbo_stream
       format.json { head :created, location: card_comment_path(@card, @comment, format: :json) }
