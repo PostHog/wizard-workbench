@@ -16,6 +16,45 @@ const currentPath = Astro.url.pathname;
     <DocsSidebar currentPath={currentPath} />
     <main class="docs-content">
       <slot />
+      <div class="doc-feedback" style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+        <p style="font-size: 0.9rem; color: #6b7280;">Was this page helpful?</p>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="feedback-btn" data-helpful="true" style="padding: 0.25rem 0.75rem; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">Yes</button>
+          <button class="feedback-btn" data-helpful="false" style="padding: 0.25rem 0.75rem; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">No</button>
+        </div>
+        <p id="feedback-thanks" style="display: none; font-size: 0.9rem; color: #6b7280; margin-top: 0.5rem;">Thanks for your feedback!</p>
+      </div>
     </main>
   </div>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    var feedbackBtns = document.querySelectorAll('.feedback-btn');
+    feedbackBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var helpful = btn.getAttribute('data-helpful') === 'true';
+        var sessionId = window.posthog?.get_session_id?.() || '';
+        var distinctId = window.posthog?.get_distinct_id?.() || '';
+
+        fetch('/api/events/doc-feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-PostHog-Session-Id': sessionId
+          },
+          body: JSON.stringify({
+            helpful: helpful,
+            page: window.location.pathname,
+            distinctId: distinctId
+          })
+        }).catch(function (err) {
+          window.posthog?.captureException(err);
+        });
+
+        document.getElementById('feedback-thanks').style.display = 'block';
+        feedbackBtns.forEach(function (b) { b.disabled = true; });
+      });
+    });
+  });
+</script>
