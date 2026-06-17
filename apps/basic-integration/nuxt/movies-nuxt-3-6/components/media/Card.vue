@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import type { Media, MediaType } from '~/types'
 
-defineProps<{
+const props = defineProps<{
   type: MediaType
   item: Media
 }>()
+
+const { $posthog: posthog } = useNuxtApp()
+
+function trackClick() {
+  posthog?.capture('media_card_clicked', {
+    media_id: props.item.id,
+    media_title: props.item.title || props.item.name,
+    media_type: props.item.media_type || props.type,
+  })
+}
 </script>
 
 <template>
   <NuxtLink
     :to="`/${item.media_type || type}/${item.id}`" pb2
+    @click="trackClick"
   >
     <div
       block bg-gray4:10 p1

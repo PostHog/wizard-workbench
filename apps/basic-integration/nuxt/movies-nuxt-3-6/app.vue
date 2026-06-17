@@ -1,6 +1,13 @@
 <script setup>
 import '@unocss/reset/tailwind.css'
 
+const { $posthog: posthog } = useNuxtApp()
+
+onErrorCaptured((error) => {
+  posthog?.captureException(error)
+  return false
+})
+
 const route = useRoute()
 const { isAuthenticated } = useAuth()
 const showNavBar = computed(() => isAuthenticated.value && route.path !== '/login')

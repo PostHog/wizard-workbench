@@ -1,0 +1,52 @@
+[
+  {
+    "event": "user_logged_in",
+    "description": "User successfully logs in",
+    "file": "pages/login.vue"
+  },
+  {
+    "event": "login_failed",
+    "description": "Login attempt failed",
+    "file": "pages/login.vue"
+  },
+  {
+    "event": "user_logged_out",
+    "description": "User clicks the logout button",
+    "file": "components/NavBar.vue"
+  },
+  {
+    "event": "search_performed",
+    "description": "User submits a search query",
+    "file": "pages/search.vue"
+  },
+  {
+    "event": "trailer_played",
+    "description": "User clicks to play a movie or TV show trailer",
+    "file": "components/media/Hero.vue"
+  },
+  {
+    "event": "video_played",
+    "description": "User clicks to play a video from the videos tab",
+    "file": "components/video/Card.vue"
+  },
+  {
+    "event": "media_detail_tab_changed",
+    "description": "User switches between Overview, Videos, and Photos tabs on a media detail page",
+    "file": "components/media/Details.vue"
+  },
+  {
+    "event": "media_card_clicked",
+    "description": "User clicks a media card to view its detail page",
+    "file": "components/media/Card.vue"
+  },
+  {
+    "event": "server_user_logged_in",
+    "description": "Server-side: user login processed by the auth API",
+    "file": "server/api/auth/login.post.ts"
+  },
+  {
+    "event": "server_user_logged_out",
+    "description": "Server-side: user logout processed by the auth API",
+    "file": "server/api/auth/logout.post.ts"
+  }
+]
