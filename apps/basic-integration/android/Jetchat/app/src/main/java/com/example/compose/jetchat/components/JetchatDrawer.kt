@@ -60,6 +60,7 @@ import com.example.compose.jetchat.data.colleagueProfile
 import com.example.compose.jetchat.data.meProfile
 import com.example.compose.jetchat.theme.JetchatTheme
 import com.example.compose.jetchat.widget.WidgetReceiver
+import com.posthog.PostHog
 
 @Composable
 fun JetchatDrawerContent(
@@ -77,9 +78,11 @@ fun JetchatDrawerContent(
         DividerItem()
         DrawerItemHeader("Chats")
         ChatItem("composers", selectedMenu == "composers") {
+            PostHog.capture(event = "chat_channel_switched", properties = mapOf("channel" to "composers"))
             onChatClicked("composers")
         }
         ChatItem("droidcon-nyc", selectedMenu == "droidcon-nyc") {
+            PostHog.capture(event = "chat_channel_switched", properties = mapOf("channel" to "droidcon-nyc"))
             onChatClicked("droidcon-nyc")
         }
         DividerItem(modifier = Modifier.padding(horizontal = 28.dp))
@@ -320,6 +323,7 @@ private fun addWidgetToHomeScreen(context: Context) {
     val myProvider = ComponentName(context, WidgetReceiver::class.java)
     if (widgetAddingIsSupported(context)) {
         appWidgetManager.requestPinAppWidget(myProvider, null, null)
+        PostHog.capture(event = "widget_added_to_home_screen")
     }
 }
 

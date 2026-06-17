@@ -31,6 +31,7 @@ import com.example.compose.jetchat.MainViewModel
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 
 class ConversationFragment : Fragment() {
 
@@ -53,6 +54,7 @@ class ConversationFragment : Fragment() {
                             )
                         },
                         onNavIconPressed = {
+                            PostHog.capture(event = "drawer_opened")
                             activityViewModel.openDrawer()
                         },
                     )
