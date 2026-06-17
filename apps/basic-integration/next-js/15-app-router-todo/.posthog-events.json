@@ -1,0 +1,37 @@
+[
+  {
+    "event": "todo_created",
+    "description": "User successfully creates a new todo item via the form",
+    "file": "components/todos/todo-list.tsx"
+  },
+  {
+    "event": "todo_completed",
+    "description": "User marks an active todo as completed by checking the checkbox",
+    "file": "components/todos/todo-list.tsx"
+  },
+  {
+    "event": "todo_reopened",
+    "description": "User unchecks a completed todo, marking it active again",
+    "file": "components/todos/todo-list.tsx"
+  },
+  {
+    "event": "todo_deleted",
+    "description": "User deletes a todo item via the trash icon",
+    "file": "components/todos/todo-list.tsx"
+  },
+  {
+    "event": "todo_api_created",
+    "description": "Server-side: todo successfully persisted via POST /api/todos",
+    "file": "app/api/todos/route.ts"
+  },
+  {
+    "event": "todo_api_updated",
+    "description": "Server-side: todo updated via PATCH /api/todos/[id] (completion toggle or edit)",
+    "file": "app/api/todos/[id]/route.ts"
+  },
+  {
+    "event": "todo_api_deleted",
+    "description": "Server-side: todo deleted via DELETE /api/todos/[id]",
+    "file": "app/api/todos/[id]/route.ts"
+  }
+]

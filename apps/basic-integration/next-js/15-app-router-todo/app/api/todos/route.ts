@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodos, createTodo } from '@/lib/data';
+import { getServerPostHog } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -33,6 +34,19 @@ export async function POST(request: NextRequest) {
       description: validatedData.description,
       completed: validatedData.completed,
     });
+
+    const ph = getServerPostHog();
+    if (ph) {
+      ph.capture({
+        distinctId: 'server',
+        event: 'todo_api_created',
+        properties: {
+          todo_id: newTodo.id,
+          has_description: !!validatedData.description,
+        },
+      });
+      await ph.shutdown();
+    }
 
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
