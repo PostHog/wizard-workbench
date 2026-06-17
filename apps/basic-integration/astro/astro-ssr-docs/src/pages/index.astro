@@ -11,8 +11,8 @@ import Layout from '../layouts/Layout.astro';
         Comprehensive guides, API references, and best practices.
       </p>
       <div class="hero-buttons">
-        <a href="/docs" class="btn btn-primary">Get Started</a>
-        <a href="/docs/api" class="btn btn-secondary">API Reference</a>
+        <a href="/docs" class="btn btn-primary" id="hero-get-started">Get Started</a>
+        <a href="/docs/api" class="btn btn-secondary" id="hero-api-reference">API Reference</a>
       </div>
     </div>
   </section>
@@ -20,33 +20,54 @@ import Layout from '../layouts/Layout.astro';
   <section class="features">
     <div class="container">
       <div class="features-grid">
-        <a href="/docs" class="feature-card">
+        <a href="/docs" class="feature-card" data-feature="quick-start-guide">
           <h3>Quick Start Guide</h3>
           <p>Get up and running with NeuralFlow in under 5 minutes.</p>
         </a>
-        <a href="/docs/concepts" class="feature-card">
+        <a href="/docs/concepts" class="feature-card" data-feature="core-concepts">
           <h3>Core Concepts</h3>
           <p>Understand the fundamentals of AI-powered automation.</p>
         </a>
-        <a href="/docs/workflows" class="feature-card">
+        <a href="/docs/workflows" class="feature-card" data-feature="workflow-builder">
           <h3>Workflow Builder</h3>
           <p>Create complex automation sequences visually.</p>
         </a>
-        <a href="/docs/api" class="feature-card">
+        <a href="/docs/api" class="feature-card" data-feature="api-reference">
           <h3>API Reference</h3>
           <p>Complete documentation for all API endpoints.</p>
         </a>
-        <a href="/docs/api/authentication" class="feature-card">
+        <a href="/docs/api/authentication" class="feature-card" data-feature="authentication">
           <h3>Authentication</h3>
           <p>Secure your integrations with API keys and OAuth.</p>
         </a>
-        <a href="/docs/api/endpoints" class="feature-card">
+        <a href="/docs/api/endpoints" class="feature-card" data-feature="rest-endpoints">
           <h3>REST Endpoints</h3>
           <p>Explore all available API endpoints and methods.</p>
         </a>
       </div>
     </div>
   </section>
+
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('hero-get-started')?.addEventListener('click', function () {
+        window.posthog?.capture('get_started_clicked', { location: 'hero' });
+      });
+
+      document.getElementById('hero-api-reference')?.addEventListener('click', function () {
+        window.posthog?.capture('api_reference_clicked', { location: 'hero' });
+      });
+
+      document.querySelectorAll('.feature-card[data-feature]').forEach(function (card) {
+        card.addEventListener('click', function () {
+          window.posthog?.capture('feature_card_clicked', {
+            feature: card.getAttribute('data-feature'),
+            href: card.getAttribute('href'),
+          });
+        });
+      });
+    });
+  </script>
 
   <footer class="footer">
     <div class="container">

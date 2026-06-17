@@ -16,6 +16,66 @@ const currentPath = Astro.url.pathname;
     <DocsSidebar currentPath={currentPath} />
     <main class="docs-content">
       <slot />
+      <div class="docs-feedback">
+        <p>Was this page helpful?</p>
+        <div class="feedback-buttons">
+          <button class="feedback-btn" data-helpful="true">Yes</button>
+          <button class="feedback-btn" data-helpful="false">No</button>
+        </div>
+        <p class="feedback-thanks" style="display:none;">Thanks for your feedback!</p>
+      </div>
     </main>
   </div>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Code snippet copy tracking
+    document.querySelectorAll('pre code').forEach(function (block) {
+      var pre = block.parentElement;
+      var btn = document.createElement('button');
+      btn.textContent = 'Copy';
+      btn.className = 'copy-btn';
+      pre.style.position = 'relative';
+      pre.appendChild(btn);
+
+      btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(block.textContent || '').then(function () {
+          btn.textContent = 'Copied!';
+          setTimeout(function () { btn.textContent = 'Copy'; }, 2000);
+          window.posthog?.capture('code_snippet_copied', {
+            page: window.location.pathname,
+            snippet_preview: (block.textContent || '').slice(0, 80),
+          });
+        });
+      });
+    });
+
+    // Docs feedback widget
+    document.querySelectorAll('.feedback-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var helpful = btn.getAttribute('data-helpful') === 'true';
+        var page = window.location.pathname;
+        var sessionId = window.posthog?.get_session_id?.() || null;
+        var distinctId = window.posthog?.get_distinct_id?.() || null;
+
+        // Client-side capture
+        window.posthog?.capture('docs_feedback_submitted', { page: page, helpful: helpful });
+
+        // Server-side capture via API
+        fetch('/api/feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-PostHog-Session-Id': sessionId || '',
+            'X-PostHog-Distinct-Id': distinctId || '',
+          },
+          body: JSON.stringify({ page: page, helpful: helpful, distinctId: distinctId }),
+        }).catch(function (err) { console.error('Feedback API error:', err); });
+
+        document.querySelector('.feedback-buttons').style.display = 'none';
+        document.querySelector('.feedback-thanks').style.display = 'block';
+      });
+    });
+  });
+</script>
