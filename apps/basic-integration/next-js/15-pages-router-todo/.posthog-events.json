@@ -1,0 +1,57 @@
+[
+  {
+    "event": "todo_created",
+    "description": "User successfully creates a new todo item",
+    "file": "components/todos/todo-list.tsx"
+  },
+  {
+    "event": "todo_completed",
+    "description": "User marks a todo item as completed",
+    "file": "components/todos/todo-list.tsx"
+  },
+  {
+    "event": "todo_reopened",
+    "description": "User marks a completed todo item as incomplete",
+    "file": "components/todos/todo-list.tsx"
+  },
+  {
+    "event": "todo_deleted",
+    "description": "User successfully deletes a todo item",
+    "file": "components/todos/todo-list.tsx"
+  },
+  {
+    "event": "todo_create_failed",
+    "description": "Client-side error when creating a todo item",
+    "file": "components/todos/todo-list.tsx"
+  },
+  {
+    "event": "todo_toggle_failed",
+    "description": "Client-side error when toggling a todo item",
+    "file": "components/todos/todo-list.tsx"
+  },
+  {
+    "event": "todo_delete_failed",
+    "description": "Client-side error when deleting a todo item",
+    "file": "components/todos/todo-list.tsx"
+  },
+  {
+    "event": "todo_created_api",
+    "description": "Server-side: todo successfully created via API",
+    "file": "pages/api/todos/index.ts"
+  },
+  {
+    "event": "todo_validation_error",
+    "description": "Server-side: request body failed Zod validation",
+    "file": "pages/api/todos/index.ts"
+  },
+  {
+    "event": "todo_updated_api",
+    "description": "Server-side: todo successfully updated (completed toggled or fields changed) via API",
+    "file": "pages/api/todos/[id].ts"
+  },
+  {
+    "event": "todo_deleted_api",
+    "description": "Server-side: todo successfully deleted via API",
+    "file": "pages/api/todos/[id].ts"
+  }
+]

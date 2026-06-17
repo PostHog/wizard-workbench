@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
 import { z } from 'zod';
+import posthogServer from '@/lib/posthog-server';
 
 const todoSchema = z.object({
   title: z.string().min(1).max(255),
@@ -31,9 +32,20 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         completed: validatedData.completed,
       });
 
+      posthogServer.capture({
+        distinctId: 'server',
+        event: 'todo_created_api',
+        properties: { todo_id: newTodo.id, has_description: !!newTodo.description },
+      });
+
       return res.status(201).json(newTodo);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        posthogServer.capture({
+          distinctId: 'server',
+          event: 'todo_validation_error',
+          properties: { method: 'POST', route: '/api/todos' },
+        });
         return res.status(400).json({
           error: 'Invalid todo data',
           details: error.errors,
