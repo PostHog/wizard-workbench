@@ -1,10 +1,19 @@
+import { useEffect } from 'react'
 import { Navigate } from 'react-router'
 import { useAuth } from '~/context/AuthContext'
 import { getAllUsers, getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
+import { usePostHog } from '@posthog/react'
 import type { Route } from './+types/stats'
 
 export default function Stats() {
   const { user } = useAuth()
+  const posthog = usePostHog()
+
+  useEffect(() => {
+    if (user) {
+      posthog?.capture('leaderboard_viewed')
+    }
+  }, [])
 
   if (!user) {
     return <Navigate to="/login" replace />
