@@ -11,12 +11,14 @@ import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link2, MessageSquareText } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
-export const Post = ({ id, title, url, score, text, kids }: Item) => {
+export const Post = ({ id, title, url, score, text, kids, by }: Item) => {
   const QC = useQueryClient();
+  const posthog = usePostHog();
 
   const isExternal = useMemo(() => {
     return text === undefined;
@@ -34,8 +36,24 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
-          if (isExternal) Linking.openURL(url);
-          else await navigateToDetails();
+          if (isExternal) {
+            posthog.capture("external_link_opened", {
+              item_id: id,
+              item_title: title,
+              url,
+              author: by,
+            });
+            Linking.openURL(url);
+          } else {
+            posthog.capture("post_tapped", {
+              item_id: id,
+              item_title: title,
+              author: by,
+              score,
+              comment_count: kids?.length ?? 0,
+            });
+            await navigateToDetails();
+          }
         }}
       >
         <Text style={{ color: "black", fontSize: 20, fontWeight: 500 }}>
@@ -66,6 +84,14 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog.capture("post_tapped", {
+              item_id: id,
+              item_title: title,
+              author: by,
+              score,
+              comment_count: kids?.length ?? 0,
+              source: "comments_button",
+            });
             await navigateToDetails();
           }}
         >
@@ -86,6 +112,13 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           <Pressable
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              posthog.capture("external_link_opened", {
+                item_id: id,
+                item_title: title,
+                url,
+                author: by,
+                source: "link_button",
+              });
               Linking.openURL(url);
             }}
           >
