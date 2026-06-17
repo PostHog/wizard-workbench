@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy, DestroyRef, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { I18nService } from '@app/i18n';
 import { Title } from '@angular/platform-browser';
@@ -8,6 +9,7 @@ import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppUpdateService, Logger } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
+import { PostHogService } from '@app/shared/services/posthog.service';
 
 @Component({
   selector: 'app-root',
@@ -24,10 +26,20 @@ export class AppComponent implements OnInit {
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly posthogService = inject(PostHogService);
 
   title = 'angular-boilerplate';
 
   ngOnInit() {
+    if (isPlatformBrowser(this.platformId)) {
+      this.posthogService.init(environment.posthogKey, {
+        api_host: environment.posthogHost,
+        ui_host: 'https://us.posthog.com',
+        capture_exceptions: true,
+      });
+    }
+
     // Setup logger
     if (environment.production) {
       Logger.enableProductionMode();
