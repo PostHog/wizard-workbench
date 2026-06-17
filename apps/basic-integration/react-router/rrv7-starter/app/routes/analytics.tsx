@@ -6,6 +6,7 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getPurchasedFollowers } from '@/lib/utils/localStorage'
 import type { FakeMetric } from '@/lib/data/fake-data'
+import { usePostHog } from '@posthog/react'
 
 export const meta: Route.MetaFunction = () => {
   const siteUrl = SITE_URL || 'https://clouthub.fake'
@@ -22,12 +23,18 @@ export default function Analytics() {
   const [metrics, setMetrics] = useState<FakeMetric[]>(fakeMetrics)
   const [followers, setFollowers] = useState(0)
   const [purchasedFollowers, setPurchasedFollowers] = useState(0)
+  const posthog = usePostHog()
 
   useEffect(() => {
     const currentFollowers = getFollowers()
     const purchased = getPurchasedFollowers()
     setFollowers(currentFollowers)
     setPurchasedFollowers(purchased)
+
+    posthog?.capture('analytics_viewed', {
+      current_followers: currentFollowers,
+      purchased_followers: purchased,
+    })
 
     // Update metrics with real localStorage data
     setMetrics((prev) => {
@@ -48,9 +55,7 @@ export default function Analytics() {
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-6">
           <h1 className="text-4xl font-bold text-primary mb-2">Analytics Dashboard</h1>
-          <p className="text-primary/50">
-            All your metrics are fake, but they look real! 📊
-          </p>
+          <p className="text-primary/50">All your metrics are fake, but they look real! 📊</p>
           {purchasedFollowers > 0 && (
             <p className="text-accent mt-2">
               You've purchased {purchasedFollowers.toLocaleString()} fake followers! (Saved in localStorage)
@@ -64,9 +69,8 @@ export default function Analytics() {
             <div>
               <h2 className="text-xl font-bold text-primary">Disclaimer</h2>
               <p className="text-primary/70 text-sm">
-                All metrics shown are completely fake and generated randomly. 
-                Any resemblance to real engagement is purely coincidental.
-                (But your follower count is saved in localStorage!)
+                All metrics shown are completely fake and generated randomly. Any resemblance to real engagement is
+                purely coincidental. (But your follower count is saved in localStorage!)
               </p>
             </div>
           </div>
@@ -83,9 +87,7 @@ export default function Analytics() {
           <div className="bg-background border border-primary/10 rounded-lg p-8 h-64 flex items-center justify-center">
             <div className="text-center">
               <div className="text-6xl mb-4">📊</div>
-              <p className="text-primary/50">
-                This chart would show your fake engagement over time
-              </p>
+              <p className="text-primary/50">This chart would show your fake engagement over time</p>
               <p className="text-primary/30 text-sm mt-2">
                 (If we had time to build it, which we don't, because it's fake)
               </p>
@@ -96,4 +98,3 @@ export default function Analytics() {
     </div>
   )
 }
-
