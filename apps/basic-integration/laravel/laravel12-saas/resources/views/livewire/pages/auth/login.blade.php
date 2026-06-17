@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use App\Services\PostHogService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -12,7 +14,7 @@ new #[Layout('layouts.guest')] class extends Component
     /**
      * Handle an incoming authentication request.
      */
-    public function login(): void
+    public function login(PostHogService $posthog): void
     {
         $this->validate();
 
@@ -20,14 +22,20 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
+        // PostHog: Identify and track login
+        $user = Auth::user();
+        $posthog->identify($user->email, $user->getPostHogProperties());
+        $posthog->capture($user->email, 'user_logged_in', [
+            'login_method' => 'password',
+        ]);
+
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: false);
     }
 
-        public function googleLogin()
+    public function googleLogin()
     {
         return redirect()->route('socialite.redirect', 'google');
     }
-
 }; ?>
 
 <div>
