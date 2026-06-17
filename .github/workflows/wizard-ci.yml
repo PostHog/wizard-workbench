@@ -27,11 +27,11 @@ on:
       wizard_ref:
         description: 'Wizard repo branch/tag/sha'
         type: string
-        default: 'experiment/orchestrator-ci-health-advisory'
+        default: 'main'
       context_mill_ref:
         description: 'Context Mill repo branch/tag/sha'
         type: string
-        default: 'experiment/orchestrator'
+        default: 'main'
       variant:
         description: 'Wizard arm to test (orchestrator forces the wizard-orchestrator flag via CI-build-only overrides)'
         type: choice
