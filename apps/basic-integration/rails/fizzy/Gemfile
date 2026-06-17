@@ -43,7 +43,12 @@ gem "mission_control-jobs"
 gem "stackprof"
 gem "benchmark" # indirect dependency, being removed from Ruby 3.5 stdlib so here to quash warnings
 
+# PostHog
+gem "posthog-ruby"
+gem "posthog-rails"
+
 group :development, :test do
+  gem "dotenv-rails"
   gem "brakeman", require: false
   gem "bundler-audit", require: false
   gem "debug"
