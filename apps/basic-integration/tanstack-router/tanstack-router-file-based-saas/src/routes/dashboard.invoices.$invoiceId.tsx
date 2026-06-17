@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
+import { usePostHog } from '@posthog/react'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
 import { fetchInvoiceById, patchInvoice } from '../utils/mockTodos'
@@ -28,11 +29,21 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
     onSuccess: () => router.invalidate(),
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
+
+  React.useEffect(() => {
+    posthog.capture('invoice_viewed', {
+      invoice_id: invoice.id,
+      invoice_title: invoice.title,
+      amount: invoice.id * 125,
+      status: invoice.id % 2 === 0 ? 'paid' : 'pending',
+    })
+  }, [invoice.id])
 
   React.useEffect(() => {
     navigate({
@@ -90,10 +101,18 @@ function InvoiceComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            const title = formData.get('title') as string
+            const body = formData.get('body') as string
+            posthog.capture('invoice_updated', {
+              invoice_id: invoice.id,
+              invoice_title: title,
+              amount: invoice.id * 125,
+              status: invoice.id % 2 === 0 ? 'paid' : 'pending',
+            })
             updateInvoiceMutation.mutate({
               id: invoice.id,
-              title: formData.get('title') as string,
-              body: formData.get('body') as string,
+              title,
+              body,
             })
           }}
           className="space-y-4"
