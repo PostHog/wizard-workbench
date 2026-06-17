@@ -25,6 +25,16 @@ useHead({
     { property: 'og:image', content: $img(`/tmdb${item.poster_path}`, { width: 1200, height: 630 }) },
   ],
 })
+
+const { $posthog: posthog } = useNuxtApp()
+onMounted(() => {
+  posthog?.capture('media_viewed', {
+    media_id: item.id,
+    media_type: type.value,
+    media_title: item.title || item.name,
+    vote_average: item.vote_average,
+  })
+})
 </script>
 
 <template>
