@@ -7,6 +7,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -76,6 +77,13 @@ function PricingCard({
 
     startTransition(async () => {
       try {
+        posthog.capture('pricing_plan_selected', {
+          plan_name: name,
+          price_id: priceId,
+          price: price,
+          interval: interval,
+        });
+
         const response = await fetch('/api/stripe/create-checkout', {
           method: 'POST',
           headers: {

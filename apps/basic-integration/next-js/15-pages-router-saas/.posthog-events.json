@@ -1,0 +1,67 @@
+[
+  {
+    "event": "user_signed_up",
+    "description": "A new user successfully created an account",
+    "file": "pages/api/auth/sign-up.ts"
+  },
+  {
+    "event": "user_signed_in",
+    "description": "A user successfully authenticated with email and password",
+    "file": "pages/api/auth/sign-in.ts"
+  },
+  {
+    "event": "user_signed_out",
+    "description": "A user signed out of their account",
+    "file": "components/header.tsx"
+  },
+  {
+    "event": "checkout_session_created",
+    "description": "A Stripe checkout session was created for a logged-in user selecting a plan",
+    "file": "pages/api/stripe/create-checkout.ts"
+  },
+  {
+    "event": "checkout_completed",
+    "description": "A user returned from Stripe after successfully completing payment",
+    "file": "pages/api/stripe/checkout.ts"
+  },
+  {
+    "event": "subscription_updated",
+    "description": "A team subscription status changed via Stripe webhook",
+    "file": "pages/api/stripe/webhook.ts"
+  },
+  {
+    "event": "subscription_cancelled",
+    "description": "A team subscription was cancelled or deleted via Stripe webhook",
+    "file": "pages/api/stripe/webhook.ts"
+  },
+  {
+    "event": "customer_portal_opened",
+    "description": "A user opened the Stripe customer portal to manage their subscription",
+    "file": "pages/api/stripe/customer-portal.ts"
+  },
+  {
+    "event": "team_member_invited",
+    "description": "A team owner sent an invitation to a new team member",
+    "file": "pages/api/team/invite.ts"
+  },
+  {
+    "event": "team_member_removed",
+    "description": "A team owner removed a member from the team",
+    "file": "pages/api/team/remove-member.ts"
+  },
+  {
+    "event": "account_updated",
+    "description": "A user updated their account name or email",
+    "file": "pages/api/account/update.ts"
+  },
+  {
+    "event": "manage_subscription_clicked",
+    "description": "A user clicked the Manage Subscription button in the dashboard",
+    "file": "pages/dashboard/index.tsx"
+  },
+  {
+    "event": "pricing_plan_selected",
+    "description": "A user clicked Get Started on a pricing plan card",
+    "file": "pages/pricing.tsx"
+  }
+]
