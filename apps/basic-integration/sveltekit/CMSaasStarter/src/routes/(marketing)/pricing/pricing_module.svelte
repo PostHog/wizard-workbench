@@ -1,5 +1,6 @@
 <script lang="ts">
   import { pricingPlans } from "./pricing_plans"
+  import posthog from "posthog-js"
 
   interface Props {
     // Module context
@@ -15,6 +16,13 @@
     currentPlanId = "",
     center = true,
   }: Props = $props()
+
+  function handlePlanCtaClick(planId: string, planName: string) {
+    posthog.capture("plan_cta_clicked", {
+      plan_id: planId,
+      plan_name: planName,
+    })
+  }
 </script>
 
 <div
@@ -22,7 +30,7 @@
     ? 'place-content-center'
     : ''} flex-wrap"
 >
-  {#each pricingPlans as plan}
+  {#each pricingPlans as plan (plan.id)}
     <div
       class="flex-none card card-bordered {plan.id === highlightedPlanId
         ? 'border-primary'
@@ -57,6 +65,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() => handlePlanCtaClick(plan.id, plan.name)}
               >
                 {callToAction}
               </a>
