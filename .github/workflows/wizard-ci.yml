@@ -32,6 +32,14 @@ on:
         description: 'Context Mill repo branch/tag/sha'
         type: string
         default: 'main'
+      flag_overrides:
+        description: 'CI-only feature-flag overrides as JSON, e.g. {"wizard-orchestrator":true}. Empty leaves live flags untouched.'
+        type: string
+        default: ''
+      exclude_tasks:
+        description: 'Orchestrator task types to skip, comma-separated (e.g. dashboard).'
+        type: string
+        default: ''
       posthog_ref:
         description: 'PostHog repo branch/tag/sha (for MCP)'
         type: string
@@ -76,6 +84,8 @@ jobs:
       input_base_branch: ${{ steps.resolve-inputs.outputs.base_branch }}
       input_wizard_ref: ${{ steps.resolve-inputs.outputs.wizard_ref }}
       input_context_mill_ref: ${{ steps.resolve-inputs.outputs.context_mill_ref }}
+      input_flag_overrides: ${{ steps.resolve-inputs.outputs.flag_overrides }}
+      input_exclude_tasks: ${{ steps.resolve-inputs.outputs.exclude_tasks }}
       input_posthog_ref: ${{ steps.resolve-inputs.outputs.posthog_ref }}
       input_posthog_region: ${{ steps.resolve-inputs.outputs.posthog_region }}
       input_source: ${{ steps.resolve-inputs.outputs.source }}
@@ -96,6 +106,8 @@ jobs:
           CP_BASE_BRANCH: ${{ github.event.client_payload.base_branch }}
           CP_WIZARD_REF: ${{ github.event.client_payload.wizard_ref }}
           CP_CONTEXT_MILL_REF: ${{ github.event.client_payload.context_mill_ref }}
+          CP_FLAG_OVERRIDES: ${{ github.event.client_payload.flag_overrides }}
+          CP_EXCLUDE_TASKS: ${{ github.event.client_payload.exclude_tasks }}
           CP_POSTHOG_REF: ${{ github.event.client_payload.posthog_ref }}
           CP_POSTHOG_REGION: ${{ github.event.client_payload.posthog_region }}
           CP_TRIGGER_ID: ${{ github.event.client_payload.trigger_id }}
@@ -110,6 +122,8 @@ jobs:
           INPUT_BASE_BRANCH: ${{ inputs.base_branch }}
           INPUT_WIZARD_REF: ${{ inputs.wizard_ref }}
           INPUT_CONTEXT_MILL_REF: ${{ inputs.context_mill_ref }}
+          INPUT_FLAG_OVERRIDES: ${{ inputs.flag_overrides }}
+          INPUT_EXCLUDE_TASKS: ${{ inputs.exclude_tasks }}
           INPUT_POSTHOG_REF: ${{ inputs.posthog_ref }}
           INPUT_POSTHOG_REGION: ${{ inputs.posthog_region }}
           INPUT_TRIGGER_ID: ${{ inputs.trigger_id }}
@@ -121,6 +135,8 @@ jobs:
             BASE_BRANCH="main"
             WIZARD_REF="main"
             CONTEXT_MILL_REF="main"
+            FLAG_OVERRIDES=""
+            EXCLUDE_TASKS=""
             POSTHOG_REF="master"
             POSTHOG_REGION="us"
             TRIGGER_ID=""
@@ -136,6 +152,8 @@ jobs:
             BASE_BRANCH="${CP_BASE_BRANCH:-main}"
             WIZARD_REF="${CP_WIZARD_REF:-main}"
             CONTEXT_MILL_REF="${CP_CONTEXT_MILL_REF:-main}"
+            FLAG_OVERRIDES="${CP_FLAG_OVERRIDES:-}"
+            EXCLUDE_TASKS="${CP_EXCLUDE_TASKS:-}"
             POSTHOG_REF="${CP_POSTHOG_REF:-master}"
             POSTHOG_REGION="${CP_POSTHOG_REGION:-us}"
             TRIGGER_ID="${CP_TRIGGER_ID:-}"
@@ -156,6 +174,8 @@ jobs:
             BASE_BRANCH="${INPUT_BASE_BRANCH:-main}"
             WIZARD_REF="${INPUT_WIZARD_REF:-main}"
             CONTEXT_MILL_REF="${INPUT_CONTEXT_MILL_REF:-main}"
+            FLAG_OVERRIDES="${INPUT_FLAG_OVERRIDES:-}"
+            EXCLUDE_TASKS="${INPUT_EXCLUDE_TASKS:-}"
             POSTHOG_REF="${INPUT_POSTHOG_REF:-master}"
             POSTHOG_REGION="${INPUT_POSTHOG_REGION:-us}"
             TRIGGER_ID="${INPUT_TRIGGER_ID:-}"
@@ -172,6 +192,8 @@ jobs:
           echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
           echo "wizard_ref=$WIZARD_REF" >> $GITHUB_OUTPUT
           echo "context_mill_ref=$CONTEXT_MILL_REF" >> $GITHUB_OUTPUT
+          echo "flag_overrides=$FLAG_OVERRIDES" >> $GITHUB_OUTPUT
+          echo "exclude_tasks=$EXCLUDE_TASKS" >> $GITHUB_OUTPUT
           echo "posthog_ref=$POSTHOG_REF" >> $GITHUB_OUTPUT
           echo "posthog_region=$POSTHOG_REGION" >> $GITHUB_OUTPUT
           echo "trigger_id=$TRIGGER_ID" >> $GITHUB_OUTPUT
@@ -646,6 +668,8 @@ jobs:
           CONTEXT_MILL_REF: ${{ needs.discover.outputs.input_context_mill_ref }}
           POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
+          WIZARD_CI_FLAG_OVERRIDES: ${{ needs.discover.outputs.input_flag_overrides }}
+          WIZARD_CI_EXCLUDE_TASKS: ${{ needs.discover.outputs.input_exclude_tasks }}
           POSTHOG_WIZARD_YARA_REPORT: 'true'
           POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
 
