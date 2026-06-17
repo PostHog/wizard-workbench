@@ -9,11 +9,18 @@ from django.contrib.auth.views import (
 from django.contrib import messages
 from django.urls import reverse_lazy
 from .forms import RegisterForm, LoginForm, ProfileForm
+from config.posthog_client import posthog
 
 
 class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = form.get_user()
+        posthog.capture(str(user.id), 'user_logged_in')
+        return response
 
 
 class CustomLogoutView(LogoutView):
@@ -26,6 +33,10 @@ class CustomPasswordResetView(PasswordResetView):
     subject_template_name = 'accounts/password_reset_subject.txt'
     success_url = reverse_lazy('accounts:password_reset_done')
 
+    def form_valid(self, form):
+        posthog.capture('anonymous', 'password_reset_requested')
+        return super().form_valid(form)
+
 
 class CustomPasswordResetDoneView(PasswordResetDoneView):
     template_name = 'accounts/password_reset_done.html'
@@ -34,6 +45,12 @@ class CustomPasswordResetDoneView(PasswordResetDoneView):
 class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     template_name = 'accounts/password_reset_confirm.html'
     success_url = reverse_lazy('accounts:password_reset_complete')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if self.user:
+            posthog.capture(str(self.user.id), 'password_reset_completed')
+        return response
 
 
 class CustomPasswordResetCompleteView(PasswordResetCompleteView):
@@ -49,6 +66,7 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            posthog.capture(str(user.id), 'user_registered')
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +81,7 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            posthog.capture(str(request.user.id), 'profile_updated')
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:

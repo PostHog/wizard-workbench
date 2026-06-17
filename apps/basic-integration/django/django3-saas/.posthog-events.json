@@ -1,0 +1,77 @@
+[
+  {
+    "event": "user_registered",
+    "description": "Fires when a new user completes registration and is logged in",
+    "file": "accounts/views.py"
+  },
+  {
+    "event": "user_logged_in",
+    "description": "Fires when a user successfully authenticates",
+    "file": "accounts/views.py"
+  },
+  {
+    "event": "password_reset_requested",
+    "description": "Fires when a user submits the password reset form with their email",
+    "file": "accounts/views.py"
+  },
+  {
+    "event": "password_reset_completed",
+    "description": "Fires when a user successfully sets a new password via reset link",
+    "file": "accounts/views.py"
+  },
+  {
+    "event": "profile_updated",
+    "description": "Fires when a user saves changes to their profile/settings",
+    "file": "accounts/views.py"
+  },
+  {
+    "event": "checkout_initiated",
+    "description": "Fires when a user is redirected to Stripe Checkout to subscribe to a plan",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "subscription_started",
+    "description": "Fires when a subscription is created (demo mode, without Stripe)",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "plan_changed",
+    "description": "Fires when a user changes their existing subscription plan",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "subscription_canceled",
+    "description": "Fires when a user cancels their active subscription",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "billing_portal_accessed",
+    "description": "Fires when a user is redirected to the Stripe billing portal",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "checkout_completed",
+    "description": "Fires server-side via Stripe webhook when checkout.session.completed is received",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "payment_failed",
+    "description": "Fires server-side via Stripe webhook when invoice.payment_failed is received",
+    "file": "billing/views.py"
+  },
+  {
+    "event": "project_created",
+    "description": "Fires when a user successfully creates a new project",
+    "file": "dashboard/views.py"
+  },
+  {
+    "event": "project_updated",
+    "description": "Fires when a user saves changes to an existing project",
+    "file": "dashboard/views.py"
+  },
+  {
+    "event": "project_deleted",
+    "description": "Fires when a user deletes a project",
+    "file": "dashboard/views.py"
+  }
+]
