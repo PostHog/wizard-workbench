@@ -1,11 +1,26 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const app = new Koa();
 const router = new Router();
 
 app.use(bodyParser());
+
+// PostHog request context middleware — propagates distinct ID and session to all downstream captures
+app.use((ctx, next) => {
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || ctx.ip || 'anonymous';
+  const sessionId = ctx.headers['x-posthog-session-id'];
+  const contextData = { distinctId, properties: { $ip: ctx.ip } };
+  if (sessionId) contextData.sessionId = sessionId;
+  return posthog.withContext(contextData, next);
+});
 
 const folders = [{ id: 1, name: 'General' }];
 const notes = [];
@@ -34,6 +49,8 @@ router.post('/api/folders', (ctx) => {
   folders.push(folder);
   ctx.status = 201;
   ctx.body = folder;
+
+  posthog.capture({ event: 'folder created', properties: { folder_id: folder.id, folder_name: folder.name } });
 });
 
 router.delete('/api/folders/:id', (ctx) => {
@@ -54,12 +71,15 @@ router.delete('/api/folders/:id', (ctx) => {
   }
 
   // Move notes from deleted folder to General
+  const movedCount = notes.filter((n) => n.folder_id === folderId).length;
   for (const note of notes) {
     if (note.folder_id === folderId) note.folder_id = 1;
   }
 
   folders.splice(index, 1);
   ctx.status = 204;
+
+  posthog.capture({ event: 'folder deleted', properties: { folder_id: folderId, notes_moved_to_general: movedCount } });
 });
 
 // --- Notes ---
@@ -79,6 +99,10 @@ router.get('/api/notes', (ctx) => {
   }
 
   ctx.body = { notes: result, total: result.length };
+
+  if (search) {
+    posthog.capture({ event: 'notes searched', properties: { query_length: search.length, result_count: result.length, folder_id: folder_id ? parseInt(folder_id, 10) : null } });
+  }
 });
 
 router.post('/api/notes', (ctx) => {
@@ -107,6 +131,8 @@ router.post('/api/notes', (ctx) => {
   notes.push(note);
   ctx.status = 201;
   ctx.body = note;
+
+  posthog.capture({ event: 'note created', properties: { note_id: note.id, folder_id: note.folder_id, has_content: note.content.length > 0 } });
 });
 
 router.get('/api/notes/:id', (ctx) => {
@@ -144,6 +170,8 @@ router.patch('/api/notes/:id', (ctx) => {
   note.updated_at = new Date().toISOString();
 
   ctx.body = note;
+
+  posthog.capture({ event: 'note updated', properties: { note_id: note.id, folder_id: note.folder_id, updated_title: title !== undefined, updated_content: content !== undefined, updated_folder: folder_id !== undefined } });
 });
 
 router.delete('/api/notes/:id', (ctx) => {
@@ -155,12 +183,25 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
+  const deletedNote = notes[index];
   notes.splice(index, 1);
   ctx.status = 204;
+
+  posthog.capture({ event: 'note deleted', properties: { note_id: deletedNote.id, folder_id: deletedNote.folder_id } });
 });
 
 app.use(router.routes());
 app.use(router.allowedMethods());
+
+app.on('error', (err, ctx) => {
+  const distinctId = ctx?.headers?.['x-posthog-distinct-id'] || ctx?.ip || 'anonymous';
+  posthog.captureException(err, distinctId);
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
 
 const PORT = process.env.PORT || 3003;
 
