@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -75,6 +76,11 @@ public final class SupportViewModel: @unchecked Sendable {
 
     public func purchase(product: SupportProduct) {
         processingProductId = product.id
+        PostHogSDK.shared.capture("support_purchase_initiated", properties: [
+            "product_id": product.id,
+            "product_name": product.displayName,
+            "product_kind": product.kind == .subscription ? "subscription" : "tip",
+        ])
         Task { @MainActor [weak self] in
             guard let self else { return }
             defer { self.processingProductId = nil }
@@ -114,6 +120,11 @@ public final class SupportViewModel: @unchecked Sendable {
     private func handle(result: SupportPurchaseResult, for product: SupportProduct) {
         switch result {
         case .success:
+            PostHogSDK.shared.capture("support_purchase_completed", properties: [
+                "product_id": product.id,
+                "product_name": product.displayName,
+                "product_kind": product.kind == .subscription ? "subscription" : "tip",
+            ])
             switch product.kind {
             case .subscription:
                 alertInfo = AlertInfo(

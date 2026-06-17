@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -83,6 +84,7 @@ public final class SettingsViewModel: @unchecked Sendable {
     public func clearCache() {
         settingsUseCase.clearCache()
         refreshCacheUsage()
+        PostHogSDK.shared.capture("settings_cache_cleared")
     }
 
     public func refreshCacheUsage() {
