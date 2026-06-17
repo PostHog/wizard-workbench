@@ -27,6 +27,12 @@ useHead({
     },
   ],
 })
+
+const { $posthog } = useNuxtApp()
+onErrorCaptured((error) => {
+  $posthog?.captureException(error)
+  return false
+})
 </script>
 
 <template>

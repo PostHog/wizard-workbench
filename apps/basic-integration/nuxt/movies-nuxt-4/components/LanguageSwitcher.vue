@@ -6,6 +6,8 @@ const availableLocales = computed(() => {
 })
 
 function updateLocale(event) {
+  const { $posthog: posthog } = useNuxtApp()
+  posthog?.capture('language_changed', { locale: event.target.value, previous_locale: locale.value })
   setLocale(event.target.value)
   window.location.reload()
 }

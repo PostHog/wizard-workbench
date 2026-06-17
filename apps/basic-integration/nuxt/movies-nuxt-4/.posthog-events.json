@@ -1,0 +1,57 @@
+[
+  {
+    "event": "user_logged_in",
+    "description": "User successfully submits the login form and is authenticated",
+    "file": "pages/login.vue"
+  },
+  {
+    "event": "user_logged_out",
+    "description": "User clicks the logout button in the navbar",
+    "file": "components/NavBar.vue"
+  },
+  {
+    "event": "server_user_logged_in",
+    "description": "Server-side: login API route processes a successful authentication",
+    "file": "server/api/auth/login.post.ts"
+  },
+  {
+    "event": "server_user_logged_out",
+    "description": "Server-side: logout API route processes a session termination",
+    "file": "server/api/auth/logout.post.ts"
+  },
+  {
+    "event": "media_searched",
+    "description": "User submits a debounced search query for movies or TV shows",
+    "file": "pages/search.vue"
+  },
+  {
+    "event": "video_played",
+    "description": "User clicks play on a video or trailer card",
+    "file": "components/video/Card.vue"
+  },
+  {
+    "event": "video_modal_opened",
+    "description": "The iframe video modal becomes visible with a new video URL",
+    "file": "components/IframeModal.vue"
+  },
+  {
+    "event": "media_details_tab_changed",
+    "description": "User switches between Overview, Videos, and Photos tabs on a media detail page",
+    "file": "components/media/Details.vue"
+  },
+  {
+    "event": "language_changed",
+    "description": "User selects a different locale from the language switcher",
+    "file": "components/LanguageSwitcher.vue"
+  },
+  {
+    "event": "photo_modal_opened",
+    "description": "User opens the photo gallery modal by clicking a photo",
+    "file": "components/photo/Modal.vue"
+  },
+  {
+    "event": "photo_modal_navigated",
+    "description": "User navigates to the previous or next photo inside the modal",
+    "file": "components/photo/Modal.vue"
+  }
+]

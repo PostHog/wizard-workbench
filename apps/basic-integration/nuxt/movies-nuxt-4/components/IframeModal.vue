@@ -2,9 +2,11 @@
 import { onKeyDown } from '@vueuse/core'
 
 const src = ref<string | null>(null)
+const { $posthog: posthog } = useNuxtApp()
 
 function showModal(link: string) {
   src.value = link
+  posthog?.capture('video_modal_opened', { url: link })
 }
 const el = ref<HTMLIFrameElement>()
 

@@ -5,22 +5,26 @@ const images = ref<Image[] | null>(null)
 const index = ref(0)
 
 const current = computed(() => images.value?.[index.value])
+const { $posthog: posthog } = useNuxtApp()
 
 provideImageModal((img, idx) => {
   images.value = img
   index.value = idx
+  posthog?.capture('photo_modal_opened', { total_photos: img.length, initial_index: idx })
 })
 
 function prev() {
   if (!images.value?.length)
     return
   index.value = (index.value - 1 + images.value.length) % images.value.length
+  posthog?.capture('photo_modal_navigated', { direction: 'prev', index: index.value })
 }
 
 function next() {
   if (!images.value?.length)
     return
   index.value = (index.value + 1) % images.value.length
+  posthog?.capture('photo_modal_navigated', { direction: 'next', index: index.value })
 }
 
 useEventListener('keydown', (e) => {
