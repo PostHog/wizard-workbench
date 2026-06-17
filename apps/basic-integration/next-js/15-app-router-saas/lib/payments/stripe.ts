@@ -7,6 +7,7 @@ import {
   updateTeamSubscription
 } from '@/lib/db/queries';
 import { stripeStub } from './stripe-stub';
+import { createServerPostHog } from '@/lib/posthog';
 
 // Use stub if STRIPE_MODE=stub or if STRIPE_SECRET_KEY is missing/invalid
 const useStub =
@@ -143,12 +144,21 @@ export async function handleSubscriptionChange(
 
   if (status === 'active' || status === 'trialing') {
     const plan = subscription.items.data[0]?.plan;
+    const planName = (plan?.product as Stripe.Product).name;
     await updateTeamSubscription(team.id, {
       stripeSubscriptionId: subscriptionId,
       stripeProductId: plan?.product as string,
-      planName: (plan?.product as Stripe.Product).name,
+      planName,
       subscriptionStatus: status
     });
+
+    const posthog = createServerPostHog();
+    posthog.capture({
+      distinctId: `team_${team.id}`,
+      event: 'subscription_updated',
+      properties: { team_id: team.id, subscription_id: subscriptionId, status, plan_name: planName },
+    });
+    await posthog.flush();
   } else if (status === 'canceled' || status === 'unpaid') {
     await updateTeamSubscription(team.id, {
       stripeSubscriptionId: null,
@@ -156,6 +166,14 @@ export async function handleSubscriptionChange(
       planName: null,
       subscriptionStatus: status
     });
+
+    const posthog = createServerPostHog();
+    posthog.capture({
+      distinctId: `team_${team.id}`,
+      event: 'subscription_canceled',
+      properties: { team_id: team.id, subscription_id: subscriptionId, status },
+    });
+    await posthog.flush();
   }
 }
 

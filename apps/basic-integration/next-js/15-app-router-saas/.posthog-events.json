@@ -1,0 +1,72 @@
+[
+  {
+    "event": "user_signed_in",
+    "description": "A user successfully authenticated with email and password",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event": "user_signed_up",
+    "description": "A new user successfully created an account",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event": "invitation_accepted",
+    "description": "A new user signed up by accepting a team invitation",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event": "user_signed_out",
+    "description": "A user signed out of their account",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event": "password_updated",
+    "description": "A user successfully changed their password",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event": "account_deleted",
+    "description": "A user permanently deleted their account",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event": "account_updated",
+    "description": "A user updated their account name or email",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event": "team_member_removed",
+    "description": "A team owner removed a member from the team",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event": "team_member_invited",
+    "description": "A team owner sent an invitation to a new member",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event": "checkout_started",
+    "description": "A user initiated the Stripe checkout flow from the pricing page",
+    "file": "lib/payments/actions.ts"
+  },
+  {
+    "event": "customer_portal_accessed",
+    "description": "A user opened the Stripe customer portal to manage their subscription",
+    "file": "lib/payments/actions.ts"
+  },
+  {
+    "event": "checkout_completed",
+    "description": "A user successfully completed a Stripe checkout and subscription was created",
+    "file": "app/api/stripe/checkout/route.ts"
+  },
+  {
+    "event": "subscription_updated",
+    "description": "A team subscription became active or entered the trial period",
+    "file": "lib/payments/stripe.ts"
+  },
+  {
+    "event": "subscription_canceled",
+    "description": "A team subscription was canceled or became unpaid",
+    "file": "lib/payments/stripe.ts"
+  }
+]

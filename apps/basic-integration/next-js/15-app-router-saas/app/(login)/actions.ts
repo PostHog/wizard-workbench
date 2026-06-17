@@ -25,6 +25,7 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+import { createServerPostHog } from '@/lib/posthog';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -90,6 +91,14 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
+
+  const posthog = createServerPostHog();
+  posthog.capture({
+    distinctId: foundUser.id.toString(),
+    event: 'user_signed_in',
+    properties: { email: foundUser.email },
+  });
+  await posthog.flush();
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -212,6 +221,21 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     setSession(createdUser)
   ]);
 
+  const posthog = createServerPostHog();
+  posthog.capture({
+    distinctId: createdUser.id.toString(),
+    event: 'user_signed_up',
+    properties: { email, role: userRole, has_invite: !!inviteId },
+  });
+  if (inviteId) {
+    posthog.capture({
+      distinctId: createdUser.id.toString(),
+      event: 'invitation_accepted',
+      properties: { email, role: userRole },
+    });
+  }
+  await posthog.flush();
+
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
     const priceId = formData.get('priceId') as string;
@@ -226,6 +250,13 @@ export async function signOut() {
   const userWithTeam = await getUserWithTeam(user.id);
   await logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT);
   (await cookies()).delete('session');
+
+  const posthog = createServerPostHog();
+  posthog.capture({
+    distinctId: user.id.toString(),
+    event: 'user_signed_out',
+  });
+  await posthog.flush();
 }
 
 const updatePasswordSchema = z.object({
@@ -282,6 +313,13 @@ export const updatePassword = validatedActionWithUser(
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PASSWORD)
     ]);
 
+    const posthog = createServerPostHog();
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'password_updated',
+    });
+    await posthog.flush();
+
     return {
       success: 'Password updated successfully.'
     };
@@ -333,6 +371,13 @@ export const deleteAccount = validatedActionWithUser(
         );
     }
 
+    const posthog = createServerPostHog();
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'account_deleted',
+    });
+    await posthog.flush();
+
     (await cookies()).delete('session');
     redirect('/sign-in');
   }
@@ -353,6 +398,14 @@ export const updateAccount = validatedActionWithUser(
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
+
+    const posthog = createServerPostHog();
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'account_updated',
+      properties: { name, email },
+    });
+    await posthog.flush();
 
     return { name, success: 'Account updated successfully.' };
   }
@@ -386,6 +439,14 @@ export const removeTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.REMOVE_TEAM_MEMBER
     );
+
+    const posthog = createServerPostHog();
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'team_member_removed',
+      properties: { team_id: userWithTeam.teamId, member_id: memberId },
+    });
+    await posthog.flush();
 
     return { success: 'Team member removed successfully' };
   }
@@ -453,6 +514,14 @@ export const inviteTeamMember = validatedActionWithUser(
 
     // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
     // await sendInvitationEmail(email, userWithTeam.team.name, role)
+
+    const posthog = createServerPostHog();
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'team_member_invited',
+      properties: { team_id: userWithTeam.teamId, invited_email: email, role },
+    });
+    await posthog.flush();
 
     return { success: 'Invitation sent successfully' };
   }
