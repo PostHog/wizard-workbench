@@ -58,6 +58,7 @@ import Layout from '../layouts/Layout.astro';
 <script>
   const form = document.getElementById('contact-form') as HTMLFormElement;
   const messageDiv = document.getElementById('form-message') as HTMLDivElement;
+  const ph = (window as any).posthog;
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -65,11 +66,20 @@ import Layout from '../layouts/Layout.astro';
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
+    const sessionId = ph?.get_session_id?.() || null;
+
+    ph?.capture('contact_form_submitted', {
+      interest: data.interest,
+      has_company: !!data.company,
+    });
+
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-PostHog-Session-Id': sessionId || '',
+          'X-PostHog-Distinct-Id': ph?.get_distinct_id?.() || '',
         },
         body: JSON.stringify(data),
       });
@@ -77,14 +87,21 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        ph?.identify(String(data.email), { email: String(data.email), company: data.company ? String(data.company) : undefined });
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
       } else {
+        ph?.captureException(new Error(result.error || 'Contact form submission failed'), {
+          interest: data.interest,
+          status: response.status,
+        });
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
       }
     } catch (error) {
+      ph?.capture('contact_form_error', { reason: 'network_error' });
+      ph?.captureException(error);
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
     }
