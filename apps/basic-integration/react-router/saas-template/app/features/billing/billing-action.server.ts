@@ -40,6 +40,7 @@ import { deleteStripeSubscriptionScheduleFromDatabaseById } from "./stripe-subsc
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/organizations_+/$organizationSlug+/settings+/+types/billing";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { OrganizationMembershipRole } from "~/generated/client";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
@@ -62,6 +63,7 @@ export async function billingAction({
   params,
   request,
 }: Route.ActionArgs) {
+  const posthog = (context as PostHogContext).posthog;
   try {
     const { organization, headers, role, user } = context.get(
       organizationMembershipContext,
@@ -99,6 +101,13 @@ export async function billingAction({
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
         });
 
+        posthog?.capture({
+          event: "subscription_cancelled",
+          properties: {
+            organization_id: organization.id,
+            organization_name: organization.name,
+          },
+        });
         return redirect(cancelSession.url);
       }
 
@@ -159,6 +168,14 @@ export async function billingAction({
           seatsUsed: organization._count.memberships,
         });
 
+        posthog?.capture({
+          event: "checkout_started",
+          properties: {
+            organization_id: organization.id,
+            organization_name: organization.name,
+            price_lookup_key: body.lookupKey,
+          },
+        });
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
         return redirect(checkoutSession.url!);
       }
@@ -195,6 +212,13 @@ export async function billingAction({
           type: "success",
         });
 
+        posthog?.capture({
+          event: "subscription_resumed",
+          properties: {
+            organization_id: organization.id,
+            organization_name: organization.name,
+          },
+        });
         return data(
           { result: undefined },
           { headers: combineHeaders(toast, headers) },
@@ -233,6 +257,14 @@ export async function billingAction({
             organization.stripeSubscriptions[0].items[0].stripeId,
         });
 
+        posthog?.capture({
+          event: "subscription_plan_switched",
+          properties: {
+            new_price_lookup_key: body.lookupKey,
+            organization_id: organization.id,
+            organization_name: organization.name,
+          },
+        });
         return redirect(portalSession.url);
       }
 
