@@ -456,11 +456,7 @@ jobs:
   wizard-ci:
     needs: [discover, notify-start, notify-pr-start, setup-deps]
     if: always() && needs.discover.result == 'success'
-    # Swift apps need macOS (Xcode); Expo react-native apps need a runner with
-    # the Expo environment pre-installed (the GitHub-hosted images don't ship it),
-    # so they route to a dedicated self-hosted runner labeled `expo`. Everything
-    # else runs on the standard ubuntu image.
-    runs-on: ${{ contains(matrix.app, 'swift/') && 'macos-latest' || contains(matrix.app, 'react-native/expo') && fromJson('["self-hosted", "expo"]') || 'ubuntu-latest' }}
+    runs-on: ${{ contains(matrix.app, 'swift/') && 'macos-latest' || 'ubuntu-latest' }}
     timeout-minutes: 60
     permissions:
       contents: read
@@ -502,6 +498,15 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # Expo react-native apps live outside the pnpm workspace, so the root
+      # install above never installs their dependencies — including the local
+      # Expo CLI the wizard shells out to. Install them in-app for just the
+      # Expo matrix jobs so the Expo environment is available on ubuntu.
+      - name: Install Expo app dependencies
+        if: contains(matrix.app, 'react-native/expo')
+        run: npm ci
+        working-directory: apps/${{ matrix.app }}
 
       - name: Install GitHub CLI
         run: |
