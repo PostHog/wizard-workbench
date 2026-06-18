@@ -1,3 +1,4 @@
+import posthog
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -15,9 +16,27 @@ class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+        with posthog.new_context():
+            posthog.identify_context(str(user.id))
+            posthog.capture('user_logged_in', properties={
+                'has_company': bool(user.company_name),
+                'is_email_verified': user.is_email_verified(),
+            })
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            with posthog.new_context():
+                posthog.identify_context(str(request.user.id))
+                posthog.capture('user_logged_out')
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -49,6 +68,11 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            with posthog.new_context():
+                posthog.identify_context(str(user.id))
+                posthog.capture('user_registered', properties={
+                    'has_company': bool(user.company_name),
+                })
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +87,10 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            posthog.identify_context(str(request.user.id))
+            posthog.capture('profile_updated', properties={
+                'has_company': bool(request.user.company_name),
+            })
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
