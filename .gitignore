@@ -99,3 +99,7 @@ temp/
 
 # Android build artifacts
 **/.cxx/
+
+# @ablaszkiewicz debug files
+scripts/select-app.sh
+Makefile
