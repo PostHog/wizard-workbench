@@ -35,6 +35,8 @@ gem "web-push"
 gem "net-http-persistent"
 gem "zip_kit"
 gem "mittens"
+gem "posthog-ruby"
+gem "posthog-rails"
 gem "useragent", bc: "useragent"
 
 # Operations

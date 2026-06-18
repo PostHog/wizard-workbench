@@ -15,6 +15,12 @@ class JoinCodesController < ApplicationController
     @join_code.redeem_if { |account| @identity.join(account) }
     user = User.active.find_by!(account: @join_code.account, identity: @identity)
 
+    PostHog.capture(
+      distinct_id: @identity.email_address,
+      event: "account_joined",
+      properties: { account_name: @join_code.account.name }
+    )
+
     if @identity == Current.identity && user.setup?
       redirect_to landing_url(script_name: @join_code.account.slug)
     elsif @identity == Current.identity
