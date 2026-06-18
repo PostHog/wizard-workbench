@@ -108,6 +108,7 @@ fun ConversationContent(
     navigateToProfile: (String) -> Unit,
     modifier: Modifier = Modifier,
     onNavIconPressed: () -> Unit = { },
+    onMessageSent: ((String) -> Unit)? = null,
 ) {
     val authorMe = stringResource(R.string.author_me)
     val timeNow = stringResource(id = R.string.now)
@@ -203,6 +204,7 @@ fun ConversationContent(
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )
+                    onMessageSent?.invoke(content)
                 },
                 resetScroll = {
                     scope.launch {
