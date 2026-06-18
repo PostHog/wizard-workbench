@@ -1,0 +1,62 @@
+[
+  {
+    "event_name": "story_feed_filtered",
+    "event_description": "User changed the story type filter (Top, Best, Ask, Show) on the home screen.",
+    "file": "app/index.tsx"
+  },
+  {
+    "event_name": "story_opened",
+    "event_description": "User navigated to a story's discussion/detail page from the feed.",
+    "file": "components/posts/Post.tsx"
+  },
+  {
+    "event_name": "story_external_link_opened",
+    "event_description": "User opened a story's external article URL from the feed.",
+    "file": "components/posts/Post.tsx"
+  },
+  {
+    "event_name": "story_upvote_tapped",
+    "event_description": "User tapped the upvote button on a story in the feed.",
+    "file": "components/posts/Post.tsx"
+  },
+  {
+    "event_name": "story_viewed",
+    "event_description": "User viewed a story's full detail page (top of engagement funnel).",
+    "file": "app/[itemId].tsx"
+  },
+  {
+    "event_name": "story_detail_external_link_opened",
+    "event_description": "User opened a story's external URL from the story detail page.",
+    "file": "app/[itemId].tsx"
+  },
+  {
+    "event_name": "story_detail_upvote_tapped",
+    "event_description": "User tapped the upvote button from within a story's detail page.",
+    "file": "app/[itemId].tsx"
+  },
+  {
+    "event_name": "story_author_profile_tapped",
+    "event_description": "User tapped the story author's name to view their HN profile.",
+    "file": "app/[itemId].tsx"
+  },
+  {
+    "event_name": "parent_story_navigated",
+    "event_description": "User navigated to the parent story from a comment detail view.",
+    "file": "app/[itemId].tsx"
+  },
+  {
+    "event_name": "comment_replies_opened",
+    "event_description": "User opened a comment's nested replies/sub-thread.",
+    "file": "components/comments/comment.tsx"
+  },
+  {
+    "event_name": "comment_author_profile_tapped",
+    "event_description": "User tapped a comment author's name to view their HN profile.",
+    "file": "components/comments/comment.tsx"
+  },
+  {
+    "event_name": "user_profile_viewed",
+    "event_description": "User viewed a Hacker News user's profile page.",
+    "file": "app/users/[userId].tsx"
+  }
+]
