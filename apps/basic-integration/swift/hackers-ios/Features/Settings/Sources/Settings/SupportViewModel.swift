@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -89,6 +90,10 @@ public final class SupportViewModel: @unchecked Sendable {
                     title: "Purchase Failed",
                     message: error.localizedDescription
                 )
+                PostHogSDK.shared.capture("support_purchase_failed", properties: [
+                    "product_id": product.id,
+                    "error": error.localizedDescription,
+                ])
             }
         }
     }
@@ -126,6 +131,12 @@ public final class SupportViewModel: @unchecked Sendable {
                     message: "Your tip helps keep Hackers fast, polished, and ready for the next big Hacker News discussion."
                 )
             }
+            let productKind = product.kind == .subscription ? "subscription" : "tip"
+            PostHogSDK.shared.capture("support_purchase_completed", properties: [
+                "product_id": product.id,
+                "product_kind": productKind,
+                "display_price": product.displayPrice,
+            ])
         case .pending:
             alertInfo = AlertInfo(
                 title: "Purchase Pending",
@@ -143,6 +154,7 @@ public final class SupportViewModel: @unchecked Sendable {
                 title: "Purchases Restored",
                 message: "Any existing supporter subscriptions or tips linked to your Apple ID are now active again."
             )
+            PostHogSDK.shared.capture("support_purchases_restored")
         case .pending:
             alertInfo = AlertInfo(
                 title: "Restore Pending",

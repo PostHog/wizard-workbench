@@ -5,8 +5,15 @@
 //  Copyright © 2025 Weiran Zhang. All rights reserved.
 //
 
+import PostHog
 import Shared
 import SwiftUI
+
+// The PostHog project token is a public client-side key safe to ship in the binary.
+// POSTHOG_PROJECT_TOKEN / POSTHOG_HOST Xcode environment variables act as optional
+// overrides (debug/simulator only); the hardcoded values ship in Archive/Release builds.
+private let posthogApiKey = ProcessInfo.processInfo.environment["POSTHOG_PROJECT_TOKEN"] ?? "sTMFPsFhdP1Ssg"
+private let posthogHost = ProcessInfo.processInfo.environment["POSTHOG_HOST"] ?? "https://us.i.posthog.com"
 
 @main
 struct HackersApp: App {
@@ -16,6 +23,12 @@ struct HackersApp: App {
 
     // Keep AppDelegate for legacy services and setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
+    init() {
+        let config = PostHogConfig(apiKey: posthogApiKey, host: posthogHost)
+        config.captureApplicationLifecycleEvents = true
+        PostHogSDK.shared.setup(config)
+    }
 
     var body: some Scene {
         WindowGroup {
