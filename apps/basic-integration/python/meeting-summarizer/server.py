@@ -23,6 +23,8 @@ import mimetypes
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+from posthog_client import posthog_client
+from posthog import identify_context, set_context_session
 
 
 # Session management
@@ -69,6 +71,12 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
     db = UserDatabase()
     sessions = SessionManager()
+
+    def _get_posthog_ids(self):
+        """Return (distinct_id, session_id) from PostHog tracing headers, or (None, None)."""
+        distinct_id = self.headers.get('X-POSTHOG-DISTINCT-ID')
+        session_id = self.headers.get('X-POSTHOG-SESSION-ID')
+        return distinct_id, session_id
 
     def _set_headers(self, status_code=200, content_type='text/html'):
         """Set response headers"""
@@ -274,6 +282,18 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
 
+                    if posthog_client:
+                        _, ph_session_id = self._get_posthog_ids()
+                        with posthog_client.new_context():
+                            identify_context(user.user_id)
+                            if ph_session_id:
+                                set_context_session(ph_session_id)
+                            posthog_client.set(
+                                distinct_id=user.user_id,
+                                properties={'username': user.username},
+                            )
+                            posthog_client.capture('user_logged_in')
+
                     # Send response with session cookie
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
@@ -291,14 +311,23 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     self.wfile.write(response_data.encode('utf-8'))
                 else:
                     logging.warning(f"Login failed for: {email} (user {'found but inactive' if user else 'not found'})")
+                    if posthog_client:
+                        posthog_client.capture(
+                            'login_failed',
+                            distinct_id=email,
+                            properties={'reason': 'user_not_found_or_inactive'},
+                        )
                     self._send_json({'error': 'User not found or inactive'}, 401)
                 return
 
             # API: Logout
             if path == '/api/auth/logout':
                 session_id = self._get_session_id()
+                current_user = self._get_current_user()
                 if session_id:
                     self.sessions.delete_session(session_id)
+                if posthog_client and current_user:
+                    posthog_client.capture('user_logged_out', distinct_id=current_user.user_id)
 
                 self._set_headers(200, 'application/json')
                 self.send_header('Set-Cookie', 'session_id=; Path=/; HttpOnly; Max-Age=0')
@@ -332,6 +361,12 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_user(user):
+                    if posthog_client:
+                        posthog_client.set(
+                            distinct_id=user.user_id,
+                            properties={'username': user.username},
+                        )
+                        posthog_client.capture('user_created', distinct_id=user.user_id)
                     self._send_json(user.to_dict(), 201)
                 else:
                     self._send_json({'error': 'User already exists'}, 409)
@@ -370,6 +405,18 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    if posthog_client:
+                        posthog_client.capture(
+                            'meeting_submitted',
+                            distinct_id=current_user.user_id,
+                            properties={
+                                'transcript_word_count': len(transcript.split()),
+                                'participant_count': len(participants),
+                                'action_items_count': len(action_items),
+                                'key_points_count': len(key_points),
+                                'duration_minutes': duration,
+                            },
+                        )
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -401,6 +448,12 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
                 if self.db.update_user(user_id, **data):
                     updated_user = self.db.get_user(user_id)
+                    if posthog_client:
+                        posthog_client.capture(
+                            'user_updated',
+                            distinct_id=user_id,
+                            properties={'fields_updated': list(data.keys())},
+                        )
                     self._send_json(updated_user.to_dict())
                 else:
                     self._send_json({'error': 'User not found'}, 404)
@@ -428,6 +481,8 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 user_id = path.split('/')[-1]
 
                 if self.db.delete_user(user_id):
+                    if posthog_client:
+                        posthog_client.capture('user_deleted', distinct_id=user_id)
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'User not found'}, 404)
@@ -449,6 +504,8 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    if posthog_client:
+                        posthog_client.capture('meeting_deleted', distinct_id=current_user.user_id)
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)

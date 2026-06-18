@@ -7,6 +7,7 @@ from typing import Optional
 
 from database import UserDatabase
 from models import User
+from posthog_client import posthog_client
 
 
 class UserService:
@@ -36,6 +37,19 @@ class UserService:
 
         if self.db.create_user(user):
             print(f"✓ User registered: {username} ({email})")
+            if posthog_client:
+                posthog_client.set(
+                    distinct_id=user_id,
+                    properties={'username': username},
+                )
+                posthog_client.capture(
+                    'user_registered',
+                    distinct_id=user_id,
+                    properties={
+                        'has_full_name': full_name is not None,
+                        'has_metadata': metadata is not None,
+                    },
+                )
             return user
         else:
             print(f"✗ Failed to register user: {username} (email or username already exists)")
@@ -63,6 +77,8 @@ class UserService:
 
         if success:
             print(f"✓ User deactivated: {user_id}")
+            if posthog_client:
+                posthog_client.capture('user_deactivated', distinct_id=user_id)
         else:
             print(f"✗ Failed to deactivate user: {user_id}")
 
