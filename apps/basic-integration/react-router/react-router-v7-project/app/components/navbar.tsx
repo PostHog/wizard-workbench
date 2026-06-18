@@ -1,7 +1,6 @@
 import { NavLink, Link } from "react-router";
 import { useAuth } from "~/context/AuthContext";
 import { getAvatarUrl } from "~/lib/utils/auth";
-
 export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
 
