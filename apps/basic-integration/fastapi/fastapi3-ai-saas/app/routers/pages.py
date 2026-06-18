@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from posthog import capture
 
 from app.dependencies import CurrentUser, DbSession, RequiredUser
 from app.models import Generation, APIKey, Activity
@@ -31,6 +32,8 @@ async def dashboard(request: Request, current_user: RequiredUser, db: DbSession)
         .limit(5)
         .all()
     )
+
+    capture("dashboard_viewed")
 
     # Stats
     all_generations = db.query(Generation).filter(Generation.user_id == current_user.id).all()
