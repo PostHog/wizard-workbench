@@ -1,3 +1,4 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
@@ -8,6 +9,7 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -19,6 +21,8 @@ except ImportError:
     Redis = None
     rq = None
 from config import Config
+
+posthog_client = None
 
 
 def get_locale():
@@ -36,6 +40,7 @@ babel = Babel()
 
 
 def create_app(config_class=Config):
+    global posthog_client
     app = Flask(__name__)
     app.config.from_object(config_class)
 
@@ -45,6 +50,13 @@ def create_app(config_class=Config):
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
+
+    posthog_client = Posthog(
+        app.config['POSTHOG_PROJECT_TOKEN'],
+        host=app.config['POSTHOG_HOST'],
+        enable_exception_autocapture=True,
+    )
+    atexit.register(posthog_client.shutdown)
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if Elasticsearch and app.config['ELASTICSEARCH_URL'] else None
     if Redis and rq:
