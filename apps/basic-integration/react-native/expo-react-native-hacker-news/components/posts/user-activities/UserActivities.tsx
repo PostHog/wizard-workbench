@@ -2,6 +2,7 @@ import { ReactNode, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { FlatList, ListRenderItem, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePostHog } from "posthog-react-native";
 
 import { Post } from "@/components/posts/Post";
 import { Spinner } from "@/components/Spinner";
@@ -17,6 +18,8 @@ type Props = Pick<User, "id" | "submitted"> & {
 
 export const Activities = ({ id, submitted, children }: Props) => {
   const { bottom } = useSafeAreaInsets();
+  const posthog = usePostHog();
+
   const { data, hasNextPage, isLoading, isFetchingNextPage, fetchNextPage } =
     useInfiniteQuery({
       queryKey: [id, "activities"],
@@ -49,6 +52,16 @@ export const Activities = ({ id, submitted, children }: Props) => {
       .filter(({ dead, deleted }) => dead !== true && deleted !== true);
   }, [data]);
 
+  const handleEndReached = () => {
+    if (hasNextPage) {
+      posthog.capture("more_user_activities_loaded", {
+        user_id: id,
+        page_count: data?.pages.length ?? 0,
+      });
+      fetchNextPage();
+    }
+  };
+
   return (
     <FlatList
       indicatorStyle="black"
@@ -57,9 +70,7 @@ export const Activities = ({ id, submitted, children }: Props) => {
       keyExtractor={(item) => item.id.toString()}
       data={activities}
       onEndReachedThreshold={0.5}
-      onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
-      }}
+      onEndReached={handleEndReached}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}
       ListFooterComponent={() => {

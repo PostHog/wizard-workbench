@@ -13,6 +13,8 @@ import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
+import { useEffect } from "react";
+import { usePostHog } from "posthog-react-native";
 
 import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
@@ -22,6 +24,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -37,6 +40,18 @@ export default function ItemDetails() {
     queryFn: getItemQueryFn,
     enabled: !!item?.parent && item.type === "comment",
   });
+
+  useEffect(() => {
+    if (item) {
+      posthog.capture("story_details_viewed", {
+        story_id: item.id,
+        story_title: item.title,
+        story_score: item.score,
+        comment_count: item.kids?.length || 0,
+        has_url: !!item.url,
+      });
+    }
+  }, [item?.id]);
 
   return (
     <View style={styles.page}>
@@ -120,6 +135,11 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog.capture("story_upvoted", {
+                  story_id: item.id,
+                  story_title: item.title,
+                  story_score: item.score,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -163,6 +183,11 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture("story_detail_external_link_opened", {
+                    story_id: item.id,
+                    story_title: item.title,
+                    url: item.url,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
