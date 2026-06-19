@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
+import { usePostHog } from 'posthog-js/react'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
 import { fetchInvoiceById, patchInvoice } from '../utils/mockTodos'
@@ -28,11 +29,26 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      posthog.capture('invoice_updated', {
+        invoice_id: invoice.id,
+        invoice_title: invoice.title,
+      })
+      router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
+
+  React.useEffect(() => {
+    posthog.capture('invoice_viewed', {
+      invoice_id: invoice.id,
+      invoice_title: invoice.title,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice.id])
 
   React.useEffect(() => {
     navigate({
@@ -86,15 +102,18 @@ function InvoiceComponent() {
 
         <form
           key={invoice.id}
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
-            updateInvoiceMutation.mutate({
+            const result = await updateInvoiceMutation.mutate({
               id: invoice.id,
               title: formData.get('title') as string,
               body: formData.get('body') as string,
             })
+            if (result === undefined) {
+              posthog.capture('invoice_update_failed', { invoice_id: invoice.id })
+            }
           }}
           className="space-y-4"
         >
@@ -117,6 +136,11 @@ function InvoiceComponent() {
                 })}
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 params={true}
+                onClick={() => {
+                  if (!search.showNotes) {
+                    posthog.capture('invoice_notes_shown', { invoice_id: invoice.id })
+                  }
+                }}
               >
                 {search.showNotes ? 'Hide Notes' : 'Add Notes'}
               </Link>
