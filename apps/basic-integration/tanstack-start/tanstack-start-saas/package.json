@@ -10,9 +10,11 @@
     "start": "node .output/server/index.mjs"
   },
   "dependencies": {
+    "@posthog/react": "^1.10.2",
     "@tanstack/react-router": "^1.158.1",
     "@tanstack/react-router-devtools": "^1.158.1",
     "@tanstack/react-start": "^1.158.1",
+    "posthog-node": "^5.38.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^2.6.0",
