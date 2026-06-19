@@ -1,3 +1,4 @@
+from posthog import new_context, identify_context, capture
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -31,6 +32,14 @@ def index(request):
         metrics['days_remaining'] = max(0, days_remaining)
         metrics['plan_name'] = subscription.plan.name
 
+    with new_context():
+        identify_context(str(request.user.id))
+        capture('dashboard_viewed', properties={
+            'project_count': metrics['project_count'],
+            'active_projects': metrics['active_projects'],
+            'has_subscription': subscription is not None,
+        })
+
     return render(request, 'dashboard/index.html', {
         'projects': projects,
         'activities': activities,
@@ -59,6 +68,12 @@ def create_project(request):
                 action='project_created',
                 description=f'Created project: {project.name}'
             )
+
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('project_created', properties={
+                    'has_description': bool(project.description),
+                })
 
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
@@ -104,6 +119,10 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+
+        with new_context():
+            identify_context(str(request.user.id))
+            capture('project_deleted')
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
