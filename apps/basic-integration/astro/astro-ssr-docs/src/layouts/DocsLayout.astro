@@ -16,6 +16,45 @@ const currentPath = Astro.url.pathname;
     <DocsSidebar currentPath={currentPath} />
     <main class="docs-content">
       <slot />
+      <div class="doc-feedback">
+        <p>Was this page helpful?</p>
+        <div class="feedback-buttons">
+          <button class="feedback-btn" data-helpful="true">Yes</button>
+          <button class="feedback-btn" data-helpful="false">No</button>
+        </div>
+        <p class="feedback-thanks" style="display:none;">Thanks for your feedback!</p>
+      </div>
     </main>
   </div>
 </Layout>
+
+<script is:inline>
+  document.querySelectorAll('.feedback-btn').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      const helpful = btn.getAttribute('data-helpful') === 'true';
+      const sessionId = window.posthog?.get_session_id?.() || null;
+      const distinctId = window.posthog?.get_distinct_id?.() || null;
+
+      try {
+        await fetch('/api/feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-PostHog-Session-Id': sessionId || '',
+            'X-PostHog-Distinct-Id': distinctId || ''
+          },
+          body: JSON.stringify({
+            page: window.location.pathname,
+            helpful,
+            distinctId: distinctId || undefined
+          })
+        });
+      } catch (e) {
+        console.error('Feedback submission failed', e);
+      }
+
+      document.querySelector('.feedback-buttons').style.display = 'none';
+      document.querySelector('.feedback-thanks').style.display = 'block';
+    });
+  });
+</script>
