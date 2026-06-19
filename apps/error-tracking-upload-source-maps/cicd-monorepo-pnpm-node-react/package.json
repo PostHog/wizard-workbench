@@ -1,0 +1,9 @@
+{
+  "name": "cicd-monorepo-pnpm-node-react",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build"
+  },
+  "packageManager": "pnpm@10.23.0"
+}
