@@ -65,6 +65,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            POSTHOG_CLI_API_KEY=${{ secrets.POSTHOG_CLI_API_KEY }}
+            POSTHOG_CLI_PROJECT_ID=${{ secrets.POSTHOG_CLI_PROJECT_ID }}
+            POSTHOG_CLI_HOST=${{ secrets.POSTHOG_CLI_HOST }}
 
   deploy:
     name: Deploy to server over SSH
