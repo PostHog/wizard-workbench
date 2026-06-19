@@ -5,13 +5,31 @@ const currentYear = new Date().getFullYear();
 <footer class="footer">
   <div class="container footer-inner">
     <ul class="footer-links">
-      <li><a href="/features" class="footer-link">Features</a></li>
-      <li><a href="/pricing" class="footer-link">Pricing</a></li>
-      <li><a href="/about" class="footer-link">About</a></li>
-      <li><a href="/docs" class="footer-link">Docs</a></li>
-      <li><a href="#" class="footer-link">Privacy</a></li>
-      <li><a href="#" class="footer-link">Terms</a></li>
+      <li><a href="/features" class="footer-link footer-tracked" data-link="features">Features</a></li>
+      <li><a href="/pricing" class="footer-link footer-tracked" data-link="pricing">Pricing</a></li>
+      <li><a href="/about" class="footer-link footer-tracked" data-link="about">About</a></li>
+      <li><a href="/docs" class="footer-link footer-tracked" data-link="docs">Docs</a></li>
+      <li><a href="#" class="footer-link footer-tracked" data-link="privacy">Privacy</a></li>
+      <li><a href="#" class="footer-link footer-tracked" data-link="terms">Terms</a></li>
     </ul>
     <p class="footer-copy">&copy; {currentYear} NeuralFlow AI. All rights reserved.</p>
   </div>
 </footer>
+
+<script is:inline>
+  function onFooterLinkClick(event) {
+    var link = event.currentTarget.getAttribute('data-link');
+    window.posthog?.capture('footer_link_clicked', { link: link });
+  }
+
+  function setupFooter() {
+    var links = document.querySelectorAll('.footer-tracked');
+    links.forEach(function(link) {
+      link.removeEventListener('click', onFooterLinkClick);
+      link.addEventListener('click', onFooterLinkClick);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupFooter);
+  document.addEventListener('astro:page-load', setupFooter);
+</script>
