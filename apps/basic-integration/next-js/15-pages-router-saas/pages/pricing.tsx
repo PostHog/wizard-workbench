@@ -3,10 +3,11 @@ import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -76,6 +77,7 @@ function PricingCard({
 
     startTransition(async () => {
       try {
+        posthog.capture('checkout_started', { price_id: priceId, plan_name: name });
         const response = await fetch('/api/stripe/create-checkout', {
           method: 'POST',
           headers: {
@@ -130,6 +132,10 @@ export default function PricingPage({
   products,
   fallback
 }: PricingPageProps) {
+  useEffect(() => {
+    posthog.capture('pricing_page_viewed');
+  }, []);
+
   const basePlan = products.find((product) => product.name === 'Base');
   const plusPlan = products.find((product) => product.name === 'Plus');
 

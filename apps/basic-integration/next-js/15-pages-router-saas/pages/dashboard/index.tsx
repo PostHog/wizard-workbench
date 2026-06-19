@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, PlusCircle } from 'lucide-react';
 import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -26,6 +27,10 @@ function ManageSubscription() {
 
   async function handleManageSubscription() {
     try {
+      posthog.capture('subscription_management_opened', {
+        plan_name: teamData?.planName,
+        subscription_status: teamData?.subscriptionStatus,
+      });
       const response = await fetch('/api/stripe/customer-portal', {
         method: 'POST',
         headers: {
