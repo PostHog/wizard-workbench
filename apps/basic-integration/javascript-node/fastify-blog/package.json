@@ -9,6 +9,7 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
-    "fastify": "^5.2.0"
+    "fastify": "^5.2.0",
+    "posthog-node": "^5.38.2"
   }
 }
