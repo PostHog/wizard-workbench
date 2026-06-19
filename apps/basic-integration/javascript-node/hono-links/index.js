@@ -1,10 +1,20 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const app = new Hono();
 
 const links = [];
 let nextId = 1;
+
+function getDistinctId(c) {
+  return c.req.header('x-posthog-distinct-id') || 'anonymous';
+}
 
 // List links (with optional tag filter and search)
 app.get('/api/links', (c) => {
@@ -15,12 +25,22 @@ app.get('/api/links', (c) => {
 
   if (tag) {
     result = result.filter((l) => l.tags.includes(tag));
+    posthog.capture({
+      distinctId: getDistinctId(c),
+      event: 'link_filtered_by_tag',
+      properties: { tag },
+    });
   }
   if (search) {
     const q = search.toLowerCase();
     result = result.filter(
       (l) => l.title.toLowerCase().includes(q) || l.url.toLowerCase().includes(q)
     );
+    posthog.capture({
+      distinctId: getDistinctId(c),
+      event: 'link_searched',
+      properties: { query: search },
+    });
   }
   if (favoritesOnly === 'true') {
     result = result.filter((l) => l.favorite);
@@ -47,6 +67,18 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  posthog.capture({
+    distinctId: getDistinctId(c),
+    event: 'link_saved',
+    properties: {
+      link_id: link.id,
+      url: link.url,
+      title: link.title,
+      tags: link.tags,
+    },
+  });
+
   return c.json(link, 201);
 });
 
@@ -70,11 +102,39 @@ app.patch('/api/links/:id', async (c) => {
   }
 
   const body = await c.req.json();
+  const prevFavorite = link.favorite;
+
   if (body.url !== undefined) link.url = body.url;
   if (body.title !== undefined) link.title = body.title;
   if (body.description !== undefined) link.description = body.description;
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
+
+  const distinctId = getDistinctId(c);
+
+  if (body.favorite !== undefined && body.favorite !== prevFavorite) {
+    posthog.capture({
+      distinctId,
+      event: 'link_favorited',
+      properties: {
+        link_id: link.id,
+        url: link.url,
+        title: link.title,
+        favorited: link.favorite,
+      },
+    });
+  } else {
+    posthog.capture({
+      distinctId,
+      event: 'link_updated',
+      properties: {
+        link_id: link.id,
+        url: link.url,
+        title: link.title,
+        tags: link.tags,
+      },
+    });
+  }
 
   return c.json(link);
 });
@@ -87,7 +147,18 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [link] = links.splice(index, 1);
+
+  posthog.capture({
+    distinctId: getDistinctId(c),
+    event: 'link_deleted',
+    properties: {
+      link_id: link.id,
+      url: link.url,
+      title: link.title,
+    },
+  });
+
   return c.body(null, 204);
 });
 
@@ -100,6 +171,11 @@ app.get('/api/tags', (c) => {
     }
   }
   return c.json({ tags: tagCounts });
+});
+
+app.onError((err, c) => {
+  posthog.captureException(err, getDistinctId(c));
+  return c.json({ error: 'Internal server error' }, 500);
 });
 
 const PORT = process.env.PORT || 3002;
