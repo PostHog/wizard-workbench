@@ -8,6 +8,8 @@ import {
   useOutlet,
   type MetaFunction,
 } from 'react-router'
+import { usePostHog } from '@posthog/react'
+import { posthogMiddleware } from '@/lib/posthog-middleware'
 import gsap from 'gsap'
 
 import type { Route } from './+types/root'
@@ -43,6 +45,8 @@ export const links: Route.LinksFunction = () =>
       },
     ],
   })
+
+export const middleware: Route.MiddlewareFunction[] = [posthogMiddleware]
 
 export const loader = () => {
   return {}
@@ -132,6 +136,9 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog()
+  posthog?.captureException(error)
+
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined
