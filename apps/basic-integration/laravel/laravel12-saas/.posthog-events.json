@@ -1,0 +1,72 @@
+[
+  {
+    "event_name": "user_signed_up",
+    "event_description": "A new user successfully completed registration via the email/password form.",
+    "file": "resources/views/livewire/pages/auth/register.blade.php"
+  },
+  {
+    "event_name": "user_logged_in",
+    "event_description": "A user authenticated successfully via the login form.",
+    "file": "resources/views/livewire/pages/auth/login.blade.php"
+  },
+  {
+    "event_name": "user_logged_out",
+    "event_description": "A user ended their session by logging out.",
+    "file": "routes/auth.php"
+  },
+  {
+    "event_name": "social_login_completed",
+    "event_description": "A returning user signed in via a social OAuth provider (e.g. Google).",
+    "file": "app/Http/Controllers/Auth/SocialiteController.php"
+  },
+  {
+    "event_name": "social_signup_completed",
+    "event_description": "A new user created an account for the first time via a social OAuth provider.",
+    "file": "app/Http/Controllers/Auth/SocialiteController.php"
+  },
+  {
+    "event_name": "email_verified",
+    "event_description": "A user clicked the verification link and confirmed their email address.",
+    "file": "app/Http/Controllers/Auth/VerifyEmailController.php"
+  },
+  {
+    "event_name": "password_reset_requested",
+    "event_description": "A user submitted the forgot-password form to receive a reset link.",
+    "file": "resources/views/livewire/pages/auth/forgot-password.blade.php"
+  },
+  {
+    "event_name": "subscription_page_viewed",
+    "event_description": "An authenticated user viewed the subscription/plan selection page (top of checkout funnel).",
+    "file": "app/Http/Controllers/SubscriptionController.php"
+  },
+  {
+    "event_name": "subscription_checkout_started",
+    "event_description": "A user initiated a Stripe checkout session to subscribe to a plan.",
+    "file": "app/Http/Controllers/SubscriptionController.php"
+  },
+  {
+    "event_name": "subscription_created",
+    "event_description": "A user's subscription was created (including demo mode when Stripe is not configured).",
+    "file": "app/Http/Controllers/SubscriptionController.php"
+  },
+  {
+    "event_name": "subscription_plan_changed",
+    "event_description": "An existing subscriber swapped to a different subscription plan.",
+    "file": "app/Http/Controllers/SubscriptionController.php"
+  },
+  {
+    "event_name": "billing_portal_accessed",
+    "event_description": "A user was redirected to the Stripe billing portal to manage their subscription.",
+    "file": "app/Http/Controllers/SubscriptionController.php"
+  },
+  {
+    "event_name": "profile_updated",
+    "event_description": "A user saved changes to their profile name or email address.",
+    "file": "resources/views/livewire/profile/update-profile-information-form.blade.php"
+  },
+  {
+    "event_name": "account_deleted",
+    "event_description": "A user permanently deleted their account after confirming with their password.",
+    "file": "resources/views/livewire/profile/delete-user-form.blade.php"
+  }
+]
