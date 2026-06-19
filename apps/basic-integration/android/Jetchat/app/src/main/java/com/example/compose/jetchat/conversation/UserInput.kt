@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -284,7 +285,10 @@ private fun UserInputSelector(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.EMOJI) },
+            onClick = {
+                onSelectorChange(InputSelector.EMOJI)
+                PostHog.capture(event = "emoji_selector_opened")
+            },
             icon = painterResource(id = R.drawable.ic_mood),
             selected = currentInputSelector == InputSelector.EMOJI,
             description = stringResource(id = R.string.emoji_selector_bt_desc),
@@ -296,19 +300,28 @@ private fun UserInputSelector(
             description = stringResource(id = R.string.dm_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.PICTURE) },
+            onClick = {
+                onSelectorChange(InputSelector.PICTURE)
+                PostHog.capture(event = "attachment_panel_opened", properties = mapOf("panel_type" to "picture"))
+            },
             icon = painterResource(id = R.drawable.ic_insert_photo),
             selected = currentInputSelector == InputSelector.PICTURE,
             description = stringResource(id = R.string.attach_photo_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.MAP) },
+            onClick = {
+                onSelectorChange(InputSelector.MAP)
+                PostHog.capture(event = "attachment_panel_opened", properties = mapOf("panel_type" to "map"))
+            },
             icon = painterResource(id = R.drawable.ic_place),
             selected = currentInputSelector == InputSelector.MAP,
             description = stringResource(id = R.string.map_selector_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.PHONE) },
+            onClick = {
+                onSelectorChange(InputSelector.PHONE)
+                PostHog.capture(event = "attachment_panel_opened", properties = mapOf("panel_type" to "phone"))
+            },
             icon = painterResource(id = R.drawable.ic_duo),
             selected = currentInputSelector == InputSelector.PHONE,
             description = stringResource(id = R.string.videochat_desc),
@@ -446,14 +459,17 @@ private fun UserInputText(
             onStartRecording = {
                 val consumed = !isRecordingMessage
                 isRecordingMessage = true
+                PostHog.capture(event = "voice_recording_started")
                 consumed
             },
             onFinishRecording = {
                 // handle end of recording
                 isRecordingMessage = false
+                PostHog.capture(event = "voice_recording_finished")
             },
             onCancelRecording = {
                 isRecordingMessage = false
+                PostHog.capture(event = "voice_recording_cancelled")
             },
             modifier = Modifier.fillMaxHeight(),
         )
