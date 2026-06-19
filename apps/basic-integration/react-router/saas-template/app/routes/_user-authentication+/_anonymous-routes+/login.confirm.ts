@@ -15,12 +15,14 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { supabase, headers } = context.get(anonymousContext);
+  const posthog = (context as PostHogContext).posthog;
   const i18n = getInstance(context);
   const { inviteLinkInfo, headers: inviteLinkHeaders } =
     await getValidInviteLinkInfo(request);
@@ -55,12 +57,26 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       user.email,
     );
 
+  const isNewUser = !userAccount;
+
   const finalUserAccount =
     userAccount ??
     (await saveUserAccountToDatabase({
       email: user.email,
       supabaseUserId: user.id,
     }));
+
+  if (isNewUser) {
+    posthog?.capture({
+      event: "user_signed_up",
+      properties: { email: user.email, method: "email" },
+    });
+  } else {
+    posthog?.capture({
+      event: "user_logged_in",
+      properties: { method: "email" },
+    });
+  }
 
   if (inviteLinkInfo || emailInviteInfo) {
     const organizationId =
@@ -118,6 +134,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         userAccountId: finalUserAccount.id,
       });
 
+      posthog?.capture({
+        event: "organization_member_joined",
+        properties: {
+          invite_type: "email",
+          organization_id: emailInviteInfo.organizationId,
+          organization_name: emailInviteInfo.organizationName,
+        },
+      });
+
       // If the user has a name, they're already onboarded and we can redirect
       // them to their new organization's dashboard.
       return userAccount?.name
@@ -156,6 +181,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         organizationId: inviteLinkInfo.organizationId,
         request,
         userAccountId: finalUserAccount.id,
+      });
+
+      posthog?.capture({
+        event: "organization_member_joined",
+        properties: {
+          invite_type: "link",
+          organization_id: inviteLinkInfo.organizationId,
+          organization_name: inviteLinkInfo.organizationName,
+        },
       });
 
       // If the user has a name, they're already onboarded and we can redirect

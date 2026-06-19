@@ -40,6 +40,7 @@ import { deleteStripeSubscriptionScheduleFromDatabaseById } from "./stripe-subsc
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/organizations_+/$organizationSlug+/settings+/+types/billing";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { OrganizationMembershipRole } from "~/generated/client";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
@@ -66,6 +67,7 @@ export async function billingAction({
     const { organization, headers, role, user } = context.get(
       organizationMembershipContext,
     );
+    const posthog = (context as PostHogContext).posthog;
     const i18n = getInstance(context);
 
     const result = await validateFormData(request, schema);
@@ -97,6 +99,15 @@ export async function billingAction({
           customerId: organization.stripeCustomerId,
           organizationSlug: params.organizationSlug,
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
+        });
+
+        posthog?.capture({
+          event: "subscription_cancelled",
+          properties: {
+            organization_id: organization.id,
+            organization_name: organization.name,
+            subscription_id: organization.stripeSubscriptions[0].stripeId,
+          },
         });
 
         return redirect(cancelSession.url);
@@ -157,6 +168,16 @@ export async function billingAction({
           priceId: price.stripeId,
           purchasedById: user.id,
           seatsUsed: organization._count.memberships,
+        });
+
+        posthog?.capture({
+          event: "subscription_checkout_started",
+          properties: {
+            organization_id: organization.id,
+            organization_name: organization.name,
+            price_id: price.stripeId,
+            price_lookup_key: body.lookupKey,
+          },
         });
 
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
@@ -231,6 +252,16 @@ export async function billingAction({
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
           subscriptionItemId:
             organization.stripeSubscriptions[0].items[0].stripeId,
+        });
+
+        posthog?.capture({
+          event: "subscription_switched",
+          properties: {
+            new_price_id: price.stripeId,
+            new_price_lookup_key: body.lookupKey,
+            organization_id: organization.id,
+            organization_name: organization.name,
+          },
         });
 
         return redirect(portalSession.url);

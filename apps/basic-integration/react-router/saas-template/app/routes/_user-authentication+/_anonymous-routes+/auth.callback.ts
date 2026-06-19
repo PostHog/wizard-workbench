@@ -15,6 +15,7 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
@@ -22,6 +23,7 @@ import { redirectWithToast } from "~/utils/toast.server";
 export async function loader({ request, context }: Route.LoaderArgs) {
   try {
     const { supabase, headers } = context.get(anonymousContext);
+    const posthog = (context as PostHogContext).posthog;
     const i18n = getInstance(context);
     const { inviteLinkInfo, headers: inviteLinkHeaders } =
       await getValidInviteLinkInfo(request);
@@ -110,6 +112,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
             userAccountId: maybeUser.id,
           });
 
+          posthog?.capture({
+            event: "organization_member_joined",
+            properties: {
+              invite_type: "email",
+              organization_id: emailInviteInfo.organizationId,
+              organization_name: emailInviteInfo.organizationName,
+            },
+          });
+
           return redirectWithToast(
             href("/organizations/:organizationSlug/dashboard", {
               organizationSlug: emailInviteInfo.organizationSlug,
@@ -146,6 +157,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
             userAccountId: maybeUser.id,
           });
 
+          posthog?.capture({
+            event: "organization_member_joined",
+            properties: {
+              invite_type: "link",
+              organization_id: inviteLinkInfo.organizationId,
+              organization_name: inviteLinkInfo.organizationName,
+            },
+          });
+
           return redirectWithToast(
             href("/organizations/:organizationSlug/dashboard", {
               organizationSlug: inviteLinkInfo.organizationSlug,
@@ -173,6 +193,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         }
       }
 
+      posthog?.capture({
+        event: "user_logged_in",
+        properties: { method: "oauth" },
+      });
+
       return redirect(href("/organizations"), {
         headers: combineHeaders(headers, inviteLinkHeaders, emailInviteHeaders),
       });
@@ -181,6 +206,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const userProfile = await saveUserAccountToDatabase({
       email,
       supabaseUserId: user.id,
+    });
+
+    posthog?.capture({
+      event: "user_signed_up",
+      properties: { email, method: "oauth" },
     });
 
     if (emailInviteInfo) {
@@ -194,6 +224,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         role: emailInviteInfo.role,
         userAccountId: userProfile.id,
       });
+
+      posthog?.capture({
+        event: "organization_member_joined",
+        properties: {
+          invite_type: "email",
+          organization_id: emailInviteInfo.organizationId,
+          organization_name: emailInviteInfo.organizationName,
+        },
+      });
     } else if (inviteLinkInfo) {
       await acceptInviteLink({
         i18n,
@@ -202,6 +241,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         organizationId: inviteLinkInfo.organizationId,
         request,
         userAccountId: userProfile.id,
+      });
+
+      posthog?.capture({
+        event: "organization_member_joined",
+        properties: {
+          invite_type: "link",
+          organization_id: inviteLinkInfo.organizationId,
+          organization_name: inviteLinkInfo.organizationName,
+        },
       });
     }
 
