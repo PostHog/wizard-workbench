@@ -54,6 +54,7 @@ import {
   selectCommand,
   selectApp,
 } from "../wizard-run/picker.js";
+import { runE2e, replayRecording } from "./e2e.js";
 
 // ============================================================================
 // Config
@@ -76,6 +77,16 @@ interface Options {
   pushOnly: boolean;
   branch?: string;
   evaluate: boolean;
+  /** Run via the wizard-ci-tools control plane (full flow + structured asserts). */
+  e2e: boolean;
+  /** Scoped project id for the personal API key (e2e mode). */
+  projectId?: string;
+  /** e2e: keep installed skills instead of deleting them. */
+  keepSkills: boolean;
+  /** Replay a recorded run (path to recording.json). */
+  replay?: string;
+  /** Flags forwarded to the replayer (--step / --delay <ms>). */
+  replayPassthrough: string[];
 }
 
 // ============================================================================
@@ -251,11 +262,21 @@ function parseArgs(): Options {
     clean: false,
     pushOnly: false,
     evaluate: false,
+    e2e: false,
+    keepSkills: false,
+    replayPassthrough: [],
   };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === "--app" || arg === "-a") opts.app = args[++i];
+    if (arg === "--e2e") opts.e2e = true;
+    else if (arg === "--replay") opts.replay = args[++i];
+    else if (arg === "--delay") {
+      opts.replayPassthrough.push("--delay", args[++i]);
+    } else if (arg === "--step") opts.replayPassthrough.push("--step");
+    else if (arg === "--project-id") opts.projectId = args[++i];
+    else if (arg === "--keep-skills") opts.keepSkills = true;
+    else if (arg === "--app" || arg === "-a") opts.app = args[++i];
     else if (arg === "--command" || arg === "-c") opts.command = args[++i];
     else if (arg === "--product") opts.product = args[++i];
     else if (arg === "--trigger-id" || arg === "-t") opts.triggerId = args[++i];
@@ -305,8 +326,20 @@ Evaluation:
   pnpm wizard-ci --evaluate, -e      Run pr-evaluator after PR creation
                                      With --local: runs evaluation on local branch
                                      (creates branch, commits, runs test-run mode)
+
+Control-plane e2e (full interactive flow, structured assertions):
+  pnpm wizard-ci <app-path> --e2e    Run via wizard-ci-tools instead of LoggingUI
+                                     happy path · skip mcp+slack · delete skills
+                                     · continue past health issues
+  pnpm wizard-ci ... --e2e --project-id <id>   Scoped-key project (or env POSTHOG_WIZARD_PROJECT_ID)
+  pnpm wizard-ci ... --e2e --keep-skills       Keep installed skills instead of deleting
+  pnpm wizard-ci --replay <recording.json>     Replay a recorded run in the terminal
+                                     --step (Enter to advance, default) | --delay <ms> (auto)
 `);
       process.exit(0);
+    } else if (!arg.startsWith("-") && !opts.app) {
+      // Positional app path, e.g. `wizard-ci basic-integration/<framework> --e2e`.
+      opts.app = arg;
     }
   }
   return opts;
@@ -743,6 +776,24 @@ async function runCI(
 
 async function main(): Promise<void> {
   const opts = parseArgs();
+
+  // Replay a recorded e2e run in the terminal.
+  if (opts.replay) {
+    process.exit(replayRecording(opts.replay, opts.replayPassthrough));
+  }
+
+  // Control-plane e2e: run the full interactive flow via wizard-ci-tools and
+  // assert on structured state, instead of the classic LoggingUI spawn + PR.
+  if (opts.e2e) {
+    process.exit(
+      runE2e({
+        app: opts.app,
+        region: process.env.POSTHOG_REGION,
+        projectId: opts.projectId,
+        keepSkills: opts.keepSkills,
+      }),
+    );
+  }
 
   // Handle --clean command
   if (opts.clean) {
