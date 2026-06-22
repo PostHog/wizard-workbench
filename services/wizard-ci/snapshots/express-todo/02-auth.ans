@@ -1,0 +1,9 @@
+[1m[38;2;220;147;0mPostHog Setup Wizard[39m[22m
+[32m✔ [39mFramework: Node.js
+
+[1m[2mHow does the wizard use your data?[22m
+[2m• Source files are read by Claude for AI context[22m
+[2m• .env* and secrets stay on your machine[22m
+[2m• Press [38;2;220;147;0m[I][39m for full privacy & usage info[22m
+
+[34m⠋[39m Waiting for authentication...

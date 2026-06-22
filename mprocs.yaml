@@ -110,6 +110,14 @@ procs:
     autostart: false
     env_file: .env
 
+  wizard-ci-snapshots:
+    # Run the CI-e2e test definitions, render TUI snapshots of each real run,
+    # and diff against the committed baseline. Prints a per-frame summary and
+    # writes a side-by-side visual report (report.html). --update to accept.
+    shell: "pnpm wizard-ci-snapshots"
+    autostart: false
+    env_file: .env
+
   # ═══════════════════════════════════════════════════════════════════════════
   # PR/BRANCH EVALUATION
   # ═══════════════════════════════════════════════════════════════════════════
