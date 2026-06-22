@@ -1,3 +1,4 @@
+import posthog from 'posthog-js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -19,6 +20,11 @@ function requireAuth(handler) {
     handler(params);
   };
 }
+
+posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
+  api_host: import.meta.env.VITE_POSTHOG_HOST,
+  person_profiles: 'identified_only',
+});
 
 // --- Routes ---
 
