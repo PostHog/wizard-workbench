@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -86,7 +87,16 @@ function RouterSpinner() {
 
 function RootComponent() {
   return (
-    <>
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN!}
+      options={{
+        api_host: '/ingest',
+        ui_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST || 'https://us.posthog.com',
+        defaults: '2026-01-30',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
@@ -132,7 +142,7 @@ function RootComponent() {
         </div>
       </div>
       <TanStackRouterDevtools position="bottom-right" />
-    </>
+    </PostHogProvider>
   )
 }
 
@@ -433,9 +443,13 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data }) => {
+      posthog.capture('invoice_created', { invoice_id: data.id, invoice_title: data.title })
+      router.invalidate()
+    },
   })
 
   return (
@@ -449,14 +463,17 @@ function InvoicesIndexComponent() {
         </div>
 
         <form
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
-            createInvoiceMutation.mutate({
+            const result = await createInvoiceMutation.mutate({
               title: formData.get('title') as string,
               body: formData.get('body') as string,
             })
+            if (!result) {
+              posthog.capture('invoice_creation_failed')
+            }
           }}
           className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-4"
         >
@@ -517,11 +534,19 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data }) => {
+      posthog.capture('invoice_updated', { invoice_id: data?.id, invoice_title: data?.title })
+      router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
+
+  React.useEffect(() => {
+    posthog.capture('invoice_viewed', { invoice_id: invoice.id, invoice_title: invoice.title })
+  }, [invoice.id])
   React.useEffect(() => {
     navigate({
       search: (old) => ({
@@ -574,15 +599,18 @@ function InvoiceComponent() {
 
         <form
           key={invoice.id}
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
-            updateInvoiceMutation.mutate({
+            const result = await updateInvoiceMutation.mutate({
               id: invoice.id,
               title: formData.get('title') as string,
               body: formData.get('body') as string,
             })
+            if (!result) {
+              posthog.capture('invoice_update_failed', { invoice_id: invoice.id })
+            }
           }}
           className="space-y-4"
         >
@@ -601,6 +629,10 @@ function InvoiceComponent() {
                 search={(old) => ({
                   ...old,
                   showNotes: old.showNotes ? undefined : true,
+                })}
+                onClick={() => posthog.capture('invoice_notes_toggled', {
+                  invoice_id: invoice.id,
+                  action: search.showNotes ? 'hidden' : 'shown',
                 })}
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 from={invoiceRoute.fullPath}
@@ -688,6 +720,7 @@ function UsersLayoutComponent() {
   const navigate = useNavigate({ from: usersLayoutRoute.fullPath })
   const { usersView } = usersLayoutRoute.useSearch()
   const users = usersLayoutRoute.useLoaderData()
+  const posthog = usePostHog()
   const sortBy = usersView?.sortBy ?? 'name'
   const filterBy = usersView?.filterBy
 
@@ -715,7 +748,8 @@ function UsersLayoutComponent() {
     )
   }, [sortedUsers, filterBy])
 
-  const setSortBy = (sortBy: UsersViewSortBy) =>
+  const setSortBy = (sortBy: UsersViewSortBy) => {
+    posthog.capture('team_members_sorted', { sort_by: sortBy })
     navigate({
       search: (old) => {
         return {
@@ -728,6 +762,7 @@ function UsersLayoutComponent() {
       },
       replace: true,
     })
+  }
 
   React.useEffect(() => {
     navigate({
@@ -759,6 +794,11 @@ function UsersLayoutComponent() {
           <input
             value={filterDraft}
             onChange={(e) => setFilterDraft(e.target.value)}
+            onBlur={(e) => {
+              if (e.target.value) {
+                posthog.capture('team_members_filtered', { filter_by: e.target.value })
+              }
+            }}
             placeholder="Search team members..."
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
           />
@@ -861,6 +901,13 @@ const userRoute = createRoute({
 
 function UserComponent() {
   const user = userRoute.useLoaderData()
+  const posthog = usePostHog()
+
+  React.useEffect(() => {
+    if (user) {
+      posthog.capture('team_member_viewed', { user_id: user.id, user_name: user.name })
+    }
+  }, [user?.id])
 
   if (!user) {
     return <div className="p-6">User not found</div>
@@ -1003,6 +1050,7 @@ const profileRoute = createRoute({
 
 function ProfileComponent() {
   const { username } = profileRoute.useRouteContext()
+  const posthog = usePostHog()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
 
@@ -1049,7 +1097,10 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => posthog.capture('plan_upgrade_clicked')}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Upgrade
             </button>
           </div>
@@ -1067,6 +1118,8 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                posthog.capture('user_signed_out')
+                posthog.reset()
                 auth.logout()
                 router.invalidate()
               }}
@@ -1099,10 +1152,13 @@ function LoginComponent() {
   })
   const search = useSearch({ from: loginRoute.fullPath })
   const [username, setUsername] = React.useState('')
+  const posthog = usePostHog()
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog.identify(username, { username })
+    posthog.capture('user_signed_in', { username })
     router.invalidate()
   }
 
@@ -1138,6 +1194,8 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('user_signed_out')
+                posthog.reset()
                 auth.logout()
                 router.invalidate()
               }}
