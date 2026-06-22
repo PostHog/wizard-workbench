@@ -1,6 +1,7 @@
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
+import posthog
 from flask import Flask, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -42,6 +43,11 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     login.init_app(app)
+
+    if not app.config.get('POSTHOG_DISABLED'):
+        posthog.api_key = app.config['POSTHOG_PROJECT_TOKEN']
+        posthog.host = app.config['POSTHOG_HOST']
+        posthog.debug = app.config.get('DEBUG', False)
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)

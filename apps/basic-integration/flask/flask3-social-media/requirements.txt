@@ -13,6 +13,7 @@ Flask-WTF
 gunicorn
 langdetect
 PyJWT
+posthog
 python-dotenv
 redis
 requests
