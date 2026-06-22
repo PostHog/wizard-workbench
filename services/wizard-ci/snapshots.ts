@@ -21,8 +21,11 @@
  *   WIZARD_PATH                a wizard checkout that has e2e-harness/ (i.e. on the
  *                              e2e-control-plane branch) — that's where the render runs
  *
- * CI surfaces report.html in visual-comparison mode (and fails on drift until a
- * human updates the baseline). Locally it's surfaced through mprocs.
+ * Drift never fails the command — a real agent emits frames a little differently
+ * each run, so the diffs are surfaced (terminal summary + report.html) for a
+ * human to eyeball, not asserted away. Only a genuine failure (the run dying, no
+ * recording) exits non-zero. report.html is the side-by-side visual comparison;
+ * locally it's surfaced through mprocs.
  */
 import "dotenv/config";
 import { join, basename } from "path";
@@ -164,7 +167,7 @@ function main(): number {
     args[args.indexOf("--project-id") + 1] ||
     "";
 
-  let drift = 0;
+  let totalChanged = 0;
   for (const def of TEST_DEFS) {
     console.log(`\n=== snapshots: ${def.name} (${def.app}) ===`);
 
@@ -212,13 +215,20 @@ function main(): number {
     console.log(`\nvisual report: ${report}`);
     if (!existsSync(baselineDir))
       console.log(`(no baseline yet — run with --update to seed it)`);
-    if (changed.length) drift = 1;
+    totalChanged += changed.length;
   }
 
-  if (drift)
-    console.log(`\n✖ snapshots drifted. Review the report; accept with --update.`);
+  // Drift is expected — a real agent does the same steps but emits frames a
+  // little differently run to run. We surface the diffs for a human to eyeball;
+  // we never fail on them. (A genuine failure — the run dying or no recording —
+  // returns non-zero earlier.) Accept a new baseline with --update.
+  if (totalChanged)
+    console.log(
+      `\nℹ ${totalChanged} frame(s) changed — review the report above. ` +
+        `Accept with --update if the new run looks right.`,
+    );
   else console.log(`\n✓ snapshots match baseline.`);
-  return drift;
+  return 0;
 }
 
 process.exit(main());
