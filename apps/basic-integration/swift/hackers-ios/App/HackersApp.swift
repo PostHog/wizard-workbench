@@ -5,8 +5,17 @@
 //  Copyright © 2025 Weiran Zhang. All rights reserved.
 //
 
+import PostHog
 import Shared
 import SwiftUI
+
+// PostHog configuration — the project token is a public client-side key designed
+// to ship in the binary. An env-var override is read first (useful in Xcode dev
+// builds), but a hardcoded fallback ensures Release/Archive builds always work.
+private let posthogProjectToken =
+    ProcessInfo.processInfo.environment["POSTHOG_PROJECT_TOKEN"] ?? "sTMFPsFhdP1Ssg"
+private let posthogHost =
+    ProcessInfo.processInfo.environment["POSTHOG_HOST"] ?? "https://us.i.posthog.com"
 
 @main
 struct HackersApp: App {
@@ -16,6 +25,12 @@ struct HackersApp: App {
 
     // Keep AppDelegate for legacy services and setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
+    init() {
+        let config = PostHogConfig(apiKey: posthogProjectToken, host: posthogHost)
+        config.captureApplicationLifecycleEvents = true
+        PostHogSDK.shared.setup(config)
+    }
 
     var body: some Scene {
         WindowGroup {
