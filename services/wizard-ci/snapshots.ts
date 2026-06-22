@@ -39,8 +39,18 @@ import {
   cpSync,
 } from "fs";
 import { spawnSync } from "child_process";
-import { runE2e } from "./e2e.js";
+import { createInterface } from "readline";
+import { runE2e, replayRecording } from "./e2e.js";
 import { ansiToHtml } from "./ansi-html.js";
+
+/** Yes/no prompt. Auto-no when not a TTY (CI), so nothing ever hangs. */
+async function confirm(question: string): Promise<boolean> {
+  if (!process.stdin.isTTY) return false;
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await new Promise<string>((res) => rl.question(question, res));
+  rl.close();
+  return /^y(es)?$/i.test(answer.trim());
+}
 
 const WORKBENCH = join(import.meta.dirname, "..", "..");
 const BASELINE_ROOT = join(import.meta.dirname, "snapshots");
@@ -157,7 +167,7 @@ function stripAnsi(s: string): string {
   return s.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
-function main(): number {
+async function main(): Promise<number> {
   const args = process.argv.slice(2);
   const update = args.includes("--update");
   const recordingArg = args[args.indexOf("--recording") + 1];
@@ -168,6 +178,7 @@ function main(): number {
     "";
 
   let totalChanged = 0;
+  const recorded: Array<{ name: string; recording: string }> = [];
   for (const def of TEST_DEFS) {
     console.log(`\n=== snapshots: ${def.name} (${def.app}) ===`);
 
@@ -183,6 +194,7 @@ function main(): number {
       console.error(`✖ no recording at ${recording}`);
       return 1;
     }
+    recorded.push({ name: def.name, recording });
 
     const currentDir = join(OUT_ROOT, def.name, "current");
     const baselineDir = join(BASELINE_ROOT, def.name);
@@ -228,7 +240,16 @@ function main(): number {
         `Accept with --update if the new run looks right.`,
     );
   else console.log(`\n✓ snapshots match baseline.`);
+
+  // Offer to replay the run's snapshots right here — no need to copy/paste a
+  // command. TTY only (confirm() auto-declines in CI), and the replayer takes
+  // over stdin for its own stepper once this prompt closes.
+  for (const { name, recording } of recorded) {
+    if (await confirm(`\nReplay ${name} snapshots in the terminal? [y/N] `)) {
+      replayRecording(recording, ["--step"]);
+    }
+  }
   return 0;
 }
 
-process.exit(main());
+main().then((code) => process.exit(code));
