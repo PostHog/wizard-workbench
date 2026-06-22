@@ -783,7 +783,7 @@ async function main(): Promise<void> {
   }
 
   // Control-plane e2e: run the full interactive flow via wizard-ci-tools and
-  // assert on structured state, instead of the classic LoggingUI spawn + PR.
+  // assert on structured state.
   if (opts.e2e) {
     process.exit(
       runE2e({

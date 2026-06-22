@@ -256,15 +256,3 @@ This generates the CA cert at `~/.mitmproxy/mitmproxy-ca-cert.pem` and adds it t
 In phrocs, start the `mitmproxy` process first, then start `wizard-run-proxy`. Traffic will appear in the mitmproxy TUI.
 
 Alternatively, you can use [Charles Proxy](https://www.charlesproxy.com/) (GUI-based, paid license) on port `8888` instead of mitmproxy.
-
----
-
-## Agentic exploration
-
-You can hand the Wizard to an AI agent and have it **run, drive, and explore the Wizard itself** — against any app, headlessly, snapshotting the TUI so it can see what happened. The agent's runbook lives in the Wizard repo at `e2e-harness/EXPLORING-AS-AN-AGENT.md` (set `WIZARD_PATH` to that checkout). It covers driving the flow through the `wizard-ci-tools` control plane (`read_state` / `list_actions` / `perform_action`), capturing snapshots with `renderFrame`, and the env the run needs.
-
-Point an agent (e.g. Claude Code) at it with a prompt like — here, exploring against [open-saas](https://github.com/wasp-lang/open-saas):
-
-> Explore the PostHog Wizard against a real app, in the name of agentic exploration. Read `e2e-harness/EXPLORING-AS-AN-AGENT.md` in the wizard repo — it's your runbook for driving the Wizard headlessly, capturing snapshots, and the env you'll need. Ask me for my phx key file path and set up per the runbook. Then clone `https://github.com/wasp-lang/open-saas` into a throwaway `/tmp` copy, work out how to build it, and run the Wizard against it — driving the flow, snapshotting each key moment, and rendering the screens back so I can see them. Then tell me what the Wizard did: which screens it walked, what it changed in the project, and anything that broke.
-
-The agent figures out how to build and run the target itself — that's the point. It learns the Wizard by driving it.

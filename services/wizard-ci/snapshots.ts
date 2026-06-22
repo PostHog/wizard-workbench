@@ -2,30 +2,23 @@
  * wizard-ci snapshots: TUI visual-regression for the CI-e2e test definitions.
  *
  * For each test definition (for now: the integration flow on express-todo) this
- * runs a REAL `--e2e` agent run, renders every key-moment frame of the run's
+ * runs a real `--e2e` agent run, renders every key-moment frame of the run's
  * recording to a real-Ink ANSI snapshot, and diffs it against a committed
- * baseline. The point is NOT pixel-determinism — a real agent enqueues tasks
- * differently run to run — it's to surface those differences to a human in a
- * side-by-side: same screens every time, minor run-to-run changes flagged for
- * review. No mocks anywhere: real agent, real recording, real render.
+ * baseline. Differences are surfaced in a side-by-side for review.
  *
  *   pnpm wizard-ci-snapshots                 # run + compare, write HTML report
  *   pnpm wizard-ci-snapshots --update        # accept current output as baseline
- *   pnpm wizard-ci-snapshots --recording <f> # skip the run, render an existing
- *                                            #   real recording (still no mock)
+ *   pnpm wizard-ci-snapshots --recording <f> # render an existing recording, skip the run
  *
  * Requires (in .env, sourced by the `wizard-ci-snapshots` mprocs proc):
- *   POSTHOG_PERSONAL_API_KEY   the phx key (used as the gateway bearer)
- *   POSTHOG_WIZARD_PROJECT_ID  the project the key is scoped to (else bootstrap 403s)
+ *   POSTHOG_PERSONAL_API_KEY   the phx key (gateway bearer)
+ *   POSTHOG_WIZARD_PROJECT_ID  the project the key is scoped to
  *   POSTHOG_REGION             us | eu
- *   WIZARD_PATH                a wizard checkout that has e2e-harness/ (i.e. on the
- *                              e2e-control-plane branch) — that's where the render runs
+ *   WIZARD_PATH                a wizard checkout that has e2e-harness/ (where the render runs)
  *
- * Drift never fails the command — a real agent emits frames a little differently
- * each run, so the diffs are surfaced (terminal summary + report.html) for a
- * human to eyeball, not asserted away. Only a genuine failure (the run dying, no
- * recording) exits non-zero. report.html is the side-by-side visual comparison;
- * locally it's surfaced through mprocs.
+ * Drift never fails the command: diffs are surfaced (terminal + report.html), and
+ * only a genuine failure (run died, no recording) exits non-zero. report.html is
+ * the side-by-side; locally it's surfaced through mprocs.
  */
 import "dotenv/config";
 import { join, basename } from "path";
@@ -93,8 +86,7 @@ function renderSnapshots(recording: string, outDir: string): void {
   const r = spawnSync("npx", ["tsx", script, recording, outDir], {
     cwd: wizardRepo(),
     stdio: "inherit",
-    // Force truecolor so Ink/chalk emit ANSI even though this isn't a TTY —
-    // the snapshots capture the real colored TUI, not stripped text.
+    // Force truecolor so Ink/chalk emit ANSI (not a TTY).
     env: { ...process.env, FORCE_COLOR: "3" },
   });
   if (r.status !== 0) throw new Error("render-snapshots failed");
@@ -133,7 +125,7 @@ function reportHtml(name: string, diffs: FrameDiff[]): string {
   const rows = diffs
     .map(
       (d) => `
-    <section class="row ${d.status}">
+    <section class="row ${d.status}" data-frame="${d.file}" data-status="${d.status}">
       <h2><span class="badge" style="background:${BADGE[d.status]}">${d.status}</span> ${d.file}</h2>
       <div class="cols">
         <div><div class="lbl">baseline</div>${cell(d.baseline)}</div>
@@ -145,9 +137,9 @@ function reportHtml(name: string, diffs: FrameDiff[]): string {
   const changed = diffs.filter((d) => d.status !== "same").length;
   return `<!doctype html><html><head><meta charset="utf-8"><title>wizard-ci snapshots — ${name}</title>
 <style>
-  body{background:#0d1117;color:#c9d1d9;font:14px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;padding:24px}
+  body{background:#0d1117;color:#c9d1d9;font:14px/1.2 ui-monospace,SFMono-Regular,Menlo,"DejaVu Sans Mono","Liberation Mono",Consolas,monospace;margin:0;padding:24px}
   h1{font-size:18px} .summary{margin:8px 0 24px;color:#8b949e}
-  .row{border:1px solid #21262d;border-radius:8px;margin:16px 0;padding:12px 16px}
+  .row{background:#0d1117;border:1px solid #21262d;border-radius:8px;margin:16px 0;padding:12px 16px}
   .row.same{opacity:.5} .row.changed{border-color:#d29922}
   h2{font-size:14px;margin:0 0 10px;font-weight:600}
   .badge{color:#0d1117;padding:1px 8px;border-radius:10px;font-size:11px;text-transform:uppercase;margin-right:8px}
@@ -230,10 +222,8 @@ async function main(): Promise<number> {
     totalChanged += changed.length;
   }
 
-  // Drift is expected — a real agent does the same steps but emits frames a
-  // little differently run to run. We surface the diffs for a human to eyeball;
-  // we never fail on them. (A genuine failure — the run dying or no recording —
-  // returns non-zero earlier.) Accept a new baseline with --update.
+  // Drift never fails: report the diffs and exit 0 (real failures returned
+  // non-zero earlier). Accept a new baseline with --update.
   if (totalChanged)
     console.log(
       `\nℹ ${totalChanged} frame(s) changed — review the report above. ` +
@@ -241,9 +231,7 @@ async function main(): Promise<number> {
     );
   else console.log(`\n✓ snapshots match baseline.`);
 
-  // Offer to replay the run's snapshots right here — no need to copy/paste a
-  // command. TTY only (confirm() auto-declines in CI), and the replayer takes
-  // over stdin for its own stepper once this prompt closes.
+  // Offer to replay (TTY only; confirm() auto-declines in CI).
   for (const { name, recording } of recorded) {
     if (await confirm(`\nReplay ${name} snapshots in the terminal? [y/N] `)) {
       replayRecording(recording, ["--step"]);
