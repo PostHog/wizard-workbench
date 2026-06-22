@@ -14,6 +14,13 @@
  *   pnpm wizard-ci-snapshots --recording <f> # skip the run, render an existing
  *                                            #   real recording (still no mock)
  *
+ * Requires (in .env, sourced by the `wizard-ci-snapshots` mprocs proc):
+ *   POSTHOG_PERSONAL_API_KEY   the phx key (used as the gateway bearer)
+ *   POSTHOG_WIZARD_PROJECT_ID  the project the key is scoped to (else bootstrap 403s)
+ *   POSTHOG_REGION             us | eu
+ *   WIZARD_PATH                a wizard checkout that has e2e-harness/ (i.e. on the
+ *                              e2e-control-plane branch) — that's where the render runs
+ *
  * CI surfaces report.html in visual-comparison mode (and fails on drift until a
  * human updates the baseline). Locally it's surfaced through mprocs.
  */
