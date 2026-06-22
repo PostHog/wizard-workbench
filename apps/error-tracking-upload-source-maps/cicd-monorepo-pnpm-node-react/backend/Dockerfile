@@ -22,15 +22,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --filter backend...
 
 # Compile the sources. Shared is built before the backend so its dist/ + types
-# are in place. tsc emits source maps that posthog-cli then injects and uploads.
+# are in place before the backend is compiled.
 COPY packages/shared packages/shared
 COPY backend backend
-ARG POSTHOG_CLI_API_KEY
-ARG POSTHOG_CLI_PROJECT_ID
-ARG POSTHOG_CLI_HOST
-ENV POSTHOG_CLI_API_KEY=$POSTHOG_CLI_API_KEY \
-    POSTHOG_CLI_PROJECT_ID=$POSTHOG_CLI_PROJECT_ID \
-    POSTHOG_CLI_HOST=$POSTHOG_CLI_HOST
 RUN pnpm --filter @repo/shared build && pnpm --filter backend build
 
 # ---- Runtime stage ----
