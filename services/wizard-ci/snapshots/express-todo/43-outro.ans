@@ -1,0 +1,23 @@
+[1m[32m✔ Successfully installed PostHog![39m[22m
+
+Dashboard: [36mhttps://us.posthog.com/project/228144/dashboard/1746617?utm_source=wizard&utm_medium=cli&[39m
+[36mutm_content=outro-dashboard[39m
+
+Check [1m./posthog-setup-report.md[22m for details
+
+[1m[36mWhat the agent did:[39m[22m
+• Analyzed your Node.js project structure
+• Installed the posthog-node package
+• Created PostHog initialization with proper configuration
+• Configured graceful shutdown for event flushing
+• Added example code for events, feature flags, and error capture
+• Added environment variables to .env file
+
+Learn more:
+[36mhttps://posthog.com/docs/libraries/node?utm_source=wizard&utm_medium=cli&utm_content=outro-docs[39m
+
+[2mNote: This wizard uses an LLM agent to analyze and modify your project. Please review the changes [22m
+[2mmade.[22m
+[2mHow did this work for you? Drop us a line: wizard@posthog.com[22m
+
+[90mPress any key to continue[39m
