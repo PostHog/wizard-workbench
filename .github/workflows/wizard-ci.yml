@@ -627,15 +627,22 @@ jobs:
         id: execute-wizard
         continue-on-error: true
         run: |
-          CMD_ARGS=(pnpm wizard-ci --app "$MATRIX_APP" --base "$INPUT_BASE_BRANCH")
-          if [ -n "$TRIGGER_ID" ]; then
-            CMD_ARGS+=(--trigger-id "$TRIGGER_ID")
+          if [ "$SNAPSHOTS" = "true" ]; then
+            # Snapshot mode: real-TUI visual regression + review PR (no evaluator).
+            pnpm wizard-ci-snapshot-review "$MATRIX_APP" 2>&1 | tee wizard-output.log
+          else
+            CMD_ARGS=(pnpm wizard-ci --app "$MATRIX_APP" --base "$INPUT_BASE_BRANCH")
+            if [ -n "$TRIGGER_ID" ]; then
+              CMD_ARGS+=(--trigger-id "$TRIGGER_ID")
+            fi
+            if [ "$INPUT_EVALUATE" = "true" ]; then
+              CMD_ARGS+=(--evaluate)
+            fi
+            "${CMD_ARGS[@]}" 2>&1 | tee wizard-output.log
           fi
-          if [ "$INPUT_EVALUATE" = "true" ]; then
-            CMD_ARGS+=(--evaluate)
-          fi
-          "${CMD_ARGS[@]}" 2>&1 | tee wizard-output.log
         env:
+          SNAPSHOTS: ${{ inputs.snapshots }}
+          POSTHOG_WIZARD_PROJECT_ID: '2'
           MATRIX_APP: ${{ matrix.app }}
           INPUT_BASE_BRANCH: ${{ needs.discover.outputs.input_base_branch }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
@@ -1026,65 +1033,3 @@ jobs:
                 }
               ]
             }"
-
-  # ============================================================================
-  # SNAPSHOTS: real-TUI visual regression. Dispatch with snapshots=true to open a
-  # side-by-side review PR for the app — independent of the evaluator, using the
-  # same app token + setup + PostHog key (project hard-coded to 2, the bot key's).
-  # ============================================================================
-  snapshots:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.snapshots }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    permissions:
-      contents: write
-      pull-requests: write
-      id-token: write
-    steps:
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
-        with:
-          app-id: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_APP_ID }}
-          private-key: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_PRIVATE_KEY }}
-          owner: PostHog
-          repositories: wizard-workbench
-
-      - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: '24'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Chromium for Playwright
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Setup wizard dependencies
-        uses: ./.github/actions/setup-wizard-deps
-        with:
-          wizard_ref: ${{ inputs.wizard_ref || 'main' }}
-          context_mill_ref: ${{ inputs.context_mill_ref || 'main' }}
-          posthog_ref: ${{ inputs.posthog_ref || 'master' }}
-          app_token: ${{ steps.app-token.outputs.token }}
-          save_cache: 'false'
-
-      - name: Render snapshots + open review PR
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
-          POSTHOG_WIZARD_PROJECT_ID: '2'
-          POSTHOG_REGION: ${{ inputs.posthog_region || 'us' }}
-        run: |
-          pnpm wizard-ci-snapshot-review "${{ inputs.app || 'basic-integration/javascript-node/express-todo' }}"
-
