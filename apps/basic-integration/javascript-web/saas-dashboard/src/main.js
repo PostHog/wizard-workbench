@@ -6,6 +6,7 @@ import { renderProjects } from './pages/projects.js';
 import { renderProjectDetail } from './pages/project-detail.js';
 import { renderSettings } from './pages/settings.js';
 import { renderActivity } from './pages/activity.js';
+import posthog from './posthog.js';
 
 /**
  * Auth guard — redirects to login if no user is logged in.
@@ -38,5 +39,10 @@ router.notFound(() => {
 });
 
 // --- Start ---
+
+if (store.state.currentUser) {
+  const user = store.state.currentUser;
+  posthog.identify(user.id, { email: user.email, name: user.name, role: user.role });
+}
 
 router.start();
