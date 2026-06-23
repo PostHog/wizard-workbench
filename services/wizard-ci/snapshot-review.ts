@@ -143,13 +143,13 @@ async function main(): Promise<number> {
     console.error("✖ GH_TOKEN / GITHUB_TOKEN required to open the review PR.");
     return 2;
   }
-  const repoRoot = getRepoRoot();
+  const repoRoot = getRepoRoot(process.cwd());
   const dest = join(repoRoot, REVIEW_DIR, name);
   rmSync(dest, { recursive: true, force: true });
   mkdirSync(dest, { recursive: true });
   cpSync(shotsDir, dest, { recursive: true });
 
-  const baseSha = git(["rev-parse", "HEAD"], repoRoot).trim();
+  const baseSha = git("rev-parse HEAD", repoRoot);
   console.log(`Opening snapshot-review PR on branch ${branch}…`);
   try {
     const r = (await commitAndCreatePR({
