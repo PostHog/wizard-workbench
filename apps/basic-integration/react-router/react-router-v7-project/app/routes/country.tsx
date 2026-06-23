@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import type { Route } from "./+types/country";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
@@ -11,6 +12,8 @@ export async function clientLoader({ params }: Route.LoaderArgs) {
 }
 
 export default function Country({ loaderData }: Route.ComponentProps) {
+  const posthog = usePostHog();
+
   const country = {
     name: loaderData[0]?.name?.common || "N/A",
     officialName: loaderData[0]?.name?.official || "N/A",
@@ -20,6 +23,11 @@ export default function Country({ loaderData }: Route.ComponentProps) {
     population: loaderData[0]?.population || "N/A",
     flagUrl: loaderData[0]?.flags?.png || "",
   };
+
+  posthog?.capture('country_detail_viewed', {
+    country: country.name,
+    region: country.region,
+  });
 
   return (
     <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
