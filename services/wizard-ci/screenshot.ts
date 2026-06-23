@@ -2,13 +2,13 @@
  * report.html → PNG screenshots, via headless Chromium (Playwright).
  *
  * snapshots.ts renders each key moment to HTML (baseline │ current). This
- * rasterizes that report — one PNG per frame (the side-by-side row) plus a
- * full-flow strip — for attaching to a review PR.
+ * rasterizes that report into one PNG per frame (the side-by-side row), for
+ * attaching to a review PR.
  *
  *   tsx services/wizard-ci/screenshot.ts <report.html> <outDir> [--only-changed]
  *
- * Writes <outDir>/<frame>.png per row (named by the row's data-frame), a
- * _flow.png of the whole page, and a shots.json manifest (frame, status, file).
+ * Writes <outDir>/<frame>.png per row (named by the row's data-frame) and a
+ * shots.json manifest (frame, status, file).
  */
 import { chromium } from "playwright";
 import { mkdirSync, rmSync, writeFileSync } from "fs";
@@ -58,14 +58,11 @@ async function main(): Promise<number> {
     shots.push({ frame, status, file });
   }
 
-  // Full-flow strip — the whole report top to bottom.
-  await page.screenshot({ path: join(outDir, "_flow.png"), fullPage: true });
-
   await browser.close();
   writeFileSync(join(outDir, "shots.json"), JSON.stringify(shots, null, 2));
 
   process.stdout.write(
-    `shot ${shots.length} frame(s) + _flow.png → ${outDir}\n` +
+    `shot ${shots.length} frame(s) → ${outDir}\n` +
       `manifest: ${join(outDir, "shots.json")}\n`,
   );
   return 0;

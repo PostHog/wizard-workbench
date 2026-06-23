@@ -57,7 +57,10 @@ const STATUS_EMOJI: Record<string, string> = {
   same: "⚪️",
 };
 
-/** Build the PR body: a summary + each frame's side-by-side image. */
+/**
+ * Build the PR body. Mirrors the eval path's buildPRBody: plain metadata lines,
+ * then the snapshot content (one side-by-side image per changed frame).
+ */
 function prBody(
   app: string,
   shots: Shot[],
@@ -65,18 +68,19 @@ function prBody(
   runUrl: string | null,
 ): string {
   const changed = shots.filter((s) => s.status !== "same");
-  const lines: string[] = [];
-  lines.push(`## TUI snapshot review — \`${app}\``);
-  lines.push("");
-  lines.push(
-    `A real \`--e2e\` run, rendered to side-by-side screenshots (baseline │ current). ` +
-      `**${changed.length}** of ${shots.length} key-moment frames differ. Eyeball them; ` +
-      `merge this PR to accept the new baseline.`,
-  );
-  if (runUrl) lines.push("", `[CI run](${runUrl})`);
-  lines.push("", `![flow](${rawBase}/_flow.png)`, "");
+  const lines: string[] = [
+    "Automated wizard CI snapshot run.",
+    "",
+    runUrl ? `Source: [github-actions](${runUrl})` : "Source: local",
+    `App: \`${app}\``,
+    `App directory: \`apps/${app}\``,
+    `Frames changed: ${changed.length} of ${shots.length}`,
+    "",
+    "Real-TUI key moments, rendered baseline vs current. Review the frames below, merge to accept the new baseline.",
+    "",
+  ];
   for (const s of changed) {
-    lines.push(`### ${STATUS_EMOJI[s.status] ?? ""} ${s.frame} — ${s.status}`);
+    lines.push(`### ${STATUS_EMOJI[s.status] ?? ""} ${s.frame} (${s.status})`);
     lines.push("", `![${s.frame}](${rawBase}/${s.file})`, "");
   }
   return lines.join("\n");
@@ -126,7 +130,7 @@ async function main(): Promise<number> {
     ? `https://github.com/${repoSlug}/actions/runs/${process.env.GITHUB_RUN_ID}`
     : null;
   const body = prBody(app, shots, rawBase, runUrl);
-  const title = `📸 TUI snapshots — ${name}`;
+  const title = `[CI] (snapshots) ${app}`;
 
   if (dryRun) {
     const dest = join(OUT_ROOT, name, "review");
@@ -186,12 +190,10 @@ async function main(): Promise<number> {
     if (commentPr) {
       const changed = shots.length; // screenshot.ts --only-changed → changed frames only
       const comment = [
-        `### 📸 TUI snapshot review — \`${app}\``,
+        `### Wizard CI snapshot review — \`${app}\``,
         "",
         `**${changed}** key-moment frame(s) differ from the baseline.` +
-          (r.prUrl ? ` [Full side-by-side review →](${r.prUrl})` : ""),
-        "",
-        `![flow](${rawBase}/_flow.png)`,
+          (r.prUrl ? ` [Side-by-side review →](${r.prUrl})` : ""),
       ].join("\n");
       postPRComment(commentPr, comment, repoRoot);
       console.log(`✓ commented on PR #${commentPr}`);
