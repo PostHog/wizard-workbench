@@ -10,6 +10,7 @@
     "posthog-node": "^5.35.4"
   },
   "devDependencies": {
+    "@types/node": "^26.0.0",
     "dotenv": "^17.4.2",
     "rollup": "^4.30.1"
   }

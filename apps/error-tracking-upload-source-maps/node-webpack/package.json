@@ -9,6 +9,7 @@
     "posthog-node": "^5.35.4"
   },
   "devDependencies": {
+    "@types/node": "^26.0.0",
     "dotenv": "^17.4.2",
     "ts-loader": "^9.5.1",
     "typescript": "^5.7.2",

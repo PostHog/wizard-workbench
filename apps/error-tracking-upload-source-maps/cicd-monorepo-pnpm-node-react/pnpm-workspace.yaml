@@ -1,0 +1,8 @@
+packages:
+  - backend
+  - frontend
+  - packages/*
+
+# Wait at least seven days (10080 minutes) before installing newly published
+# package versions, to avoid malicious or unstable releases.
+minimumReleaseAge: 10080
