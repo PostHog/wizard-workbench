@@ -623,6 +623,10 @@ jobs:
           # PostHog tracking for eval analytics
           POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
 
+      - name: Install Chromium for Playwright (snapshots)
+        if: ${{ inputs.snapshots }}
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Execute wizard
         id: execute-wizard
         continue-on-error: true
