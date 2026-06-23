@@ -1,6 +1,8 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
+import posthog
 from flask import Flask, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -38,6 +40,10 @@ babel = Babel()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    posthog.api_key = app.config.get('POSTHOG_PROJECT_TOKEN', '')
+    posthog.host = app.config.get('POSTHOG_HOST', 'https://us.i.posthog.com')
+    atexit.register(posthog.shutdown)
 
     db.init_app(app)
     migrate.init_app(app, db)
