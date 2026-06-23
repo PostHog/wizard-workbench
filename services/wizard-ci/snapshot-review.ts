@@ -8,7 +8,7 @@
  *   3. commit the PNGs to a review branch and open a PR whose body embeds them
  *      (via raw.githubusercontent URLs) — the changed frames first.
  *
- *   tsx services/wizard-ci/snapshot-review.ts <app> [--recording <f>] [--dry-run]
+ *   tsx services/wizard-ci/snapshot-review.ts <app> [--dry-run]
  *
  * --dry-run writes the PR body + PNGs under /tmp and skips the PR (for local use).
  * In CI the GitHub App token comes from GH_TOKEN / GITHUB_TOKEN and the repo from
@@ -81,19 +81,14 @@ async function main(): Promise<number> {
   const args = process.argv.slice(2);
   const app = args.find((a) => !a.startsWith("--"));
   const dryRun = args.includes("--dry-run");
-  const recIdx = args.indexOf("--recording");
-  const recording = recIdx !== -1 ? args[recIdx + 1] : null;
   if (!app) {
-    console.error("usage: snapshot-review <app> [--recording <f>] [--dry-run]");
+    console.error("usage: snapshot-review <app> [--dry-run]");
     return 2;
   }
   const name = basename(app);
 
-  // 1. snapshots → report.html (real run unless --recording reuses one).
-  const snap = ["tsx", "services/wizard-ci/snapshots.ts"];
-  if (recording) snap.push("--recording", recording);
-  else snap.push(app);
-  run("npx", snap);
+  // 1. a real run → report.html (the real-TUI screens, baseline vs current).
+  run("npx", ["tsx", "services/wizard-ci/snapshots.ts", app]);
   const report = join(OUT_ROOT, name, "report.html");
   if (!existsSync(report)) {
     console.error(`✖ no report at ${report}`);

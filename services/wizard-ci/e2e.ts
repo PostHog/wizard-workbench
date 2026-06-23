@@ -1,17 +1,13 @@
 /**
- * `wizard-ci --e2e` — full end-to-end run driven through the wizard-ci-tools
- * control plane, against prod cloud.
+ * `wizard-ci --e2e` — full end-to-end run against prod cloud, driven through the
+ * REAL wizard TUI.
  *
- * Classic `wizard-ci` runs the agent under LoggingUI and exits — it skips the
- * interactive screens and gives you only ANSI stdout to grep. `--e2e` runs the
- * WHOLE flow: a `WizardCiDriver` makes each human-side decision through the same
- * store setters the Ink UI uses, taking the happy path everywhere — skip MCP,
- * skip Slack, DELETE skills, and continue past any health-check issue — then
- * asserts on STRUCTURED state plus the real file changes the agent made.
- *
- * The store + driver must run in-process with the wizard, so the engine is the
- * wizard repo's headless harness (`scripts/e2e-full-run.no-jest.ts`); this is
- * the orchestration + assertion layer.
+ * The wizard repo's `scripts/tui-snapshots.no-jest.ts` runs the real `startTUI`
+ * in a PTY and drives it through the fixed happy path (skip MCP, skip Slack,
+ * delete skills, continue past health issues) by store state manipulation — auth
+ * via the phx key, no browser. It captures every key-moment screen as real-TUI
+ * text and writes a structured result JSON; this is the orchestration + assertion
+ * layer over it.
  *
  *   pnpm wizard-ci basic-integration/javascript-node/express-todo --e2e
  *   pnpm wizard-ci basic-integration/next-js/15-app-router-todo --e2e --project-id 228144
@@ -46,10 +42,21 @@ export interface E2eOptions {
 
 function wizardRepo(): string {
   const p = process.env.WIZARD_PATH?.replace(/^~/, process.env.HOME || "");
-  return p || `${process.env.HOME}/development/wizard`;
+  if (p) return p;
+  // Default to a sibling wizard checkout next to the workbench.
+  for (const name of ["wizard-e2e", "wizard"]) {
+    const sibling = join(WORKBENCH, "..", name);
+    if (existsSync(sibling)) return sibling;
+  }
+  return `${process.env.HOME}/development/wizard`;
 }
 
-/** Run a single app through the control-plane e2e and assert. Returns exit code. */
+/** Where a run drops its real-TUI snapshots — shared with the snapshots flow. */
+export function snapsDirFor(app: string): string {
+  return `/tmp/wizard-e2e-${basename(app)}-snaps`;
+}
+
+/** Run a single app through the real-TUI e2e and assert. Returns exit code. */
 export function runE2e(opts: E2eOptions): number {
   const app = opts.app;
   const region = opts.region || process.env.POSTHOG_REGION || "us";
@@ -78,7 +85,7 @@ export function runE2e(opts: E2eOptions): number {
   const name = basename(app);
   const appDir = `/tmp/wizard-e2e-${name}`;
   const resultJson = `/tmp/wizard-e2e-${name}.json`;
-  const recordingJson = `/tmp/wizard-e2e-${name}.recording.json`;
+  const snapsDir = snapsDirFor(app);
 
   // Always a /tmp copy — never the real fixture.
   rmSync(appDir, { recursive: true, force: true });
@@ -86,8 +93,10 @@ export function runE2e(opts: E2eOptions): number {
   spawnSync("rsync", ["-a", "--exclude", "node_modules", "--exclude", ".git", `${appSrc}/`, `${appDir}/`], {
     stdio: "inherit",
   });
+  rmSync(snapsDir, { recursive: true, force: true });
+  mkdirSync(snapsDir, { recursive: true });
 
-  const harness = join(wizardRepo(), "scripts", "e2e-full-run.no-jest.ts");
+  const harness = join(wizardRepo(), "scripts", "tui-snapshots.no-jest.ts");
   if (!existsSync(harness)) {
     console.error(`✖ wizard e2e harness not found: ${harness}\n  Set WIZARD_PATH to the wizard repo.`);
     return 2;
@@ -101,8 +110,10 @@ export function runE2e(opts: E2eOptions): number {
   childEnv.POSTHOG_PERSONAL_API_KEY = apiKey;
   childEnv.APP_DIR = appDir;
   childEnv.PROJECT_ID = projectId;
+  childEnv.POSTHOG_REGION = region;
+  childEnv.SNAP_OUT = snapsDir;
   childEnv.E2E_RESULT_JSON = resultJson;
-  childEnv.E2E_RECORDING_JSON = recordingJson;
+  childEnv.RUN_AGENT = "1"; // full flow through outro, not just the pre-run screens
   childEnv.E2E_KEEP_SKILLS = opts.keepSkills ? "true" : "false";
 
   const run = spawnSync("npx", ["tsx", harness], {
@@ -138,32 +149,9 @@ export function runE2e(opts: E2eOptions): number {
     console.log(`\nscreen path: ${result.screenPath?.join(" → ")}`);
     console.log(`new deps   : ${(result.newDeps || []).join(", ") || "(none)"}`);
     console.log(`result json: ${resultJson}`);
-  }
-
-  if (existsSync(recordingJson)) {
-    console.log(`recording  : ${recordingJson}`);
-    console.log(`replay it  : pnpm wizard-ci --replay ${recordingJson}        (Enter ▸ step)`);
-    console.log(`             pnpm wizard-ci --replay ${recordingJson} --delay 1200   (auto)`);
+    console.log(`snapshots  : ${snapsDir}`);
   }
 
   console.log(`\n${passed ? "✓ E2E PASS" : "✗ E2E FAIL"} — ${app}\n`);
   return passed ? 0 : 1;
-}
-
-/** Replay a recorded run in the terminal via the wizard repo's replayer. */
-export function replayRecording(file: string, passthrough: string[]): number {
-  if (!existsSync(file)) {
-    console.error(`✖ recording not found: ${file}`);
-    return 2;
-  }
-  const script = join(wizardRepo(), "scripts", "replay-e2e.no-jest.ts");
-  if (!existsSync(script)) {
-    console.error(`✖ replayer not found: ${script}\n  Set WIZARD_PATH to the wizard repo.`);
-    return 2;
-  }
-  const run = spawnSync("npx", ["tsx", script, file, ...passthrough], {
-    cwd: wizardRepo(),
-    stdio: "inherit",
-  });
-  return run.status ?? 1;
 }
