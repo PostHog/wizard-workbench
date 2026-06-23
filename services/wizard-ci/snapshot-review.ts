@@ -4,14 +4,14 @@
  *
  *   1. wizard-ci-snapshots <app>  → a real run, a diff vs the committed baseline,
  *                                   and report.html (baseline │ current per frame)
- *   2. screenshot.ts              → one PNG per changed frame + a _flow.png strip
+ *   2. screenshot.ts              → one PNG per changed frame
  *   3. commit the PNGs to a review branch and open a PR whose body embeds them
- *      (via raw.githubusercontent URLs) — the changed frames first.
+ *      (via raw.githubusercontent URLs), one changed frame per row.
  *
  *   tsx services/wizard-ci/snapshot-review.ts <app> [--dry-run] [--comment-pr <n>]
  *
- * --comment-pr <n> also posts a comment on PR n (the flow strip + a link to the
- * full review) — used by the `/wizard-ci` PR-comment trigger.
+ * --comment-pr <n> also posts a comment on PR n (the changed-frame count + a link
+ * to the full review) — used by the `/wizard-ci` PR-comment trigger.
  *
  * --dry-run writes the PR body + PNGs under /tmp and skips the PR (for local use).
  * In CI the GitHub App token comes from GH_TOKEN / GITHUB_TOKEN and the repo from
