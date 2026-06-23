@@ -7,6 +7,7 @@
 
 import DesignSystem
 import Domain
+import PostHog
 import Shared
 import SwiftUI
 
@@ -336,6 +337,7 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
     @ViewBuilder
     private var settingsButton: some View {
         Button {
+            PostHogSDK.shared.capture("settings_opened")
             navigationStore.showSettings()
         } label: {
             Image(systemName: "gearshape")
@@ -369,6 +371,12 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
             navigationStore.showPost(post)
             return
         }
+
+        PostHogSDK.shared.capture("post_link_opened", properties: [
+            "post_id": post.id,
+            "post_title": post.title,
+            "url": post.url.absoluteString,
+        ])
 
         if isSidebar {
             navigationStore.showPost(post)
@@ -467,6 +475,10 @@ struct PostRowView: View {
         let wasUpvoted = mutablePost.upvoted
 
         if wasUpvoted {
+            PostHogSDK.shared.capture("post_upvoted", properties: [
+                "post_id": post.id,
+                "post_title": post.title,
+            ])
             await MainActor.run {
                 onPostUpdated?(mutablePost)
             }

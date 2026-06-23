@@ -10,6 +10,7 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import PostHog
 import Settings
 import Shared
 import SwiftUI
@@ -141,6 +142,7 @@ struct MainContentView: View {
         .task {
             if onboardingCoordinator.shouldShowOnboarding() {
                 showOnboarding = true
+                PostHogSDK.shared.capture("onboarding_shown")
             }
         }
     }
