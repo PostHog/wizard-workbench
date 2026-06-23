@@ -168,7 +168,7 @@ async function main(): Promise<number> {
         console.log(d.current.split("\n").map((l) => `      ${l}`).join("\n"));
       }
     }
-    console.log(`\nvisual report: ${report}`);
+    console.log(`\nvisual report — open it:  open ${report}`);
     if (!existsSync(baselineDir))
       console.log(`(no baseline yet — run with --update to seed it)`);
     totalChanged += changed.length;
