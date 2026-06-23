@@ -54,7 +54,7 @@ import {
   selectCommand,
   selectApp,
 } from "../wizard-run/picker.js";
-import { runE2e, replayRecording } from "./e2e.js";
+import { runE2e } from "./e2e.js";
 
 // ============================================================================
 // Config
@@ -77,16 +77,12 @@ interface Options {
   pushOnly: boolean;
   branch?: string;
   evaluate: boolean;
-  /** Run via the wizard-ci-tools control plane (full flow + structured asserts). */
+  /** Drive the real wizard TUI through the full flow + structured asserts. */
   e2e: boolean;
   /** Scoped project id for the personal API key (e2e mode). */
   projectId?: string;
   /** e2e: keep installed skills instead of deleting them. */
   keepSkills: boolean;
-  /** Replay a recorded run (path to recording.json). */
-  replay?: string;
-  /** Flags forwarded to the replayer (--step / --delay <ms>). */
-  replayPassthrough: string[];
 }
 
 // ============================================================================
@@ -264,16 +260,11 @@ function parseArgs(): Options {
     evaluate: false,
     e2e: false,
     keepSkills: false,
-    replayPassthrough: [],
   };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === "--e2e") opts.e2e = true;
-    else if (arg === "--replay") opts.replay = args[++i];
-    else if (arg === "--delay") {
-      opts.replayPassthrough.push("--delay", args[++i]);
-    } else if (arg === "--step") opts.replayPassthrough.push("--step");
     else if (arg === "--project-id") opts.projectId = args[++i];
     else if (arg === "--keep-skills") opts.keepSkills = true;
     else if (arg === "--app" || arg === "-a") opts.app = args[++i];
@@ -327,14 +318,12 @@ Evaluation:
                                      With --local: runs evaluation on local branch
                                      (creates branch, commits, runs test-run mode)
 
-Control-plane e2e (full interactive flow, structured assertions):
-  pnpm wizard-ci <app-path> --e2e    Run via wizard-ci-tools instead of LoggingUI
+Control-plane e2e (full interactive flow via the real TUI, structured assertions):
+  pnpm wizard-ci <app-path> --e2e    Drive the real wizard TUI through the full flow
                                      happy path · skip mcp+slack · delete skills
                                      · continue past health issues
   pnpm wizard-ci ... --e2e --project-id <id>   Scoped-key project (or env POSTHOG_WIZARD_PROJECT_ID)
   pnpm wizard-ci ... --e2e --keep-skills       Keep installed skills instead of deleting
-  pnpm wizard-ci --replay <recording.json>     Replay a recorded run in the terminal
-                                     --step (Enter to advance, default) | --delay <ms> (auto)
 `);
       process.exit(0);
     } else if (!arg.startsWith("-") && !opts.app) {
@@ -777,12 +766,7 @@ async function runCI(
 async function main(): Promise<void> {
   const opts = parseArgs();
 
-  // Replay a recorded e2e run in the terminal.
-  if (opts.replay) {
-    process.exit(replayRecording(opts.replay, opts.replayPassthrough));
-  }
-
-  // Control-plane e2e: run the full interactive flow via wizard-ci-tools and
+  // Control-plane e2e: drive the full interactive flow via the real TUI and
   // assert on structured state.
   if (opts.e2e) {
     process.exit(

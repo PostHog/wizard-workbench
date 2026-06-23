@@ -52,7 +52,7 @@ async function main(): Promise<number> {
     const frame = (await row.getAttribute("data-frame")) ?? `frame-${i}`;
     const status = (await row.getAttribute("data-status")) ?? "unknown";
     if (onlyChanged && status === "same") continue;
-    const file = `${frame.replace(/\.[^.]+$/, "")}.png`; // 10-run.ans → 10-run.png
+    const file = `${frame.replace(/\.[^.]+$/, "")}.png`; // 10-run.txt → 10-run.png
     await row.scrollIntoViewIfNeeded();
     await row.screenshot({ path: join(outDir, file) });
     shots.push({ frame, status, file });

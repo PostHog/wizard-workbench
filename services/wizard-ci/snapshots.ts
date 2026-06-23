@@ -1,27 +1,25 @@
 /**
- * wizard-ci snapshots: TUI visual-regression for the CI-e2e test definitions.
+ * wizard-ci snapshots: real-TUI visual-regression for the CI-e2e test definitions.
  *
- * For each test definition (for now: the integration flow on express-todo) this
- * runs a real `--e2e` agent run, renders every key-moment frame of the run's
- * recording to a real-Ink ANSI snapshot, and diffs it against a committed
- * baseline. Differences are surfaced in a side-by-side for review.
+ * For each test definition this runs a real `--e2e` agent run, which drives the
+ * REAL wizard TUI and captures every key-moment screen as text, then diffs each
+ * against a committed baseline. Differences are surfaced side-by-side for review.
  *
  *   pnpm wizard-ci-snapshots                 # run + compare, write HTML report
  *   pnpm wizard-ci-snapshots --update        # accept current output as baseline
- *   pnpm wizard-ci-snapshots --recording <f> # render an existing recording, skip the run
  *
  * Requires (in .env, sourced by the `wizard-ci-snapshots` mprocs proc):
  *   POSTHOG_PERSONAL_API_KEY   the phx key (gateway bearer)
  *   POSTHOG_WIZARD_PROJECT_ID  the project the key is scoped to
  *   POSTHOG_REGION             us | eu
- *   WIZARD_PATH                a wizard checkout that has e2e-harness/ (where the render runs)
+ *   WIZARD_PATH                a wizard checkout that has e2e-harness/ (where the run happens)
  *
  * Drift never fails the command: diffs are surfaced (terminal + report.html), and
- * only a genuine failure (run died, no recording) exits non-zero. report.html is
+ * only a genuine failure (run died, no snapshots) exits non-zero. report.html is
  * the side-by-side; locally it's surfaced through mprocs.
  */
 import "dotenv/config";
-import { join, basename } from "path";
+import { join } from "path";
 import {
   existsSync,
   mkdirSync,
@@ -31,29 +29,14 @@ import {
   readdirSync,
   cpSync,
 } from "fs";
-import { spawnSync } from "child_process";
-import { createInterface } from "readline";
-import { runE2e, replayRecording } from "./e2e.js";
-import { ansiToHtml } from "./ansi-html.js";
+import { runE2e, snapsDirFor } from "./e2e.js";
 
-/** Yes/no prompt. Auto-no when not a TTY (CI), so nothing ever hangs. */
-async function confirm(question: string): Promise<boolean> {
-  if (!process.stdin.isTTY) return false;
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const answer = await new Promise<string>((res) => rl.question(question, res));
-  rl.close();
-  return /^y(es)?$/i.test(answer.trim());
-}
-
-const WORKBENCH = join(import.meta.dirname, "..", "..");
 const BASELINE_ROOT = join(import.meta.dirname, "snapshots");
 const OUT_ROOT = "/tmp/wizard-snapshots";
 
 /** A CI-e2e test definition: which flow runs against which app. */
 interface TestDef {
-  /** Stable key for baseline + report dirs. */
   name: string;
-  /** apps/<app> path the e2e harness copies and runs against. */
   app: string;
 }
 
@@ -64,12 +47,6 @@ const TEST_DEFS: TestDef[] = [
   },
 ];
 
-function wizardRepo(): string {
-  const p = process.env.WIZARD_PATH?.replace(/^~/, process.env.HOME || "");
-  if (!p) throw new Error("WIZARD_PATH is not set (path to the wizard repo).");
-  return p;
-}
-
 type FrameStatus = "same" | "changed" | "added" | "removed";
 interface FrameDiff {
   file: string;
@@ -78,24 +55,10 @@ interface FrameDiff {
   current: string | null;
 }
 
-/** Render a recording's frames to <outDir>/<seq>-<screen>.ans via the wizard. */
-function renderSnapshots(recording: string, outDir: string): void {
-  const script = join(wizardRepo(), "scripts", "render-snapshots.no-jest.ts");
-  if (!existsSync(script))
-    throw new Error(`wizard render-snapshots not found: ${script}`);
-  const r = spawnSync("npx", ["tsx", script, recording, outDir], {
-    cwd: wizardRepo(),
-    stdio: "inherit",
-    // Force truecolor so Ink/chalk emit ANSI (not a TTY).
-    env: { ...process.env, FORCE_COLOR: "3" },
-  });
-  if (r.status !== 0) throw new Error("render-snapshots failed");
-}
-
-/** Union the two dirs by filename and classify each frame. */
+/** Union the two dirs by filename and classify each real-TUI snapshot. */
 function diffDirs(baselineDir: string, currentDir: string): FrameDiff[] {
   const ls = (d: string) =>
-    existsSync(d) ? readdirSync(d).filter((f) => f.endsWith(".ans")) : [];
+    existsSync(d) ? readdirSync(d).filter((f) => f.endsWith(".txt")) : [];
   const files = [...new Set([...ls(baselineDir), ...ls(currentDir)])].sort();
   return files.map((file) => {
     const b = existsSync(join(baselineDir, file))
@@ -117,11 +80,15 @@ const BADGE: Record<FrameStatus, string> = {
   removed: "#f85149",
 };
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function reportHtml(name: string, diffs: FrameDiff[]): string {
   const cell = (s: string | null) =>
     s === null
       ? `<pre class="missing">— absent —</pre>`
-      : `<pre>${ansiToHtml(s)}</pre>`;
+      : `<pre>${escapeHtml(s)}</pre>`;
   const rows = diffs
     .map(
       (d) => `
@@ -154,44 +121,30 @@ ${rows}
 </body></html>`;
 }
 
-function stripAnsi(s: string): string {
-  // eslint-disable-next-line no-control-regex
-  return s.replace(/\x1b\[[0-9;]*m/g, "");
-}
-
 async function main(): Promise<number> {
   const args = process.argv.slice(2);
   const update = args.includes("--update");
-  const recordingArg = args[args.indexOf("--recording") + 1];
-  const onlyRecording = args.includes("--recording") ? recordingArg : null;
   const projectId =
     process.env.POSTHOG_WIZARD_PROJECT_ID ||
     args[args.indexOf("--project-id") + 1] ||
     "";
 
   let totalChanged = 0;
-  const recorded: Array<{ name: string; recording: string }> = [];
   for (const def of TEST_DEFS) {
     console.log(`\n=== snapshots: ${def.name} (${def.app}) ===`);
 
-    const recording = onlyRecording || `/tmp/wizard-e2e-${basename(def.app)}.recording.json`;
-    if (!onlyRecording) {
-      const code = runE2e({ app: def.app, projectId });
-      if (code !== 0) {
-        console.error(`✖ e2e run failed for ${def.name} (exit ${code})`);
-        return code;
-      }
+    const code = runE2e({ app: def.app, projectId });
+    if (code !== 0) {
+      console.error(`✖ e2e run failed for ${def.name} (exit ${code})`);
+      return code;
     }
-    if (!existsSync(recording)) {
-      console.error(`✖ no recording at ${recording}`);
+    const currentDir = snapsDirFor(def.app);
+    if (!existsSync(currentDir) || readdirSync(currentDir).filter((f) => f.endsWith(".txt")).length === 0) {
+      console.error(`✖ no snapshots at ${currentDir}`);
       return 1;
     }
-    recorded.push({ name: def.name, recording });
 
-    const currentDir = join(OUT_ROOT, def.name, "current");
     const baselineDir = join(BASELINE_ROOT, def.name);
-    renderSnapshots(recording, currentDir);
-
     if (update) {
       rmSync(baselineDir, { recursive: true, force: true });
       mkdirSync(baselineDir, { recursive: true });
@@ -211,9 +164,8 @@ async function main(): Promise<number> {
     for (const d of diffs) {
       const mark = d.status === "same" ? "·" : d.status === "changed" ? "~" : d.status === "added" ? "+" : "-";
       console.log(`  ${mark} ${d.file}`);
-      // mprocs: show the changed frame's current render inline for quick eyeball.
       if (d.status === "changed" && d.current) {
-        console.log(stripAnsi(d.current).split("\n").map((l) => `      ${l}`).join("\n"));
+        console.log(d.current.split("\n").map((l) => `      ${l}`).join("\n"));
       }
     }
     console.log(`\nvisual report: ${report}`);
@@ -231,12 +183,6 @@ async function main(): Promise<number> {
     );
   else console.log(`\n✓ snapshots match baseline.`);
 
-  // Offer to replay (TTY only; confirm() auto-declines in CI).
-  for (const { name, recording } of recorded) {
-    if (await confirm(`\nReplay ${name} snapshots in the terminal? [y/N] `)) {
-      replayRecording(recording, ["--step"]);
-    }
-  }
   return 0;
 }
 
