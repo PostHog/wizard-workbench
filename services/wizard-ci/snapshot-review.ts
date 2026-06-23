@@ -25,9 +25,11 @@ import {
   rmSync,
   cpSync,
   readFileSync,
+  readdirSync,
   writeFileSync,
 } from "fs";
 import { spawnSync } from "child_process";
+import { snapsDirFor } from "./e2e.js";
 import { commitAndCreatePR, postPRComment } from "../github/index.js";
 import { getRepoRoot, git } from "../github/index.js";
 
@@ -148,6 +150,17 @@ async function main(): Promise<number> {
   rmSync(dest, { recursive: true, force: true });
   mkdirSync(dest, { recursive: true });
   cpSync(shotsDir, dest, { recursive: true });
+
+  // Also commit the raw text snapshots so the PR has a readable, diffable record
+  // (and so blank renders can be told apart from blank captures).
+  const txtDir = snapsDirFor(app);
+  if (existsSync(txtDir)) {
+    const txtDest = join(dest, "frames");
+    mkdirSync(txtDest, { recursive: true });
+    for (const f of readdirSync(txtDir))
+      if (f.endsWith(".txt") && f !== "latest.txt")
+        cpSync(join(txtDir, f), join(txtDest, f));
+  }
 
   const baseSha = git("rev-parse HEAD", repoRoot);
   console.log(`Opening snapshot-review PR on branch ${branch}…`);
