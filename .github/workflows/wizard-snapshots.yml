@@ -13,8 +13,9 @@ on:
     inputs:
       app:
         description: 'App path (e.g. "basic-integration/javascript-node/express-todo")'
-        required: true
+        required: false
         type: string
+        default: 'basic-integration/javascript-node/express-todo'
       wizard_ref:
         description: 'Wizard repo branch/tag/sha'
         type: string
@@ -28,8 +29,8 @@ on:
         type: string
         default: 'master'
       project_id:
-        description: 'PostHog project id the key is scoped to'
-        required: true
+        description: 'PostHog project id the key is scoped to (defaults to the WIZARD_SNAPSHOTS_PROJECT_ID repo variable)'
+        required: false
         type: string
       posthog_region:
         description: 'PostHog region'
@@ -38,14 +39,28 @@ on:
         default: 'us'
   repository_dispatch:
     types: [wizard-snapshots-trigger]
+  # Comment `/wizard-ci [app] [wizard_ref]` on a PR to run the e2e and have the
+  # results posted back as a comment on that PR.
+  issue_comment:
+    types: [created]
 
 jobs:
   snapshots:
+    # Dispatches always run; comment triggers only on a PR, only for the
+    # `/wizard-ci` command, and only from a repo member/owner/collaborator.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'repository_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       startsWith(github.event.comment.body, '/wizard-ci') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: write # commit the screenshots to the review branch
       pull-requests: write
+      issues: write # comment + react on the triggering PR
       id-token: write
     steps:
       - name: Generate GitHub App token
@@ -57,10 +72,37 @@ jobs:
           owner: PostHog
           repositories: wizard-workbench
 
+      - name: Resolve request
+        id: req
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          if [ "${{ github.event_name }}" = "issue_comment" ]; then
+            REST="${COMMENT_BODY#/wizard-ci}"
+            read -r APP REF _ <<< "$REST"
+            echo "app=${APP:-basic-integration/javascript-node/express-todo}" >> "$GITHUB_OUTPUT"
+            echo "wizard_ref=${REF:-main}" >> "$GITHUB_OUTPUT"
+            echo "comment_pr=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+            echo "checkout_ref=refs/pull/${{ github.event.issue.number }}/merge" >> "$GITHUB_OUTPUT"
+          else
+            echo "app=${{ inputs.app || github.event.client_payload.app || 'basic-integration/javascript-node/express-todo' }}" >> "$GITHUB_OUTPUT"
+            echo "wizard_ref=${{ inputs.wizard_ref || github.event.client_payload.wizard_ref || 'main' }}" >> "$GITHUB_OUTPUT"
+            echo "comment_pr=${{ github.event.client_payload.comment_pr }}" >> "$GITHUB_OUTPUT"
+            echo "checkout_ref=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Acknowledge the command
+        if: github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" -f content=eyes >/dev/null || true
+
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           token: ${{ steps.app-token.outputs.token }}
+          ref: ${{ steps.req.outputs.checkout_ref }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -81,17 +123,23 @@ jobs:
         # Exports WIZARD_PATH / CONTEXT_MILL_PATH / MCP_PATH.
         uses: ./.github/actions/setup-wizard-deps
         with:
-          wizard_ref: ${{ inputs.wizard_ref || github.event.client_payload.wizard_ref || 'main' }}
+          wizard_ref: ${{ steps.req.outputs.wizard_ref }}
           context_mill_ref: ${{ inputs.context_mill_ref || 'main' }}
           posthog_ref: ${{ inputs.posthog_ref || 'master' }}
           app_token: ${{ steps.app-token.outputs.token }}
           save_cache: 'false'
 
-      - name: Render snapshots + open review PR
+      - name: Render snapshots + report (review PR, and a comment when triggered by /wizard-ci)
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
-          POSTHOG_WIZARD_PROJECT_ID: ${{ inputs.project_id || github.event.client_payload.project_id }}
+          POSTHOG_WIZARD_PROJECT_ID: ${{ inputs.project_id || github.event.client_payload.project_id || vars.WIZARD_SNAPSHOTS_PROJECT_ID }}
           POSTHOG_REGION: ${{ inputs.posthog_region || 'us' }}
+          APP: ${{ steps.req.outputs.app }}
+          COMMENT_PR: ${{ steps.req.outputs.comment_pr }}
         run: |
-          pnpm wizard-ci-snapshot-review "${{ inputs.app || github.event.client_payload.app }}"
+          if [ -n "$COMMENT_PR" ]; then
+            pnpm wizard-ci-snapshot-review "$APP" --comment-pr "$COMMENT_PR"
+          else
+            pnpm wizard-ci-snapshot-review "$APP"
+          fi

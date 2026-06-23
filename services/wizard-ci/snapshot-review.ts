@@ -8,7 +8,10 @@
  *   3. commit the PNGs to a review branch and open a PR whose body embeds them
  *      (via raw.githubusercontent URLs) — the changed frames first.
  *
- *   tsx services/wizard-ci/snapshot-review.ts <app> [--dry-run]
+ *   tsx services/wizard-ci/snapshot-review.ts <app> [--dry-run] [--comment-pr <n>]
+ *
+ * --comment-pr <n> also posts a comment on PR n (the flow strip + a link to the
+ * full review) — used by the `/wizard-ci` PR-comment trigger.
  *
  * --dry-run writes the PR body + PNGs under /tmp and skips the PR (for local use).
  * In CI the GitHub App token comes from GH_TOKEN / GITHUB_TOKEN and the repo from
@@ -25,7 +28,7 @@ import {
   writeFileSync,
 } from "fs";
 import { spawnSync } from "child_process";
-import { commitAndCreatePR } from "../github/index.js";
+import { commitAndCreatePR, postPRComment } from "../github/index.js";
 import { getRepoRoot, git } from "../github/index.js";
 
 const OUT_ROOT = "/tmp/wizard-snapshots";
@@ -81,8 +84,11 @@ async function main(): Promise<number> {
   const args = process.argv.slice(2);
   const app = args.find((a) => !a.startsWith("--"));
   const dryRun = args.includes("--dry-run");
+  // --comment-pr <n>: also post a comment on that PR linking to the review.
+  const commentIdx = args.indexOf("--comment-pr");
+  const commentPr = commentIdx !== -1 ? Number(args[commentIdx + 1]) : null;
   if (!app) {
-    console.error("usage: snapshot-review <app> [--dry-run]");
+    console.error("usage: snapshot-review <app> [--dry-run] [--comment-pr <n>]");
     return 2;
   }
   const name = basename(app);
@@ -161,6 +167,22 @@ async function main(): Promise<number> {
       token,
     })) as { prUrl?: string };
     console.log(`✓ review PR: ${r.prUrl ?? "(created)"}`);
+
+    // When triggered by a /wizard-ci PR comment, report back on that PR with the
+    // flow strip + a link to the full side-by-side review.
+    if (commentPr) {
+      const changed = shots.length; // screenshot.ts --only-changed → changed frames only
+      const comment = [
+        `### 📸 TUI snapshot review — \`${app}\``,
+        "",
+        `**${changed}** key-moment frame(s) differ from the baseline.` +
+          (r.prUrl ? ` [Full side-by-side review →](${r.prUrl})` : ""),
+        "",
+        `![flow](${rawBase}/_flow.png)`,
+      ].join("\n");
+      postPRComment(commentPr, comment, repoRoot);
+      console.log(`✓ commented on PR #${commentPr}`);
+    }
     return 0;
   } catch (e) {
     console.error(`✖ ${e instanceof Error ? e.message : String(e)}`);
