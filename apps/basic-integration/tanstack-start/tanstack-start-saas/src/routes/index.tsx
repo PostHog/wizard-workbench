@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { usePostHog } from 'posthog-js/react'
 
 export const Route = createFileRoute('/')({
   component: Home,
 })
 
 function Home() {
+  const posthog = usePostHog()
+
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
@@ -18,12 +21,14 @@ function Home() {
           <div className="flex gap-4">
             <Link
               to="/posts"
+              onClick={() => posthog.capture('home_cta_clicked', { cta: 'view_invoices' })}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
               View Invoices
             </Link>
             <Link
               to="/users"
+              onClick={() => posthog.capture('home_cta_clicked', { cta: 'manage_team' })}
               className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
               Manage Team
