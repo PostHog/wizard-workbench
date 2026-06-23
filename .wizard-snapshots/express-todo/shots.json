@@ -1,0 +1,117 @@
+[
+  {
+    "frame": "01-intro.txt",
+    "status": "added",
+    "file": "01-intro.png"
+  },
+  {
+    "frame": "02-auth.txt",
+    "status": "added",
+    "file": "02-auth.png"
+  },
+  {
+    "frame": "03-run.txt",
+    "status": "added",
+    "file": "03-run.png"
+  },
+  {
+    "frame": "04-run.txt",
+    "status": "added",
+    "file": "04-run.png"
+  },
+  {
+    "frame": "05-run.txt",
+    "status": "added",
+    "file": "05-run.png"
+  },
+  {
+    "frame": "06-run.txt",
+    "status": "added",
+    "file": "06-run.png"
+  },
+  {
+    "frame": "07-run.txt",
+    "status": "added",
+    "file": "07-run.png"
+  },
+  {
+    "frame": "08-run.txt",
+    "status": "added",
+    "file": "08-run.png"
+  },
+  {
+    "frame": "09-run.txt",
+    "status": "added",
+    "file": "09-run.png"
+  },
+  {
+    "frame": "10-run.txt",
+    "status": "added",
+    "file": "10-run.png"
+  },
+  {
+    "frame": "11-run.txt",
+    "status": "added",
+    "file": "11-run.png"
+  },
+  {
+    "frame": "12-run.txt",
+    "status": "added",
+    "file": "12-run.png"
+  },
+  {
+    "frame": "13-run.txt",
+    "status": "added",
+    "file": "13-run.png"
+  },
+  {
+    "frame": "14-run.txt",
+    "status": "added",
+    "file": "14-run.png"
+  },
+  {
+    "frame": "15-run.txt",
+    "status": "added",
+    "file": "15-run.png"
+  },
+  {
+    "frame": "16-run.txt",
+    "status": "added",
+    "file": "16-run.png"
+  },
+  {
+    "frame": "17-run.txt",
+    "status": "added",
+    "file": "17-run.png"
+  },
+  {
+    "frame": "18-run.txt",
+    "status": "added",
+    "file": "18-run.png"
+  },
+  {
+    "frame": "19-run.txt",
+    "status": "added",
+    "file": "19-run.png"
+  },
+  {
+    "frame": "20-outro.txt",
+    "status": "added",
+    "file": "20-outro.png"
+  },
+  {
+    "frame": "21-mcp.txt",
+    "status": "added",
+    "file": "21-mcp.png"
+  },
+  {
+    "frame": "22-slack-connect.txt",
+    "status": "added",
+    "file": "22-slack-connect.png"
+  },
+  {
+    "frame": "23-keep-skills.txt",
+    "status": "added",
+    "file": "23-keep-skills.png"
+  }
+]
