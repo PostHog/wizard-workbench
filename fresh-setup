@@ -138,21 +138,21 @@ fi
 # 5. API key prompt
 # ─────────────────────────────────────────────────────────────────────────────
 if (( INTERACTIVE == 1 )); then
-  current_key="$(grep -E '^POSTHOG_PERSONAL_API_KEY=' "$ENV_FILE" | head -n1 | cut -d= -f2-)"
+  current_key="$(grep -E '^WIZARD_API_KEY=' "$ENV_FILE" | head -n1 | cut -d= -f2-)"
   if [[ "$current_key" == "phx_..." || -z "$current_key" ]]; then
     echo
     echo "Optional: PostHog personal API key (only needed for wizard-ci and PR evaluator)."
     echo "Get one from https://us.posthog.com/settings/user-api-keys — leave blank to skip."
-    read -r -s -p "POSTHOG_PERSONAL_API_KEY: " api_key
+    read -r -s -p "WIZARD_API_KEY: " api_key
     echo
     if [[ -n "$api_key" ]]; then
-      sed -i '' -e "s|^POSTHOG_PERSONAL_API_KEY=.*|POSTHOG_PERSONAL_API_KEY=$api_key|" "$ENV_FILE"
+      sed -i '' -e "s|^WIZARD_API_KEY=.*|WIZARD_API_KEY=$api_key|" "$ENV_FILE"
       say "API key saved to .env"
     else
       say "Skipping API key (you can edit .env later)."
     fi
   else
-    say "POSTHOG_PERSONAL_API_KEY already set in .env"
+    say "WIZARD_API_KEY already set in .env"
   fi
 fi
 

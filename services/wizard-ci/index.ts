@@ -279,7 +279,7 @@ function parseArgs(): Options {
 wizard-ci: Run wizard on a single test app and create a PR
 
 Runs wizard in CI mode (non-interactive). Requires POSTHOG_REGION and
-POSTHOG_PERSONAL_API_KEY to be defined in .env file.
+WIZARD_API_KEY to be defined in .env file.
 
 For running all apps, use the wizard-trigger GitHub workflow.
 

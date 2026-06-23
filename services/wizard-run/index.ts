@@ -70,7 +70,7 @@ ${WIZARD_COMMANDS.map((c) => `  ${commandToInvocation(c.id).padEnd(28)}  ${c.des
 
 Options:
   --command <id>     Wizard command (see above)
-  --ci               CI mode. Requires POSTHOG_PERSONAL_API_KEY in .env
+  --ci               CI mode. Requires WIZARD_API_KEY in .env
   --region <us|eu>   PostHog region (default: us)
   -h, --help         Show this help message
 `);

@@ -205,13 +205,13 @@ function runBenchmark(
   }
 
   const region = opts.region || (process.env.POSTHOG_REGION as "us" | "eu") || "us";
-  const apiKey = process.env.POSTHOG_PERSONAL_API_KEY;
+  const apiKey = process.env.WIZARD_API_KEY;
 
   if (!apiKey) {
     return Promise.resolve({
       success: false,
       duration: 0,
-      error: "POSTHOG_PERSONAL_API_KEY must be set in .env",
+      error: "WIZARD_API_KEY must be set in .env",
     });
   }
 
@@ -314,7 +314,7 @@ async function main(): Promise<void> {
   // Write config to workbench root
   const configPath = join(WORKBENCH, ".benchmark-config.json");
   writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
-  process.env.POSTHOG_WIZARD_BENCHMARK_CONFIG = configPath;
+  process.env.WIZARD_BENCHMARK_CONFIG = configPath;
 
   console.log(`Running benchmark: ${commandToInvocation(command.id)}`);
   console.log(`App: ${selectedApp.name}\n`);
