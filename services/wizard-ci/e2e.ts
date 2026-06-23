@@ -113,7 +113,6 @@ export function runE2e(opts: E2eOptions): number {
   childEnv.POSTHOG_REGION = region;
   childEnv.SNAP_OUT = snapsDir;
   childEnv.E2E_RESULT_JSON = resultJson;
-  childEnv.RUN_AGENT = "1"; // full flow through outro, not just the pre-run screens
   childEnv.E2E_KEEP_SKILLS = opts.keepSkills ? "true" : "false";
 
   const run = spawnSync("npx", ["tsx", harness], {
