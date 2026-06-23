@@ -16,6 +16,8 @@ class Boards::ColumnsController < ApplicationController
   def create
     @column = @board.columns.create!(column_params)
 
+    PostHog.capture(distinct_id: Current.user.posthog_distinct_id, event: "column_created", properties: { column_id: @column.id, board_id: @board.id, column_name: @column.name })
+
     respond_to do |format|
       format.turbo_stream
       format.json { head :created, location: board_column_path(@board, @column, format: :json) }
