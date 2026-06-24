@@ -1,0 +1,35 @@
+                               PostHog Wizard v2.30.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Next.js project structure (app router)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_signed_up A new user successfully created an account.
+                               • user_signed_in A user successfully signed in to their account.
+                               • user_signed_out A user signed out of their account.
+                               • checkout_started A user initiated a Stripe checkout session for a subscription plan.
+                               • subscription_activated A user successfully completed checkout and activated a subscription.
+                               • subscription_updated A team's subscription plan was updated via Stripe webhook.
+                               • subscription_cancelled A team's subscription was cancelled via Stripe webhook.
+                               • team_member_invited A team owner sent an invitation to a new team member.
+                               • team_member_removed A team member was removed from the team.
+                               • account_updated A user updated their account name or email.
+                               • password_updated A user successfully changed their account password.
+                               • account_deleted A user permanently deleted their account.
+                               • pricing_page_viewed A user viewed the pricing page, representing the top of the subscription conversion funnel.
+
+                               Learn more: https://posthog.com/docs/libraries/next-js?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
