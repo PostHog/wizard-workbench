@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, PlusCircle } from 'lucide-react';
 import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -26,6 +27,10 @@ function ManageSubscription() {
 
   async function handleManageSubscription() {
     try {
+      posthog.capture('subscription_management_opened', {
+        plan: teamData?.planName,
+      });
+
       const response = await fetch('/api/stripe/customer-portal', {
         method: 'POST',
         headers: {
@@ -39,6 +44,7 @@ function ManageSubscription() {
         window.location.href = result.url;
       }
     } catch (err) {
+      posthog.captureException(err);
       console.error('Failed to open customer portal');
     }
   }
@@ -102,9 +108,12 @@ function TeamMembers() {
           return;
         }
 
+        posthog.capture('team_member_removed', { member_id: memberId });
+
         // Refresh team data
         mutate('/api/team');
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred');
       }
     });
@@ -207,10 +216,15 @@ function InviteTeamMember() {
           return;
         }
 
+        posthog.capture('team_member_invited', {
+          role: data.role,
+        });
+
         setSuccess(result.success);
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred');
       }
     });

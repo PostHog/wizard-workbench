@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { getTeamByStripeCustomerId } from '@/lib/db/queries';
 
 // Disable body parsing, need raw body for Stripe webhook signature verification
 export const config = {
@@ -36,12 +38,34 @@ export default async function handler(
     return res.status(400).json({ error: 'Webhook signature verification failed.' });
   }
 
+  const posthog = getPostHogClient();
+
   switch (event.type) {
     case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
+    case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+
+      const customerId = subscription.customer as string;
+      const team = await getTeamByStripeCustomerId(customerId);
+      const distinctId = team ? `stripe_customer_${customerId}` : customerId;
+      const eventName =
+        event.type === 'customer.subscription.deleted'
+          ? 'subscription_cancelled'
+          : 'subscription_updated';
+
+      posthog.capture({
+        distinctId,
+        event: eventName,
+        properties: {
+          subscription_id: subscription.id,
+          subscription_status: subscription.status,
+          stripe_customer_id: customerId,
+          team_id: team?.id,
+        },
+      });
       break;
+    }
     default:
       console.log(`Unhandled event type ${event.type}`);
   }

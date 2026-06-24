@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -165,6 +166,17 @@ export default async function handler(
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
       setSession(createdUser, res)
     ]);
+
+    const posthog = getPostHogClient();
+    posthog.identify({
+      distinctId: createdUser.email,
+      properties: { email: createdUser.email, invited_via: inviteId ? 'invitation' : 'direct' },
+    });
+    posthog.capture({
+      distinctId: createdUser.email,
+      event: 'user_signed_up',
+      properties: { user_id: createdUser.id, invited_via: inviteId ? 'invitation' : 'direct' },
+    });
 
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({
