@@ -1,4 +1,5 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 import { NotFound } from '~/components/NotFound'
 import { PostErrorComponent } from '~/components/PostError'
 import { fetchInvoice, markInvoicePaid } from '~/utils/invoices'
@@ -12,10 +13,25 @@ export const Route = createFileRoute('/posts_/$postId/deep')({
 function PostDeepComponent() {
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
 
   const handleMarkAsPaid = async () => {
+    posthog.capture('invoice_mark_paid_clicked', {
+      invoice_id: invoice.id,
+      invoice_title: invoice.title,
+      invoice_amount: invoice.amount,
+      source: 'invoice_deep_detail',
+    })
     await markInvoicePaid({ data: String(invoice.id) })
     router.invalidate()
+  }
+
+  const handleDownloadPdf = () => {
+    posthog.capture('invoice_pdf_download_clicked', {
+      invoice_id: invoice.id,
+      invoice_title: invoice.title,
+      invoice_status: invoice.status,
+    })
   }
 
   if (!invoice) {
@@ -97,7 +113,10 @@ function PostDeepComponent() {
                 Mark as Paid
               </button>
             )}
-            <button className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <button
+              onClick={handleDownloadPdf}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
               Download PDF
             </button>
           </div>

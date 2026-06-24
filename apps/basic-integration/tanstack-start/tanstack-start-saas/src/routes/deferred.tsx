@@ -1,6 +1,7 @@
 import { Await, createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { Suspense, useState } from 'react'
+import { usePostHog } from '@posthog/react'
 
 const personServerFn = createServerFn({ method: 'GET' })
   .inputValidator((d: string) => d)
@@ -31,6 +32,7 @@ export const Route = createFileRoute('/deferred')({
 function Deferred() {
   const [count, setCount] = useState(0)
   const { deferredStuff, deferredPerson, person } = Route.useLoaderData()
+  const posthog = usePostHog()
 
   return (
     <div className="p-6">
@@ -113,7 +115,13 @@ function Deferred() {
         <div className="flex items-center gap-4">
           <span className="text-2xl font-bold">{count}</span>
           <button
-            onClick={() => setCount(count + 1)}
+            onClick={() => {
+              const next = count + 1
+              setCount(next)
+              posthog.capture('analytics_counter_incremented', {
+                counter_value: next,
+              })
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Increment
