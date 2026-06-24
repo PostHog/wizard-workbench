@@ -19,18 +19,12 @@ import { spawnSync } from "child_process";
 const WORKBENCH = join(import.meta.dirname, "..", "..");
 const APPS_DIR = join(WORKBENCH, "apps");
 
-// Host Claude-Code / Anthropic auth vars: when the wizard's agent subprocess is
+// Host Claude Code / Anthropic auth vars: when the wizard's agent subprocess is
 // spawned from inside a Claude Code session it defers auth to the host
 // (apiKeySource=none → 401). Strip them so it auths with the phx key, exactly
 // like a plain CI shell (where these are simply unset, so the strip is a no-op).
-const STRIP_ENV = [
-  "ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN",
-  "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SESSION_ID",
-  "CLAUDE_CODE_CHILD_SESSION", "CLAUDE_CODE_OAUTH_SCOPES", "CLAUDE_CODE_OAUTH_TOKEN",
-  "CLAUDE_CODE_SDK_HAS_OAUTH_REFRESH", "CLAUDE_CODE_SDK_HAS_HOST_AUTH_REFRESH",
-  "CLAUDE_CODE_EXECPATH", "CLAUDE_CODE_EMIT_TOOL_USE_SUMMARIES",
-  "CLAUDE_AGENT_SDK_VERSION", "CLAUDE_CODE_ENABLE_ASK_USER_QUESTION_TOOL", "AI_AGENT",
-];
+// Same predicate the wizard's MCP host uses, so the two can't drift.
+const STRIP_HOST_AUTH = /^(CLAUDE|ANTHROPIC|AI_AGENT)/;
 
 export interface E2eOptions {
   app?: string;
@@ -106,7 +100,8 @@ export function runE2e(opts: E2eOptions): number {
   console.log(`    policy: skip mcp · skip slack · ${opts.keepSkills ? "keep" : "delete"} skills · continue past health issues\n`);
 
   const childEnv: NodeJS.ProcessEnv = { ...process.env };
-  for (const k of STRIP_ENV) delete childEnv[k];
+  for (const k of Object.keys(childEnv))
+    if (STRIP_HOST_AUTH.test(k)) delete childEnv[k];
   childEnv.POSTHOG_PERSONAL_API_KEY = apiKey;
   childEnv.APP_DIR = appDir;
   childEnv.PROJECT_ID = projectId;
