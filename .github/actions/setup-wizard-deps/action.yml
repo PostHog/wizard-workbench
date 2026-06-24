@@ -195,12 +195,22 @@ runs:
         git checkout -q FETCH_HEAD
         echo "::endgroup::"
 
-        echo "::group::Installing PostCSS dependencies (required for UI apps build)"
-        pnpm add -Dw autoprefixer postcss-preset-env cssnano
+        echo "::group::Installing MCP dependencies (filtered to @posthog/mcp)"
+        # The monorepo is cloned solely to build services/mcp, so install only
+        # that package and its workspace dependencies. A full-workspace install
+        # also fetches and compiles unrelated native addons from plugin-server
+        # (lz4, node-rdkafka), which @posthog/mcp does not use and which break
+        # node-gyp on a cold cache (gyp_main.py "Permission denied", make Error
+        # 126) — the recurring "flaky install" failure. The trailing "..."
+        # selects @posthog/mcp plus its workspace deps and nothing else.
+        pnpm install --frozen-lockfile --filter "@posthog/mcp..."
         echo "::endgroup::"
 
-        echo "::group::Installing MCP dependencies"
-        pnpm install --frozen-lockfile
+        echo "::group::Installing PostCSS dependencies (required for UI apps build)"
+        # PostCSS tooling lives at the workspace root, not in @posthog/mcp, so
+        # add it after the filtered install. --ignore-scripts keeps this step
+        # from rebuilding any native addons it may relink.
+        pnpm add -Dw --ignore-scripts autoprefixer postcss-preset-env cssnano
         echo "::endgroup::"
 
         echo "::group::Building MCP UI apps"
