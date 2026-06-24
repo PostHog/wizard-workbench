@@ -5,6 +5,7 @@ import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
 
@@ -89,9 +90,14 @@ function PricingCard({
         if (result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
+          posthog.capture('checkout_initiated', {
+            plan_name: name,
+            price_id: priceId,
+          });
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err as Error);
         console.error('Checkout error:', err);
       }
     });

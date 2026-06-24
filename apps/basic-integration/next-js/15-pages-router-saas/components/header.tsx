@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/router';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -23,6 +24,8 @@ function UserMenu() {
   const router = useRouter();
 
   async function handleSignOut() {
+    posthog.capture('user_signed_out');
+    posthog.reset();
     try {
       // Call sign-out API to delete HttpOnly session cookie
       await fetch('/api/auth/sign-out', {
