@@ -67,10 +67,18 @@ jobs:
 
       - name: Resolve request
         id: req
+        # Bind event-controlled values to env vars and reference them as shell
+        # variables — never interpolate ${{ github.event.* }} into the run script.
+        env:
+          IN_APP: ${{ inputs.app }}
+          IN_WIZARD_REF: ${{ inputs.wizard_ref }}
+          CP_APP: ${{ github.event.client_payload.app }}
+          CP_WIZARD_REF: ${{ github.event.client_payload.wizard_ref }}
+          CP_COMMENT_PR: ${{ github.event.client_payload.comment_pr }}
         run: |
-          echo "app=${{ inputs.app || github.event.client_payload.app || 'basic-integration/javascript-node/express-todo' }}" >> "$GITHUB_OUTPUT"
-          echo "wizard_ref=${{ inputs.wizard_ref || github.event.client_payload.wizard_ref || 'main' }}" >> "$GITHUB_OUTPUT"
-          echo "comment_pr=${{ github.event.client_payload.comment_pr }}" >> "$GITHUB_OUTPUT"
+          echo "app=${IN_APP:-${CP_APP:-basic-integration/javascript-node/express-todo}}" >> "$GITHUB_OUTPUT"
+          echo "wizard_ref=${IN_WIZARD_REF:-${CP_WIZARD_REF:-main}}" >> "$GITHUB_OUTPUT"
+          echo "comment_pr=${CP_COMMENT_PR}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
