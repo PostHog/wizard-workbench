@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.30.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Use those signals to decide what to build next.            ◼ Plan event tracking
+                                                                                           ◼ Install PostHog
+                                PostHog has all the dev tools you need.                    ◼ Initialize PostHog client-side
+                                                                                           ▶ Set up server-side PostHog
+                                  ◆ Product Analytics     ◆ Error Tracking                 ◻ Capture client-side events
+                                                                                           ◻ Create PostHog dashboard
+
+                                                                                           ⠹ Progress: 3/6 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Inserting PostHog capture code.
+                                ◆ Inserting PostHog capture code — creating instrumentation-client.ts and updating next.config.ts.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

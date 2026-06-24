@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.30.0                                                                    Feedback: wizard@posthog.com 
+
+                                Tips                                                       Tasks
+
+                                ◆ You can also track people and groups with PostHog        ◼ Plan event tracking
+                                Events can be associated with the humans who generate      ◼ Install PostHog
+                                them, letting you understand a specific user or            ◼ Initialize PostHog client-side
+                                customer's situation.                                      ◼ Set up server-side PostHog
+                                                                                           ▶ Capture client-side events
+                                ◆ Get way more detail using properties                     ◻ Create PostHog dashboard
+                                Events and person records can have any properties you 
+                                want. Track things like how they found your website,       ⠇ Progress: 4/6 completed
+                                what subscription tier they choose, and much more.
+
+                                ◆ Use PostHog in Slack
+                                Connect the PostHog Slack app to analyze data and ship 
+                                product changes — deploy flags, open PRs, run queries — 
+                                just by tagging @PostHog: https://posthog.com/slack
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Inserting PostHog capture code — updating app/api/todos/route.ts with server_todo_created event.
+                                ◆ Inserting PostHog capture code — updating app/api/todos/[id]/route.ts with server_todo_updated and 
+                                server_todo_deleted events.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.30.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Or funnels to reveal bottlenecks.                          ◼ Plan event tracking
+                                                                                           ◼ Install PostHog
+                                  Funnel · ride conversion                                 ▶ Initialize PostHog client-side
+                                                                                           ◻ Set up server-side PostHog
+                                  1  app_launched                     100.00%              ◻ Capture client-side events
+                                     ██████████████████████████████                        ◻ Create PostHog dashboard
+                                     → 1,200 users
+                                                                                           ⠸ Progress: 2/6 completed
+                                  2  ride_requested       avg 2m 30s   72.00%
+                                     ██████████████████████░░░░░░░░░
+                                     → 864 users  ↘ 336 (28%)
+
+                                  3  ride_accepted        avg 5m 12s   51.00%
+                                     ██████████████████░░░░░░░░░░░░░
+                                     → 612 users  ↘ 252 (29%)
+
+                                  4  ride_started         avg 1m 45s   38.00%
+                                     █████████████░░░░░░░░░░░░░░░░░░
+                                     → 456 users  ↘ 156 (25%)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Generating events based on project.
+                                ◆ Inserting PostHog capture code.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
