@@ -6,6 +6,7 @@ import { QUERY_LIST } from '../constants/lists'
 import { listMedia, getMedia } from '../composables/useTMDB'
 import MediaHero from '../components/media/MediaHero.vue'
 import CarouselAutoQuery from '../components/carousel/CarouselAutoQuery.vue'
+import posthog from 'posthog-js'
 
 const props = defineProps<{
   type?: MediaType
@@ -45,12 +46,22 @@ onMounted(async () => {
     console.error('Error loading hero item:', error)
   }
 })
+
+const handleHeroClick = () => {
+  if (heroItem.value) {
+    posthog.capture('media_list_hero_clicked', {
+      media_id: heroItem.value.id,
+      media_type: mediaType.value,
+      media_title: heroItem.value.title || heroItem.value.name,
+    })
+  }
+}
 </script>
 
 <template>
   <div class="min-h-screen bg-black text-white">
     <div v-if="heroItem">
-      <router-link :to="`/${mediaType}/${heroItem.id}`">
+      <router-link :to="`/${mediaType}/${heroItem.id}`" @click="handleHeroClick">
         <MediaHero :item="heroItem" />
       </router-link>
     </div>
