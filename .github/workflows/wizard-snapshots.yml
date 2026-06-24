@@ -102,7 +102,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           token: ${{ steps.app-token.outputs.token }}
-          ref: ${{ steps.req.outputs.checkout_ref }}
+          ref: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request.head.sha || steps.req.outputs.checkout_ref }}
           fetch-depth: 0
 
       - name: Setup Node.js
