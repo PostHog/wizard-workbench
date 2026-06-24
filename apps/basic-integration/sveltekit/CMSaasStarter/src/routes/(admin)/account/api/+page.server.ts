@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -27,6 +28,14 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_subscription_toggled",
+      properties: { unsubscribed: newUnsubscribedStatus },
+    })
+    await posthog.flush()
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -70,6 +79,14 @@ export const actions = {
         email,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_changed",
+      properties: {},
+    })
+    await posthog.flush()
 
     return {
       email,
@@ -172,6 +189,14 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session!.user!.id,
+      event: "password_changed",
+      properties: { recovery_flow: !!isRecoverySession },
+    })
+    await posthog.flush()
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +245,14 @@ export const actions = {
         currentPassword,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+      properties: {},
+    })
+    await posthog.flush()
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -322,6 +355,14 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: newProfile ? "profile_completed" : "profile_updated",
+      properties: { company_name: companyName },
+    })
+    await posthog.flush()
+
     return {
       fullName,
       companyName,
@@ -331,6 +372,14 @@ export const actions = {
   signout: async ({ locals: { supabase, safeGetSession } }) => {
     const { session } = await safeGetSession()
     if (session) {
+      const posthog = getPostHogClient()
+      posthog.capture({
+        distinctId: session.user.id,
+        event: "user_signed_out",
+        properties: {},
+      })
+      await posthog.flush()
+
       await supabase.auth.signOut()
       redirect(303, "/")
     } else {
