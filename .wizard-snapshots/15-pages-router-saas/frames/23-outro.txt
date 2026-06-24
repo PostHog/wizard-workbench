@@ -1,0 +1,33 @@
+                               PostHog Wizard v2.30.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1751155?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Next.js project structure (pages router)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • sign_up_submitted User submits the sign-up form with email and password.
+                               • sign_in_submitted User submits the sign-in form with email and password.
+                               • sign_out_clicked User clicks the sign-out button in the header dropdown.
+                               • checkout_started User clicks 'Get Started' on a pricing plan to begin checkout.
+                               • team_member_invited Team owner sends an invitation to a new team member.
+                               • team_member_removed Team owner removes a member from the team.
+                               • account_updated User saves changes to their account name and email.
+                               • manage_subscription_clicked User clicks 'Manage Subscription' to open the Stripe customer portal.
+                               • subscription_updated A Stripe subscription was activated or updated via webhook.
+                               • subscription_cancelled A Stripe subscription was cancelled or became unpaid via webhook.
+
+                               Learn more: https://posthog.com/docs/libraries/next-js?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

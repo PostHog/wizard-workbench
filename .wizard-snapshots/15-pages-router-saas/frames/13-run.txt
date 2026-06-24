@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.30.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Like trends to measure growth.                             ◼ Plan event tracking
+                                                                                           ▶ Install PostHog
+                                  Trends · user signups (monthly)                          ◻ Capture events
+                                                                                           ◻ Identify users
+                                  10k ┤                          ╭── 9,575                 ◻ Validate integration
+                                      │                         ╭╯                         ◻ Create dashboard
+                                 7.5k ┤                        ╭╯
+                                      │                      ╭─╯                           ⠼ Progress: 1/6 completed
+                                   5k ┤                    ╭─╯
+                                      │                 ╭──╯
+                                 2.5k ┤             ╭───╯
+                                      │      ╭──────╯
+                                    0 ┤──────╯
+                                      └┬─────┬─────┬─────┬─────┬──
+                                       May   Aug   Nov   Feb   May
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Generating events based on project.
+                                ◆ Inserting PostHog capture code.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
