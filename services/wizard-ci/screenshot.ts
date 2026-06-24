@@ -1,32 +1,27 @@
 /**
  * report.html → PNG screenshots, via headless Chromium (Playwright).
  *
- * snapshots.ts renders each key moment to HTML (baseline │ current). This
- * rasterizes that report into one PNG per frame (the side-by-side row), for
- * attaching to a review PR.
+ * snapshots.ts renders each key moment to HTML. This rasterizes that report into
+ * one PNG per frame (one row), for attaching to a review PR.
  *
- *   tsx services/wizard-ci/screenshot.ts <report.html> <outDir> [--only-changed]
+ *   tsx services/wizard-ci/screenshot.ts <report.html> <outDir>
  *
  * Writes <outDir>/<frame>.png per row (named by the row's data-frame) and a
- * shots.json manifest (frame, status, file).
+ * shots.json manifest (frame, file).
  */
 import { chromium } from "playwright";
 import { mkdirSync, rmSync, writeFileSync } from "fs";
-import { join, basename } from "path";
+import { join } from "path";
 
 interface Shot {
   frame: string;
-  status: string;
   file: string;
 }
 
 async function main(): Promise<number> {
   const [report, outDir] = process.argv.slice(2).filter((a) => !a.startsWith("--"));
-  const onlyChanged = process.argv.includes("--only-changed");
   if (!report || !outDir) {
-    process.stderr.write(
-      "usage: screenshot <report.html> <outDir> [--only-changed]\n",
-    );
+    process.stderr.write("usage: screenshot <report.html> <outDir>\n");
     return 2;
   }
 
@@ -34,8 +29,7 @@ async function main(): Promise<number> {
   mkdirSync(outDir, { recursive: true });
 
   const browser = await chromium.launch();
-  // Wide enough that the two 100-col terminal columns sit side by side without
-  // wrapping; 2× scale for crisp text.
+  // 2× scale for crisp terminal text.
   const page = await browser.newPage({
     viewport: { width: 1920, height: 1080 },
     deviceScaleFactor: 2,
@@ -50,12 +44,10 @@ async function main(): Promise<number> {
   for (let i = 0; i < count; i++) {
     const row = rows.nth(i);
     const frame = (await row.getAttribute("data-frame")) ?? `frame-${i}`;
-    const status = (await row.getAttribute("data-status")) ?? "unknown";
-    if (onlyChanged && status === "same") continue;
     const file = `${frame.replace(/\.[^.]+$/, "")}.png`; // 10-run.txt → 10-run.png
     await row.scrollIntoViewIfNeeded();
     await row.screenshot({ path: join(outDir, file) });
-    shots.push({ frame, status, file });
+    shots.push({ frame, file });
   }
 
   await browser.close();

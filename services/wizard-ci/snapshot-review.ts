@@ -1,17 +1,16 @@
 /**
- * wizard-ci snapshot review: open a PR with side-by-side TUI screenshots for a
- * human to eyeball, instead of running the agent evaluator.
+ * wizard-ci snapshot review: open a PR with the current run's TUI screenshots
+ * for a human to eyeball, instead of running the agent evaluator.
  *
- *   1. wizard-ci-snapshots <app>  → a real run, a diff vs the committed baseline,
- *                                   and report.html (baseline │ current per frame)
- *   2. screenshot.ts              → one PNG per changed frame
+ *   1. wizard-ci-snapshots <app>  → a real run + report.html (current frames)
+ *   2. screenshot.ts              → one PNG per frame
  *   3. commit the PNGs to a review branch and open a PR whose body embeds them
- *      (via raw.githubusercontent URLs), one changed frame per row.
+ *      (via raw.githubusercontent URLs), one frame per row.
  *
  *   tsx services/wizard-ci/snapshot-review.ts <app> [--dry-run] [--comment-pr <n>]
  *
- * --comment-pr <n> also posts a comment on PR n (the changed-frame count + a link
- * to the full review) — used by the `/wizard-ci` PR-comment trigger.
+ * --comment-pr <n> also posts a comment on PR n (the frame count + a link to the
+ * full review) — used by the `/wizard-ci` PR-comment trigger.
  *
  * --dry-run writes the PR body + PNGs under /tmp and skips the PR (for local use).
  * In CI the GitHub App token comes from GH_TOKEN / GITHUB_TOKEN and the repo from
@@ -38,7 +37,6 @@ const REVIEW_DIR = ".wizard-snapshots"; // committed on the review branch only
 
 interface Shot {
   frame: string;
-  status: string;
   file: string;
 }
 
@@ -50,16 +48,9 @@ function run(cmd: string, args: string[], extraEnv: Record<string, string> = {})
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} failed`);
 }
 
-const STATUS_EMOJI: Record<string, string> = {
-  changed: "🟠",
-  added: "🔵",
-  removed: "🔴",
-  same: "⚪️",
-};
-
 /**
  * Build the PR body. Mirrors the eval path's buildPRBody: plain metadata lines,
- * then the snapshot content (one side-by-side image per changed frame).
+ * then one image per captured frame.
  */
 function prBody(
   app: string,
@@ -67,20 +58,19 @@ function prBody(
   rawBase: string,
   runUrl: string | null,
 ): string {
-  const changed = shots.filter((s) => s.status !== "same");
   const lines: string[] = [
     "Automated wizard CI snapshot run.",
     "",
     runUrl ? `Source: [github-actions](${runUrl})` : "Source: local",
     `App: \`${app}\``,
     `App directory: \`apps/${app}\``,
-    `Frames changed: ${changed.length} of ${shots.length}`,
+    `Frames: ${shots.length}`,
     "",
-    "Real-TUI key moments, rendered baseline vs current. Review the frames below, merge to accept the new baseline.",
+    "Real-TUI key moments from the current run. Eyeball the frames below.",
     "",
   ];
-  for (const s of changed) {
-    lines.push(`### ${STATUS_EMOJI[s.status] ?? ""} ${s.frame} (${s.status})`);
+  for (const s of shots) {
+    lines.push(`### ${s.frame}`);
     lines.push("", `![${s.frame}](${rawBase}/${s.file})`, "");
   }
   return lines.join("\n");
@@ -99,7 +89,7 @@ async function main(): Promise<number> {
   }
   const name = basename(app);
 
-  // 1. a real run → report.html (the real-TUI screens, baseline vs current).
+  // 1. a real run → report.html (the current real-TUI frames).
   run("npx", ["tsx", "services/wizard-ci/snapshots.ts", app]);
   const report = join(OUT_ROOT, name, "report.html");
   if (!existsSync(report)) {
@@ -107,15 +97,9 @@ async function main(): Promise<number> {
     return 1;
   }
 
-  // 2. report.html → PNGs (changed frames only) + shots.json.
+  // 2. report.html → one PNG per frame + shots.json.
   const shotsDir = join(OUT_ROOT, name, "shots");
-  run("npx", [
-    "tsx",
-    "services/wizard-ci/screenshot.ts",
-    report,
-    shotsDir,
-    "--only-changed",
-  ]);
+  run("npx", ["tsx", "services/wizard-ci/screenshot.ts", report, shotsDir]);
   const shots: Shot[] = JSON.parse(
     readFileSync(join(shotsDir, "shots.json"), "utf8"),
   );
@@ -139,7 +123,7 @@ async function main(): Promise<number> {
     cpSync(shotsDir, dest, { recursive: true });
     writeFileSync(join(dest, "PR_BODY.md"), body);
     console.log(`\n[dry-run] review bundle → ${dest}`);
-    console.log(`  ${shots.filter((s) => s.status !== "same").length} changed frames, PR body in PR_BODY.md`);
+    console.log(`  ${shots.length} frames, PR body in PR_BODY.md`);
     return 0;
   }
 
@@ -155,8 +139,8 @@ async function main(): Promise<number> {
   mkdirSync(dest, { recursive: true });
   cpSync(shotsDir, dest, { recursive: true });
 
-  // Also commit the raw text snapshots so the PR has a readable, diffable record
-  // (and so blank renders can be told apart from blank captures).
+  // Also commit the raw text frames so the PR has a readable record, and so blank
+  // renders can be told apart from blank captures.
   const txtDir = snapsDirFor(app);
   if (existsSync(txtDir)) {
     const txtDest = join(dest, "frames");
@@ -185,15 +169,14 @@ async function main(): Promise<number> {
     })) as { prUrl?: string };
     console.log(`✓ review PR: ${r.prUrl ?? "(created)"}`);
 
-    // When triggered by a /wizard-ci PR comment, report back on that PR with the
-    // flow strip + a link to the full side-by-side review.
+    // When triggered by a /wizard-ci PR comment, report back on that PR with a
+    // link to the full review.
     if (commentPr) {
-      const changed = shots.length; // screenshot.ts --only-changed → changed frames only
       const comment = [
         `### Wizard CI snapshot review — \`${app}\``,
         "",
-        `**${changed}** key-moment frame(s) differ from the baseline.` +
-          (r.prUrl ? ` [Side-by-side review →](${r.prUrl})` : ""),
+        `**${shots.length}** key-moment frame(s) captured.` +
+          (r.prUrl ? ` [Review →](${r.prUrl})` : ""),
       ].join("\n");
       postPRComment(commentPr, comment, repoRoot);
       console.log(`✓ commented on PR #${commentPr}`);

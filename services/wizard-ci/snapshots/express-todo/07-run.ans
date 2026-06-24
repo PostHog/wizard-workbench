@@ -1,8 +1,0 @@
- [1m[38;2;220;147;0mLearn[39m[22m                                             [1mTasks[22m
-
-                                                   [34m⠋[39m Analyzing project...
-[90m────────────────────────────────────────────────────────────────────────────────────────────────────[39m
- [90m[2m┊ Initializing Claude agent...[22m[39m
- [90m◆ Verbose logs: /tmp/posthog-wizard.log[39m
-
- [7m[1m[38;2;220;147;0m Status [39m[22m[27m [90m Tail logs [39m [90m Visualizer [39m [90m HN [39m

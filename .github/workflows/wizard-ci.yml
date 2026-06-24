@@ -632,7 +632,7 @@ jobs:
         continue-on-error: true
         run: |
           if [ "$SNAPSHOTS" = "true" ]; then
-            # Snapshot mode: real-TUI visual regression + review PR (no evaluator).
+            # Snapshot mode: render the real-TUI screens + open a review PR (no evaluator).
             pnpm wizard-ci-snapshot-review "$MATRIX_APP" 2>&1 | tee wizard-output.log
           else
             CMD_ARGS=(pnpm wizard-ci --app "$MATRIX_APP" --base "$INPUT_BASE_BRANCH")

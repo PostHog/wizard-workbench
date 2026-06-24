@@ -1,9 +1,8 @@
 name: Wizard Snapshots
 
-# Visual-review dispatch: run the wizard e2e on an app, render the TUI to
-# side-by-side screenshots (baseline | current), and open a PR for a human to
-# eyeball — instead of running the agent evaluator. Merging the PR accepts the
-# new baseline.
+# Visual-review dispatch: run the wizard e2e on an app, render the current TUI
+# key-moment screens to screenshots, and open a PR for a human to eyeball —
+# instead of running the agent evaluator.
 #
 # Triggered manually (workflow_dispatch) or programmatically (repository_dispatch
 # wizard-snapshots-trigger). A `/wizard-ci` PR comment reaches this workflow as a
