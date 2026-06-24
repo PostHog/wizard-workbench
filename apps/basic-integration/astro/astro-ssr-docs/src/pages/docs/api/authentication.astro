@@ -55,4 +55,8 @@ const renderTime = new Date().toISOString();
   <div class="render-info">
     Server-rendered at: {renderTime}
   </div>
+
+  <script is:inline>
+    window.posthog?.capture('api_authentication_viewed');
+  </script>
 </DocsLayout>

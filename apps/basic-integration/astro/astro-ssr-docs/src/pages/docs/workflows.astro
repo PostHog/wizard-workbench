@@ -59,4 +59,8 @@ const renderTime = new Date().toISOString();
   <div class="render-info">
     Server-rendered at: {renderTime}
   </div>
+
+  <script is:inline>
+    window.posthog?.capture('workflows_page_viewed');
+  </script>
 </DocsLayout>

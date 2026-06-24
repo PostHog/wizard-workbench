@@ -56,4 +56,8 @@ NEURALFLOW_API_KEY=your_api_key_here</code></pre>
   <div class="render-info">
     Server-rendered at: {renderTime}
   </div>
+
+  <script is:inline>
+    window.posthog?.capture('installation_page_viewed');
+  </script>
 </DocsLayout>
