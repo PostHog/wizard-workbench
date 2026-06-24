@@ -17,7 +17,7 @@
  * Only a genuine failure (run died, no snapshots) exits non-zero.
  */
 import "dotenv/config";
-import { join } from "path";
+import { join, basename } from "path";
 import {
   existsSync,
   mkdirSync,
@@ -91,7 +91,13 @@ async function main(): Promise<number> {
     args[args.indexOf("--project-id") + 1] ||
     "";
 
-  for (const def of TEST_DEFS) {
+  // Run a specific app when one is passed, otherwise the default test set.
+  const appArg = args.find((a) => !a.startsWith("--"));
+  const defs: TestDef[] = appArg
+    ? [{ name: basename(appArg), app: appArg }]
+    : TEST_DEFS;
+
+  for (const def of defs) {
     console.log(`\n=== snapshots: ${def.name} (${def.app}) ===`);
 
     const code = runE2e({ app: def.app, projectId });
