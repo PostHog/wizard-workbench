@@ -14,5 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->report(function (\Throwable $e) {
+            if (! config('posthog.api_key')) {
+                return;
+            }
+            $posthog = app(\App\Services\PostHogService::class);
+            $distinctId = auth()->user()?->email ?? 'anonymous';
+            $posthog->captureException($e, $distinctId);
+        });
     })->create();
