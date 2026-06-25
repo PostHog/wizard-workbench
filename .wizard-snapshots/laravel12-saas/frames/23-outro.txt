@@ -1,0 +1,34 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Laravel with Livewire project structure
+                               • Installed the PostHog PHP package via Composer
+                               • Configured PostHog in your Laravel application
+                               • Added PostHog initialization to bootstrap/app.php
+                               • Configured PostHog to work with Livewire
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_signed_up A new user completes registration via the signup form.
+                               • user_logged_in A user successfully authenticates with email and password.
+                               • user_logged_out A user logs out of the application.
+                               • user_signed_up_social A new user registers via a social OAuth provider (e.g. Google).
+                               • user_logged_in_social An existing user logs in via a social OAuth provider (e.g. Google).
+                               • subscription_page_viewed A user views the subscription/pricing page to browse available plans.
+                               • subscription_checkout_started A user initiates the checkout process for a subscription plan.
+                               • subscription_plan_swapped A subscribed user changes their plan to a different tier.
+                               • dashboard_viewed An authenticated user loads the main dashboard page.
+                               • profile_viewed An authenticated user navigates to their profile/settings page.
+
+                               Learn more: https://posthog.com/docs/libraries/php?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

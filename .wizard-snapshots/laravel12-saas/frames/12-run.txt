@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Here's the flow.                                           ▶ Plan event tracking
+                                                                                           ▶ Install PostHog dependency
+                                  ┌──────────────────────────────┐                         ◻ Configure environment variables
+                                  │ Your App                     │                         ◻ Add PostHog configuration and service
+                                  │   │ posthog.capture()        │                         ◻ Instrument event tracking
+                                  │   │  custom events           │                         ◻ Create PostHog dashboard
+                                  │   │  custom properties       │
+                                  │   │  person profiles         │                         ⠴ Progress: 0/6 completed
+                                  │   ↓  groups                  │
+                                  │ PostHog SDK                  │
+                                  │   ↓ HTTP                     │
+                                  │ PostHog Cloud                │
+                                  │   ↓ query + visualize        │
+                                  │ Dashboards & Insights        │
+                                  └──────────────────────────────┘
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Verifying PostHog dependencies.
+                                ◆ Generating events based on project.
+
+                                 Status   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
