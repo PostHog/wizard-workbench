@@ -1,0 +1,37 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your SwiftUI project structure
+                               • Added the PostHog iOS SDK via Swift Package Manager
+                               • Configured PostHog initialization in your app entry point
+                               • Added event capture and user identification
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • login_completed User successfully logged in with their Hacker News credentials.
+                               • login_failed User attempted to log in but authentication failed due to bad credentials or a network error.
+                               • logout User logged out of their Hacker News account.
+                               • post_upvoted User upvoted a Hacker News post.
+                               • post_unvoted User removed their upvote from a Hacker News post.
+                               • comment_upvoted User upvoted a comment on a Hacker News post.
+                               • post_bookmarked User bookmarked or un-bookmarked a post.
+                               • feed_category_changed User switched to a different feed category (e.g., top, new, ask, show, jobs).
+                               • post_searched User submitted a search query in the feed.
+                               • comments_viewed User opened the comments screen for a post, marking the top of the engagement funnel.
+                               • onboarding_completed User completed or dismissed the onboarding flow.
+                               • purchase_completed User successfully completed an in-app purchase (tip or subscription).
+                               • purchase_failed An in-app purchase attempt failed due to a StoreKit error.
+                               • purchases_restored User successfully restored their previous in-app purchases.
+
+                               Learn more: https://posthog.com/docs/libraries/ios?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
