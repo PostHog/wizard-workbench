@@ -58,4 +58,10 @@ console.log('Extracted data:', document.data);</code></pre>
   <div class="render-info">
     Server-rendered at: {renderTime}
   </div>
+
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', function () {
+      window.posthog?.capture('docs_quickstart_viewed');
+    });
+  </script>
 </DocsLayout>
