@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Tips                                                       Tasks
+
+                                ◆ You can also track people and groups with PostHog        ◼ Check project structure and plan events
+                                Events can be associated with the humans who generate      ◼ Install PostHog dependency
+                                them, letting you understand a specific user or            ◼ Configure PostHog settings and middleware
+                                customer's situation.                                      ◼ Initialize PostHog in AppConfig
+                                                                                           ◼ Capture events in views
+                                ◆ Get way more detail using properties                     ◼ Set up environment variables
+                                Events and person records can have any properties you      ◼ Review and validate integration
+                                want. Track things like how they found your website, 
+                                what subscription tier they choose, and much more.         ⠧ Cleaning up...
+
+                                ◆ Use PostHog in Slack
+                                Connect the PostHog Slack app to analyze data and ship 
+                                product changes — deploy flags, open PRs, run queries — 
+                                just by tagging @PostHog: https://posthog.com/slack
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Report details of any errors you fix.
+                                ◆ Configured dashboard.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

@@ -1,0 +1,36 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Standard Django project structure
+                               • Installed the PostHog Python package
+                               • Configured PostHog in your Django settings
+                               • Added PostHog middleware for automatic event tracking
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_registered A new user completes registration and their account is created.
+                               • user_logged_in A user successfully logs in with their credentials.
+                               • user_logged_out A user logs out of the application.
+                               • profile_updated A user updates their profile or account settings.
+                               • pricing_viewed A visitor views the pricing page, the top of the subscription conversion funnel.
+                               • checkout_initiated A user initiates a subscription checkout for a plan.
+                               • subscription_started A user successfully starts a new subscription in demo mode.
+                               • checkout_completed A Stripe checkout session completes and a subscription is activated via webhook.
+                               • plan_changed A user changes their subscription plan to a different tier.
+                               • subscription_canceled A user cancels their active subscription.
+                               • payment_failed A subscription payment fails, indicating potential churn risk.
+                               • project_created A user creates a new project in the dashboard.
+                               • project_deleted A user deletes an existing project from the dashboard.
+
+                               Learn more: https://posthog.com/docs/libraries/django?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Use those signals to decide what to build next.            ◼ Check project structure and plan events
+                                                                                           ▶ Install PostHog dependency
+                                                                                           ▶ Set up environment variables
+                                                                                           ◻ Configure PostHog settings and middleware
+                                                                                           ◻ Initialize PostHog in AppConfig
+                                                                                           ◻ Capture events in views
+                                                                                           ◻ Review and validate integration
+
+                                                                                           ⠋ Progress: 1/7 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Verifying PostHog dependencies.
+                                ◆ Generating events based on project.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Use those signals to decide what to build next.            ◼ Check project structure and plan events
+                                                                                           ◼ Install PostHog dependency
+                                PostHog has all the dev tools you need.                    ◼ Configure PostHog settings and middleware
+                                                                                           ◼ Set up environment variables
+                                  ◆ Product Analytics     ◆ Error Tracking                 ▶ Initialize PostHog in AppConfig
+                                  ◆ Web Analytics         ◆ Session Replay                 ◻ Capture events in views
+                                  ◆ Feature Flags         ◆ Data Pipelines                 ◻ Review and validate integration
+                                  ◆ Experiments           ◆ Data Warehouse
+                                  ◆ LLM Analytics         ◆ Surveys                        ⠋ Progress: 4/7 completed
+                                  ◆ Workflows             ◆ Logs
+                                  ◆ Product Tours         ◆ Support
+                                  ◆ Revenue Analytics     ◆ Endpoints
+                                  ◆ Customer Analytics    ◆ PostHog Code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Inserting PostHog capture code.
+                                ◆ Editing `config/settings.py` — adding PostHog config and middleware.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
