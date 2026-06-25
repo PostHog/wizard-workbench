@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import posthog from 'posthog-js';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
 
 interface Price {
@@ -73,6 +74,13 @@ function PricingCard({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    posthog.capture('checkout_initiated', {
+      price_id: priceId,
+      plan_name: name,
+      price_cents: price,
+      interval,
+    });
 
     startTransition(async () => {
       try {
