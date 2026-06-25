@@ -30,6 +30,13 @@
       "ciCapable": true
     },
     {
+      "id": "mcp-analytics",
+      "dir": "mcp-analytics",
+      "label": "MCP Analytics",
+      "description": "Instrument an MCP server with the @posthog/mcp SDK",
+      "ciCapable": true
+    },
+    {
       "id": "skill",
       "dir": "misc",
       "label": "Skill",
