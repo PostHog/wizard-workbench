@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
+import { usePostHog } from '@posthog/react'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
 import { fetchInvoiceById, patchInvoice } from '../utils/mockTodos'
@@ -28,11 +29,27 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data }) => {
+      router.invalidate()
+      posthog.capture('invoice_updated', {
+        invoice_id: data?.id,
+        invoice_title: data?.title,
+      })
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
+
+  React.useEffect(() => {
+    posthog.capture('invoice_viewed', {
+      invoice_id: invoice.id,
+      invoice_title: invoice.title,
+      amount: invoice.id * 125,
+      status: invoice.id % 2 === 0 ? 'paid' : 'pending',
+    })
+  }, [invoice.id])
 
   React.useEffect(() => {
     navigate({
@@ -117,6 +134,12 @@ function InvoiceComponent() {
                 })}
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 params={true}
+                onClick={() =>
+                  posthog.capture('invoice_notes_toggled', {
+                    invoice_id: invoice.id,
+                    notes_visible: !search.showNotes,
+                  })
+                }
               >
                 {search.showNotes ? 'Hide Notes' : 'Add Notes'}
               </Link>

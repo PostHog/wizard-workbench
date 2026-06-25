@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-
+import * as React from 'react'
+import { usePostHog } from '@posthog/react'
 import { fetchInvoices } from '../utils/mockTodos'
 
 export const Route = createFileRoute('/dashboard/')({
@@ -9,6 +10,11 @@ export const Route = createFileRoute('/dashboard/')({
 
 function DashboardIndexComponent() {
   const invoices = Route.useLoaderData()
+  const posthog = usePostHog()
+
+  React.useEffect(() => {
+    posthog.capture('dashboard_viewed', { total_invoices: invoices.length })
+  }, [])
 
   const totalRevenue = invoices.length * 1250
   const pendingCount = Math.floor(invoices.length * 0.3)
