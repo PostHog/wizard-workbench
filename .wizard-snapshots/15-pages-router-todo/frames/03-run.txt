@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.31.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                                                                           ⠸ Analyzing project...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Verbose logs: /tmp/posthog-wizard.log
+                                ◆ Agent initialized. Let's get cooking!
+
+                                 Status   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
