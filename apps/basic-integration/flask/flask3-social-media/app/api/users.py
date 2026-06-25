@@ -5,6 +5,7 @@ from app.models import User
 from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request
+from posthog import new_context, identify_context, capture, tag
 
 
 @bp.route('/users/<int:id>', methods=['GET'])
@@ -57,6 +58,10 @@ def create_user():
     user.from_dict(data, new_user=True)
     db.session.add(user)
     db.session.commit()
+    with new_context():
+        identify_context(user.username)
+        tag('email', user.email)
+        capture('api_user_created', properties={'signup_method': 'api'})
     return user.to_dict(), 201, {'Location': url_for('api.get_user',
                                                      id=user.id)}
 
