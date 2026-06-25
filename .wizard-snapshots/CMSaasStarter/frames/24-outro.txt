@@ -1,0 +1,36 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1761406?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your SvelteKit project structure
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_signed_in Fired on the client when a user successfully signs in via Supabase auth.
+                               • user_signed_up Fired on the client when a user successfully completes sign-up via Supabase auth.
+                               • auth_callback_completed Fired server-side when the OAuth/email auth callback exchanges a code for a session.
+                               • subscription_checkout_started Fired server-side when a user is redirected to Stripe checkout to subscribe to a plan.
+                               • billing_portal_opened Fired server-side when a user is redirected to the Stripe billing portal to manage their 
+                               subscription.
+                               • contact_form_submitted Fired server-side when a user successfully submits the contact us form.
+                               • profile_updated Fired server-side when a user successfully creates or updates their profile.
+                               • account_deleted Fired server-side when a user successfully deletes their account.
+                               • password_updated Fired server-side when a user successfully changes their password.
+                               • email_subscription_toggled Fired server-side when a user toggles their email marketing subscription status.
+                               • pricing_plan_selected Fired client-side when a user clicks to select or get started with a pricing plan.
+                               • forgot_password_requested Fired server-side when a user requests a password reset email.
+
+                               Learn more: https://posthog.com/docs/libraries/svelte?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
