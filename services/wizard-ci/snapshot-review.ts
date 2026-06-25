@@ -10,7 +10,7 @@
  *   tsx services/wizard-ci/snapshot-review.ts <app> [--dry-run] [--comment-pr <n>]
  *
  * --comment-pr <n> also posts a comment on PR n (the frame count + a link to the
- * full review) — used by the `/wizard-ci` PR-comment trigger.
+ * full review) — used by the `/wizard-snapshots` PR-comment trigger.
  *
  * --dry-run writes the PR body + PNGs under /tmp and skips the PR (for local use).
  * In CI the GitHub App token comes from GH_TOKEN / GITHUB_TOKEN and the repo from
@@ -28,17 +28,11 @@ import {
   writeFileSync,
 } from "fs";
 import { spawnSync } from "child_process";
-import { snapsDirFor } from "./e2e.js";
+import { snapsDirFor, OUT_ROOT, type Shot } from "./e2e.js";
 import { commitAndCreatePR, postPRComment } from "../github/index.js";
 import { getRepoRoot, git } from "../github/index.js";
 
-const OUT_ROOT = "/tmp/wizard-snapshots";
 const REVIEW_DIR = ".wizard-snapshots"; // committed on the review branch only
-
-interface Shot {
-  frame: string;
-  file: string;
-}
 
 function run(cmd: string, args: string[], extraEnv: Record<string, string> = {}) {
   const r = spawnSync(cmd, args, {

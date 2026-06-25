@@ -50,6 +50,15 @@ export function snapsDirFor(app: string): string {
   return `/tmp/wizard-e2e-${basename(app)}-snaps`;
 }
 
+/** Root for rendered reports + screenshots (the snapshots / review flow). */
+export const OUT_ROOT = "/tmp/wizard-snapshots";
+
+/** One rasterized frame: the source frame name and its PNG file. */
+export interface Shot {
+  frame: string;
+  file: string;
+}
+
 /** Run a single app through the real-TUI e2e and assert. Returns exit code. */
 export function runE2e(opts: E2eOptions): number {
   const app = opts.app;
@@ -90,7 +99,8 @@ export function runE2e(opts: E2eOptions): number {
   rmSync(snapsDir, { recursive: true, force: true });
   mkdirSync(snapsDir, { recursive: true });
 
-  const harness = join(wizardRepo(), "scripts", "tui-snapshots.no-jest.ts");
+  const repo = wizardRepo();
+  const harness = join(repo, "scripts", "tui-snapshots.no-jest.ts");
   if (!existsSync(harness)) {
     console.error(`✖ wizard e2e harness not found: ${harness}\n  Set WIZARD_PATH to the wizard repo.`);
     return 2;
@@ -111,7 +121,7 @@ export function runE2e(opts: E2eOptions): number {
   childEnv.E2E_KEEP_SKILLS = opts.keepSkills ? "true" : "false";
 
   const run = spawnSync("npx", ["tsx", harness], {
-    cwd: wizardRepo(),
+    cwd: repo,
     stdio: "inherit",
     env: childEnv,
   });

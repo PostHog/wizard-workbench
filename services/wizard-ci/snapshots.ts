@@ -25,9 +25,7 @@ import {
   writeFileSync,
   readdirSync,
 } from "fs";
-import { runE2e, snapsDirFor } from "./e2e.js";
-
-const OUT_ROOT = "/tmp/wizard-snapshots";
+import { runE2e, snapsDirFor, OUT_ROOT } from "./e2e.js";
 
 /** A CI-e2e test definition: which flow runs against which app. */
 interface TestDef {

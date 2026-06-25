@@ -12,11 +12,7 @@
 import { chromium } from "playwright";
 import { mkdirSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
-
-interface Shot {
-  frame: string;
-  file: string;
-}
+import { type Shot } from "./e2e.js";
 
 async function main(): Promise<number> {
   const [report, outDir] = process.argv.slice(2).filter((a) => !a.startsWith("--"));
