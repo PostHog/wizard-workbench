@@ -1,0 +1,28 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Vue project structure
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_logged_in User successfully authenticated and was redirected to the home page.
+                               • user_logged_out User clicked the logout button and their session was cleared.
+                               • media_viewed User viewed a movie or TV show detail page after real data loaded.
+                               • trailer_played User opened the trailer modal to watch a movie or TV show trailer.
+                               • search_performed User submitted a search query for movies or TV shows.
+                               • search_result_clicked User clicked on a result from the search results page.
+
+                               Learn more: https://posthog.com/docs/libraries/vue?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

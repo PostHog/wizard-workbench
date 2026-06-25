@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Here's the flow.                                           ◼ Plan event tracking
+                                                                                           ◻ Install PostHog
+                                  ┌──────────────────────────────┐                         ◻ Capture events
+                                  │ Your App                     │                         ◻ Identify users
+                                  │   │ posthog.capture()        │                         ◻ Create analytics dashboard
+                                  │   │  custom events           │
+                                  │   │  custom properties       │                         ⠏ Progress: 1/5 completed
+                                  │   │  person profiles         │
+                                  │   ↓  groups                  │
+                                  │ PostHog SDK                  │
+                                  │   ↓ HTTP                     │
+                                  │ PostHog Cloud                │
+                                  │   ↓ query + visualize        │
+                                  │ Dashboards & Insights        │
+                                  └──────────────────────────────┘
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Verifying PostHog dependencies.
+                                ◆ Generating events based on project.
+
+                                 Status   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
