@@ -19,6 +19,13 @@ class CardsController < ApplicationController
 
       format.json do
         card = @board.cards.create! card_params.merge(creator: Current.user, status: "published")
+
+        PostHog.capture(
+          distinct_id: Current.user.posthog_distinct_id,
+          event: "card_created",
+          properties: { board_id: @board.id, board_name: @board.name, card_id: card.id }
+        )
+
         head :created, location: card_path(card, format: :json)
       end
     end
@@ -40,10 +47,19 @@ class CardsController < ApplicationController
   end
 
   def destroy
+    board = @card.board
+    card_id = @card.id
+
     @card.destroy!
 
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_deleted",
+      properties: { board_id: board.id, board_name: board.name, card_id: card_id }
+    )
+
     respond_to do |format|
-      format.html { redirect_to @card.board, notice: "Card deleted" }
+      format.html { redirect_to board, notice: "Card deleted" }
       format.json { head :no_content }
     end
   end
