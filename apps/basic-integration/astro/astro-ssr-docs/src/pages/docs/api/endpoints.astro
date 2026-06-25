@@ -1,7 +1,30 @@
 ---
 import DocsLayout from '../../../layouts/DocsLayout.astro';
+import { getPostHogServer } from '../../../lib/posthog-server';
 
 const renderTime = new Date().toISOString();
+
+const phCookieName = `ph_${import.meta.env.POSTHOG_PROJECT_TOKEN}_posthog`;
+const phCookieRaw = Astro.cookies.get(phCookieName)?.value;
+let distinctId = 'anonymous';
+if (phCookieRaw) {
+  try {
+    const parsed = JSON.parse(decodeURIComponent(phCookieRaw));
+    distinctId = parsed.distinct_id || 'anonymous';
+  } catch {
+    // use fallback
+  }
+}
+
+const posthog = getPostHogServer();
+posthog.capture({
+  distinctId,
+  event: 'api_endpoints_viewed',
+  properties: {
+    page: Astro.url.pathname,
+    $current_url: Astro.url.href,
+  },
+});
 ---
 
 <DocsLayout title="API Endpoints">

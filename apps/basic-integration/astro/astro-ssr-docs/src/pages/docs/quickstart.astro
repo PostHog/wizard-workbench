@@ -50,12 +50,30 @@ console.log('Extracted data:', document.data);</code></pre>
 
   <h2>What's Next?</h2>
   <ul>
-    <li>Learn about <a href="/docs/workflows">Workflow Automation</a></li>
-    <li>Explore the full <a href="/docs/api">API Reference</a></li>
-    <li>Set up <a href="/docs/api/authentication">Authentication</a> for production</li>
+    <li>Learn about <a href="/docs/workflows" class="next-step-link" data-ph-label="workflow_automation">Workflow Automation</a></li>
+    <li>Explore the full <a href="/docs/api" class="next-step-link" data-ph-label="api_reference">API Reference</a></li>
+    <li>Set up <a href="/docs/api/authentication" class="next-step-link" data-ph-label="authentication">Authentication</a> for production</li>
   </ul>
 
   <div class="render-info">
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    window.posthog?.capture('quickstart_viewed', {
+      page: window.location.pathname,
+    });
+
+    document.querySelectorAll('.next-step-link').forEach(function (el) {
+      el.addEventListener('click', function () {
+        window.posthog?.capture('docs_next_steps_clicked', {
+          label: el.getAttribute('data-ph-label'),
+          href: el.getAttribute('href'),
+          from_page: window.location.pathname,
+        });
+      });
+    });
+  });
+</script>

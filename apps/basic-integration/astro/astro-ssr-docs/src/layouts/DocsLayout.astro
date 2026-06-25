@@ -19,3 +19,22 @@ const currentPath = Astro.url.pathname;
     </main>
   </div>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('pre code').forEach(function (block) {
+      block.style.cursor = 'pointer';
+      block.addEventListener('click', function () {
+        var text = block.textContent || '';
+        navigator.clipboard.writeText(text).then(function () {
+          window.posthog?.capture('code_sample_copied', {
+            page: window.location.pathname,
+            snippet_length: text.length,
+          });
+        }).catch(function (err) {
+          window.posthog?.captureException(err);
+        });
+      });
+    });
+  });
+</script>
