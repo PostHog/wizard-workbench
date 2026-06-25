@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { useTranslation } from "react-i18next";
 import { data, href, Link, useNavigation } from "react-router";
 
@@ -67,6 +68,7 @@ export default function OrganizationMembersRoute({
   const { t } = useTranslation("organizations", {
     keyPrefix: "settings.teamMembers",
   });
+  const posthog = usePostHog();
   const {
     emailInviteCard,
     inviteLinkCard,
@@ -77,6 +79,14 @@ export default function OrganizationMembersRoute({
   const navigation = useNavigation();
   const isInvitingByEmail =
     navigation.formData?.get("intent") === INVITE_BY_EMAIL_INTENT;
+
+  const handleFormSubmit = (event: React.FormEvent<HTMLDivElement>) => {
+    const form = event.target as HTMLFormElement;
+    const formData = new FormData(form);
+    if (formData.get("intent") === INVITE_BY_EMAIL_INTENT) {
+      posthog?.capture("member_invited_by_email");
+    }
+  };
 
   return (
     <div className="px-4 py-4 md:py-6 lg:px-6">
@@ -124,7 +134,10 @@ export default function OrganizationMembersRoute({
         )}
 
         {teamMemberTable.currentUsersRole !== "member" && (
-          <div className="grid @3xl/main:grid-cols-2 grid-cols-1 items-start gap-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs dark:*:data-[slot=card]:bg-card">
+          <div
+            className="grid @3xl/main:grid-cols-2 grid-cols-1 items-start gap-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs dark:*:data-[slot=card]:bg-card"
+            onSubmit={handleFormSubmit}
+          >
             <EmailInviteCard
               {...emailInviteCard}
               isInvitingByEmail={isInvitingByEmail}
