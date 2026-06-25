@@ -8,14 +8,40 @@ const currentPath = Astro.url.pathname;
       <span>NeuralFlow</span> AI
     </a>
     <ul class="nav-links">
-      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]}>Features</a></li>
-      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
-      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
-      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]} data-nav-destination="features">Features</a></li>
+      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]} data-nav-destination="pricing">Pricing</a></li>
+      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]} data-nav-destination="about">About</a></li>
+      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]} data-nav-destination="docs">Docs</a></li>
+      <li><a href="#" class="nav-cta" id="nav-get-started-btn">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  function onNavGetStartedClick() {
+    window.posthog?.capture('nav_get_started_clicked');
+  }
+
+  function onNavLinkClick(event) {
+    var destination = event.currentTarget.getAttribute('data-nav-destination');
+    window.posthog?.capture('nav_link_clicked', { destination: destination });
+  }
+
+  function setupNavigation() {
+    var getStartedBtn = document.getElementById('nav-get-started-btn');
+    getStartedBtn?.removeEventListener('click', onNavGetStartedClick);
+    getStartedBtn?.addEventListener('click', onNavGetStartedClick);
+
+    var navLinks = document.querySelectorAll('[data-nav-destination]');
+    navLinks.forEach(function(link) {
+      link.removeEventListener('click', onNavLinkClick);
+      link.addEventListener('click', onNavLinkClick);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupNavigation);
+  document.addEventListener('astro:page-load', setupNavigation);
+</script>
 
 <style>
   .nav-link.active {

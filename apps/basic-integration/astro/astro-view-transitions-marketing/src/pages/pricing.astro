@@ -24,7 +24,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Basic integrations</li>
             <li>Email support</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
+          <a href="#" class="btn btn-secondary" id="starter-plan-btn" style="width: 100%; justify-content: center;">Get Started</a>
         </div>
 
         <div class="pricing-card featured">
@@ -40,7 +40,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Advanced analytics</li>
             <li>Custom workflows</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
+          <a href="#" class="btn btn-primary" id="pro-plan-btn" style="width: 100%; justify-content: center;">Start Free Trial</a>
         </div>
 
         <div class="pricing-card">
@@ -57,9 +57,42 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="#" class="btn btn-secondary" id="enterprise-plan-btn" style="width: 100%; justify-content: center;">Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
+
+  <script is:inline>
+    function setupPricingPage() {
+      window.posthog?.capture('pricing_page_viewed');
+
+      var starterBtn = document.getElementById('starter-plan-btn');
+      var proBtn = document.getElementById('pro-plan-btn');
+      var enterpriseBtn = document.getElementById('enterprise-plan-btn');
+
+      starterBtn?.removeEventListener('click', onStarterClick);
+      proBtn?.removeEventListener('click', onProClick);
+      enterpriseBtn?.removeEventListener('click', onEnterpriseClick);
+
+      starterBtn?.addEventListener('click', onStarterClick);
+      proBtn?.addEventListener('click', onProClick);
+      enterpriseBtn?.addEventListener('click', onEnterpriseClick);
+    }
+
+    function onStarterClick() {
+      window.posthog?.capture('starter_plan_selected', { plan: 'starter', price: 29 });
+    }
+
+    function onProClick() {
+      window.posthog?.capture('pro_trial_started', { plan: 'pro', price: 99 });
+    }
+
+    function onEnterpriseClick() {
+      window.posthog?.capture('enterprise_contact_requested', { plan: 'enterprise' });
+    }
+
+    document.addEventListener('DOMContentLoaded', setupPricingPage);
+    document.addEventListener('astro:page-load', setupPricingPage);
+  </script>
 </Layout>
