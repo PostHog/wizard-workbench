@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Tips                                                       Tasks
+
+                                ◆ You can also track people and groups with PostHog        ◼ Plan event tracking
+                                Events can be associated with the humans who generate      ◼ Install PostHog
+                                them, letting you understand a specific user or            ◼ Capture events
+                                customer's situation.                                      ◼ Identify users
+                                                                                           ◼ Review and validate integration
+                                ◆ Get way more detail using properties                     ◼ Create PostHog dashboard
+                                Events and person records can have any properties you 
+                                want. Track things like how they found your website,       ⠙ Cleaning up...
+                                what subscription tier they choose, and much more.
+
+                                ◆ Use PostHog in Slack
+                                Connect the PostHog Slack app to analyze data and ship 
+                                product changes — deploy flags, open PRs, run queries — 
+                                just by tagging @PostHog: https://posthog.com/slack
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Linting, building and prettying.
+                                ◆ Configured dashboard: https://us.posthog.com/project/483112/insights
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

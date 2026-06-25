@@ -1,0 +1,34 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your FastAPI Fullstack project structure
+                               • Installed the PostHog Python package
+                               • Configured PostHog in your FastAPI application
+                               • Added PostHog initialization with lifespan event handling
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_signed_up Fired when a new user successfully creates an account via the signup form.
+                               • user_logged_in Fired when an existing user successfully authenticates with email and password.
+                               • user_logged_out Fired when a user logs out of their session.
+                               • content_generated Fired when a user successfully generates AI content, capturing type and credits used.
+                               • generation_failed_insufficient_credits Fired when a content generation request is rejected due to insufficient 
+                               credits.
+                               • api_key_created Fired when a user creates a new API key for programmatic access.
+                               • api_key_revoked Fired when a user revokes (deactivates) an existing API key.
+                               • settings_updated Fired when a user successfully updates their account settings (e.g. email).
+                               • password_changed Fired when a user successfully changes their password.
+                               • dashboard_viewed Fired when an authenticated user views their dashboard, marking the top of the engagement funnel.
+
+                               Learn more: https://posthog.com/docs/libraries/python?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
