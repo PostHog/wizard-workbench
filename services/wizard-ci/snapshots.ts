@@ -25,7 +25,7 @@ import {
   writeFileSync,
   readdirSync,
 } from "fs";
-import { runE2e, snapsDirFor, OUT_ROOT } from "./e2e.js";
+import { runE2e, snapsDirFor, reportDirFor } from "./e2e.js";
 
 /** A CI-e2e test definition: which flow runs against which app. */
 interface TestDef {
@@ -109,7 +109,7 @@ async function main(): Promise<number> {
       return 1;
     }
 
-    const reportDir = join(OUT_ROOT, def.name);
+    const reportDir = reportDirFor(def.app);
     mkdirSync(reportDir, { recursive: true });
     const report = join(reportDir, "report.html");
     writeFileSync(report, reportHtml(def.name, frames));

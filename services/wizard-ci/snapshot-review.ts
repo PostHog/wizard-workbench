@@ -28,7 +28,7 @@ import {
   writeFileSync,
 } from "fs";
 import { spawnSync } from "child_process";
-import { snapsDirFor, OUT_ROOT, type Shot } from "./e2e.js";
+import { snapsDirFor, reportDirFor, type Shot } from "./e2e.js";
 import { commitAndCreatePR, postPRComment } from "../github/index.js";
 import { getRepoRoot, git } from "../github/index.js";
 
@@ -82,17 +82,18 @@ async function main(): Promise<number> {
     return 2;
   }
   const name = basename(app);
+  const reportDir = reportDirFor(app);
 
   // 1. a real run → report.html (the current real-TUI frames).
   run("npx", ["tsx", "services/wizard-ci/snapshots.ts", app]);
-  const report = join(OUT_ROOT, name, "report.html");
+  const report = join(reportDir, "report.html");
   if (!existsSync(report)) {
     console.error(`✖ no report at ${report}`);
     return 1;
   }
 
   // 2. report.html → one PNG per frame + shots.json.
-  const shotsDir = join(OUT_ROOT, name, "shots");
+  const shotsDir = join(reportDir, "shots");
   run("npx", ["tsx", "services/wizard-ci/screenshot.ts", report, shotsDir]);
   const shots: Shot[] = JSON.parse(
     readFileSync(join(shotsDir, "shots.json"), "utf8"),
@@ -111,7 +112,7 @@ async function main(): Promise<number> {
   const title = `[CI] (snapshots) ${app}`;
 
   if (dryRun) {
-    const dest = join(OUT_ROOT, name, "review");
+    const dest = join(reportDir, "review");
     rmSync(dest, { recursive: true, force: true });
     mkdirSync(dest, { recursive: true });
     cpSync(shotsDir, dest, { recursive: true });

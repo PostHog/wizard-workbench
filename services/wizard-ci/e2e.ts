@@ -53,6 +53,11 @@ export function snapsDirFor(app: string): string {
 /** Root for rendered reports + screenshots (the snapshots / review flow). */
 export const OUT_ROOT = "/tmp/wizard-snapshots";
 
+/** Per-app report dir — the write/read contract shared by snapshots + review. */
+export function reportDirFor(app: string): string {
+  return join(OUT_ROOT, basename(app));
+}
+
 /** One rasterized frame: the source frame name and its PNG file. */
 export interface Shot {
   frame: string;
