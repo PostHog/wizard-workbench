@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Tips                                                       Tasks
+
+                                ◆ You can also track people and groups with PostHog        ◼ Plan PostHog event tracking
+                                Events can be associated with the humans who generate      ◼ Install PostHog dependencies
+                                them, letting you understand a specific user or            ◼ Configure PostHog initializer
+                                customer's situation.                                      ◼ Identify users with PostHog
+                                                                                           ▶ Capture business events
+                                ◆ Get way more detail using properties                     ◻ Add frontend PostHog snippet
+                                Events and person records can have any properties you      ◻ Review and validate integration
+                                want. Track things like how they found your website,       ◻ Create PostHog dashboard
+                                what subscription tier they choose, and much more.
+                                                                                           ⠋ Progress: 4/8 completed
+                                ◆ Use PostHog in Slack
+                                Connect the PostHog Slack app to analyze data and ship 
+                                product changes — deploy flags, open PRs, run queries — 
+                                just by tagging @PostHog: https://posthog.com/slack
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ A status message for each file whose edits you are planning:
+                                ◆ A status message for each file you have edited: `config/initializers/posthog.rb` — created.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

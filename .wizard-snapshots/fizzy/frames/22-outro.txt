@@ -1,0 +1,36 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Standard Rails project structure
+                               • Installed the posthog-ruby and posthog-rails gems via Bundler
+                               • Created PostHog initializer in config/initializers/posthog.rb
+                               • Configured automatic exception capture and ActiveJob instrumentation
+                               • Added posthog-js snippet to the layout template for frontend tracking
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_signed_up A new user completed account signup by providing their name and creating an account.
+                               • user_signed_in A user successfully authenticated via a magic link and started a new session.
+                               • user_signed_out A user ended their session by signing out.
+                               • board_created A user created a new board to organize work.
+                               • board_deleted A user deleted a board and all its contents.
+                               • board_published A user published a board to make it publicly accessible.
+                               • card_created A user published a new card, moving it from draft to active status.
+                               • card_closed A user marked a card as closed/done.
+                               • card_postponed A user postponed a card by moving it to the 'not now' state.
+                               • card_triaged A user triaged a card into a specific board column.
+                               • comment_created A user posted a comment on a card.
+                               • card_assigned A user was assigned to or unassigned from a card.
+                               • user_joined_via_invite A user joined an account by redeeming an invitation join code.
+                               • account_cancelled An account owner cancelled and deleted the account.
+
+                               Learn more: https://posthog.com/docs/libraries/ruby-on-rails?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
