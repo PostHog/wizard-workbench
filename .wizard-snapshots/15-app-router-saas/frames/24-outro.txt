@@ -1,0 +1,37 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1761406?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Next.js project structure (app router)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_signed_up User successfully created a new account.
+                               • user_signed_in User successfully authenticated and signed in.
+                               • user_signed_out User explicitly signed out of their account.
+                               • password_updated User successfully changed their account password.
+                               • account_deleted User permanently deleted their account.
+                               • account_updated User updated their account name or email.
+                               • team_member_invited Team owner sent an invitation to a new team member.
+                               • team_member_removed Team member was removed from the team.
+                               • checkout_started User initiated a Stripe checkout session for a subscription plan.
+                               • checkout_completed User successfully completed checkout and subscription was activated.
+                               • subscription_updated User subscription plan or status was updated via Stripe webhook.
+                               • subscription_canceled User subscription was canceled via Stripe webhook.
+                               • pricing_cta_clicked User clicked the 'Get Started' button on a pricing plan.
+                               • manage_subscription_clicked User clicked the 'Manage Subscription' button to open the billing portal.
+
+                               Learn more: https://posthog.com/docs/libraries/next-js?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
