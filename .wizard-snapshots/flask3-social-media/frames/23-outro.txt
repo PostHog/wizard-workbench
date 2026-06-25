@@ -1,0 +1,38 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Flask with Blueprints project structure
+                               • Installed the PostHog Python package
+                               • Configured PostHog in your Flask application
+                               • Added PostHog initialization with automatic event tracking
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_signed_up A new user successfully registered an account.
+                               • user_logged_in A user successfully authenticated and logged in.
+                               • user_logged_out A user logged out of their session.
+                               • password_reset_requested A user submitted a request to reset their password.
+                               • password_reset_completed A user successfully reset their password via the email link.
+                               • post_created A user published a new post to their feed.
+                               • user_followed A user followed another user.
+                               • user_unfollowed A user unfollowed another user.
+                               • message_sent A user sent a private message to another user.
+                               • profile_updated A user saved changes to their profile information.
+                               • search_performed A user submitted a search query for posts.
+                               • posts_exported A user triggered an export of their posts.
+                               • api_user_created A new user account was created via the REST API.
+                               • api_token_created A user obtained an API authentication token.
+
+                               Learn more: https://posthog.com/docs/libraries/python?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
