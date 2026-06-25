@@ -1,0 +1,33 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your React Native project structure (Expo)
+                               • Installed and configured the PostHog React Native SDK
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • story_type_changed User switches between story categories (top, best, ask, show) using the filter selector.
+                               • post_opened User taps a post title or comments button to open the post detail screen.
+                               • external_link_opened User taps the external link button on a post to open it in the browser.
+                               • story_viewed User views the detail screen of a story or comment item.
+                               • story_external_link_opened User opens the external URL from within the story detail screen.
+                               • story_upvote_tapped User taps the upvote button on a story in the detail view.
+                               • parent_story_opened User taps the 'Commented on' link to navigate to the parent story of a comment.
+                               • user_profile_viewed User navigates to another user's profile page.
+                               • comment_thread_opened User taps the comment count button on a comment to open its thread.
+                               • comment_upvote_tapped User taps the upvote button on a comment.
+                               • more_posts_loaded User scrolls to the end of the post list and triggers loading the next page.
+
+                               Learn more: https://posthog.com/docs/libraries/react-native?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
