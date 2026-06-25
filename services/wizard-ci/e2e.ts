@@ -13,7 +13,15 @@
  *   pnpm wizard-ci basic-integration/next-js/15-app-router-todo --e2e --project-id 228144
  */
 import { join, basename } from "path";
-import { existsSync, mkdirSync, rmSync, readFileSync, writeFileSync } from "fs";
+import {
+  existsSync,
+  mkdirSync,
+  rmSync,
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  statSync,
+} from "fs";
 import { spawnSync } from "child_process";
 
 const WORKBENCH = join(import.meta.dirname, "..", "..");
@@ -56,6 +64,30 @@ export const OUT_ROOT = "/tmp/wizard-snapshots";
 /** Per-app report dir — the write/read contract shared by snapshots + review. */
 export function reportDirFor(app: string): string {
   return join(OUT_ROOT, basename(app));
+}
+
+/**
+ * Seconds-since-the-first-frame for each captured frame, keyed by filename —
+ * derived from the frames' write times so headings can show time-since-start.
+ */
+export function frameTimings(dir: string): Record<string, number> {
+  if (!existsSync(dir)) return {};
+  const stamped = readdirSync(dir)
+    .filter((f) => f.endsWith(".txt") || f.endsWith(".ans"))
+    .map((f) => ({ f, t: statSync(join(dir, f)).mtimeMs }));
+  if (!stamped.length) return {};
+  const start = Math.min(...stamped.map((s) => s.t));
+  const out: Record<string, number> = {};
+  for (const { f, t } of stamped) out[f] = (t - start) / 1000;
+  return out;
+}
+
+/** Human elapsed: "+5s", "+1m05s". */
+export function fmtElapsed(seconds: number): string {
+  const s = Math.round(seconds);
+  return s < 60
+    ? `+${s}s`
+    : `+${Math.floor(s / 60)}m${String(s % 60).padStart(2, "0")}s`;
 }
 
 /** One rasterized frame: the source frame name and its PNG file. */

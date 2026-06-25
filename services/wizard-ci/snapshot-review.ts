@@ -28,7 +28,13 @@ import {
   writeFileSync,
 } from "fs";
 import { spawnSync } from "child_process";
-import { snapsDirFor, reportDirFor, type Shot } from "./e2e.js";
+import {
+  snapsDirFor,
+  reportDirFor,
+  frameTimings,
+  fmtElapsed,
+  type Shot,
+} from "./e2e.js";
 import { commitAndCreatePR, postPRComment } from "../github/index.js";
 import { getRepoRoot, git } from "../github/index.js";
 
@@ -51,6 +57,7 @@ function prBody(
   shots: Shot[],
   rawBase: string,
   runUrl: string | null,
+  timings: Record<string, number>,
 ): string {
   const lines: string[] = [
     "Automated wizard CI snapshot run.",
@@ -64,7 +71,7 @@ function prBody(
     "",
   ];
   for (const s of shots) {
-    lines.push(`### ${s.frame}`);
+    lines.push(`### ${s.frame} (${fmtElapsed(timings[s.frame] ?? 0)})`);
     lines.push("", `![${s.frame}](${rawBase}/${s.file})`, "");
   }
   return lines.join("\n");
@@ -108,7 +115,8 @@ async function main(): Promise<number> {
   const runUrl = process.env.GITHUB_RUN_ID
     ? `https://github.com/${repoSlug}/actions/runs/${process.env.GITHUB_RUN_ID}`
     : null;
-  const body = prBody(app, shots, rawBase, runUrl);
+  const timings = frameTimings(snapsDirFor(app));
+  const body = prBody(app, shots, rawBase, runUrl, timings);
   const title = `[CI] (snapshots) ${app}`;
 
   if (dryRun) {

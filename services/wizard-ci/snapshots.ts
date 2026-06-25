@@ -25,7 +25,13 @@ import {
   writeFileSync,
   readdirSync,
 } from "fs";
-import { runE2e, snapsDirFor, reportDirFor } from "./e2e.js";
+import {
+  runE2e,
+  snapsDirFor,
+  reportDirFor,
+  frameTimings,
+  fmtElapsed,
+} from "./e2e.js";
 
 /** A CI-e2e test definition: which flow runs against which app. */
 interface TestDef {
@@ -58,12 +64,16 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function reportHtml(name: string, frames: Frame[]): string {
+function reportHtml(
+  name: string,
+  frames: Frame[],
+  timings: Record<string, number>,
+): string {
   const rows = frames
     .map(
       (f) => `
     <section class="row" data-frame="${f.file}">
-      <h2>${f.file}</h2>
+      <h2>${f.file} <span class="t">(${fmtElapsed(timings[f.file] ?? 0)})</span></h2>
       <pre>${escapeHtml(f.text)}</pre>
     </section>`,
     )
@@ -74,6 +84,7 @@ function reportHtml(name: string, frames: Frame[]): string {
   h1{font-size:18px} .summary{margin:8px 0 24px;color:#8b949e}
   .row{background:#0d1117;border:1px solid #21262d;border-radius:8px;margin:16px 0;padding:12px 16px}
   h2{font-size:14px;margin:0 0 10px;font-weight:600}
+  .t{color:#8b949e;font-weight:400}
   pre{background:#010409;border:1px solid #21262d;border-radius:6px;padding:10px;margin:0;overflow:auto;white-space:pre}
 </style></head><body>
 <h1>wizard-ci TUI snapshots — ${name}</h1>
@@ -109,10 +120,11 @@ async function main(): Promise<number> {
       return 1;
     }
 
+    const timings = frameTimings(snapsDirFor(def.app));
     const reportDir = reportDirFor(def.app);
     mkdirSync(reportDir, { recursive: true });
     const report = join(reportDir, "report.html");
-    writeFileSync(report, reportHtml(def.name, frames));
+    writeFileSync(report, reportHtml(def.name, frames, timings));
 
     console.log(`\n--- ${def.name}: ${frames.length} frames ---`);
     for (const f of frames) console.log(`  · ${f.file}`);
