@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Use those signals to decide what to build next.            ◼ Plan event tracking
+                                                                                           ◼ Install PostHog packages
+                                PostHog has all the dev tools you need.                    ◼ Configure environment variables
+                                                                                           ◼ Set up PostHog plugin and config
+                                                                                           ▶ Capture events and identify users
+                                                                                           ◻ Add server-side event tracking
+                                                                                           ◻ Create PostHog dashboard
+
+                                                                                           ⠦ Progress: 4/7 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Created plugins/posthog.client.ts — PostHog initialization with vue:error hook.
+                                ◆ Created types/nuxt-app.d.ts — TypeScript declarations for $posthog.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

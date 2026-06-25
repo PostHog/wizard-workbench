@@ -1,0 +1,32 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Nuxt project structure
+                               • Configured PostHog module/plugin
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_logged_in User successfully logs in to the app.
+                               • user_logged_out User logs out of the app.
+                               • media_viewed User views the detail page for a movie or TV show.
+                               • search_performed User performs a search query.
+                               • trailer_played User plays a video trailer for a movie or TV show.
+                               • media_details_tab_changed User switches between Overview, Videos, and Photos tabs on the media detail page.
+                               • person_viewed User views a cast or crew member's profile page.
+                               • genre_browsed User browses movies or TV shows by genre.
+                               • category_browsed User browses a specific category list such as popular or top-rated.
+                               • server_user_logged_in Server-side event capturing a successful user login.
+
+                               Learn more: https://posthog.com/docs/libraries/nuxt?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

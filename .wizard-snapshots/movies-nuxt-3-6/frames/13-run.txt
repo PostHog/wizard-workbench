@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                With enough event data, you can answer powerful            ◼ Plan event tracking
+                                questions about your product.                              ◻ Install PostHog packages
+                                                                                           ◻ Configure environment variables
+                                                                                           ◻ Set up PostHog plugin and config
+                                                                                           ◻ Capture events and identify users
+                                                                                           ◻ Add server-side event tracking
+                                                                                           ◻ Create PostHog dashboard
+
+                                                                                           ⠋ Progress: 1/7 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Checking project structure.
+                                ◆ Generating events based on project.
+
+                                 Status   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

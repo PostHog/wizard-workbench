@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Like trends to measure growth.                             ◼ Plan event tracking
+                                                                                           ◼ Install PostHog packages
+                                  Trends · user signups (monthly)                          ◼ Configure environment variables
+                                                                                           ▶ Set up PostHog plugin and config
+                                  10k ┤                          ╭── 9,575                 ◻ Capture events and identify users
+                                      │                         ╭╯                         ◻ Add server-side event tracking
+                                 7.5k ┤                        ╭╯                          ◻ Create PostHog dashboard
+                                      │                      ╭─╯
+                                   5k ┤                    ╭─╯                             ⠦ Progress: 3/7 completed
+                                      │                 ╭──╯
+                                 2.5k ┤             ╭───╯
+                                      │      ╭──────╯
+                                    0 ┤──────╯
+                                      └┬─────┬─────┬─────┬─────┬──
+                                       May   Aug   Nov   Feb   May
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Generating events based on project.
+                                ◆ Inserting PostHog capture code.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
