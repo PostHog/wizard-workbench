@@ -10,6 +10,14 @@ const items: Media[] = reactive([])
 async function fetch(page: number) {
   items.push(...(await listMedia(type.value, query.value, page)).results)
 }
+
+const posthog = usePostHog()
+onMounted(() => {
+  posthog?.capture('media_category_viewed', {
+    media_type: type.value,
+    category: query.value,
+  })
+})
 </script>
 
 <template>
