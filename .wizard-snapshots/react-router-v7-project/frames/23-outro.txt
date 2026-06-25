@@ -1,0 +1,32 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your React Router project structure (v7 Framework mode)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_signed_up User successfully creates a new account via the signup form.
+                               • user_logged_in User successfully logs in with existing credentials.
+                               • user_logged_out User clicks the logout button in the navbar.
+                               • country_claimed User claims a country, earning 100 points.
+                               • country_liked User likes a country, earning 10 points.
+                               • country_visited User marks a country as virtually visited, earning 50 points.
+                               • country_filter_applied User applies a region filter to narrow down the countries list.
+                               • country_viewed User views the detail page for a specific country, the top of the claim funnel.
+                               • profile_viewed User views their own profile page, a signal of engagement with their progress.
+
+                               Learn more: https://posthog.com/docs/libraries/react?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

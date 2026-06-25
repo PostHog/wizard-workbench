@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Or funnels to reveal bottlenecks.                          ◼ Plan event tracking
+                                                                                           ▶ Install PostHog dependencies
+                                  Funnel · ride conversion                                 ▶ Configure environment variables
+                                                                                           ◻ Implement PostHog integration
+                                  1  app_launched                     100.00%              ◻ Review and validate integration
+                                     ██████████████████████████████                        ◻ Create PostHog dashboard
+
+                                                                                           ⠋ Progress: 1/6 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Verifying PostHog dependencies.
+                                ◆ Generating events based on project.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
