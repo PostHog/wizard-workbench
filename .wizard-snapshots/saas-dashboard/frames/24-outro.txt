@@ -1,0 +1,35 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1761406?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Node.js project structure
+                               • Installed the posthog-node package
+                               • Created PostHog initialization with proper configuration
+                               • Configured graceful shutdown for event flushing
+                               • Added example code for events, feature flags, and error capture
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user signed in User successfully authenticates and logs in to the application.
+                               • user signed out User clicks the sign out button to end their session.
+                               • project created User creates a new project with a name and description.
+                               • project deleted User deletes an existing project and all its tasks.
+                               • task added User adds a new task to a project with a title and priority.
+                               • task status updated User moves a task to a different status column on the board.
+                               • task deleted User deletes a task from a project.
+                               • task assigned User assigns a task to a team member or removes an assignment.
+                               • settings updated User changes a preference such as theme or notification settings.
+                               • data reset User resets all application data back to its default state.
+
+                               Learn more: https://posthog.com/docs/libraries/node?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

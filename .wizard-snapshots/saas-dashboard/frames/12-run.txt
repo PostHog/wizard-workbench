@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                You can view the Wizard's status below.                    ▶ Plan event tracking
+                                                                                           ◻ Install PostHog SDK
+                                Press S to expand or collapse the status.                  ◻ Implement PostHog event capture
+                                                                                           ◻ Identify users
+                                                                                           ◻ Capture errors
+                                                                                           ◻ Review and validate integration
+                                                                                           ◻ Create PostHog dashboard
+
+                                                                                           ⠏ Progress: 0/7 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Writing your PostHog setup with events, error capture and more...
+                                ◆ Checking project structure.
+
+                                 Status   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
