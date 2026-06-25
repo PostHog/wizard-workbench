@@ -1,0 +1,29 @@
+                               PostHog Wizard v2.31.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Next.js project structure (app router)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • todo_created User successfully adds a new todo item with a title and optional description.
+                               • todo_completed User marks an active todo item as completed.
+                               • todo_reopened User unchecks a completed todo item to mark it as active again.
+                               • todo_deleted User deletes a todo item from the list.
+                               • server_todo_created Server confirms successful creation of a new todo via the API route.
+                               • server_todo_updated Server confirms a todo was updated (title, description, or completion status) via the API route.
+                               • server_todo_deleted Server confirms a todo was deleted via the API route.
+
+                               Learn more: https://posthog.com/docs/libraries/next-js?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

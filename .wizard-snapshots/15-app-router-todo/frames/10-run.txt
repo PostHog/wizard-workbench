@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.31.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                It takes about eight minutes.                              ◻ Plan event tracking
+                                                                                           ◻ Install PostHog dependencies
+                                                                                           ◻ Configure environment variables
+                                                                                           ◻ Initialize PostHog client-side
+                                                                                           ◻ Add server-side PostHog client
+                                                                                           ◻ Capture events and identify users
+
+                                                                                           ⠼ Progress: 0/6 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Agent initialized. Let's get cooking!
+                                ◆ Writing your PostHog setup with events, error capture and more...
+
+                                 Status   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

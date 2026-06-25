@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.31.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Use those signals to decide what to build next.            ◼ Plan event tracking
+                                                                                           ◼ Configure environment variables
+                                                                                           ▶ Install PostHog dependencies
+                                                                                           ◻ Initialize PostHog client-side
+                                                                                           ◻ Add server-side PostHog client
+                                                                                           ◻ Capture events and identify users
+                                                                                           ◻ Review and validate integration
+                                                                                           ◻ Create PostHog dashboard
+
+                                                                                           ⠦ Progress: 2/8 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Verifying PostHog dependencies.
+                                ◆ Generating events based on project.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
