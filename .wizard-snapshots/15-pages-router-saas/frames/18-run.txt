@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.31.0                                                                    Feedback: wizard@posthog.com 
+
+                                Tips                                                       Tasks
+
+                                ◆ You can also track people and groups with PostHog        ◼ Plan event tracking
+                                Events can be associated with the humans who generate      ◼ Install PostHog
+                                them, letting you understand a specific user or            ◼ Capture events
+                                customer's situation.                                      ◼ Identify users
+                                                                                           ◻ Validate integration
+                                ◆ Get way more detail using properties                     ◻ Create dashboard
+                                Events and person records can have any properties you 
+                                want. Track things like how they found your website,       ⠦ Progress: 4/6 completed
+                                what subscription tier they choose, and much more.
+
+                                ◆ Use PostHog in Slack
+                                Connect the PostHog Slack app to analyze data and ship 
+                                product changes — deploy flags, open PRs, run queries — 
+                                just by tagging @PostHog: https://posthog.com/slack
+
+                                ◆ You can track Stripe revenue with PostHog
+                                Add Stripe as a data source while you wait: 
+                                https://app.posthog.com/project/data-warehouse/new-sourc
+                                e?kind=Stripe
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Planning changes for pages/api/stripe/checkout.ts — capturing checkout_completed server-side event.
+                                ◆ Planning changes for pages/api/stripe/webhook.ts — capturing subscription_updated and subscription_cancelled 
+                                server-side events.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

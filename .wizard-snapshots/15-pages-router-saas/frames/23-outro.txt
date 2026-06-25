@@ -1,0 +1,34 @@
+                               PostHog Wizard v2.31.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1751155?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Next.js project structure (pages router)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • signed_up User successfully created a new account.
+                               • signed_in User successfully signed in to their account.
+                               • pricing_page_viewed User viewed the pricing page, the top of the subscription conversion funnel.
+                               • checkout_started User clicked Get Started on a pricing plan and initiated a Stripe checkout session.
+                               • checkout_completed User successfully completed a Stripe checkout and subscription was activated.
+                               • subscription_updated A subscription was updated or moved to trialing/active status via Stripe webhook.
+                               • subscription_cancelled A subscription was cancelled or became unpaid via Stripe webhook.
+                               • manage_subscription_clicked User clicked the Manage Subscription button to open the Stripe customer portal.
+                               • team_member_invited Team owner successfully sent an invitation to a new team member.
+                               • team_member_removed Team owner successfully removed a member from the team.
+                               • account_updated User successfully updated their account name or email address.
+
+                               Learn more: https://posthog.com/docs/libraries/next-js?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
