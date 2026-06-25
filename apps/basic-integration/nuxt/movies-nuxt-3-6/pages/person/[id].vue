@@ -11,6 +11,12 @@ useHead({
     { property: 'og:image', content: $img(`/tmdb${person.profile_path}`, { width: 1200, height: 630 }) },
   ],
 })
+
+const { $posthog: posthog } = useNuxtApp()
+posthog?.capture('person_viewed', {
+  person_id: id.value,
+  person_name: person.name,
+})
 </script>
 
 <template>
