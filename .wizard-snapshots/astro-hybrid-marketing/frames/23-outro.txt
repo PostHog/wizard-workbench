@@ -1,0 +1,29 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1761075?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Astro project structure (Hybrid)
+                               • Created PostHog component with is:inline script
+                               • Integrated PostHog into your layout
+                               • Set up posthog-node for server-side tracking
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • start_free_trial_clicked User clicks the Start Free Trial CTA button on the home page or pricing page.
+                               • contact_sales_clicked User clicks the Contact Sales button to initiate a sales conversation.
+                               • pricing_plan_selected User clicks a pricing plan button (Starter, Pro, or Enterprise) on the pricing page.
+                               • contact_form_submitted User submits the contact form with their details and inquiry.
+                               • contact_form_received Server successfully received and validated a contact form submission.
+
+                               Learn more: https://posthog.com/docs/libraries/astro?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

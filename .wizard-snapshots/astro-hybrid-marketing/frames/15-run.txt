@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Or funnels to reveal bottlenecks.                          ◼ Plan event tracking
+                                                                                           ◼ Install PostHog
+                                  Funnel · ride conversion                                 ▶ Capture client-side and server-side events
+                                                                                           ◻ Identify users
+                                  1  app_launched                     100.00%              ◻ Review and validate integration
+                                     ██████████████████████████████                        ◻ Create analytics dashboard
+                                     → 1,200 users
+                                                                                           ⠹ Progress: 2/6 completed
+                                  2  ride_requested       avg 2m 30s   72.00%
+                                     ██████████████████████░░░░░░░░░
+                                     → 864 users  ↘ 336 (28%)
+
+                                  3  ride_accepted        avg 5m 12s   51.00%
+                                     ██████████████████░░░░░░░░░░░░░
+                                     → 612 users  ↘ 252 (29%)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Adding `src/lib/posthog-server.ts` — new server-side PostHog singleton.
+                                ◆ Editing `src/layouts/Layout.astro` — adding PostHog component to the `<head>`.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
