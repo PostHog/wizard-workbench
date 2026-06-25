@@ -624,7 +624,7 @@ jobs:
           POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
 
       - name: Install Chromium for Playwright (snapshots)
-        if: ${{ inputs.snapshots }}
+        if: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Execute wizard
@@ -645,7 +645,9 @@ jobs:
             "${CMD_ARGS[@]}" 2>&1 | tee wizard-output.log
           fi
         env:
-          SNAPSHOTS: ${{ inputs.snapshots }}
+          # workflow_dispatch sets inputs.snapshots; a /wizard-snapshots comment
+          # arrives as a repository_dispatch carrying client_payload.snapshots.
+          SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
           MATRIX_APP: ${{ matrix.app }}
           INPUT_BASE_BRANCH: ${{ needs.discover.outputs.input_base_branch }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
