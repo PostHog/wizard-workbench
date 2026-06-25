@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { updateInvoice, getInvoiceById } from '~/utils/invoices'
+import { getPostHogClient } from '~/utils/posthog-server'
 
 export const Route = createFileRoute('/api/invoices/$invoiceId/pay')({
   server: {
@@ -26,6 +27,20 @@ export const Route = createFileRoute('/api/invoices/$invoiceId/pay')({
         }
 
         const invoice = updateInvoice(id, { status: 'paid' })
+
+        const sessionId = request.headers.get('X-PostHog-Session-Id')
+        const posthog = getPostHogClient()
+        posthog.capture({
+          distinctId: 'server',
+          event: 'invoice_payment_api_processed',
+          properties: {
+            $session_id: sessionId || undefined,
+            invoice_id: invoice!.id,
+            amount: invoice!.amount,
+            title: invoice!.title,
+            source: 'api',
+          },
+        })
 
         return Response.json(invoice)
       },
