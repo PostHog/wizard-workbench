@@ -20,6 +20,16 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        @if(config('posthog.api_key') && !config('posthog.disabled'))
+        <script>
+            !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+" (stub)"},o="init me debug reloadFeatureFlags getActiveMatchingSurveys getSurveys onFeatureFlags identify alias group reset people.set people.set_once capture register unregister opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing getDistinctId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+            posthog.init('{{ config("posthog.api_key") }}', {
+                api_host: '{{ config("posthog.host") }}',
+                person_profiles: 'identified_only',
+            });
+        </script>
+        @endif
     </head>
     <body class="min-h-screen antialiased">
         <div class="grid min-h-screen lg:grid-cols-2">
