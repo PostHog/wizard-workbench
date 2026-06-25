@@ -1,0 +1,35 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1761406?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Python project structure
+                               • Installed the PostHog Python package using pip
+                               • Created PostHog initialization using instance-based API (Posthog class)
+                               • Configured exception autocapture and graceful shutdown
+                               • Added example code for events, feature flags, and error capture (without PII)
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_logged_in A user successfully authenticated and started a session.
+                               • user_login_failed A login attempt failed due to invalid credentials or inactive account.
+                               • user_logged_out A user explicitly ended their session.
+                               • meeting_created A meeting transcript was submitted and successfully analyzed by the AI summarizer.
+                               • meeting_viewed A user fetched a specific meeting's details (top of the analysis engagement funnel).
+                               • meeting_deleted A user deleted one of their meeting records.
+                               • user_registered A new user account was created via the admin API.
+                               • user_registered A new user was registered through the user management service.
+                               • user_deactivated A user account was deactivated through the user management service.
+                               • user_deleted A user account was permanently deleted through the user management service.
+
+                               Learn more: https://posthog.com/docs/libraries/python?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
