@@ -2,6 +2,7 @@ import { Chart, DoughnutController, ArcElement, Tooltip, Legend, BarController, 
 import { api } from '../api.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
+import posthog from '../posthog.js';
 
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend, BarController, BarElement, CategoryScale, LinearScale);
 
@@ -214,6 +215,7 @@ export async function renderDashboard() {
       },
     });
   } catch (err) {
+    posthog.captureException(err);
     content.innerHTML = `<div class="error-message">Failed to load dashboard: ${err.message}</div>`;
   }
 }
