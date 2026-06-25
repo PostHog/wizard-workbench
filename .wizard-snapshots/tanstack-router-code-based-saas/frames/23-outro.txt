@@ -1,0 +1,30 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1761406?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your React (TanStack Router) project structure (Code-based routing)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_signed_in User successfully submits the login form to sign in.
+                               • user_signed_out User clicks the Sign Out button to end their session.
+                               • invoice_created User submits the form to create a new invoice.
+                               • invoice_updated User saves changes to an existing invoice.
+                               • invoice_notes_toggled User clicks Add Notes or Hide Notes to toggle the internal notes section on an invoice.
+                               • plan_upgrade_clicked User clicks the Upgrade button on their account profile page.
+                               • team_members_sorted User changes the sort order for the team members list.
+
+                               Learn more: https://posthog.com/docs/libraries/react?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

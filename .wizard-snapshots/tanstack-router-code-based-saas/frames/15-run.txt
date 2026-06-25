@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                                                                           ◼ Plan event tracking
+                                                                                           ◼ Install PostHog
+                                                                                           ▶ Implement PostHog provider and pageview tracking
+                                                                                           ◻ Capture events and identify users
+                                                                                           ◻ Add error tracking
+                                                                                           ◻ Create PostHog dashboard
+
+                                                                                           ⠦ Progress: 2/6 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Verifying PostHog dependencies.
+                                ◆ Generating events based on project.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
