@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.31.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Use those signals to decide what to build next.            ◼ Planning event tracking
+                                                                                           ▶ Installing PostHog
+                                PostHog has all the dev tools you need.                    ◻ Capturing events
+                                                                                           ◻ Identifying users
+                                  ◆ Product Analytics     ◆ Error Tracking                 ◻ Reviewing and validating integration
+                                  ◆ Web Analytics         ◆ Session Replay                 ◻ Creating dashboards
+                                  ◆ Feature Flags         ◆ Data Pipelines
+                                  ◆ Experiments           ◆ Data Warehouse                 ⠙ Progress: 1/6 completed
+                                  ◆ LLM Analytics         ◆ Surveys
+                                  ◆ Workflows             ◆ Logs
+                                  ◆ Product Tours         ◆ Support
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Generating events based on project.
+                                ◆ Inserting PostHog capture code.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

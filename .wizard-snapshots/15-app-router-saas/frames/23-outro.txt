@@ -1,0 +1,35 @@
+                               PostHog Wizard v2.31.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Next.js project structure (app router)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • sign_up A new user successfully created an account.
+                               • sign_in An existing user successfully signed in.
+                               • sign_out A user signed out of their account.
+                               • invitation_accepted A user signed up via a team invitation link.
+                               • checkout_initiated A user started a Stripe checkout session for a subscription plan.
+                               • customer_portal_opened A user opened the Stripe customer portal to manage their subscription.
+                               • checkout_completed A user successfully completed the Stripe checkout and their subscription was activated.
+                               • subscription_updated A team subscription was updated via a Stripe webhook event.
+                               • subscription_cancelled A team subscription was cancelled via a Stripe webhook event.
+                               • team_member_invited A team owner sent an invitation to a new team member.
+                               • team_member_removed A team member was removed from the team.
+                               • password_updated A user successfully changed their account password.
+                               • account_deleted A user permanently deleted their account.
+
+                               Learn more: https://posthog.com/docs/libraries/next-js?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

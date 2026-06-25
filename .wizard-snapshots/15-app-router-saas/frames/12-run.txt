@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.31.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Or funnels to reveal bottlenecks.                          ◼ Planning event tracking
+                                                                                           ◻ Installing PostHog
+                                  Funnel · ride conversion                                 ◻ Capturing events
+                                                                                           ◻ Identifying users
+                                  1  app_launched                     100.00%              ◻ Reviewing and validating integration
+                                     ██████████████████████████████                        ◻ Creating dashboards
+                                     → 1,200 users
+                                                                                           ⠧ Progress: 1/6 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Verifying PostHog dependencies.
+                                ◆ Generating events based on project.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

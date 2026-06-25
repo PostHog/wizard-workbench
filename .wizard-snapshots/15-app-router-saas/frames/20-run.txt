@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.31.0                                                                    Feedback: wizard@posthog.com 
+
+                                Tips                                                       Tasks
+
+                                ◆ You can also track people and groups with PostHog        ◼ Planning event tracking
+                                Events can be associated with the humans who generate      ◼ Installing PostHog
+                                them, letting you understand a specific user or            ◼ Capturing events
+                                customer's situation.                                      ◼ Identifying users
+                                                                                           ◼ Reviewing and validating integration
+                                ◆ Get way more detail using properties                     ◻ Creating dashboards
+                                Events and person records can have any properties you 
+                                want. Track things like how they found your website,       ⠼ Progress: 5/6 completed
+                                what subscription tier they choose, and much more.
+
+                                ◆ Use PostHog in Slack
+                                Connect the PostHog Slack app to analyze data and ship 
+                                product changes — deploy flags, open PRs, run queries — 
+                                just by tagging @PostHog: https://posthog.com/slack
+
+                                ◆ You can track Stripe revenue with PostHog
+                                Add Stripe as a data source while you wait: 
+                                https://app.posthog.com/project/data-warehouse/new-sourc
+                                e?kind=Stripe
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Finding and correcting errors.
+                                ◆ Linting, building and prettying.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
