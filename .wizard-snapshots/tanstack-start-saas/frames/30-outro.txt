@@ -1,0 +1,32 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1760786?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your TanStack Start project structure
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • invoice_viewed User views an individual invoice detail page, representing the top of the payment conversion funnel.
+                               • invoice_paid User clicks the 'Mark as Paid' button to mark a pending invoice as paid.
+                               • invoice_deep_viewed User navigates to the full invoice details page to see complete invoice information.
+                               • invoice_pdf_downloaded User clicks the 'Download PDF' button to download an invoice as a PDF.
+                               • invoice_paid_deep User marks an invoice as paid from the full invoice details page.
+                               • invoice_created A new invoice is created via the API endpoint.
+                               • invoice_paid_api An invoice is marked as paid via the dedicated pay API endpoint.
+                               • invoice_deleted An invoice is permanently deleted via the API endpoint.
+                               • invoice_updated An invoice's details are updated via the PATCH API endpoint.
+
+                               Learn more: https://posthog.com/docs/libraries/react?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
