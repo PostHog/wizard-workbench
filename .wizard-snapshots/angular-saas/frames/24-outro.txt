@@ -1,0 +1,37 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1761406?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Angular project structure
+                               • Created and configured PostHog service
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_logged_in User successfully authenticates and logs in to the application.
+                               • user_logged_out User logs out and their session credentials are cleared.
+                               • project_created User creates a new project via the create project modal.
+                               • team_member_added User adds a new team member with a specified role via the add member modal.
+                               • billing_viewed User navigates to the billing page, entering the plan upgrade funnel.
+                               • plan_upgrade_clicked User clicks the upgrade button on a billing plan.
+                               • subscription_managed User clicks the manage subscription button on the billing page.
+                               • profile_updated User saves changes to their profile information.
+                               • account_settings_saved User saves their account settings including profile info or password.
+                               • account_deletion_requested User clicks the delete account button, signaling potential churn.
+                               • two_factor_authentication_toggled User enables or disables two-factor authentication on their account.
+                               • session_revoked User revokes one or all active sessions from the security settings.
+                               • notification_preferences_saved User saves their notification preference settings.
+                               • quick_action_clicked User clicks a quick action button on the dashboard.
+
+                               Learn more: https://posthog.com/docs/libraries/angular?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
