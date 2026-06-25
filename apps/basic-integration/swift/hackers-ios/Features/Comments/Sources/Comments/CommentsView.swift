@@ -8,6 +8,7 @@
 import DesignSystem
 import Domain
 import Foundation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -123,6 +124,13 @@ public struct CommentsView<Store: NavigationStoreProtocol>: View {
             await viewModel.loadComments()
             if let targetID = pendingCommentID {
                 _ = await viewModel.revealComment(withId: targetID)
+            }
+            if let post = viewModel.post {
+                PostHogSDK.shared.capture("comments_viewed", properties: [
+                    "post_id": post.id,
+                    "post_title": post.title,
+                    "comment_count": post.commentsCount,
+                ])
             }
         }
         .refreshable {
