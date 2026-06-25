@@ -91,6 +91,7 @@ import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -366,7 +367,13 @@ fun Message(
             // Avatar
             Image(
                 modifier = Modifier
-                    .clickable(onClick = { onAuthorClick(msg.author) })
+                    .clickable(onClick = {
+                        PostHog.capture(
+                            event = "message_author_clicked",
+                            properties = mapOf("author" to msg.author, "source" to "avatar"),
+                        )
+                        onAuthorClick(msg.author)
+                    })
                     .padding(horizontal = 16.dp)
                     .size(42.dp)
                     .border(1.5.dp, borderColor, CircleShape)
@@ -526,8 +533,20 @@ fun ClickableMessage(message: Message, isUserMe: Boolean, authorClicked: (String
                 .firstOrNull()
                 ?.let { annotation ->
                     when (annotation.tag) {
-                        SymbolAnnotationType.LINK.name -> uriHandler.openUri(annotation.item)
-                        SymbolAnnotationType.PERSON.name -> authorClicked(annotation.item)
+                        SymbolAnnotationType.LINK.name -> {
+                            PostHog.capture(
+                                event = "message_link_clicked",
+                                properties = mapOf("url" to annotation.item),
+                            )
+                            uriHandler.openUri(annotation.item)
+                        }
+                        SymbolAnnotationType.PERSON.name -> {
+                            PostHog.capture(
+                                event = "message_author_clicked",
+                                properties = mapOf("author" to annotation.item, "source" to "message"),
+                            )
+                            authorClicked(annotation.item)
+                        }
                         else -> Unit
                     }
                 }
