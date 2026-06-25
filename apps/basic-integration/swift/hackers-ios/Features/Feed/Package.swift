@@ -22,12 +22,13 @@ let package = Package(
     dependencies: [
         .package(path: "../../Domain"),
         .package(path: "../../Shared"),
-        .package(path: "../../DesignSystem")
+        .package(path: "../../DesignSystem"),
+        .package(url: "https://github.com/PostHog/posthog-ios.git", from: "3.62.0")
     ],
     targets: [
         .target(
             name: "Feed",
-            dependencies: ["Domain", "Shared", "DesignSystem"],
+            dependencies: ["Domain", "Shared", "DesignSystem", "PostHog"],
         ),
         .testTarget(
             name: "FeedTests",

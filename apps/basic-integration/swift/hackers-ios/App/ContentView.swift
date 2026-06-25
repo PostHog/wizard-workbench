@@ -10,6 +10,7 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import PostHog
 import Settings
 import Shared
 import SwiftUI
@@ -133,6 +134,7 @@ struct MainContentView: View {
         .sheet(isPresented: $showOnboarding) {
             onboardingCoordinator
                 .makeOnboardingView {
+                    PostHogSDK.shared.capture("onboarding_completed")
                     showOnboarding = false
                 }
                 .textScaling(for: settingsViewModel.textSize)

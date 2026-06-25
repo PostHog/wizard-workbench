@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 
 @MainActor
 @Observable
@@ -64,12 +65,25 @@ public final class SessionService: AuthenticationServiceProtocol {
     public func authenticate(username: String, password: String) async throws -> AuthenticationState {
         try await authenticationUseCase.authenticate(username: username, password: password)
         user = await authenticationUseCase.getCurrentUser()
+        if let loggedInUser = user {
+            PostHogSDK.shared.identify(loggedInUser.username, userProperties: [
+                "username": loggedInUser.username,
+            ])
+            PostHogSDK.shared.capture("user_logged_in", properties: [
+                "username": loggedInUser.username,
+            ])
+        }
         return .authenticated
     }
 
     public func unauthenticate() {
         Task { [weak self] in
             guard let self else { return }
+            let currentUsername = await MainActor.run { self.user?.username }
+            var logoutProperties: [String: Any] = [:]
+            if let username = currentUsername { logoutProperties["username"] = username }
+            PostHogSDK.shared.capture("user_logged_out", properties: logoutProperties)
+            PostHogSDK.shared.reset()
             try? await authenticationUseCase.logout()
             await MainActor.run { self.user = nil }
         }
