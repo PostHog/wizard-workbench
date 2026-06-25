@@ -10,6 +10,7 @@ const router = useRouter()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
+const posthog = usePostHog()
 
 const items = ref<Media[]>([])
 const currentSearch = ref(input.value)
@@ -22,6 +23,7 @@ function search() {
   count.value = undefined
   items.value = []
   router.replace({ query: { s: input.value } })
+  posthog?.capture('search_performed', { query: currentSearch.value })
 }
 
 async function fetch(page: number) {
