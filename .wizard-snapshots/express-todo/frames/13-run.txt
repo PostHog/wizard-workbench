@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                                                                           ◼ Plan event tracking
+                                                                                           ◻ Install PostHog SDK
+                                                                                           ◻ Capture events in route handlers
+                                                                                           ◻ Identify users
+                                                                                           ◻ Add error tracking
+                                                                                           ◻ Create PostHog dashboard
+
+                                                                                           ⠙ Progress: 1/6 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Checking project structure.
+                                ◆ Verifying PostHog dependencies.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

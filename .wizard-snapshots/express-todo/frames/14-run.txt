@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Events are the foundation of the PostHog platform.         ◼ Plan event tracking
+                                                                                           ▶ Install PostHog SDK
+                                Every time an action is performed in your codebase —       ◻ Capture events in route handlers
+                                like button clicks, function calls, or thrown errors —     ◻ Identify users
+                                we can capture an event.                                   ◻ Add error tracking
+                                                                                           ◻ Create PostHog dashboard
+                                Events are sent to PostHog and joined with other product
+                                data.                                                      ⠹ Progress: 1/6 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Verifying PostHog dependencies.
+                                ◆ Inserting PostHog capture code.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status

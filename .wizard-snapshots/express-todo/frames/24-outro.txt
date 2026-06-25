@@ -1,0 +1,27 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Node.js project structure
+                               • Installed the posthog-node package
+                               • Created PostHog initialization with proper configuration
+                               • Configured graceful shutdown for event flushing
+                               • Added example code for events, feature flags, and error capture
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • todo_created Fired when a user successfully creates a new todo item.
+                               • todo_updated Fired when a user updates an existing todo item's title or completion status.
+                               • todo_deleted Fired when a user deletes a todo item.
+
+                               Learn more: https://posthog.com/docs/libraries/node?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

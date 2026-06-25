@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.33.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Like trends to measure growth.                             ◼ Plan event tracking
+                                                                                           ◼ Install PostHog SDK
+                                  Trends · user signups (monthly)                          ◼ Capture events in route handlers
+                                                                                           ◼ Identify users
+                                  10k ┤                          ╭── 9,575                 ◼ Add error tracking
+                                      │                         ╭╯                         ◻ Create PostHog dashboard
+                                 7.5k ┤                        ╭╯
+                                      │                      ╭─╯                           ⠧ Progress: 5/6 completed
+                                   5k ┤                    ╭─╯
+                                      │                 ╭──╯
+                                 2.5k ┤             ╭───╯
+                                      │      ╭──────╯
+                                    0 ┤──────╯
+                                      └┬─────┬─────┬─────┬─────┬──
+                                       May   Aug   Nov   Feb   May
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Planning changes to index.js — adding PostHog init, Express middleware helpers, capture calls on 
+                                create/update/delete, and error handler.
+                                ◆ Edited index.js — added PostHog init, Express context middleware, capture on 
+                                todo_created/todo_updated/todo_deleted, error handler, and graceful shutdown.
+
+                                 Status   Event plan   Tail logs   Visualizer   HN 
+
+                                ←→ switch tab  s toggle status
