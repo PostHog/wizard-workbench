@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -284,25 +285,37 @@ private fun UserInputSelector(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.EMOJI) },
+            onClick = {
+                PostHog.capture(event = "emoji_selector_opened")
+                onSelectorChange(InputSelector.EMOJI)
+            },
             icon = painterResource(id = R.drawable.ic_mood),
             selected = currentInputSelector == InputSelector.EMOJI,
             description = stringResource(id = R.string.emoji_selector_bt_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.DM) },
+            onClick = {
+                PostHog.capture(event = "dm_selector_tapped")
+                onSelectorChange(InputSelector.DM)
+            },
             icon = painterResource(id = R.drawable.ic_alternate_email),
             selected = currentInputSelector == InputSelector.DM,
             description = stringResource(id = R.string.dm_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.PICTURE) },
+            onClick = {
+                PostHog.capture(event = "photo_attachment_tapped")
+                onSelectorChange(InputSelector.PICTURE)
+            },
             icon = painterResource(id = R.drawable.ic_insert_photo),
             selected = currentInputSelector == InputSelector.PICTURE,
             description = stringResource(id = R.string.attach_photo_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.MAP) },
+            onClick = {
+                PostHog.capture(event = "map_selector_tapped")
+                onSelectorChange(InputSelector.MAP)
+            },
             icon = painterResource(id = R.drawable.ic_place),
             selected = currentInputSelector == InputSelector.MAP,
             description = stringResource(id = R.string.map_selector_desc),
