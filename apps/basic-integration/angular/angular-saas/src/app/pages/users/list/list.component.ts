@@ -2,6 +2,7 @@ import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@ang
 import { UseRandomUser } from '@core/usecases';
 import { RandomUserEntity } from '@core/entities';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { PosthogService } from '@core/services/posthog.service';
 
 @Component({
   selector: 'app-list',
@@ -15,8 +16,10 @@ export class ListComponent implements OnInit {
 
   private readonly useRandomUser = new UseRandomUser();
   private readonly toast = inject(HotToastService);
+  private readonly posthogService = inject(PosthogService);
 
   ngOnInit() {
+    this.posthogService.posthog.capture('users_list_viewed');
     this.useRandomUser.getAllUsers().subscribe({
       next: (users) => {
         this.users.set(users);
@@ -24,6 +27,7 @@ export class ListComponent implements OnInit {
       },
       error: (error) => {
         console.error(error);
+        this.posthogService.posthog.captureException(error);
       },
     });
   }

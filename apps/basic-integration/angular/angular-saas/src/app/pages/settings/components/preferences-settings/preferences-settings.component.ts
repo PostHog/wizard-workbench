@@ -2,6 +2,7 @@ import { Component, inject, ChangeDetectionStrategy, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { ThemeService } from '@app/shell/services/theme.service';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { PosthogService } from '@core/services/posthog.service';
 
 interface Preferences {
   isDarkMode: boolean;
@@ -214,6 +215,7 @@ interface Preferences {
 export class PreferencesSettingsComponent {
   private readonly themeService = inject(ThemeService);
   private readonly toast = inject(HotToastService);
+  private readonly posthogService = inject(PosthogService);
 
   readonly preferences = signal<Preferences>({
     isDarkMode: false,
@@ -236,6 +238,7 @@ export class PreferencesSettingsComponent {
   toggleTheme(event: Event) {
     const isDarkMode = (event.target as HTMLInputElement).checked;
     this.preferences.update((current) => ({ ...current, isDarkMode }));
+    this.posthogService.posthog.capture('theme_toggled', { theme: isDarkMode ? 'dark' : 'light' });
     if (isDarkMode) {
       this.themeService.setDarkTheme();
     } else {

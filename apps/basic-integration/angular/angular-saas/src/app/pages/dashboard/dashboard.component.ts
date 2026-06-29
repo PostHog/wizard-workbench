@@ -1,6 +1,7 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { CredentialsService } from '@app/auth/services/credentials.service';
 import { DataService } from '@app/@core/services/data.service';
+import { PosthogService } from '@core/services/posthog.service';
 import { StatsCardComponent } from './components/stats-card/stats-card.component';
 import { WelcomeBannerComponent } from './components/welcome-banner/welcome-banner.component';
 import { ActivityFeedComponent } from './components/activity-feed/activity-feed.component';
@@ -23,12 +24,17 @@ interface StatItem {
   styleUrl: './dashboard.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   readonly credentialsService = inject(CredentialsService);
   private readonly dataService = inject(DataService);
+  private readonly posthogService = inject(PosthogService);
 
   readonly showCreateProjectModal = signal(false);
   readonly showAddMemberModal = signal(false);
+
+  ngOnInit() {
+    this.posthogService.posthog.capture('dashboard_viewed');
+  }
 
   readonly stats = computed<StatItem[]>(() => {
     const dataStats = this.dataService.stats();
