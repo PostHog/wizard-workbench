@@ -7,6 +7,8 @@
     pricingPlans,
     defaultPlanId,
   } from "../../../../(marketing)/pricing/pricing_plans"
+  import posthog from "posthog-js"
+  import { browser } from "$app/environment"
 
   let adminSection: Writable<string> = getContext("adminSection")
   adminSection.set("billing")
@@ -17,6 +19,14 @@
   let currentPlanName = pricingPlans.find(
     (x) => x.id === data.currentPlanId,
   )?.name
+
+  $effect(() => {
+    if (browser && !data.isActiveCustomer) {
+      posthog.capture("pricing_plan_viewed", {
+        has_ever_had_subscription: data.hasEverHadSubscription,
+      })
+    }
+  })
 </script>
 
 <svelte:head>
