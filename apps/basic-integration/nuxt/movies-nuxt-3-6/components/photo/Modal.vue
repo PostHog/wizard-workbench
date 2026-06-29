@@ -5,10 +5,12 @@ const images = ref<Image[] | null>(null)
 const index = ref(0)
 
 const current = computed(() => images.value?.[index.value])
+const { $posthog: posthog } = useNuxtApp()
 
 provideImageModal((img, idx) => {
   images.value = img
   index.value = idx
+  posthog?.capture('photo_modal_opened', { photo_index: idx, total_photos: img.length })
 })
 
 function prev() {
