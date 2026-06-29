@@ -6,7 +6,7 @@
     "evaluate": "tsx services/pr-evaluator/index.ts",
     "wizard-ci": "tsx services/wizard-ci/index.ts",
     "wizard-ci-snapshots": "tsx services/wizard-ci/snapshots.ts",
-    "wizard-ci-snapshot-review": "tsx services/wizard-ci/snapshot-review.ts",
+    "wizard-ci-snapshots-review": "tsx services/wizard-ci/snapshots-review.ts",
     "benchmark": "tsx services/wizard-benchmark/index.ts",
     "framework-detect": "tsx services/framework-detect/index.ts",
     "yara-scan": "tsx services/yara-scan/index.ts",

@@ -633,7 +633,7 @@ jobs:
         run: |
           if [ "$SNAPSHOTS" = "true" ]; then
             # Snapshot mode: render the real-TUI screens + open a review PR (no evaluator).
-            pnpm wizard-ci-snapshot-review "$MATRIX_APP" 2>&1 | tee wizard-output.log
+            pnpm wizard-ci-snapshots-review "$MATRIX_APP" 2>&1 | tee wizard-output.log
           else
             CMD_ARGS=(pnpm wizard-ci --app "$MATRIX_APP" --base "$INPUT_BASE_BRANCH")
             if [ -n "$TRIGGER_ID" ]; then
@@ -645,7 +645,7 @@ jobs:
             "${CMD_ARGS[@]}" 2>&1 | tee wizard-output.log
           fi
         env:
-          # workflow_dispatch sets inputs.snapshots; a /wizard-snapshots comment
+          # workflow_dispatch sets inputs.snapshots; a /wizard-ci-snapshots comment
           # arrives as a repository_dispatch carrying client_payload.snapshots.
           SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
           MATRIX_APP: ${{ matrix.app }}

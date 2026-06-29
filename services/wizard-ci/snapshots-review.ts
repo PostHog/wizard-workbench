@@ -7,10 +7,10 @@
  *   3. commit the PNGs to a review branch and open a PR whose body embeds them
  *      (via raw.githubusercontent URLs), one frame per row.
  *
- *   tsx services/wizard-ci/snapshot-review.ts <app> [--dry-run] [--comment-pr <n>]
+ *   tsx services/wizard-ci/snapshots-review.ts <app> [--dry-run] [--comment-pr <n>]
  *
  * --comment-pr <n> also posts a comment on PR n (the frame count + a link to the
- * full review) — used by the `/wizard-snapshots` PR-comment trigger.
+ * full review) — used by the `/wizard-ci-snapshots` PR-comment trigger.
  *
  * --dry-run writes the PR body + PNGs under /tmp and skips the PR (for local use).
  * In CI the GitHub App token comes from GH_TOKEN / GITHUB_TOKEN and the repo from
@@ -93,7 +93,7 @@ async function main(): Promise<number> {
     app = (await selectApp(findApps(APPS_DIR))).name;
   }
   if (!app) {
-    console.error("usage: snapshot-review <app> [--dry-run] [--comment-pr <n>]");
+    console.error("usage: snapshots-review <app> [--dry-run] [--comment-pr <n>]");
     return 2;
   }
   const name = basename(app);
@@ -162,7 +162,7 @@ async function main(): Promise<number> {
   }
 
   const baseSha = git("rev-parse HEAD", repoRoot);
-  console.log(`Opening snapshot-review PR on branch ${branch}…`);
+  console.log(`Opening snapshots-review PR on branch ${branch}…`);
   try {
     const r = (await commitAndCreatePR({
       repoOwner,
