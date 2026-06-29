@@ -52,6 +52,10 @@ on:
         description: 'Post notifications to Slack'
         type: boolean
         default: false
+      snapshots:
+        description: 'Run real-TUI snapshots instead of the evaluator (opens a review PR)'
+        type: boolean
+        default: false
 
   # Webhook trigger from external repos (wizard, context-mill, posthog)
   # POST https://api.github.com/repos/{owner}/{repo}/dispatches
@@ -619,19 +623,31 @@ jobs:
           # PostHog tracking for eval analytics
           POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
 
+      - name: Install Chromium for Playwright (snapshots)
+        if: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Execute wizard
         id: execute-wizard
         continue-on-error: true
         run: |
-          CMD_ARGS=(pnpm wizard-ci --app "$MATRIX_APP" --base "$INPUT_BASE_BRANCH")
-          if [ -n "$TRIGGER_ID" ]; then
-            CMD_ARGS+=(--trigger-id "$TRIGGER_ID")
+          if [ "$SNAPSHOTS" = "true" ]; then
+            # Snapshot mode: render the real-TUI screens + open a review PR (no evaluator).
+            pnpm wizard-ci-snapshots-review "$MATRIX_APP" 2>&1 | tee wizard-output.log
+          else
+            CMD_ARGS=(pnpm wizard-ci --app "$MATRIX_APP" --base "$INPUT_BASE_BRANCH")
+            if [ -n "$TRIGGER_ID" ]; then
+              CMD_ARGS+=(--trigger-id "$TRIGGER_ID")
+            fi
+            if [ "$INPUT_EVALUATE" = "true" ]; then
+              CMD_ARGS+=(--evaluate)
+            fi
+            "${CMD_ARGS[@]}" 2>&1 | tee wizard-output.log
           fi
-          if [ "$INPUT_EVALUATE" = "true" ]; then
-            CMD_ARGS+=(--evaluate)
-          fi
-          "${CMD_ARGS[@]}" 2>&1 | tee wizard-output.log
         env:
+          # workflow_dispatch sets inputs.snapshots; a /wizard-ci-snapshots comment
+          # arrives as a repository_dispatch carrying client_payload.snapshots.
+          SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
           MATRIX_APP: ${{ matrix.app }}
           INPUT_BASE_BRANCH: ${{ needs.discover.outputs.input_base_branch }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
@@ -1023,4 +1039,3 @@ jobs:
                 }
               ]
             }"
-
