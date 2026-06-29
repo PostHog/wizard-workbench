@@ -7,6 +7,7 @@
 
 import DesignSystem
 import Domain
+import PostHog
 import Shared
 import SwiftUI
 
@@ -369,6 +370,12 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
             navigationStore.showPost(post)
             return
         }
+
+        PostHogSDK.shared.capture("link_opened", properties: [
+            "post_id": post.id,
+            "post_title": post.title,
+            "url": post.url.absoluteString,
+        ])
 
         if isSidebar {
             navigationStore.showPost(post)

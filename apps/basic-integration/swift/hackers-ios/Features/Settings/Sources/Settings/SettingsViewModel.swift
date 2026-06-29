@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -71,7 +72,11 @@ public final class SettingsViewModel: @unchecked Sendable {
         case \.rememberFeedCategory:
             settingsUseCase.rememberFeedCategory = value as! Bool
         case \.textSize:
-            settingsUseCase.textSize = value as! TextSize
+            let size = value as! TextSize
+            settingsUseCase.textSize = size
+            PostHogSDK.shared.capture("settings_text_size_changed", properties: [
+                "text_size": size.rawValue,
+            ])
         case \.compactFeedDesign:
             settingsUseCase.compactFeedDesign = value as! Bool
         default:

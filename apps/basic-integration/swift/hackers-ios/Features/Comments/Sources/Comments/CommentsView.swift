@@ -8,6 +8,7 @@
 import DesignSystem
 import Domain
 import Foundation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -121,6 +122,14 @@ public struct CommentsView<Store: NavigationStoreProtocol>: View {
                 }
             }
             await viewModel.loadComments()
+            if let post = viewModel.post {
+                PostHogSDK.shared.capture("post_viewed", properties: [
+                    "post_id": post.id,
+                    "post_title": post.title,
+                    "post_score": post.score,
+                    "post_type": post.postType.rawValue,
+                ])
+            }
             if let targetID = pendingCommentID {
                 _ = await viewModel.revealComment(withId: targetID)
             }

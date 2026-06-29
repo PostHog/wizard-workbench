@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -116,11 +117,21 @@ public final class SupportViewModel: @unchecked Sendable {
         case .success:
             switch product.kind {
             case .subscription:
+                PostHogSDK.shared.capture("support_subscription_purchased", properties: [
+                    "product_id": product.id,
+                    "product_name": product.displayName,
+                    "price": product.displayPrice,
+                ])
                 alertInfo = AlertInfo(
                     title: "Thank You!",
                     message: "You're now a Hackers Supporter. Your contribution keeps the app running smoothly."
                 )
             case .tip:
+                PostHogSDK.shared.capture("support_tip_given", properties: [
+                    "product_id": product.id,
+                    "product_name": product.displayName,
+                    "price": product.displayPrice,
+                ])
                 alertInfo = AlertInfo(
                     title: "Thank You!",
                     message: "Your tip helps keep Hackers fast, polished, and ready for the next big Hacker News discussion."
@@ -139,6 +150,7 @@ public final class SupportViewModel: @unchecked Sendable {
     private func handleRestore(result: SupportPurchaseResult) {
         switch result {
         case .success:
+            PostHogSDK.shared.capture("support_purchases_restored")
             alertInfo = AlertInfo(
                 title: "Purchases Restored",
                 message: "Any existing supporter subscriptions or tips linked to your Apple ID are now active again."
