@@ -6,7 +6,10 @@
  * every key-moment screen as text, then renders the current frames for review.
  * Baseline comparison is out of scope for now — this surfaces the current run.
  *
- *   pnpm wizard-ci-snapshots
+ *   pnpm wizard-ci-snapshots [app]
+ *
+ * With no app in an interactive shell it shows an app picker (like the other
+ * run screens); non-interactively it falls back to the default test set.
  *
  * Requires (in .env, sourced by the `wizard-ci-snapshots` mprocs proc):
  *   POSTHOG_PERSONAL_API_KEY   the phx key (gateway bearer)
@@ -31,7 +34,10 @@ import {
   reportDirFor,
   frameTimings,
   fmtElapsed,
+  APPS_DIR,
 } from "./e2e.js";
+import { findApps } from "./utils.js";
+import { selectApp } from "../wizard-run/picker.js";
 
 /** A CI-e2e test definition: which flow runs against which app. */
 interface TestDef {
@@ -100,11 +106,20 @@ async function main(): Promise<number> {
     args[args.indexOf("--project-id") + 1] ||
     "";
 
-  // Run a specific app when one is passed, otherwise the default test set.
+  // Resolve which app(s) to snapshot:
+  //  - explicit positional <app>           → that app
+  //  - no app, interactive shell (local)    → app picker, like the run screens
+  //  - no app, non-interactive (CI/mprocs)  → the default test set
   const appArg = args.find((a) => !a.startsWith("--"));
-  const defs: TestDef[] = appArg
-    ? [{ name: basename(appArg), app: appArg }]
-    : TEST_DEFS;
+  let defs: TestDef[];
+  if (appArg) {
+    defs = [{ name: basename(appArg), app: appArg }];
+  } else if (process.stdin.isTTY) {
+    const app = await selectApp(findApps(APPS_DIR));
+    defs = [{ name: basename(app.name), app: app.name }];
+  } else {
+    defs = TEST_DEFS;
+  }
 
   for (const def of defs) {
     console.log(`\n=== snapshots: ${def.name} (${def.app}) ===`);

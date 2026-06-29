@@ -33,8 +33,11 @@ import {
   reportDirFor,
   frameTimings,
   fmtElapsed,
+  APPS_DIR,
   type Shot,
 } from "./e2e.js";
+import { findApps } from "./utils.js";
+import { selectApp } from "../wizard-run/picker.js";
 import { commitAndCreatePR, postPRComment } from "../github/index.js";
 import { getRepoRoot, git } from "../github/index.js";
 
@@ -79,11 +82,16 @@ function prBody(
 
 async function main(): Promise<number> {
   const args = process.argv.slice(2);
-  const app = args.find((a) => !a.startsWith("--"));
   const dryRun = args.includes("--dry-run");
   // --comment-pr <n>: also post a comment on that PR linking to the review.
   const commentIdx = args.indexOf("--comment-pr");
   const commentPr = commentIdx !== -1 ? Number(args[commentIdx + 1]) : null;
+  // App: explicit positional, else an interactive picker (like the run screens).
+  // Stay non-interactive in CI — there the app always arrives as a positional.
+  let app = args.find((a) => !a.startsWith("--"));
+  if (!app && process.stdin.isTTY) {
+    app = (await selectApp(findApps(APPS_DIR))).name;
+  }
   if (!app) {
     console.error("usage: snapshot-review <app> [--dry-run] [--comment-pr <n>]");
     return 2;

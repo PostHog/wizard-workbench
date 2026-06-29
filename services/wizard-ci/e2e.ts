@@ -25,7 +25,7 @@ import {
 import { spawnSync } from "child_process";
 
 const WORKBENCH = join(import.meta.dirname, "..", "..");
-const APPS_DIR = join(WORKBENCH, "apps");
+export const APPS_DIR = join(WORKBENCH, "apps");
 
 // Host Claude Code / Anthropic auth vars: when the wizard's agent subprocess is
 // spawned from inside a Claude Code session it defers auth to the host
