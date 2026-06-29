@@ -173,6 +173,10 @@ export interface WizardOptions {
   skillId?: string;
   /** Source-SDK variant for the `migrate` command — appended as --product=<id>. */
   product?: string;
+  /** Pins the target project via --project-id instead of letting the wizard
+   *  resolve it from /api/users/@me/ (the user's mutable current_team). Shared
+   *  across the parallel matrix, that field races between runs. */
+  projectId?: string;
 }
 
 /**
@@ -221,6 +225,14 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
     }
 
     args.push("--ci", "--region", region, "--api-key", apiKey, "--install-dir", appPath);
+
+    // Pin the project explicitly when known, so resolution doesn't fall back to
+    // /api/users/@me/ (current_team) — shared mutable state that races across the
+    // parallel matrix and intermittently resolves the wrong project.
+    const projectId = options.projectId || process.env.POSTHOG_WIZARD_PROJECT_ID;
+    if (projectId) {
+      args.push("--project-id", projectId);
+    }
   }
 
   // Always request YARA report — the wizard writes a JSON file to /tmp
