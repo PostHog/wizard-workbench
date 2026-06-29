@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -13,6 +14,8 @@ interface ContactFormData {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const data: ContactFormData = await request.json();
+    const sessionId = request.headers.get('X-PostHog-Session-Id');
+    const distinctId = request.headers.get('X-PostHog-Distinct-Id');
 
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
@@ -43,6 +46,18 @@ export const POST: APIRoute = async ({ request }) => {
       interest: data.interest,
       message: data.message,
       timestamp: new Date().toISOString(),
+    });
+
+    const posthog = getPostHogServer();
+    posthog.capture({
+      distinctId: distinctId || data.email,
+      event: 'contact_form_submitted',
+      properties: {
+        $session_id: sessionId || undefined,
+        interest: data.interest,
+        company: data.company || undefined,
+        source: 'api',
+      },
     });
 
     return new Response(
