@@ -1,3 +1,4 @@
+from posthog import new_context, identify_context, tag, capture
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -15,9 +16,30 @@ class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+        with new_context():
+            identify_context(str(user.id))
+            tag('username', user.username)
+            tag('is_staff', user.is_staff)
+            tag('company_name', user.company_name)
+            capture('user_logged_in', properties={
+                'login_method': 'email',
+            })
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            user_id = str(request.user.id)
+            with new_context():
+                identify_context(user_id)
+                capture('user_logged_out')
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -25,6 +47,11 @@ class CustomPasswordResetView(PasswordResetView):
     email_template_name = 'accounts/password_reset_email.html'
     subject_template_name = 'accounts/password_reset_subject.txt'
     success_url = reverse_lazy('accounts:password_reset_done')
+
+    def form_valid(self, form):
+        with new_context():
+            capture('password_reset_requested')
+        return super().form_valid(form)
 
 
 class CustomPasswordResetDoneView(PasswordResetDoneView):
@@ -49,6 +76,12 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            with new_context():
+                identify_context(str(user.id))
+                tag('username', user.username)
+                tag('is_staff', user.is_staff)
+                tag('company_name', user.company_name)
+                capture('user_registered')
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +96,9 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            with new_context():
+                identify_context(str(request.user.id))
+                capture('profile_settings_updated')
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
