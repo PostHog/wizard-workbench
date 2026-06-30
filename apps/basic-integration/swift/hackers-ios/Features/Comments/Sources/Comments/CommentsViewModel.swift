@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -133,6 +134,7 @@ public final class CommentsViewModel: @unchecked Sendable {
             updatedPost.isBookmarked = bookmarksController.isBookmarked(currentPost.id)
             post = updatedPost
         }
+        PostHogSDK.shared.capture("comments_viewed", properties: ["post_id": postID])
         await commentsLoader.loadIfNeeded()
         updateVisibleComments()
     }
