@@ -13,3 +13,6 @@
 [submodule "apps/migrate/triplex"]
 	path = apps/migrate/triplex
 	url = https://github.com/pmndrs/triplex.git
+[submodule "apps/self-driving/turbo-monorepo"]
+	path = apps/self-driving/turbo-monorepo
+	url = https://github.com/t3-oss/create-t3-turbo.git
