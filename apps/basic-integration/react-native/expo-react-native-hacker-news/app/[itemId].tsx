@@ -13,6 +13,7 @@ import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
@@ -22,6 +23,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -72,7 +74,16 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              onPress={() => {
+                posthog.capture("item_author_profile_viewed", {
+                  item_id: item.id,
+                  author: item.by,
+                  item_type: item.type,
+                });
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -120,6 +131,12 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog.capture("item_upvoted", {
+                  item_id: item.id,
+                  item_title: item.title,
+                  score: item.score ?? 0,
+                  item_type: item.type,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -163,6 +180,12 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture("item_external_link_opened", {
+                    item_id: item.id,
+                    item_title: item.title,
+                    url: item.url,
+                    host: new URL(item.url).host,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +217,14 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog.capture("parent_item_navigated", {
+                  from_item_id: item.id,
+                  to_item_id: parentItem.id,
+                  parent_title: parentItem.title || parentItem.text?.slice(0, 80),
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
