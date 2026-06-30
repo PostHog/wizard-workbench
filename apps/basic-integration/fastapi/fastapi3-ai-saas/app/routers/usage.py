@@ -6,6 +6,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
+from app.analytics import posthog_client
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
 
@@ -77,6 +78,16 @@ async def get_usage(
         credits_used_today=sum(g.credits_used for g in today_gens),
         by_type=by_type,
     )
+
+    if posthog_client:
+        posthog_client.capture(
+            "usage_stats_viewed",
+            properties={
+                "days_requested": days,
+                "total_generations": stats.total_generations,
+                "total_credits_used": stats.total_credits_used,
+            },
+        )
 
     return UsageResponse(
         stats=stats,
