@@ -1,0 +1,30 @@
+                               PostHog Wizard v2.34.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard: https://us.posthog.com/project/483112/insights?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Angular project structure
+                               • Created and configured PostHog service
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_logged_in Fired when a user successfully submits the login form.
+                               • user_logged_out Fired when a user completes the logout flow.
+                               • project_created Fired when a user successfully creates a new project via the modal.
+                               • team_member_added Fired when a user successfully adds a new team member via the modal.
+                               • billing_plan_selected Fired when a user clicks to select or change their billing plan.
+                               • account_settings_saved Fired when a user saves their account settings.
+                               • profile_updated Fired when a user successfully saves changes to their profile.
+                               • http_error_captured Fired when an HTTP request error is caught by the global error interceptor.
+
+                               Learn more: https://posthog.com/docs/libraries/angular?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
