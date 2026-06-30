@@ -1,5 +1,6 @@
 // Fake authentication utilities using localStorage
 import { nanoid } from 'nanoid'
+import posthog from 'posthog-js'
 
 export interface FakeUser {
   id: string
@@ -137,36 +138,37 @@ export function visitCountry(countryName: string): void {
 
 function checkAchievements(user: FakeUser): void {
   const achievements = [...user.achievements]
-  
+
+  const unlock = (name: string, points: number = 0) => {
+    achievements.push(name)
+    user.totalPoints += points
+    posthog.capture('achievement_unlocked', { achievement: name, total_points: user.totalPoints })
+  }
+
   if (user.claimedCountries.length >= 1 && !achievements.includes('🌍 First Claim')) {
-    achievements.push('🌍 First Claim')
-    user.totalPoints += 50
+    unlock('🌍 First Claim', 50)
   }
-  
+
   if (user.claimedCountries.length >= 10 && !achievements.includes('🏆 Country Collector')) {
-    achievements.push('🏆 Country Collector')
-    user.totalPoints += 200
+    unlock('🏆 Country Collector', 200)
   }
-  
+
   if (user.claimedCountries.length >= 50 && !achievements.includes('👑 World Dominator')) {
-    achievements.push('👑 World Dominator')
-    user.totalPoints += 1000
+    unlock('👑 World Dominator', 1000)
   }
-  
+
   if (user.visitedCountries.length >= 5 && !achievements.includes('✈️ Frequent Flyer')) {
-    achievements.push('✈️ Frequent Flyer')
-    user.totalPoints += 150
+    unlock('✈️ Frequent Flyer', 150)
   }
-  
+
   if (user.likedCountries.length >= 20 && !achievements.includes('❤️ Country Lover')) {
-    achievements.push('❤️ Country Lover')
-    user.totalPoints += 100
+    unlock('❤️ Country Lover', 100)
   }
-  
+
   if (user.totalPoints >= 1000 && !achievements.includes('⭐ Point Master')) {
-    achievements.push('⭐ Point Master')
+    unlock('⭐ Point Master')
   }
-  
+
   user.achievements = achievements
 }
 
