@@ -16,11 +16,13 @@
  */
 import "dotenv/config";
 import { join } from "path";
+import { spawnSync } from "child_process";
 import { findApps, runWizard } from "../wizard-ci/utils.js";
 import {
   WIZARD_COMMANDS,
   commandToSubcommand,
   commandToInvocation,
+  commandToProgram,
   findCommand,
   MIGRATE_PRODUCTS,
   type WizardCommand,
@@ -84,6 +86,23 @@ Options:
 async function main(): Promise<void> {
   const opts = parseArgs();
 
+  // Run mode — a normal wizard run, a headless (--ci) run, or a real-TUI
+  // snapshot capture + diff. Skipped when --ci already forced headless.
+  let snapshots = false;
+  if (!opts.ci) {
+    const mode = await promptChoice("What do you want to run?", [
+      "Wizard (interactive)",
+      "Wizard (headless / --ci)",
+      "Snapshots (real-TUI capture + diff)",
+    ]);
+    if (!mode) {
+      console.error("A run mode is required.");
+      process.exit(1);
+    }
+    if (mode.includes("headless")) opts.ci = true;
+    else if (mode.includes("Snapshots")) snapshots = true;
+  }
+
   // Resolve command: either from --command flag or interactive picker
   let command: WizardCommand;
   if (opts.command) {
@@ -100,12 +119,15 @@ async function main(): Promise<void> {
     }
     command = found;
   } else {
-    command = await selectCommand(opts.ci);
+    // Only the snapshots flow is restricted to commands with an e2e.json;
+    // interactive / headless runs offer every command.
+    command = await selectCommand(opts.ci, snapshots);
   }
 
+  // Wizard-invocation prompts below only apply to a real run, not snapshots.
   // If the skill command was selected, prompt for the skill ID
   let skillId: string | undefined;
-  if (command.id === 'skill') {
+  if (!snapshots && command.id === 'skill') {
     skillId = await prompt('Enter skill ID: ');
     if (!skillId) {
       console.error("Skill ID is required.");
@@ -115,7 +137,7 @@ async function main(): Promise<void> {
 
   // If the migrate command was selected, prompt for the source SDK
   let product: string | undefined;
-  if (command.id === 'migrate') {
+  if (!snapshots && command.id === 'migrate') {
     product = await promptChoice(
       'Migrate from which source SDK?',
       MIGRATE_PRODUCTS as readonly string[],
@@ -124,6 +146,22 @@ async function main(): Promise<void> {
       console.error("Source SDK is required for migrate.");
       process.exit(1);
     }
+  }
+
+  // If self-driving was selected, ask whether to integrate the SDK first.
+  // "Integrate first" passes --integrate (skips the in-wizard question);
+  // otherwise the wizard asks "do you already have PostHog?" itself.
+  let integrate = false;
+  if (!snapshots && command.id === 'self-driving') {
+    const choice = await promptChoice(
+      'Set up the PostHog SDK first, or just Self-driving?',
+      ['Ask me in the wizard', 'Integrate the SDK first (--integrate)'],
+    );
+    if (!choice) {
+      console.error("A choice is required for self-driving.");
+      process.exit(1);
+    }
+    integrate = choice.includes('--integrate');
   }
 
   const scopedAppsDir = join(APPS_DIR, command.appsDir);
@@ -135,8 +173,33 @@ async function main(): Promise<void> {
 
   const selectedApp = await selectApp(apps);
 
+  // Snapshots mode: hand off to the real-TUI snapshot capture for this app
+  // (the same tool the removed mprocs pane ran), then exit.
+  if (snapshots) {
+    // selectedApp.name is relative to the command's appsDir; snapshots.ts
+    // resolves from apps/, so prepend the appsDir to get the full app path.
+    const appPath = `${command.appsDir}/${selectedApp.name}`;
+    const program = commandToProgram(command.id);
+    console.log();
+    console.log(`Snapshots: ${appPath}  (program: ${program})\n`);
+    const res = spawnSync(
+      "npx",
+      [
+        "tsx",
+        "services/wizard-ci/snapshots.ts",
+        appPath,
+        "--program",
+        program,
+      ],
+      { stdio: "inherit", cwd: WORKBENCH },
+    );
+    process.exit(res.status ?? 0);
+  }
+
   console.log();
-  console.log(`Command: ${commandToInvocation(command.id, { skillId, product })}`);
+  console.log(
+    `Command: ${commandToInvocation(command.id, { skillId, product, integrate })}`,
+  );
   console.log(`App:     ${selectedApp.name}`);
   console.log(`Path:    ${selectedApp.path}`);
   if (opts.ci) {
@@ -150,6 +213,7 @@ async function main(): Promise<void> {
     command: commandToSubcommand(command.id),
     skillId,
     product,
+    integrate,
   });
 
   if (!result.success) {

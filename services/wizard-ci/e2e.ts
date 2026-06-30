@@ -40,6 +40,8 @@ export interface E2eOptions {
   projectId?: string;
   /** true → keep installed skills; default deletes them. */
   keepSkills?: boolean;
+  /** Wizard program id to drive (e.g. 'self-driving'); default integration. */
+  program?: string;
 }
 
 function wizardRepo(): string {
@@ -156,6 +158,8 @@ export function runE2e(opts: E2eOptions): number {
   childEnv.SNAP_OUT = snapsDir;
   childEnv.E2E_RESULT_JSON = resultJson;
   childEnv.E2E_KEEP_SKILLS = opts.keepSkills ? "true" : "false";
+  // Which program the real-TUI host drives — defaults to integration.
+  if (opts.program) childEnv.PROGRAM = opts.program;
 
   const run = spawnSync("npx", ["tsx", harness], {
     cwd: repo,
@@ -172,12 +176,20 @@ export function runE2e(opts: E2eOptions): number {
     /* harness crashed before writing */
   }
 
+  // The integration flow ends at keep-skills/skillsComplete; other programs
+  // (e.g. self-driving) end at their own outro, so assert against that instead.
+  const isIntegration = !opts.program || opts.program === "posthog-integration";
+  const programChecks: Array<[string, boolean]> = isIntegration
+    ? [
+        ["full interactive flow reached keep-skills", !!result?.screenPath?.includes("keep-skills")],
+        ["skillsComplete", result?.skillsComplete === true],
+      ]
+    : [["reached the outro", !!result?.screenPath?.includes("outro")]];
   const checks: Array<[string, boolean]> = result
     ? [
         ["agent run completed", result.runPhase === "completed"],
         ["posthog dependency added or .env written", !!result.hasPosthogDep || !!result.envFile],
-        ["full interactive flow reached keep-skills", !!result.screenPath?.includes("keep-skills")],
-        ["skillsComplete", result.skillsComplete === true],
+        ...programChecks,
       ]
     : [["harness produced a structured result", false]];
 

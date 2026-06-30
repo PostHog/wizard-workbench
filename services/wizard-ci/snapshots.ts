@@ -37,6 +37,7 @@ import {
   APPS_DIR,
 } from "./e2e.js";
 import { findApps } from "./utils.js";
+import { commandToProgram, findCommandByAppPath } from "../wizard-commands.js";
 import { selectApp } from "../wizard-run/picker.js";
 
 /** A CI-e2e test definition: which flow runs against which app. */
@@ -106,11 +107,23 @@ async function main(): Promise<number> {
     args[args.indexOf("--project-id") + 1] ||
     "";
 
+  // Which wizard program to drive. An explicit --program wins; otherwise it's
+  // derived from the app's category (see programForApp), so `/wizard-ci
+  // self-driving/<app>` drives self-driving without passing the flag.
+  const programIdx = args.indexOf("--program");
+  const explicitProgram = programIdx !== -1 ? args[programIdx + 1] : undefined;
+
   // Resolve which app(s) to snapshot:
   //  - explicit positional <app>           → that app
   //  - no app, interactive shell (local)    → app picker, like the run screens
   //  - no app, non-interactive (CI/mprocs)  → the default test set
-  const appArg = args.find((a) => !a.startsWith("--"));
+  // Ignore values that belong to a flag (e.g. the --program / --project-id arg).
+  const appArg = args.find(
+    (a, i) =>
+      !a.startsWith("--") &&
+      args[i - 1] !== "--program" &&
+      args[i - 1] !== "--project-id",
+  );
   let defs: TestDef[];
   if (appArg) {
     defs = [{ name: basename(appArg), app: appArg }];
@@ -121,18 +134,29 @@ async function main(): Promise<number> {
     defs = TEST_DEFS;
   }
 
+  let failed = false;
   for (const def of defs) {
     console.log(`\n=== snapshots: ${def.name} (${def.app}) ===`);
 
-    const code = runE2e({ app: def.app, projectId });
+    // The program an app drives comes from its category — reuse the same
+    // app-path → command → program mapping the rest of wizard-ci uses, so
+    // `self-driving/<app>` drives self-driving without an explicit --program.
+    const cmd = findCommandByAppPath(def.app);
+    const program = explicitProgram ?? (cmd ? commandToProgram(cmd.id) : undefined);
+
+    // A non-zero run (e.g. self-driving aborting at GitHub-connect) is still
+    // worth a report — render whatever frames were captured, and reflect the
+    // failure in the exit code rather than bailing before the report.
+    const code = runE2e({ app: def.app, projectId, program });
     if (code !== 0) {
-      console.error(`✖ e2e run failed for ${def.name} (exit ${code})`);
-      return code;
+      console.error(`✖ e2e run failed for ${def.name} (exit ${code}) — rendering captured frames anyway`);
+      failed = true;
     }
     const frames = readFrames(snapsDirFor(def.app));
     if (frames.length === 0) {
       console.error(`✖ no snapshots at ${snapsDirFor(def.app)}`);
-      return 1;
+      failed = true;
+      continue;
     }
 
     const timings = frameTimings(snapsDirFor(def.app));
@@ -146,7 +170,7 @@ async function main(): Promise<number> {
     console.log(`\nvisual report — open it:  open ${report}`);
   }
 
-  return 0;
+  return failed ? 1 : 0;
 }
 
 main().then((code) => process.exit(code));

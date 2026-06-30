@@ -5,7 +5,7 @@
  * bin.ts (or the default integration flow when `id === 'default'`).
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,6 +20,8 @@ export interface WizardCommand {
   ciCapable?: boolean;
   /** Subdirectory under apps/ to scan for test apps. */
   appsDir: string;
+  /** Whether the wizard repo ships an e2e.json flow definition for this command. */
+  hasE2e: boolean;
 }
 
 interface ManifestEntry {
@@ -37,6 +39,33 @@ interface Manifest {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MANIFEST_PATH = join(__dirname, "..", "apps", "manifest.json");
 
+/**
+ * Map a command id to its wizard program id where they differ — used to locate
+ * the program's e2e test definition (`src/lib/programs/<program>/test/e2e.json`)
+ * in the wizard repo.
+ */
+const COMMAND_PROGRAM: Record<string, string> = {
+  default: "posthog-integration",
+  migrate: "migration",
+  skill: "agent-skill",
+  "upload-sourcemaps": "error-tracking-upload-source-maps",
+};
+
+/** The wizard program id a command drives (e.g. 'default' → 'posthog-integration'). */
+export function commandToProgram(id: string): string {
+  return COMMAND_PROGRAM[id] ?? id;
+}
+
+/** Whether the wizard repo ships an e2e.json flow definition for this command. */
+function hasE2eDefinition(commandId: string): boolean {
+  const wizardPath = process.env.WIZARD_PATH;
+  if (!wizardPath) return false;
+  const program = COMMAND_PROGRAM[commandId] ?? commandId;
+  return existsSync(
+    join(wizardPath, "src", "lib", "programs", program, "test", "e2e.json"),
+  );
+}
+
 function loadManifest(): WizardCommand[] {
   const raw = readFileSync(MANIFEST_PATH, "utf8");
   const manifest = JSON.parse(raw) as Manifest;
@@ -46,6 +75,7 @@ function loadManifest(): WizardCommand[] {
     description: w.description,
     ciCapable: w.ciCapable ?? false,
     appsDir: w.dir,
+    hasE2e: hasE2eDefinition(w.id),
   }));
 }
 
@@ -89,13 +119,18 @@ export type MigrateProduct = (typeof MIGRATE_PRODUCTS)[number];
  */
 export function commandToInvocation(
   id: string,
-  extra?: { skillId?: string; product?: string },
+  extra?: { skillId?: string; product?: string; integrate?: boolean },
 ): string {
   if (id === 'skill') {
     return `wizard --skill=${extra?.skillId || '<skill-id>'}`;
   }
   if (id === 'migrate') {
     return `wizard migrate --product=${extra?.product || '<product>'}`;
+  }
+  if (id === 'self-driving') {
+    return extra?.integrate
+      ? 'wizard self-driving --integrate'
+      : 'wizard self-driving';
   }
   const sub = commandToSubcommand(id);
   return sub ? `wizard ${sub}` : 'wizard';
@@ -114,4 +149,14 @@ export function findCommandByAppPath(appPath: string): WizardCommand | undefined
   if (slash <= 0) return undefined;
   const prefix = appPath.slice(0, slash);
   return WIZARD_COMMANDS.find((c) => c.appsDir === prefix);
+}
+
+/**
+ * Keep only apps whose command has an e2e.json flow definition. Falls back to
+ * the full list if none resolve (e.g. WIZARD_PATH unset), so a picker never
+ * goes empty.
+ */
+export function filterE2eApps<T extends { name: string }>(apps: T[]): T[] {
+  const filtered = apps.filter((a) => findCommandByAppPath(a.name)?.hasE2e);
+  return filtered.length > 0 ? filtered : apps;
 }

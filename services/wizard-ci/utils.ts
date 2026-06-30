@@ -173,6 +173,8 @@ export interface WizardOptions {
   skillId?: string;
   /** Source-SDK variant for the `migrate` command — appended as --product=<id>. */
   product?: string;
+  /** Self-driving: integrate the SDK first — appended as --integrate. */
+  integrate?: boolean;
 }
 
 /**
@@ -204,6 +206,9 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
   }
   if (options.product) {
     args.push(`--product=${options.product}`);
+  }
+  if (options.integrate) {
+    args.push("--integrate");
   }
   args.push("--local-mcp");
 
