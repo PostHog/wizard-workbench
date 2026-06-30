@@ -47,10 +47,19 @@ export async function promptChoice(
   return choices[index];
 }
 
-export async function selectCommand(ciMode: boolean): Promise<WizardCommand> {
-  const available = ciMode
+export async function selectCommand(
+  ciMode: boolean,
+  e2eOnly = false,
+): Promise<WizardCommand> {
+  const base = ciMode
     ? WIZARD_COMMANDS.filter((c) => c.ciCapable)
     : WIZARD_COMMANDS;
+  // Snapshots are auto-driven by an e2e.json flow definition, so that mode only
+  // offers commands that have one. Interactive / headless runs are real wizard
+  // runs — every command is available. Fall back to the full list if no e2e
+  // flows resolve (e.g. WIZARD_PATH unset) so the picker never goes empty.
+  const withE2e = base.filter((c) => c.hasE2e);
+  const available = e2eOnly && withE2e.length > 0 ? withE2e : base;
 
   if (available.length === 0) {
     console.error("No wizard commands available for this mode.");

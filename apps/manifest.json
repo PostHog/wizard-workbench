@@ -8,6 +8,13 @@
       "ciCapable": true
     },
     {
+      "id": "self-driving",
+      "dir": "self-driving",
+      "label": "Self-driving",
+      "description": "Set up PostHog Self-driving; detects PostHog and integrates first if the project doesn't have it",
+      "ciCapable": true
+    },
+    {
       "id": "revenue-analytics",
       "dir": "revenue",
       "label": "Revenue Analytics",
