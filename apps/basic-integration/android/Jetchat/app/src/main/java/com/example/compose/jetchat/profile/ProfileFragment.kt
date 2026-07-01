@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.posthog.PostHog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -59,6 +60,15 @@ class ProfileFragment : Fragment() {
         // Consider using safe args plugin
         val userId = arguments?.getString("userId")
         viewModel.setUserId(userId)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val userId = arguments?.getString("userId") ?: "me"
+        PostHog.capture(
+            event = "profile_viewed",
+            properties = mapOf("viewed_user_id" to userId),
+        )
     }
 
     @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
