@@ -1,9 +1,29 @@
 import { createServer } from 'node:http';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
 let nextContactId = 1;
 let nextGroupId = 2;
+
+function getDistinctId(req) {
+  return req.headers['x-posthog-distinct-id'] || req.socket.remoteAddress || 'anonymous';
+}
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -47,6 +67,14 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      posthog.capture({
+        distinctId: getDistinctId(req),
+        event: 'group created',
+        properties: {
+          group_id: group.id,
+          group_name: group.name,
+        },
+      });
       return json(res, 201, group);
     }
 
@@ -68,6 +96,15 @@ const server = createServer(async (req, res) => {
             c.email.toLowerCase().includes(q) ||
             (c.phone && c.phone.includes(q))
         );
+        posthog.capture({
+          distinctId: getDistinctId(req),
+          event: 'contact search performed',
+          properties: {
+            query: search,
+            group_id: groupId ? parseInt(groupId, 10) : null,
+            result_count: result.length,
+          },
+        });
       }
 
       return json(res, 200, { contacts: result, total: result.length });
@@ -90,6 +127,16 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      posthog.capture({
+        distinctId: getDistinctId(req),
+        event: 'contact created',
+        properties: {
+          contact_id: contact.id,
+          has_phone: !!contact.phone,
+          has_company: !!contact.company,
+          group_id: contact.group_id,
+        },
+      });
       return json(res, 201, contact);
     }
 
@@ -114,6 +161,14 @@ const server = createServer(async (req, res) => {
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      posthog.capture({
+        distinctId: getDistinctId(req),
+        event: 'contact updated',
+        properties: {
+          contact_id: contact.id,
+          fields_updated: Object.keys(body),
+        },
+      });
       return json(res, 200, contact);
     }
 
@@ -123,13 +178,26 @@ const server = createServer(async (req, res) => {
       const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
+      const deleted = contacts[index];
       contacts.splice(index, 1);
+      posthog.capture({
+        distinctId: getDistinctId(req),
+        event: 'contact deleted',
+        properties: {
+          contact_id: deleted.id,
+          group_id: deleted.group_id,
+        },
+      });
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    posthog.captureException(err, getDistinctId(req), {
+      path: req.url,
+      method: req.method,
+    });
     json(res, 500, { error: 'Internal server error' });
   }
 });
