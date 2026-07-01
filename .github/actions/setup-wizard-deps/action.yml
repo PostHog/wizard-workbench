@@ -206,16 +206,6 @@ runs:
         pnpm install --frozen-lockfile --filter "@posthog/mcp..."
         echo "::endgroup::"
 
-<<<<<<< Updated upstream
-        echo "::group::Installing PostCSS dependencies (required for UI apps build)"
-        # PostCSS tooling lives at the workspace root, not in @posthog/mcp, so
-        # add it after the filtered install. --ignore-scripts keeps this step
-        # from rebuilding any native addons it may relink.
-        pnpm add -Dw --ignore-scripts autoprefixer postcss-preset-env cssnano
-        echo "::endgroup::"
-
-=======
->>>>>>> Stashed changes
         echo "::group::Building MCP UI apps"
         cd "$HOME/posthog/services/mcp"
         pnpm build
