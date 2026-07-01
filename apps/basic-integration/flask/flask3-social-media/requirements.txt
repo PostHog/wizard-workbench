@@ -1,5 +1,6 @@
 alembic
 Babel
+posthog
 email-validator
 Flask>=3.0
 flask-babel
