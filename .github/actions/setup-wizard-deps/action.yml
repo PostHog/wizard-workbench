@@ -217,7 +217,12 @@ runs:
         # PostCSS tooling lives at the workspace root, not in @posthog/mcp, so
         # add it after the filtered install. --ignore-scripts keeps this step
         # from rebuilding any native addons it may relink.
-        pnpm add -Dw --ignore-scripts autoprefixer postcss-preset-env cssnano
+        # --config.trust-policy=off is duplicated on the CLI because pnpm 10.29
+        # doesn't seem to honor PNPM_CONFIG_TRUST_POLICY for `pnpm add`'s
+        # resolution pass (the earlier --frozen-lockfile install skipped
+        # resolution entirely, so it didn't need the override). CLI flag beats
+        # env beats file, so this is the surest way to disable the check.
+        pnpm add -Dw --ignore-scripts --config.trust-policy=off autoprefixer postcss-preset-env cssnano
         echo "::endgroup::"
 
         echo "::group::Building MCP UI apps"
