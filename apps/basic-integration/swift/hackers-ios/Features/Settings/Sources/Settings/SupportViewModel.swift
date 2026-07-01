@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -81,10 +82,22 @@ public final class SupportViewModel: @unchecked Sendable {
             do {
                 let result = try await self.supportUseCase.purchase(productId: product.id)
                 self.handle(result: result, for: product)
-                if result == .success, product.kind == .subscription {
-                    self.isSubscribed = true
+                if result == .success {
+                    if product.kind == .subscription {
+                        self.isSubscribed = true
+                    }
+                    PostHogSDK.shared.capture("support_purchased", properties: [
+                        "product_id": product.id,
+                        "product_name": product.displayName,
+                        "product_kind": product.kind == .subscription ? "subscription" : "tip",
+                        "price": product.displayPrice,
+                    ])
                 }
             } catch {
+                PostHogSDK.shared.capture("support_purchase_failed", properties: [
+                    "product_id": product.id,
+                    "error": error.localizedDescription,
+                ])
                 self.alertInfo = AlertInfo(
                     title: "Purchase Failed",
                     message: error.localizedDescription
@@ -102,6 +115,9 @@ public final class SupportViewModel: @unchecked Sendable {
                 let result = try await self.supportUseCase.restorePurchases()
                 await self.updateSubscriptionStatus()
                 self.handleRestore(result: result)
+                if result == .success {
+                    PostHogSDK.shared.capture("purchases_restored")
+                }
             } catch {
                 self.alertInfo = AlertInfo(
                     title: "Restore Failed",

@@ -51,6 +51,18 @@
             ReferencedContainer = "container:Hackers.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "POSTHOG_API_KEY"
+            value = "phx_API_KEY_IS_HARDCODED"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "POSTHOG_HOST"
+            value = "https://us.i.posthog.com"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
       <AdditionalOptions>
          <AdditionalOption
             key = "NSZombieEnabled"
