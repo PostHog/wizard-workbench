@@ -185,6 +185,13 @@ runs:
       shell: bash
       env:
         POSTHOG_SHA: ${{ steps.resolve.outputs.posthog_sha }}
+        # PostHog master's package.json pins packageManager: pnpm@10.29.3, and
+        # pnpm 10 auto-honors that field (manage-package-manager-versions
+        # defaults to true), so it self-upgrades from our pinned 10.28.2 back
+        # to 10.29.3 the moment we run pnpm here — which re-triggers
+        # ERR_PNPM_TRUST_DOWNGRADE on the upstream lockfile. Disable the
+        # auto-switch so the version pinned in wizard-ci.yml actually holds.
+        PNPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS: 'false'
       run: |
         echo "::group::Fetching PostHog monorepo at $POSTHOG_SHA"
         rm -rf "$HOME/posthog"
