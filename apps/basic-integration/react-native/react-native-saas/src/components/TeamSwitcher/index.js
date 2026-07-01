@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { View, TouchableOpacity, Image, Text } from 'react-native';
+import { usePostHog } from 'posthog-react-native';
 
 import { getTeamsRequest, selectTeam } from '~/store/modules/teams/actions';
 import { signOut } from '~/store/modules/auth/actions';
@@ -11,6 +12,7 @@ import styles from './styles';
 
 export default function TeamSwitcher() {
   const dispatch = useDispatch();
+  const posthog = usePostHog();
   const teams = useSelector(state => state.teams);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -28,6 +30,7 @@ export default function TeamSwitcher() {
             style={styles.teamContainer}
             onPress={() => {
               dispatch(selectTeam(team));
+              posthog.capture('team_selected', { team_id: team.id, team_name: team.name });
             }}
           >
             <Image
