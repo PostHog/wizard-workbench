@@ -1,10 +1,11 @@
-import { Injectable } from '@angular/core';
-import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest, HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 import { environment } from '@env/environment';
 import { Logger } from '../services/misc';
+import { PosthogService } from '@app/services/posthog.service';
 
 const log = new Logger('ErrorHandlerInterceptor');
 
@@ -15,6 +16,8 @@ const log = new Logger('ErrorHandlerInterceptor');
   providedIn: 'root',
 })
 export class ErrorHandlerInterceptor implements HttpInterceptor {
+  private readonly posthogService = inject(PosthogService);
+
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     return next.handle(request).pipe(catchError((error) => this._errorHandler(error)));
   }
@@ -24,6 +27,14 @@ export class ErrorHandlerInterceptor implements HttpInterceptor {
     if (!environment.production) {
       // Do something with the error
       log.error('Request error', response);
+    }
+    if (response instanceof HttpErrorResponse) {
+      this.posthogService.posthog.capture('http_error_captured', {
+        status: response.status,
+        status_text: response.statusText,
+        url: response.url,
+      });
+      this.posthogService.posthog.captureException(response);
     }
     throw response;
   }
