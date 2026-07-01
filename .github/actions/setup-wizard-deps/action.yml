@@ -185,13 +185,6 @@ runs:
       shell: bash
       env:
         POSTHOG_SHA: ${{ steps.resolve.outputs.posthog_sha }}
-        # PostHog's pnpm-workspace.yaml sets `trustPolicy: no-downgrade`, which
-        # in pnpm 10.29+ aborts install with ERR_PNPM_TRUST_DOWNGRADE whenever
-        # an upstream dep's newest release has weaker provenance than an earlier
-        # one (currently @swc/core@1.11.4). pnpm's own default is `off`; env
-        # overrides pnpm-workspace.yaml, so this just restores the default for
-        # our ephemeral build without touching the upstream config.
-        PNPM_CONFIG_TRUST_POLICY: 'off'
       run: |
         echo "::group::Fetching PostHog monorepo at $POSTHOG_SHA"
         rm -rf "$HOME/posthog"
