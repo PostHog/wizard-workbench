@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 
 export const Route = createFileRoute('/_auth/profile')({
   component: ProfileComponent,
@@ -6,6 +7,7 @@ export const Route = createFileRoute('/_auth/profile')({
 
 function ProfileComponent() {
   const { username } = Route.useRouteContext()
+  const posthog = usePostHog()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
 
@@ -52,7 +54,10 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={() => posthog.capture('plan_upgrade_clicked', { current_plan: 'free', username })}
+            >
               Upgrade
             </button>
           </div>
