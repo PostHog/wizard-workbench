@@ -15,12 +15,12 @@ subscriptionsRouter.post("/", async (req, res) => {
       return;
     }
 
-    if (userId) {
-      const user = getUser(userId);
-      if (user) {
-        console.log(`Creating subscription for user ${user.email} (${user.id})`);
-      }
+    const user = userId ? getUser(userId) : undefined;
+    if (user) {
+      console.log(`Creating subscription for user ${user.email} (${user.id})`);
     }
+
+    const posthogDistinctId = user?.posthogDistinctId || user?.email;
 
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
@@ -28,6 +28,7 @@ subscriptionsRouter.post("/", async (req, res) => {
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
       expand: ["latest_invoice.payment_intent"],
+      ...(posthogDistinctId && { metadata: { posthog_person_distinct_id: posthogDistinctId } }),
     });
 
     const invoice = subscription.latest_invoice as any;
