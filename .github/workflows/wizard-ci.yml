@@ -444,13 +444,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
-        with:
-          # pnpm 10.29 backported the v11 supply-chain revalidation pass and
-          # aborts install with ERR_PNPM_TRUST_DOWNGRADE on PostHog upstream's
-          # lockfile (e.g. @swc/core@1.11.4 dropped provenance). 10.28.2 is
-          # the last release before the backport. Pin only here — the wizard-ci
-          # matrix job stays on the packageManager version from package.json.
-          version: 10.28.2
 
       - name: Build and cache dependencies
         uses: ./.github/actions/setup-wizard-deps
