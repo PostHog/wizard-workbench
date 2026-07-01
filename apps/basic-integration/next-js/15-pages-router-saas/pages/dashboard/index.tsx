@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, PlusCircle } from 'lucide-react';
 import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -25,11 +26,18 @@ function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
 
   async function handleManageSubscription() {
+    posthog.capture('manage_subscription_clicked', {
+      plan_name: teamData?.planName,
+      subscription_status: teamData?.subscriptionStatus,
+    });
+
     try {
       const response = await fetch('/api/stripe/customer-portal', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id(),
+          'X-POSTHOG-SESSION-ID': posthog.get_session_id() ?? '',
         }
       });
 
@@ -90,7 +98,9 @@ function TeamMembers() {
         const response = await fetch('/api/team/remove-member', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id(),
+            'X-POSTHOG-SESSION-ID': posthog.get_session_id() ?? '',
           },
           body: JSON.stringify({ memberId })
         });
@@ -101,6 +111,8 @@ function TeamMembers() {
           setError(result.error || 'Failed to remove member');
           return;
         }
+
+        posthog.capture('team_member_removed', { member_id: memberId });
 
         // Refresh team data
         mutate('/api/team');
@@ -195,7 +207,9 @@ function InviteTeamMember() {
         const response = await fetch('/api/team/invite', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id(),
+            'X-POSTHOG-SESSION-ID': posthog.get_session_id() ?? '',
           },
           body: JSON.stringify(data)
         });
@@ -206,6 +220,11 @@ function InviteTeamMember() {
           setError(result.error || 'Failed to send invitation');
           return;
         }
+
+        posthog.capture('team_member_invite_submitted', {
+          invitee_email: data.email,
+          role: data.role,
+        });
 
         setSuccess(result.success);
         // Reset form
