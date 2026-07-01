@@ -33,6 +33,7 @@ import { adjustSeats } from "~/features/billing/stripe-helpers.server";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import type { Prisma } from "~/generated/client";
 import { OrganizationMembershipRole } from "~/generated/client";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { sendEmail } from "~/utils/email.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
@@ -55,6 +56,7 @@ export async function teamMembersAction({
     const { user, organization, role, headers } = context.get(
       organizationMembershipContext,
     );
+    const posthog = (context as PostHogContext).posthog;
     const i18n = getInstance(context);
 
     if (role === OrganizationMembershipRole.member) {
@@ -367,6 +369,16 @@ export async function teamMembersAction({
             "organizations:settings.teamMembers.inviteByEmail.successToastTitle",
           ),
           type: "success",
+        });
+
+        posthog?.capture({
+          event: "team_member_invited",
+          properties: {
+            invited_by_user_id: user.id,
+            invited_email: body.email,
+            invited_role: body.role,
+            organization_id: organization.id,
+          },
         });
 
         return data(

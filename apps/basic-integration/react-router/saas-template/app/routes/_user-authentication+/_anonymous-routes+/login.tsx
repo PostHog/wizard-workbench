@@ -1,5 +1,7 @@
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { IconMail } from "@tabler/icons-react";
+import { useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { data, Form, href, Link, useNavigation } from "react-router";
 import * as z from "zod";
@@ -68,9 +70,17 @@ export default function LoginRoute({
 }: Route.ComponentProps) {
   const { t } = useTranslation("userAuthentication", { keyPrefix: "login" });
   const { inviteLinkInfo } = loaderData;
+  const posthog = usePostHog();
 
   const isAwaitingEmailConfirmation =
     getIsAwaitingEmailConfirmation(actionData);
+
+  const email = actionData?.email;
+  useEffect(() => {
+    if (email) {
+      posthog?.identify(email, { email });
+    }
+  }, [email, posthog]);
 
   const { form, fields } = useForm(loginWithEmailSchema, {
     lastResult: actionData?.result,
