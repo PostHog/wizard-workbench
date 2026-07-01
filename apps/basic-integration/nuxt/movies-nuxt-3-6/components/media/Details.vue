@@ -7,17 +7,23 @@ defineProps<{
 }>()
 
 const tab = ref<'overview' | 'videos' | 'photos'>('overview')
+const { $posthog: posthog } = useNuxtApp()
+
+function setTab(newTab: 'overview' | 'videos' | 'photos') {
+  tab.value = newTab
+  posthog?.capture('media_tab_changed', { tab: newTab })
+}
 </script>
 
 <template>
   <div flex items-center justify-center gap8 py6>
-    <button n-tab :class="{ 'n-tab-active': tab === 'overview' }" @click="tab = 'overview'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'overview' }" @click="setTab('overview')">
       {{ $t('Overview') }}
     </button>
-    <button n-tab :class="{ 'n-tab-active': tab === 'videos' }" @click="tab = 'videos'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'videos' }" @click="setTab('videos')">
       {{ $t('Videos') }}
     </button>
-    <button n-tab :class="{ 'n-tab-active': tab === 'photos' }" @click="tab = 'photos'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'photos' }" @click="setTab('photos')">
       {{ $t('Media Photos') }}
     </button>
   </div>
