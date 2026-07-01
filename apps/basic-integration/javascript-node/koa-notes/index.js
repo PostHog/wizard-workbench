@@ -1,6 +1,12 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const app = new Koa();
 const router = new Router();
@@ -32,6 +38,17 @@ router.post('/api/folders', (ctx) => {
 
   const folder = { id: nextFolderId++, name };
   folders.push(folder);
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || ctx.ip || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'folder_created',
+    properties: {
+      folder_id: folder.id,
+      folder_name: folder.name,
+    },
+  });
+
   ctx.status = 201;
   ctx.body = folder;
 });
@@ -59,6 +76,16 @@ router.delete('/api/folders/:id', (ctx) => {
   }
 
   folders.splice(index, 1);
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || ctx.ip || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'folder_deleted',
+    properties: {
+      folder_id: folderId,
+    },
+  });
+
   ctx.status = 204;
 });
 
@@ -76,6 +103,17 @@ router.get('/api/notes', (ctx) => {
     result = result.filter(
       (n) => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)
     );
+
+    const distinctId = ctx.headers['x-posthog-distinct-id'] || ctx.ip || 'anonymous';
+    posthog.capture({
+      distinctId,
+      event: 'note_searched',
+      properties: {
+        query: search,
+        folder_id: folder_id ? parseInt(folder_id, 10) : null,
+        result_count: result.length,
+      },
+    });
   }
 
   ctx.body = { notes: result, total: result.length };
@@ -105,6 +143,18 @@ router.post('/api/notes', (ctx) => {
     updated_at: new Date().toISOString(),
   };
   notes.push(note);
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || ctx.ip || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note_created',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+      has_content: note.content.length > 0,
+    },
+  });
+
   ctx.status = 201;
   ctx.body = note;
 });
@@ -143,6 +193,21 @@ router.patch('/api/notes/:id', (ctx) => {
   }
   note.updated_at = new Date().toISOString();
 
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || ctx.ip || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note_updated',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+      updated_fields: [
+        title !== undefined && 'title',
+        content !== undefined && 'content',
+        folder_id !== undefined && 'folder_id',
+      ].filter(Boolean),
+    },
+  });
+
   ctx.body = note;
 });
 
@@ -155,12 +220,29 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
+  const note = notes[index];
   notes.splice(index, 1);
+
+  const distinctId = ctx.headers['x-posthog-distinct-id'] || ctx.ip || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note_deleted',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+    },
+  });
+
   ctx.status = 204;
 });
 
 app.use(router.routes());
 app.use(router.allowedMethods());
+
+app.on('error', (err, ctx) => {
+  const distinctId = ctx?.headers?.['x-posthog-distinct-id'] || ctx?.ip || 'anonymous';
+  posthog.captureException(err, distinctId);
+});
 
 const PORT = process.env.PORT || 3003;
 
