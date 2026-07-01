@@ -185,13 +185,6 @@ runs:
       shell: bash
       env:
         POSTHOG_SHA: ${{ steps.resolve.outputs.posthog_sha }}
-        # PostHog's pnpm-workspace.yaml sets `trustPolicy: no-downgrade`, which
-        # in pnpm 10.29+ aborts install with ERR_PNPM_TRUST_DOWNGRADE whenever
-        # an upstream dep's newest release has weaker provenance than an earlier
-        # one (currently @swc/core@1.11.4). pnpm's own default is `off`; env
-        # overrides pnpm-workspace.yaml, so this just restores the default for
-        # our ephemeral build without touching the upstream config.
-        PNPM_CONFIG_TRUST_POLICY: 'off'
       run: |
         echo "::group::Fetching PostHog monorepo at $POSTHOG_SHA"
         rm -rf "$HOME/posthog"
@@ -217,12 +210,7 @@ runs:
         # PostCSS tooling lives at the workspace root, not in @posthog/mcp, so
         # add it after the filtered install. --ignore-scripts keeps this step
         # from rebuilding any native addons it may relink.
-        # --config.trust-policy=off is duplicated on the CLI because pnpm 10.29
-        # doesn't seem to honor PNPM_CONFIG_TRUST_POLICY for `pnpm add`'s
-        # resolution pass (the earlier --frozen-lockfile install skipped
-        # resolution entirely, so it didn't need the override). CLI flag beats
-        # env beats file, so this is the surest way to disable the check.
-        pnpm add -Dw --ignore-scripts --config.trust-policy=off autoprefixer postcss-preset-env cssnano
+        pnpm add -Dw --ignore-scripts autoprefixer postcss-preset-env cssnano
         echo "::endgroup::"
 
         echo "::group::Building MCP UI apps"
