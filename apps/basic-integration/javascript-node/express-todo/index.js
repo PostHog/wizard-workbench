@@ -1,7 +1,13 @@
 const express = require('express');
+const { PostHog } = require('posthog-node');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 app.use(express.json());
 
@@ -21,6 +27,17 @@ app.post('/api/todos', (req, res) => {
 
   const todo = { id: nextId++, title, completed: false };
   todos.push(todo);
+
+  const distinctId = req.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'todo_created',
+    properties: {
+      todo_id: todo.id,
+      todo_title: todo.title,
+    },
+  });
+
   res.status(201).json(todo);
 });
 
@@ -31,8 +48,31 @@ app.patch('/api/todos/:id', (req, res) => {
     return res.status(404).json({ error: 'Not found' });
   }
 
+  const wasCompleted = todo.completed;
   if (req.body.title !== undefined) todo.title = req.body.title;
   if (req.body.completed !== undefined) todo.completed = req.body.completed;
+
+  const distinctId = req.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'todo_updated',
+    properties: {
+      todo_id: todo.id,
+      todo_title: todo.title,
+      todo_completed: todo.completed,
+    },
+  });
+
+  if (!wasCompleted && todo.completed) {
+    posthog.capture({
+      distinctId,
+      event: 'todo_completed',
+      properties: {
+        todo_id: todo.id,
+        todo_title: todo.title,
+      },
+    });
+  }
 
   res.json(todo);
 });
@@ -44,8 +84,38 @@ app.delete('/api/todos/:id', (req, res) => {
     return res.status(404).json({ error: 'Not found' });
   }
 
-  todos.splice(index, 1);
+  const [deleted] = todos.splice(index, 1);
+
+  const distinctId = req.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'todo_deleted',
+    properties: {
+      todo_id: deleted.id,
+      todo_title: deleted.title,
+    },
+  });
+
   res.status(204).send();
+});
+
+app.use((err, req, res, next) => {
+  const distinctId = req.headers['x-posthog-distinct-id'] || 'anonymous';
+  posthog.captureException(err, distinctId, {
+    path: req.path,
+    method: req.method,
+  });
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
 });
 
 app.listen(PORT, () => {
