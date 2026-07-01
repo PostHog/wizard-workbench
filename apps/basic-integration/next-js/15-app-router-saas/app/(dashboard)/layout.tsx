@@ -15,6 +15,7 @@ import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -23,7 +24,12 @@ function UserMenu() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const router = useRouter();
 
+  if (user) {
+    posthog.identify(user.id.toString(), { email: user.email, name: user.name ?? undefined });
+  }
+
   async function handleSignOut() {
+    posthog.reset();
     await signOut();
     mutate('/api/user');
     router.push('/');
