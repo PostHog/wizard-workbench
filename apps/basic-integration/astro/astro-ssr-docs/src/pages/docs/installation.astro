@@ -1,7 +1,30 @@
 ---
 import DocsLayout from '../../layouts/DocsLayout.astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 const renderTime = new Date().toISOString();
+
+const cookieHeader = Astro.request.headers.get('cookie') || '';
+const tokenCookieName = `ph_${import.meta.env.POSTHOG_PROJECT_TOKEN}_posthog`;
+const cookieMatch = cookieHeader.match(new RegExp(`${tokenCookieName}=([^;]+)`));
+let distinctId: string;
+try {
+  distinctId = cookieMatch ? JSON.parse(decodeURIComponent(cookieMatch[1])).distinct_id : crypto.randomUUID();
+} catch {
+  distinctId = crypto.randomUUID();
+}
+
+const sessionId = cookieHeader.match(/ph_.*_posthog_session_id=([^;]+)/)?.[1];
+
+const posthog = getPostHogServer();
+posthog.capture({
+  distinctId,
+  event: 'installation_docs_viewed',
+  properties: {
+    $session_id: sessionId || undefined,
+    page: '/docs/installation',
+  },
+});
 ---
 
 <DocsLayout title="Installation">

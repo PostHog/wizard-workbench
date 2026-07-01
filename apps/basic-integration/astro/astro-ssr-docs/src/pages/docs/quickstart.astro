@@ -1,7 +1,30 @@
 ---
 import DocsLayout from '../../layouts/DocsLayout.astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 const renderTime = new Date().toISOString();
+
+const cookieHeader = Astro.request.headers.get('cookie') || '';
+const tokenCookieName = `ph_${import.meta.env.POSTHOG_PROJECT_TOKEN}_posthog`;
+const cookieMatch = cookieHeader.match(new RegExp(`${tokenCookieName}=([^;]+)`));
+let distinctId: string;
+try {
+  distinctId = cookieMatch ? JSON.parse(decodeURIComponent(cookieMatch[1])).distinct_id : crypto.randomUUID();
+} catch {
+  distinctId = crypto.randomUUID();
+}
+
+const sessionId = cookieHeader.match(/ph_.*_posthog_session_id=([^;]+)/)?.[1];
+
+const posthog = getPostHogServer();
+posthog.capture({
+  distinctId,
+  event: 'quickstart_docs_viewed',
+  properties: {
+    $session_id: sessionId || undefined,
+    page: '/docs/quickstart',
+  },
+});
 ---
 
 <DocsLayout title="Quick Start">
@@ -49,7 +72,7 @@ console.log('Extracted data:', document.data);</code></pre>
 {'}'}</code></pre>
 
   <h2>What's Next?</h2>
-  <ul>
+  <ul id="quickstart-next-steps">
     <li>Learn about <a href="/docs/workflows">Workflow Automation</a></li>
     <li>Explore the full <a href="/docs/api">API Reference</a></li>
     <li>Set up <a href="/docs/api/authentication">Authentication</a> for production</li>
@@ -59,3 +82,16 @@ console.log('Extracted data:', document.data);</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('#quickstart-next-steps a').forEach(function (link) {
+      link.addEventListener('click', function () {
+        window.posthog?.capture('quickstart_next_step_clicked', {
+          destination: link.getAttribute('href'),
+          link_text: link.textContent?.trim(),
+        });
+      });
+    });
+  });
+</script>
