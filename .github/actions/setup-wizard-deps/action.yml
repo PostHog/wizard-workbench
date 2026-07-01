@@ -185,14 +185,6 @@ runs:
       shell: bash
       env:
         POSTHOG_SHA: ${{ steps.resolve.outputs.posthog_sha }}
-        # pnpm 10.29 added a supply-chain revalidation pass that aborts install
-        # with ERR_PNPM_TRUST_DOWNGRADE when a transitive dep's newest version
-        # has weaker trust evidence (e.g. missing provenance) than an earlier
-        # one. We're building PostHog upstream at a pinned SHA with its own
-        # committed lockfile, so "trust the lockfile" is the correct semantics —
-        # pinning the policy narrower (trustPolicyExclude) would need updating
-        # every time a different package upstream trips the same check.
-        PNPM_CONFIG_TRUST_LOCKFILE: 'true'
       run: |
         echo "::group::Fetching PostHog monorepo at $POSTHOG_SHA"
         rm -rf "$HOME/posthog"
