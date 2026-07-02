@@ -176,19 +176,21 @@ export function runE2e(opts: E2eOptions): number {
     /* harness crashed before writing */
   }
 
-  // The integration flow ends at keep-skills/skillsComplete; other programs
-  // (e.g. self-driving) end at their own outro, so assert against that instead.
+  // The integration flow ends at keep-skills/skillsComplete and its whole point
+  // is instrumenting the SDK, so it asserts a posthog dep landed. Other programs
+  // (e.g. self-driving) succeed by reaching their own outro and don't add a dep,
+  // so they don't assert one.
   const isIntegration = !opts.program || opts.program === "posthog-integration";
   const programChecks: Array<[string, boolean]> = isIntegration
     ? [
         ["full interactive flow reached keep-skills", !!result?.screenPath?.includes("keep-skills")],
         ["skillsComplete", result?.skillsComplete === true],
+        ["posthog dependency added or .env written", !!result?.hasPosthogDep || !!result?.envFile],
       ]
     : [["reached the outro", !!result?.screenPath?.includes("outro")]];
   const checks: Array<[string, boolean]> = result
     ? [
         ["agent run completed", result.runPhase === "completed"],
-        ["posthog dependency added or .env written", !!result.hasPosthogDep || !!result.envFile],
         ...programChecks,
       ]
     : [["harness produced a structured result", false]];
