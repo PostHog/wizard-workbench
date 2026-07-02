@@ -3,7 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
-import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
+import {
+  DEMO_TOKEN,
+  isDemoMode,
+  demoPermissions,
+} from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   signInSuccess,
@@ -20,7 +25,12 @@ export function* init() {
     yield put(signInSuccess(token));
     // Grant permissions immediately in demo mode
     if (isDemoMode(token)) {
-      yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
+      yield put(
+        getPermissionsSuccess(
+          demoPermissions.roles,
+          demoPermissions.permissions
+        )
+      );
     }
   }
 
@@ -34,15 +44,21 @@ export function* init() {
 }
 
 export function* signIn({ payload }) {
+  const { email, password } = payload;
   try {
-    const { email, password } = payload;
-
     // Demo mode - login with demo@test.com / demo
     if (email === 'demo@test.com' && password === 'demo') {
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
       yield put(signInSuccess(DEMO_TOKEN));
       // Grant all permissions immediately in demo mode
-      yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
+      yield put(
+        getPermissionsSuccess(
+          demoPermissions.roles,
+          demoPermissions.permissions
+        )
+      );
+      posthog.identify(email, { $set: { email } });
+      posthog.capture('user_signed_in', { email, is_demo: true });
       toast.showSuccess('Welcome to demo mode!');
       NavigationService.navigate('Main');
       return;
@@ -53,21 +69,27 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+    posthog.identify(email, { $set: { email } });
+    posthog.capture('user_signed_in', { email, is_demo: false });
     NavigationService.navigate('Main');
   } catch (err) {
+    posthog.capture('sign_in_failed', { email });
+    posthog.captureException(err);
     toast.showError('Invalid credentials');
   }
 }
 
 export function* signOut() {
+  posthog.capture('user_signed_out');
+  posthog.reset();
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
 
 export function* getPermissions() {
-  const team = yield select(state => state.teams.active);
-  const signedIn = yield select(state => state.auth.signedIn);
-  const token = yield select(state => state.auth.token);
+  const team = yield select((state) => state.teams.active);
+  const signedIn = yield select((state) => state.auth.signedIn);
+  const token = yield select((state) => state.auth.token);
 
   if (!signedIn || !team) {
     return;
@@ -75,7 +97,9 @@ export function* getPermissions() {
 
   // Demo mode - grant full admin permissions
   if (isDemoMode(token)) {
-    yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
+    yield put(
+      getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions)
+    );
     return;
   }
 
