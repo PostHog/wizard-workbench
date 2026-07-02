@@ -72,7 +72,8 @@
               "buildTarget": "angular-boilerplate:build:production"
             },
             "development": {
-              "buildTarget": "angular-boilerplate:build:development"
+              "buildTarget": "angular-boilerplate:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"
