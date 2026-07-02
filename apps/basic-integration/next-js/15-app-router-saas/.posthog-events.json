@@ -1,0 +1,82 @@
+[
+  {
+    "event_name": "auth_submitted",
+    "event_description": "User submitted the authentication form indicating sign-in or sign-up intent.",
+    "file": "app/(login)/login.tsx"
+  },
+  {
+    "event_name": "sign_in_succeeded",
+    "event_description": "User successfully signed in.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "sign_in_failed",
+    "event_description": "Sign in attempt failed due to invalid credentials.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "sign_up_succeeded",
+    "event_description": "User account created successfully.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "sign_up_failed",
+    "event_description": "User signup failed due to existing account or validation error.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "checkout_clicked",
+    "event_description": "User clicked Get Started on pricing to begin checkout.",
+    "file": "app/(dashboard)/pricing/submit-button.tsx"
+  },
+  {
+    "event_name": "checkout_started",
+    "event_description": "Server initiated Stripe checkout session.",
+    "file": "lib/payments/actions.ts"
+  },
+  {
+    "event_name": "checkout_completed",
+    "event_description": "Stripe checkout completed and subscription IDs saved.",
+    "file": "app/api/stripe/checkout/route.ts"
+  },
+  {
+    "event_name": "customer_portal_opened",
+    "event_description": "User opened the Stripe customer portal from dashboard.",
+    "file": "lib/payments/actions.ts"
+  },
+  {
+    "event_name": "account_update_submitted",
+    "event_description": "User submitted account profile changes.",
+    "file": "app/(dashboard)/dashboard/general/page.tsx"
+  },
+  {
+    "event_name": "account_updated",
+    "event_description": "User account details updated successfully on server.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "password_updated",
+    "event_description": "User password updated successfully.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "account_deleted",
+    "event_description": "User account deletion completed.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "team_member_invited",
+    "event_description": "A team invitation was sent by an owner.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "team_member_removed",
+    "event_description": "A team member was removed from the team.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "subscription_changed",
+    "event_description": "Stripe subscription was updated or canceled via webhook.",
+    "file": "app/api/stripe/webhook/route.ts"
+  }
+]
