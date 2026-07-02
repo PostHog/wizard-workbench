@@ -221,25 +221,48 @@ jobs:
       - name: Find available apps
         id: find-apps
         run: |
-          # Apps live under apps/{workflow}/{framework}/{app}, where {workflow}
-          # is the `dir` of a manifest entry with `ciCapable: true`.
-          # .wizard-root marks monorepo roots that should not be recursed into.
+          # An app root is the shallowest dir under a ciCapable workflow that has
+          # a .wizard-root marker or contains files directly; a dir of only
+          # subdirectories is a grouping (e.g. basic-integration/next-js) and is
+          # recursed into. Depth-agnostic — finds 3-level layouts
+          # (basic-integration/{framework}/{app}) and 1-level ones
+          # (error-tracking-upload-source-maps/{app}) alike.
           WORKFLOW_DIRS=$(jq -r '.workflows[] | select(.ciCapable == true) | .dir' apps/manifest.json)
+
+          find_apps() {
+            local base=$1 depth=${2:-1}
+            if [ "$depth" -gt 4 ]; then return; fi
+            for d in "$base"/*/; do
+              d=${d%/}
+              [ -d "$d" ] || continue
+              if [ -f "$d/.wizard-root" ] || find "$d" -maxdepth 1 -type f | grep -q .; then
+                echo "${d#apps/}"
+              else
+                find_apps "$d" $((depth + 1))
+              fi
+            done
+          }
+
           APPS=""
           for wf in $WORKFLOW_DIRS; do
             [ -d "apps/$wf" ] || continue
-            while IFS= read -r dir; do
-              if [ -f "$dir/.wizard-root" ]; then
-                APPS="$APPS
-          $(echo "$dir" | sed 's|apps/||')"
-              else
-                for app in "$dir"/*/; do
-                  [ -d "$app" ] && APPS="$APPS
-          $(echo "${app%/}" | sed 's|apps/||')"
-                done
-              fi
-            done < <(find "apps/$wf" -mindepth 1 -maxdepth 1 -type d | sort)
+            APPS="$APPS
+          $(find_apps "apps/$wf")"
           done
+
+          # Submodule apps (audit/*, migrate/*, self-driving/*) are gitlinks the
+          # file-based finder can't see — they're empty until `git submodule
+          # update`, which discovery skips. Add them by path from .gitmodules
+          # (the submodule path IS the app), filtered to ciCapable workflows.
+          if [ -f .gitmodules ]; then
+            while IFS= read -r sm; do
+              rel=${sm#apps/}
+              if echo "$WORKFLOW_DIRS" | grep -qx "${rel%%/*}"; then
+                APPS="$APPS
+          $rel"
+              fi
+            done < <(git config --file .gitmodules --get-regexp path | awk '{print $2}')
+          fi
 
           APPS=$(echo "$APPS" | sed '/^$/d' | sort)
 
