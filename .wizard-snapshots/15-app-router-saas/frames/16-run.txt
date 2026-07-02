@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.37.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Here's the flow.                                           ◼ Load skill menu and install integration skill
+                                                                                           ◼ Configure environment variables
+                                  ┌──────────────────────────────┐                         ◼ Install PostHog package
+                                  │ Your App                     │                         ▶ Creating PostHog files
+                                  │   │ posthog.capture()        │                         ◻ Configure server-side and middleware integration
+                                  │   │  custom events           │                         ◻ Verify and finalize integration
+                                  │   │  custom properties       │
+                                  │   │  person profiles         │                         ⠋ Progress: 3/6 completed
+                                  │   ↓  groups                  │
+                                  │ PostHog SDK                  │
+                                  │   ↓ HTTP                     │
+                                  │ PostHog Cloud                │
+                                  │   ↓ query + visualize        │
+                                  │ Dashboards & Insights        │
+                                  └──────────────────────────────┘
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Agent initialized. Let's get cooking!
+                                ◆ Writing your PostHog setup with events, error capture and more...
+
+                                 Status   Event plan   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status

@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.37.0                                                                    Feedback: wizard@posthog.com 
+
+                                Tips                                                       Tasks
+
+                                ◆ You can also track people and groups with PostHog        ◼ Load skill menu and install integration skill
+                                Events can be associated with the humans who generate      ◼ Configure environment variables
+                                them, letting you understand a specific user or            ◼ Install PostHog package
+                                customer's situation.                                      ◼ Set up PostHog client and provider
+                                                                                           ◼ Configure server-side and middleware integration
+                                ◆ Get way more detail using properties                     ▶ Verifying integration
+                                Events and person records can have any properties you 
+                                want. Track things like how they found your website,       ⠸ Progress: 5/6 completed
+                                what subscription tier they choose, and much more.
+
+                                ◆ Use PostHog in Slack
+                                Connect the PostHog Slack app to analyze data and ship 
+                                product changes — deploy flags, open PRs, run queries — 
+                                just by tagging @PostHog: https://posthog.com/slack
+
+                                ◆ You can track Stripe revenue with PostHog
+                                Add Stripe as a data source while you wait: 
+                                https://app.posthog.com/project/data-warehouse/new-sourc
+                                e?kind=Stripe
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Agent initialized. Let's get cooking!
+                                ◆ Writing your PostHog setup with events, error capture and more...
+
+                                 Status   Event plan   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status

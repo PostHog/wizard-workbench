@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.37.0                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Like trends to measure growth.                             ◼ Load skill menu and install integration skill
+                                                                                           ◼ Configure environment variables
+                                  Trends · user signups (monthly)                          ◼ Install PostHog package
+                                                                                           ◼ Set up PostHog client and provider
+                                  10k ┤                          ╭── 9,575                 ▶ Configuring server integration
+                                      │                         ╭╯                         ◻ Verify and finalize integration
+                                 7.5k ┤                        ╭╯
+                                      │                      ╭─╯                           ⠏ Progress: 4/6 completed
+                                   5k ┤                    ╭─╯
+                                      │                 ╭──╯
+                                 2.5k ┤             ╭───╯
+                                      │      ╭──────╯
+                                    0 ┤──────╯
+                                      └┬─────┬─────┬─────┬─────┬──
+                                       May   Aug   Nov   Feb   May
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Agent initialized. Let's get cooking!
+                                ◆ Writing your PostHog setup with events, error capture and more...
+
+                                 Status   Event plan   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status
