@@ -89,10 +89,6 @@ jobs:
       input_source_repo: ${{ steps.resolve-inputs.outputs.source_repo }}
       input_source_pr_number: ${{ steps.resolve-inputs.outputs.source_pr_number }}
       input_source_pr_url: ${{ steps.resolve-inputs.outputs.source_pr_url }}
-      # Node versions to test, read from the wizard's own CI matrix at the ref
-      # under test — the workbench tracks whatever the wizard supports, no drift.
-      node_versions: ${{ steps.node-matrix.outputs.node_versions }}
-      build_node: ${{ steps.node-matrix.outputs.build_node }}
 
     steps:
       - name: Resolve inputs
@@ -204,31 +200,6 @@ jobs:
           echo "  source_repo: $SOURCE_REPO"
           echo "  source_pr_number: $SOURCE_PR_NUMBER"
           echo "  source_pr_url: $SOURCE_PR_URL"
-
-      - name: Resolve wizard Node matrix
-        id: node-matrix
-        env:
-          WIZARD_REF: ${{ steps.resolve-inputs.outputs.wizard_ref }}
-        run: |
-          # Test the wizard on exactly the Node versions its own CI matrix
-          # declares, at the ref under test — so this stays in lockstep with the
-          # wizard (add a version there and it is covered here) with no drift.
-          # PostHog/wizard is public; resolve the ref to a SHA first so branch
-          # names with slashes still fetch. Fall back to a sane default on any
-          # miss so a bad read never empties the matrix.
-          FALLBACK='["22.22.0", 24]'
-          SHA=$(git ls-remote "https://github.com/PostHog/wizard.git" "$WIZARD_REF" 2>/dev/null | head -1 | cut -f1)
-          [ -z "$SHA" ] && SHA="$WIZARD_REF"
-          RAW=$(curl -fsSL "https://raw.githubusercontent.com/PostHog/wizard/${SHA}/.github/workflows/build.yml" 2>/dev/null || true)
-          NODES=$(printf '%s' "$RAW" | grep -oE "node: \[[^]]*\]" | head -1 | sed -E "s/^node: //; s/'/\"/g")
-          if ! printf '%s' "$NODES" | jq -e 'type == "array" and length > 0' >/dev/null 2>&1; then
-            echo "Could not read wizard Node matrix (got: '${NODES}'); using fallback."
-            NODES="$FALLBACK"
-          fi
-          BUILD_NODE=$(printf '%s' "$NODES" | jq -r '.[-1]')
-          echo "node_versions=$NODES" >> "$GITHUB_OUTPUT"
-          echo "build_node=$BUILD_NODE" >> "$GITHUB_OUTPUT"
-          echo "Wizard Node matrix @ ${WIZARD_REF} (${SHA}): $NODES (build on $BUILD_NODE)"
 
       - name: Generate trigger ID
         id: generate-id
@@ -492,9 +463,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          # Build the dep cache once on the newest supported Node; the cache key
-          # is Node-agnostic (wizard SHA) and the built wizard is portable JS.
-          node-version: ${{ needs.discover.outputs.build_node }}
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
@@ -524,7 +493,6 @@ jobs:
       max-parallel: 10
       matrix:
         app: ${{ fromJson(needs.discover.outputs.apps) }}
-        node: ${{ fromJson(needs.discover.outputs.node_versions) }}
     outputs:
       pr_url: ${{ steps.process-results.outputs.pr_url }}
       pr_number: ${{ steps.process-results.outputs.pr_number }}
@@ -558,7 +526,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: ${{ matrix.node }}
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
