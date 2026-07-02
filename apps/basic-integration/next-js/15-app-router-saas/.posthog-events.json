@@ -1,0 +1,72 @@
+[
+  {
+    "event_name": "user_signed_up",
+    "event_description": "Fires on the server when a new user successfully creates an account.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "user_signed_in",
+    "event_description": "Fires on the server when an existing user signs in successfully.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "user_signed_out",
+    "event_description": "Fires on the server when a user signs out of their account.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "account_updated",
+    "event_description": "Fires on the server when a user updates their account name or email.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "password_updated",
+    "event_description": "Fires on the server when a user successfully changes their password.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "account_deleted",
+    "event_description": "Fires on the server when a user deletes their account — a critical churn signal.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "team_member_invited",
+    "event_description": "Fires on the server when a team owner sends an invitation to a new member.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "team_member_removed",
+    "event_description": "Fires on the server when a team owner removes a member from the team.",
+    "file": "app/(login)/actions.ts"
+  },
+  {
+    "event_name": "checkout_started",
+    "event_description": "Fires on the server when a user initiates a Stripe checkout session.",
+    "file": "lib/payments/actions.ts"
+  },
+  {
+    "event_name": "checkout_completed",
+    "event_description": "Fires on the server when Stripe redirects back and the subscription is activated — the primary revenue conversion event.",
+    "file": "app/api/stripe/checkout/route.ts"
+  },
+  {
+    "event_name": "subscription_updated",
+    "event_description": "Fires on the server via Stripe webhook when a subscription status changes.",
+    "file": "app/api/stripe/webhook/route.ts"
+  },
+  {
+    "event_name": "subscription_canceled",
+    "event_description": "Fires on the server via Stripe webhook when a subscription is deleted/canceled.",
+    "file": "app/api/stripe/webhook/route.ts"
+  },
+  {
+    "event_name": "terminal_commands_copied",
+    "event_description": "Fires client-side when a visitor copies the setup commands from the landing page terminal.",
+    "file": "app/(dashboard)/terminal.tsx"
+  },
+  {
+    "event_name": "manage_subscription_clicked",
+    "event_description": "Fires client-side when a user clicks Manage Subscription to open the Stripe customer portal.",
+    "file": "app/(dashboard)/dashboard/page.tsx"
+  }
+]
