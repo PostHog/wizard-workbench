@@ -1,3 +1,5 @@
+import { usePostHog } from "@posthog/react";
+import { useEffect } from "react";
 import type { ShouldRevalidateFunctionArgs, UIMatch } from "react-router";
 import { data, href, Outlet, redirect, useMatches } from "react-router";
 import { promiseHash } from "remix-utils/promise";
@@ -103,13 +105,22 @@ export default function OrganizationLayoutRoute({
     notificationButtonProps,
     organizationSwitcherProps,
   } = loaderData;
+  const posthog = usePostHog();
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: identify runs once on mount to sync user with PostHog
+  useEffect(() => {
+    posthog?.identify(navUserProps.user.email, {
+      email: navUserProps.user.email,
+      name: navUserProps.user.name,
+    });
+  }, []);
   const breadcrumbs = findBreadcrumbs(
     matches as UIMatch<{ breadcrumb?: { title: string; to: string } }>[],
   );
 
   // Check if we're on a paste detail page
-  const isPasteDetailPage = matches.some(
-    (match) => match.id?.includes("pastes.$pasteId"),
+  const isPasteDetailPage = matches.some((match) =>
+    match.id?.includes("pastes.$pasteId"),
   );
 
   // If it's a paste detail page, render without sidebar

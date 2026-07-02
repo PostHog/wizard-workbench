@@ -12,6 +12,7 @@ import { getInviteInfoForAuthRoutes } from "~/features/organizations/organizatio
 import { uploadUserAvatar } from "~/features/user-accounts/settings/account/account-settings-helpers.server";
 import { updateUserAccountInDatabaseById } from "~/features/user-accounts/user-accounts-model.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { redirectWithToast } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
@@ -25,6 +26,7 @@ export async function onboardingUserAccountAction({
     request,
   });
   const { supabase } = context.get(authContext);
+  const posthog = (context as PostHogContext).posthog;
   const result = await validateFormData(
     request,
     coerceFormValue(onboardingUserAccountSchema),
@@ -48,6 +50,15 @@ export async function onboardingUserAccountAction({
   await updateUserAccountInDatabaseById({
     id: user.id,
     user: { imageUrl, name: result.data.name },
+  });
+
+  posthog?.capture({
+    distinctId: user.id,
+    event: "onboarding_profile_completed",
+    properties: {
+      has_avatar: Boolean(result.data.image),
+      name: result.data.name,
+    },
   });
 
   const { inviteLinkInfo, headers: inviteLinkHeaders } =

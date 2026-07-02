@@ -1,4 +1,5 @@
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { IconMail } from "@tabler/icons-react";
 import { Trans, useTranslation } from "react-i18next";
 import { data, Form, href, Link, useNavigation } from "react-router";
@@ -70,6 +71,7 @@ export default function RegisterRoute({
     keyPrefix: "register",
   });
   const { inviteLinkInfo } = loaderData;
+  const posthog = usePostHog();
 
   const isAwaitingEmailConfirmation =
     getIsAwaitingEmailConfirmation(actionData);
@@ -84,6 +86,18 @@ export default function RegisterRoute({
   const isRegisteringWithGoogle =
     navigation.formData?.get("intent") === REGISTER_WITH_GOOGLE_INTENT;
   const isSubmitting = isRegisteringWithEmail || isRegisteringWithGoogle;
+
+  const handleEmailSignup = (e: React.FormEvent<HTMLFormElement>) => {
+    const email = new FormData(e.currentTarget).get("email") as string;
+    if (email) {
+      posthog?.identify(email, { email });
+      posthog?.capture("user_signed_up", { email, signup_method: "email" });
+    }
+  };
+
+  const handleGoogleSignup = () => {
+    posthog?.capture("user_signed_up", { signup_method: "google" });
+  };
 
   if (isAwaitingEmailConfirmation) {
     return (
@@ -117,7 +131,7 @@ export default function RegisterRoute({
         </div>
 
         {/* Email Registration Form */}
-        <Form method="POST" {...form.props}>
+        <Form method="POST" onSubmit={handleEmailSignup} {...form.props}>
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -161,7 +175,7 @@ export default function RegisterRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Registration Form */}
-        <Form method="POST">
+        <Form method="POST" onSubmit={handleGoogleSignup}>
           <Field>
             <Button
               name="intent"
