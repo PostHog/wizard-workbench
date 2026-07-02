@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import {
@@ -64,6 +65,9 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     .limit(1);
 
   if (userWithTeam.length === 0) {
+    const ph = getPostHogClient();
+    ph.capture({ distinctId: 'unknown', event: 'sign_in_failed', properties: { reason: 'user_not_found' } });
+
     return {
       error: 'Invalid email or password. Please try again.',
       email,
@@ -79,12 +83,19 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   );
 
   if (!isPasswordValid) {
+    const ph = getPostHogClient();
+    ph.capture({ distinctId: String(foundUser.id), event: 'sign_in_failed', properties: { reason: 'invalid_password' } });
+
     return {
       error: 'Invalid email or password. Please try again.',
       email,
       password
     };
   }
+
+  const ph = getPostHogClient();
+  ph.identify({ distinctId: String(foundUser.id), properties: { role: foundUser.role } });
+  ph.capture({ distinctId: String(foundUser.id), event: 'sign_in_succeeded', properties: { team_id: foundTeam?.id ?? null } });
 
   await Promise.all([
     setSession(foundUser),
@@ -116,6 +127,9 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     .limit(1);
 
   if (existingUser.length > 0) {
+    const ph = getPostHogClient();
+    ph.capture({ distinctId: 'unknown', event: 'sign_up_failed', properties: { reason: 'existing_user' } });
+
     return {
       error: 'Failed to create user. Please try again.',
       email,
@@ -134,6 +148,9 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   const [createdUser] = await db.insert(users).values(newUser).returning();
 
   if (!createdUser) {
+    const ph = getPostHogClient();
+    ph.capture({ distinctId: 'unknown', event: 'sign_up_failed', properties: { reason: 'create_user_failed' } });
+
     return {
       error: 'Failed to create user. Please try again.',
       email,
@@ -176,6 +193,8 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
         .where(eq(teams.id, teamId))
         .limit(1);
     } else {
+      const ph = getPostHogClient();
+      ph.capture({ distinctId: 'unknown', event: 'sign_up_failed', properties: { reason: 'invalid_invitation' } });
       return { error: 'Invalid or expired invitation.', email, password };
     }
   } else {
@@ -205,6 +224,10 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     teamId: teamId,
     role: userRole
   };
+
+  const ph = getPostHogClient();
+  ph.identify({ distinctId: String(createdUser.id), properties: { role: userRole } });
+  ph.capture({ distinctId: String(createdUser.id), event: 'sign_up_succeeded', properties: { team_id: teamId } });
 
   await Promise.all([
     db.insert(teamMembers).values(newTeamMember),
@@ -282,6 +305,9 @@ export const updatePassword = validatedActionWithUser(
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PASSWORD)
     ]);
 
+    const ph = getPostHogClient();
+    ph.capture({ distinctId: String(user.id), event: 'password_updated' });
+
     return {
       success: 'Password updated successfully.'
     };
@@ -333,6 +359,9 @@ export const deleteAccount = validatedActionWithUser(
         );
     }
 
+    const ph = getPostHogClient();
+    ph.capture({ distinctId: String(user.id), event: 'account_deleted' });
+
     (await cookies()).delete('session');
     redirect('/sign-in');
   }
@@ -353,6 +382,9 @@ export const updateAccount = validatedActionWithUser(
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
+
+    const ph = getPostHogClient();
+    ph.capture({ distinctId: String(user.id), event: 'account_updated' });
 
     return { name, success: 'Account updated successfully.' };
   }
@@ -386,6 +418,9 @@ export const removeTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.REMOVE_TEAM_MEMBER
     );
+
+    const ph = getPostHogClient();
+    ph.capture({ distinctId: String(user.id), event: 'team_member_removed', properties: { team_id: userWithTeam.teamId, member_id: memberId } });
 
     return { success: 'Team member removed successfully' };
   }
@@ -450,6 +485,9 @@ export const inviteTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+
+    const ph = getPostHogClient();
+    ph.capture({ distinctId: String(user.id), event: 'team_member_invited', properties: { team_id: userWithTeam.teamId, role } });
 
     // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
     // await sendInvitationEmail(email, userWithTeam.team.name, role)

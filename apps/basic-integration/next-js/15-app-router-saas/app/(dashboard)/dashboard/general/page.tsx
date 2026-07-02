@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -89,7 +90,15 @@ export default function GeneralPage() {
           <CardTitle>Account Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" action={formAction}>
+          <form
+            className="space-y-4"
+            action={formAction}
+            onSubmit={() => {
+              try {
+                posthog.capture('account_update_submitted');
+              } catch {}
+            }}
+          >
             <Suspense fallback={<AccountForm state={state} />}>
               <AccountFormWithData state={state} />
             </Suspense>
