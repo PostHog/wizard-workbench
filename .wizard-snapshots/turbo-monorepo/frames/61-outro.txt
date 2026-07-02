@@ -1,0 +1,20 @@
+                               PostHog Wizard v2.37.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Self-driving is on. PostHog is scanning your project — first findings hit your inbox within ~30 minutes.
+
+                               Your Self-driving inbox: https://us.posthog.com/project/483112/inbox
+
+                               In your inbox you can:
+                               • Review the findings PostHog surfaces
+                               • Triage what matters and dismiss the noise
+                               • Kick off fixes and open issues
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1792537?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-self-driving-report.md for details
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

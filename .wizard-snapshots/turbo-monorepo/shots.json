@@ -1,0 +1,246 @@
+[
+  {
+    "frame": "01-self-driving-intro.txt",
+    "file": "01-self-driving-intro.png"
+  },
+  {
+    "frame": "02-self-driving-integration-check.txt",
+    "file": "02-self-driving-integration-check.png"
+  },
+  {
+    "frame": "03-self-driving-integration-check.txt",
+    "file": "03-self-driving-integration-check.png"
+  },
+  {
+    "frame": "04-auth.txt",
+    "file": "04-auth.png"
+  },
+  {
+    "frame": "05-run.txt",
+    "file": "05-run.png"
+  },
+  {
+    "frame": "06-run.txt",
+    "file": "06-run.png"
+  },
+  {
+    "frame": "07-run.txt",
+    "file": "07-run.png"
+  },
+  {
+    "frame": "08-run.txt",
+    "file": "08-run.png"
+  },
+  {
+    "frame": "09-run.txt",
+    "file": "09-run.png"
+  },
+  {
+    "frame": "10-run.txt",
+    "file": "10-run.png"
+  },
+  {
+    "frame": "11-run.txt",
+    "file": "11-run.png"
+  },
+  {
+    "frame": "12-run.txt",
+    "file": "12-run.png"
+  },
+  {
+    "frame": "13-run.txt",
+    "file": "13-run.png"
+  },
+  {
+    "frame": "14-run.txt",
+    "file": "14-run.png"
+  },
+  {
+    "frame": "15-run.txt",
+    "file": "15-run.png"
+  },
+  {
+    "frame": "16-run.txt",
+    "file": "16-run.png"
+  },
+  {
+    "frame": "17-run.txt",
+    "file": "17-run.png"
+  },
+  {
+    "frame": "18-run.txt",
+    "file": "18-run.png"
+  },
+  {
+    "frame": "19-run.txt",
+    "file": "19-run.png"
+  },
+  {
+    "frame": "20-run.txt",
+    "file": "20-run.png"
+  },
+  {
+    "frame": "21-run.txt",
+    "file": "21-run.png"
+  },
+  {
+    "frame": "22-run.txt",
+    "file": "22-run.png"
+  },
+  {
+    "frame": "23-run.txt",
+    "file": "23-run.png"
+  },
+  {
+    "frame": "24-run.txt",
+    "file": "24-run.png"
+  },
+  {
+    "frame": "25-run.txt",
+    "file": "25-run.png"
+  },
+  {
+    "frame": "26-run.txt",
+    "file": "26-run.png"
+  },
+  {
+    "frame": "27-self-driving-handoff.txt",
+    "file": "27-self-driving-handoff.png"
+  },
+  {
+    "frame": "28-run.txt",
+    "file": "28-run.png"
+  },
+  {
+    "frame": "29-run.txt",
+    "file": "29-run.png"
+  },
+  {
+    "frame": "30-run.txt",
+    "file": "30-run.png"
+  },
+  {
+    "frame": "31-run.txt",
+    "file": "31-run.png"
+  },
+  {
+    "frame": "32-run.txt",
+    "file": "32-run.png"
+  },
+  {
+    "frame": "33-run.txt",
+    "file": "33-run.png"
+  },
+  {
+    "frame": "34-run.txt",
+    "file": "34-run.png"
+  },
+  {
+    "frame": "35-run.txt",
+    "file": "35-run.png"
+  },
+  {
+    "frame": "36-run.txt",
+    "file": "36-run.png"
+  },
+  {
+    "frame": "37-run.txt",
+    "file": "37-run.png"
+  },
+  {
+    "frame": "38-run.txt",
+    "file": "38-run.png"
+  },
+  {
+    "frame": "39-run.txt",
+    "file": "39-run.png"
+  },
+  {
+    "frame": "40-run.txt",
+    "file": "40-run.png"
+  },
+  {
+    "frame": "41-run.txt",
+    "file": "41-run.png"
+  },
+  {
+    "frame": "42-run.txt",
+    "file": "42-run.png"
+  },
+  {
+    "frame": "43-run.txt",
+    "file": "43-run.png"
+  },
+  {
+    "frame": "44-wizard-ask.txt",
+    "file": "44-wizard-ask.png"
+  },
+  {
+    "frame": "45-run.txt",
+    "file": "45-run.png"
+  },
+  {
+    "frame": "46-run.txt",
+    "file": "46-run.png"
+  },
+  {
+    "frame": "47-run.txt",
+    "file": "47-run.png"
+  },
+  {
+    "frame": "48-run.txt",
+    "file": "48-run.png"
+  },
+  {
+    "frame": "49-run.txt",
+    "file": "49-run.png"
+  },
+  {
+    "frame": "50-run.txt",
+    "file": "50-run.png"
+  },
+  {
+    "frame": "51-run.txt",
+    "file": "51-run.png"
+  },
+  {
+    "frame": "52-wizard-ask.txt",
+    "file": "52-wizard-ask.png"
+  },
+  {
+    "frame": "53-run.txt",
+    "file": "53-run.png"
+  },
+  {
+    "frame": "54-run.txt",
+    "file": "54-run.png"
+  },
+  {
+    "frame": "55-run.txt",
+    "file": "55-run.png"
+  },
+  {
+    "frame": "56-run.txt",
+    "file": "56-run.png"
+  },
+  {
+    "frame": "57-run.txt",
+    "file": "57-run.png"
+  },
+  {
+    "frame": "58-run.txt",
+    "file": "58-run.png"
+  },
+  {
+    "frame": "59-run.txt",
+    "file": "59-run.png"
+  },
+  {
+    "frame": "60-run.txt",
+    "file": "60-run.png"
+  },
+  {
+    "frame": "61-outro.txt",
+    "file": "61-outro.png"
+  }
+]

@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.37.0                                                                    Feedback: wizard@posthog.com 
+
+                                Tips                                                       Tasks
+
+                                ◆ What's a signal source?                                  ◼ Check Self-driving access
+                                A signal source is one of the streams PostHog plugs        ◼ Read project and current Self-driving state
+                                straight into — your errors, session replays, support,     ◼ Connect GitHub (required)
+                                GitHub or Linear issues. Each one watches its own stream   ◼ Enable products (replay, error tracking, support)
+                                 and speaks up the moment something specific goes wrong    ◼ Enable signal sources
+                                there.                                                     ▶ Offering issue-tracker integrations
+                                                                                           ◻ Configure the scout troop
+                                ◆ What's a scout?                                          ◻ Design custom scouts
+                                A scout is like an analyst PostHog runs for you on a       ◻ Write report and hand off
+                                schedule: rather than watching one stream, it ranges 
+                                freely across your product data, looking for the bigger    ⠏ Progress: 5/9 completed
+                                trends and surprises — a spike in errors, a funnel 
+                                quietly dropping — that no single stream would catch.
+
+                                ◆ Findings land in your inbox
+                                Once setup finishes, PostHog starts scanning within ~30 
+                                minutes and surfaces what it finds in your Self-driving 
+                                inbox — grouped, researched, and ready to act on.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Enabling signal sources
+                                ◆ Offering issue-tracker integrations
+
+                                 Status   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status

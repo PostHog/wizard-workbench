@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.37.0                                                                    Feedback: wizard@posthog.com 
+
+                                Tips                                                       Tasks
+
+                                ◆ What's a signal source?                                  ◼ Plan event tracking
+                                A signal source is one of the streams PostHog plugs        ◼ Install PostHog
+                                straight into — your errors, session replays, support,     ◼ Capture events
+                                GitHub or Linear issues. Each one watches its own stream   ▶ Identify users
+                                 and speaks up the moment something specific goes wrong    ◻ Validate and revise integration
+                                there.                                                     ◻ Create PostHog dashboard
+
+                                ◆ What's a scout?                                          ⠴ Progress: 3/6 completed
+                                A scout is like an analyst PostHog runs for you on a 
+                                schedule: rather than watching one stream, it ranges 
+                                freely across your product data, looking for the bigger 
+                                trends and surprises — a spike in errors, a funnel 
+                                quietly dropping — that no single stream would catch.
+
+                                ◆ Findings land in your inbox
+                                Once setup finishes, PostHog starts scanning within ~30 
+                                minutes and surfaces what it finds in your Self-driving 
+                                inbox — grouped, researched, and ready to act on.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Editing src/app/index.tsx — adding sign-in, sign-out, post create, and post delete events.
+                                ◆ Editing src/app/post/[id].tsx — adding post_viewed event.
+
+                                 Status   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status

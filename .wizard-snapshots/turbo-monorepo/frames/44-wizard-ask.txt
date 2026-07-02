@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.37.0                                                                    Feedback: wizard@posthog.com 
+
+
+
+
+
+
+
+
+
+
+
+
+                                                      ╭──────────────────────────────────────────────────────────────────────╮
+                                                      │                                                                      │
+                                                      │                         ◆ self-driving-setup                         │
+                                                      │                                                                      │
+                                                      │   Self-driving needs GitHub access to investigate findings in your   │
+                                                      │    code and open fixes — setup can't finish without it.              │
+                                                      │                                                                      │
+                                                      │   Open this link to install the PostHog GitHub App in one click,     │
+                                                      │   then approve access. Grant it the repos you want Self-driving to   │
+                                                      │    work with — include this project's repo so step 5 can also        │
+                                                      │   watch its issues:                                                  │
+                                                      │                                                                      │
+                                                      │   https://us.posthog.com/api/environments/483112/integrat…           │
+                                                      │                                                                      │
+                                                      │   Press o to open it in your browser, or c to copy the link.         │
+                                                      │                                                                      │
+                                                      │   Then come back here.                                               │
+                                                      │                                                                      │
+                                                      │                                                                      │
+                                                      │   ▸ Done — I've installed it                                         │
+                                                      │     I can't connect right now                                        │
+                                                      │                                                                      │
+                                                      ╰──────────────────────────────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+                                ↑↓ navigate  o open in browser  c copy link  enter select

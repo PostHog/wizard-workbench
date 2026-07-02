@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.37.0                                                                    Feedback: wizard@posthog.com 
+
+                               No PostHog integration found
+
+                               We didn't find an existing PostHog integration in your project. Before you can self-drive, you'll need to integrate 
+                               PostHog into your project to capture events and generate signals.
+
+                                
+                               ▸ Set up PostHog [Enter]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                ↑↓ navigate  enter select
