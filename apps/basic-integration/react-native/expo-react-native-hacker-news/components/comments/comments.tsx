@@ -1,7 +1,8 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { FlatList, ListRenderItem, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePostHog } from "posthog-react-native";
 
 import { Spinner } from "@/components/Spinner";
 import { Comment } from "@/components/comments/comment";
@@ -15,6 +16,8 @@ type Props = Pick<Item, "id" | "kids"> & {
 };
 
 export const Comments = ({ id, kids, children }: Props) => {
+  const posthog = usePostHog();
+  const pageRef = useRef(0);
   const { bottom } = useSafeAreaInsets();
   const { data, hasNextPage, isLoading, isFetchingNextPage, fetchNextPage } =
     useInfiniteQuery({
@@ -57,7 +60,14 @@ export const Comments = ({ id, kids, children }: Props) => {
       data={comments}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage) {
+          pageRef.current += 1;
+          posthog.capture("comments_paginated", {
+            item_id: id,
+            page: pageRef.current,
+          });
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}

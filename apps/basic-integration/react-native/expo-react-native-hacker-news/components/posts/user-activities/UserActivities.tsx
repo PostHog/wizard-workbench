@@ -1,7 +1,8 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { FlatList, ListRenderItem, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePostHog } from "posthog-react-native";
 
 import { Post } from "@/components/posts/Post";
 import { Spinner } from "@/components/Spinner";
@@ -16,6 +17,8 @@ type Props = Pick<User, "id" | "submitted"> & {
 };
 
 export const Activities = ({ id, submitted, children }: Props) => {
+  const posthog = usePostHog();
+  const pageRef = useRef(0);
   const { bottom } = useSafeAreaInsets();
   const { data, hasNextPage, isLoading, isFetchingNextPage, fetchNextPage } =
     useInfiniteQuery({
@@ -58,7 +61,14 @@ export const Activities = ({ id, submitted, children }: Props) => {
       data={activities}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage) {
+          pageRef.current += 1;
+          posthog.capture("user_activities_paginated", {
+            user_id: id,
+            page: pageRef.current,
+          });
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}
