@@ -1,4 +1,10 @@
 @php
+    $posthog = app(\App\Services\PostHogService::class);
+    $distinctId = auth()->check() ? auth()->user()->email : request()->session()->getId();
+    $posthog->capture($distinctId, 'pricing_page_viewed', [
+        'url' => request()->fullUrl(),
+    ]);
+
     $tiers = [
         [
             'name' => 'Starter',
