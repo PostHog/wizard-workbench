@@ -117,6 +117,18 @@ export function runE2e(opts: E2eOptions): number {
     console.error("✖ project id required: --project-id or POSTHOG_WIZARD_PROJECT_ID.");
     return 2;
   }
+  // The source-maps run answers the agent's "api-key" ask with this key (a
+  // personal API key with the "Source map upload" preset). Without it the host
+  // would fall back to the generic sentinel answer and write a junk key to the
+  // fixture's .env — fail fast instead. Forwarded via childEnv's process.env
+  // spread below.
+  if (opts.program === "error-tracking-upload-source-maps" && !process.env.SOURCE_MAPS_CLI_KEY) {
+    console.error(
+      "✖ SOURCE_MAPS_CLI_KEY is required for the upload-source-maps e2e " +
+        "(a personal API key created with the 'Source map upload' preset).",
+    );
+    return 2;
+  }
 
   const appSrc = join(APPS_DIR, app);
   if (!existsSync(appSrc)) {
@@ -176,10 +188,14 @@ export function runE2e(opts: E2eOptions): number {
     /* harness crashed before writing */
   }
 
-  // The integration flow ends at keep-skills/skillsComplete; other programs
-  // (e.g. self-driving) end at their own outro, so assert against that instead.
-  const isIntegration = !opts.program || opts.program === "posthog-integration";
-  const programChecks: Array<[string, boolean]> = isIntegration
+  // Programs that end at keep-skills (integration, source-maps) assert
+  // skillsComplete; programs whose outro is terminal (self-driving) assert the
+  // outro was reached instead.
+  const endsAtKeepSkills =
+    !opts.program ||
+    opts.program === "posthog-integration" ||
+    opts.program === "error-tracking-upload-source-maps";
+  const programChecks: Array<[string, boolean]> = endsAtKeepSkills
     ? [
         ["full interactive flow reached keep-skills", !!result?.screenPath?.includes("keep-skills")],
         ["skillsComplete", result?.skillsComplete === true],

@@ -55,7 +55,7 @@
       "dir": "error-tracking-upload-source-maps",
       "label": "Upload Source Maps",
       "description": "Wire up PostHog Error Tracking source-map upload",
-      "ciCapable": false
+      "ciCapable": true
     }
   ]
 }
