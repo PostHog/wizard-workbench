@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -11,11 +12,23 @@ interface ContactFormData {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  const posthog = getPostHogServer();
+  const sessionId = request.headers.get('X-PostHog-Session-Id') || undefined;
+  const distinctId = request.headers.get('X-PostHog-Distinct-Id') || 'anonymous';
+
   try {
     const data: ContactFormData = await request.json();
 
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_validation_failed',
+        properties: {
+          $session_id: sessionId,
+          reason: 'missing_required_fields',
+        },
+      });
       return new Response(
         JSON.stringify({ error: 'Please fill in all required fields.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -25,6 +38,14 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_validation_failed',
+        properties: {
+          $session_id: sessionId,
+          reason: 'invalid_email',
+        },
+      });
       return new Response(
         JSON.stringify({ error: 'Please enter a valid email address.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -43,6 +64,25 @@ export const POST: APIRoute = async ({ request }) => {
       interest: data.interest,
       message: data.message,
       timestamp: new Date().toISOString(),
+    });
+
+    posthog.identify({
+      distinctId: data.email,
+      properties: {
+        name: data.name,
+        email: data.email,
+        company: data.company,
+      },
+    });
+
+    posthog.capture({
+      distinctId: data.email,
+      event: 'contact_form_received',
+      properties: {
+        $session_id: sessionId,
+        interest: data.interest,
+        has_company: !!data.company,
+      },
     });
 
     return new Response(

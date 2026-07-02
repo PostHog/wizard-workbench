@@ -58,6 +58,7 @@ import Layout from '../layouts/Layout.astro';
 <script>
   const form = document.getElementById('contact-form') as HTMLFormElement;
   const messageDiv = document.getElementById('form-message') as HTMLDivElement;
+  const ph = (window as any).posthog;
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -65,11 +66,20 @@ import Layout from '../layouts/Layout.astro';
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
+    ph?.capture('contact_form_submitted', {
+      interest: data.interest,
+    });
+
+    const sessionId = ph?.get_session_id?.() || null;
+    const distinctId = ph?.get_distinct_id?.() || null;
+
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-PostHog-Session-Id': sessionId || '',
+          'X-PostHog-Distinct-Id': distinctId || '',
         },
         body: JSON.stringify(data),
       });
@@ -77,14 +87,31 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        ph?.identify(data.email as string, {
+          name: data.name as string,
+          email: data.email as string,
+          company: (data.company as string) || undefined,
+        });
+        ph?.capture('contact_form_succeeded', {
+          interest: data.interest,
+        });
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
       } else {
+        ph?.capture('contact_form_errored', {
+          interest: data.interest,
+          error: result.error,
+        });
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
       }
     } catch (error) {
+      ph?.captureException(error);
+      ph?.capture('contact_form_errored', {
+        interest: data.interest,
+        error: 'network_error',
+      });
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
     }
