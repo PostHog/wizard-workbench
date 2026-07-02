@@ -1,4 +1,5 @@
 import { compare, hash } from 'bcryptjs';
+import posthog from 'posthog-js';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { NewUser } from '@/lib/db/schema';
@@ -44,6 +45,8 @@ export async function getSession() {
 }
 
 export async function setSession(user: NewUser) {
+  posthog.capture('user_login', { distinct_id: user.id });
+
   const expiresInOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const session: SessionData = {
     user: { id: user.id! },

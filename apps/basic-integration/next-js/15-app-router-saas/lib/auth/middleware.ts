@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import posthog from 'posthog-js';
 import { TeamDataWithMembers, User } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
@@ -21,6 +22,7 @@ export function validatedAction<S extends z.ZodType<any, any>, T>(
   return async (prevState: ActionState, formData: FormData) => {
     const result = schema.safeParse(Object.fromEntries(formData));
     if (!result.success) {
+      posthog.capture('login_error', { error: result.error.errors[0].message });
       return { error: result.error.errors[0].message };
     }
 

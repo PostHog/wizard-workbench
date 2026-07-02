@@ -4,6 +4,7 @@ import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
+import posthog from 'posthog-js';
 import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
@@ -87,6 +88,16 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date(),
       })
       .where(eq(teams.id, userTeam[0].teamId));
+
+    await posthog.capture(
+      'checkout_completed',
+      {
+        distinct_id: user[0].id,
+        customerId: customerId,
+        subscriptionId: subscriptionId,
+        planName: (plan.product as Stripe.Product).name
+      }
+    );
 
     await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
