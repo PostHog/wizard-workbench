@@ -17,6 +17,9 @@ import {
   invitations
 } from '@/lib/db/schema';
 import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
+import { getPostHogClient } from '@/lib/posthog-server';
+
+// NOTE: Client-side identification and capture happen in client components; server-side captures use getPostHogClient where appropriate
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createCheckoutSession } from '@/lib/payments/stripe';
@@ -90,6 +93,22 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
+
+  try {
+    // Server-side capture for sign in
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: foundUser.id.toString(),
+      event: 'user_signed_in',
+      properties: {
+        email: foundUser.email,
+        teamId: foundTeam?.id ?? null
+      }
+    });
+  } catch (err) {
+    // Non-fatal
+    console.error('Failed to send sign-in event to PostHog', err);
+  }
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -211,6 +230,20 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
     setSession(createdUser)
   ]);
+
+  try {
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: createdUser.id.toString(),
+      event: 'user_signed_up',
+      properties: {
+        email: createdUser.email,
+        teamId: teamId
+      }
+    });
+  } catch (err) {
+    console.error('Failed to send signup event to PostHog', err);
+  }
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -450,6 +483,21 @@ export const inviteTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+
+    try {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: user.id.toString(),
+        event: 'team_member_invited',
+        properties: {
+          invited_email: email,
+          role,
+          teamId: userWithTeam.teamId
+        }
+      });
+    } catch (err) {
+      console.error('Failed to send invite event to PostHog', err);
+    }
 
     // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
     // await sendInvitationEmail(email, userWithTeam.team.name, role)

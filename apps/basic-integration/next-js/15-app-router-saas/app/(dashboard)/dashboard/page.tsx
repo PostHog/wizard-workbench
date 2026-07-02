@@ -269,7 +269,17 @@ function InviteTeamMember() {
   );
 }
 
+import posthog from 'posthog-js';
+
 export default function SettingsPage() {
+  // Capture a page view-like event for dashboard landing
+  try {
+    posthog.capture('user_viewed_dashboard');
+  } catch (err) {
+    // Swallow errors to avoid breaking the page
+    console.error('Failed to capture dashboard view', err);
+  }
+
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium mb-6">Team Settings</h1>
