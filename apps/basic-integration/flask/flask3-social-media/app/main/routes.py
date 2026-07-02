@@ -5,7 +5,8 @@ from flask_login import current_user, login_required
 from flask_babel import _, get_locale
 import sqlalchemy as sa
 from langdetect import detect, LangDetectException
-from app import db
+from posthog import identify_context
+from app import db, posthog_client
 from app.main.forms import EditProfileForm, EmptyForm, PostForm, SearchForm, \
     MessageForm
 from app.models import User, Post, Message, Notification
@@ -36,6 +37,11 @@ def index():
                     language=language)
         db.session.add(post)
         db.session.commit()
+        with posthog_client.new_context(fresh=True):
+            identify_context(str(current_user.id))
+            posthog_client.capture('post_created', distinct_id=str(current_user.id),
+                                   properties={'language': language or 'unknown',
+                                               'post_length': len(form.post.data)})
         flash(_('Your post is now live!'))
         return redirect(url_for('main.index'))
     page = request.args.get('page', 1, type=int)
@@ -102,6 +108,10 @@ def edit_profile():
         current_user.username = form.username.data
         current_user.about_me = form.about_me.data
         db.session.commit()
+        with posthog_client.new_context(fresh=True):
+            identify_context(str(current_user.id))
+            posthog_client.capture('profile_updated', distinct_id=str(current_user.id),
+                                   properties={'has_about_me': bool(current_user.about_me)})
         flash(_('Your changes have been saved.'))
         return redirect(url_for('main.edit_profile'))
     elif request.method == 'GET':
@@ -126,6 +136,10 @@ def follow(username):
             return redirect(url_for('main.user', username=username))
         current_user.follow(user)
         db.session.commit()
+        with posthog_client.new_context(fresh=True):
+            identify_context(str(current_user.id))
+            posthog_client.capture('user_followed', distinct_id=str(current_user.id),
+                                   properties={'followed_user_id': user.id})
         flash(_('You are following %(username)s!', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -147,6 +161,10 @@ def unfollow(username):
             return redirect(url_for('main.user', username=username))
         current_user.unfollow(user)
         db.session.commit()
+        with posthog_client.new_context(fresh=True):
+            identify_context(str(current_user.id))
+            posthog_client.capture('user_unfollowed', distinct_id=str(current_user.id),
+                                   properties={'unfollowed_user_id': user.id})
         flash(_('You are not following %(username)s.', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -170,6 +188,11 @@ def search():
     page = request.args.get('page', 1, type=int)
     posts, total = Post.search(g.search_form.q.data, page,
                                current_app.config['POSTS_PER_PAGE'])
+    with posthog_client.new_context(fresh=True):
+        identify_context(str(current_user.id))
+        posthog_client.capture('search_performed', distinct_id=str(current_user.id),
+                               properties={'query_length': len(g.search_form.q.data),
+                                           'page': page})
     next_url = url_for('main.search', q=g.search_form.q.data, page=page + 1) \
         if total > page * current_app.config['POSTS_PER_PAGE'] else None
     prev_url = url_for('main.search', q=g.search_form.q.data, page=page - 1) \
@@ -190,6 +213,11 @@ def send_message(recipient):
         user.add_notification('unread_message_count',
                               user.unread_message_count())
         db.session.commit()
+        with posthog_client.new_context(fresh=True):
+            identify_context(str(current_user.id))
+            posthog_client.capture('message_sent', distinct_id=str(current_user.id),
+                                   properties={'recipient_id': user.id,
+                                               'message_length': len(form.message.data)})
         flash(_('Your message has been sent.'))
         return redirect(url_for('main.user', username=recipient))
     return render_template('send_message.html', title=_('Send Message'),
@@ -224,6 +252,9 @@ def export_posts():
     else:
         current_user.launch_task('export_posts', _('Exporting posts...'))
         db.session.commit()
+        with posthog_client.new_context(fresh=True):
+            identify_context(str(current_user.id))
+            posthog_client.capture('posts_exported', distinct_id=str(current_user.id))
     return redirect(url_for('main.user', username=current_user.username))
 
 
