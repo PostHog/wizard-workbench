@@ -1,9 +1,8 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Configuration for stable Next.js 15
-  // To enable experimental features like PPR, upgrade to canary:
-  // pnpm add next@canary
+  // Required for PostHog ingestion endpoints that may include trailing slashes
+  skipTrailingSlashRedirect: true,
 };
 
 export default nextConfig;
