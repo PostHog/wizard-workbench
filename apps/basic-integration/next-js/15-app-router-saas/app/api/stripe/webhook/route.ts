@@ -26,6 +26,21 @@ export async function POST(request: NextRequest) {
     case 'customer.subscription.deleted':
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+      try {
+        const { getPostHogClient } = await import('@/lib/posthog-server');
+        const posthog = getPostHogClient();
+        posthog.capture({
+          distinctId: subscription.customer as string,
+          event: 'stripe_webhook_received',
+          properties: {
+            subscriptionId: subscription.id,
+            status: subscription.status,
+            source: 'webhook'
+          }
+        });
+      } catch (err) {
+        console.error('PostHog webhook capture failed', err);
+      }
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);

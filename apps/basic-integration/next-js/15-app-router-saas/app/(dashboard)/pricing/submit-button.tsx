@@ -4,8 +4,20 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
 
+import posthog from '@/app/instrumentation-client';
+
 export function SubmitButton() {
   const { pending } = useFormStatus();
+
+  const handleSubmitAnalytics = () => {
+    try {
+      posthog.capture('pricing_checkout_started', {
+        source: 'client',
+      });
+    } catch (err) {
+      console.error('PostHog capture failed', err);
+    }
+  };
 
   return (
     <Button
@@ -13,6 +25,7 @@ export function SubmitButton() {
       disabled={pending}
       variant="outline"
       className="w-full rounded-full"
+      onClick={handleSubmitAnalytics}
     >
       {pending ? (
         <>
