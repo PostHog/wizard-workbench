@@ -34,6 +34,24 @@ export async function POST(request: NextRequest) {
       completed: validatedData.completed,
     });
 
+    // Server-side capture for todo creation
+    try {
+      const { PostHog } = await import('posthog-node');
+      const client = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, { host: process.env.NEXT_PUBLIC_POSTHOG_HOST });
+      client.capture({
+        distinctId: 'server',
+        event: 'todo_created',
+        properties: {
+          todo_id: newTodo.id,
+          title_length: newTodo.title.length,
+        },
+      });
+      await client.shutdown();
+    } catch (err) {
+      // If posthog-node isn't installed or fails, continue silently
+      console.error('PostHog server capture failed:', err);
+    }
+
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

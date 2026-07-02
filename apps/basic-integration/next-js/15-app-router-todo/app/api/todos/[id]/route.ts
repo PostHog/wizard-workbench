@@ -59,6 +59,23 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    // Server-side capture for todo update
+    try {
+      const { PostHog } = await import('posthog-node');
+      const client = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, { host: process.env.NEXT_PUBLIC_POSTHOG_HOST });
+      client.capture({
+        distinctId: 'server',
+        event: 'todo_toggled',
+        properties: {
+          todo_id: updatedTodo.id,
+          completed: updatedTodo.completed,
+        },
+      });
+      await client.shutdown();
+    } catch (err) {
+      console.error('PostHog server capture failed:', err);
+    }
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -92,6 +109,22 @@ export async function DELETE(
 
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
+    }
+
+    // Server-side capture for todo deletion
+    try {
+      const { PostHog } = await import('posthog-node');
+      const client = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, { host: process.env.NEXT_PUBLIC_POSTHOG_HOST });
+      client.capture({
+        distinctId: 'server',
+        event: 'todo_deleted',
+        properties: {
+          todo_id: todoId,
+        },
+      });
+      await client.shutdown();
+    } catch (err) {
+      console.error('PostHog server capture failed:', err);
     }
 
     return NextResponse.json({ message: 'Todo deleted successfully' });

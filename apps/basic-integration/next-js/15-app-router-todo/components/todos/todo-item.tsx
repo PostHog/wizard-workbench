@@ -20,7 +20,18 @@ export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
           <div className="flex items-start gap-3 flex-1">
             <Checkbox
               checked={todo.completed}
-              onChange={(e) => onToggle(todo.id, e.target.checked)}
+              onChange={(e) => {
+                try {
+                  // eslint-disable-next-line @typescript-eslint/no-var-requires
+                  const posthog = require('posthog-js');
+                  if (posthog && posthog.capture) {
+                    posthog.capture('todo_toggle_clicked', { todo_id: todo.id, completed: e.target.checked });
+                  }
+                } catch (err) {
+                  // continue if posthog isn't available
+                }
+                onToggle(todo.id, e.target.checked);
+              }}
               className="mt-1"
             />
             <div className="flex-1">
@@ -37,7 +48,18 @@ export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onDelete(todo.id)}
+            onClick={() => {
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const posthog = require('posthog-js');
+                if (posthog && posthog.capture) {
+                  posthog.capture('todo_delete_clicked', { todo_id: todo.id });
+                }
+              } catch (err) {
+                // continue if posthog isn't available
+              }
+              onDelete(todo.id);
+            }}
             className="text-destructive hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />

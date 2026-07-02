@@ -15,6 +15,18 @@ export function TodoForm({ onAdd }: TodoFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim()) {
+      // Capture client-side event for form submission
+      try {
+        // posthog is imported dynamically to avoid adding it to global scope when not installed
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const posthog = require('posthog-js');
+        if (posthog && posthog.capture) {
+          posthog.capture('todo_add_clicked', { title_length: title.length });
+        }
+      } catch (err) {
+        // If posthog-js is not installed, silently continue
+      }
+
       onAdd(title, description);
       setTitle('');
       setDescription('');
