@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import {
@@ -86,6 +87,26 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     };
   }
 
+  // Capture server-side sign in event
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: String(foundUser.id),
+    event: 'user_signed_in',
+    properties: {
+      email: foundUser.email,
+      teamId: foundTeam?.id,
+    },
+  });
+
+  // Identify user on server side
+  posthog.identify({
+    distinctId: String(foundUser.id),
+    properties: {
+      email: foundUser.email,
+      name: foundUser.name,
+    },
+  });
+
   await Promise.all([
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
@@ -141,6 +162,17 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     };
   }
 
+  // Capture server-side sign up event
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: String(createdUser.id),
+    event: 'user_signed_up',
+    properties: {
+      email: createdUser.email,
+      source: inviteId ? 'invitation' : 'self',
+    },
+  });
+
   let teamId: number;
   let userRole: string;
   let createdTeam: typeof teams.$inferSelect | null = null;
@@ -167,6 +199,17 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
         .update(invitations)
         .set({ status: 'accepted' })
         .where(eq(invitations.id, invitation.id));
+
+      // Capture invitation acceptance event
+      posthog.capture({
+        distinctId: String(createdUser.id),
+        event: 'invitation_accepted',
+        properties: {
+          email: createdUser.email,
+          teamId,
+          role: userRole,
+        },
+      });
 
       await logActivity(teamId, createdUser.id, ActivityType.ACCEPT_INVITATION);
 
@@ -197,6 +240,17 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     teamId = createdTeam.id;
     userRole = 'owner';
 
+    // Capture team creation event
+    posthog.capture({
+      distinctId: String(createdUser.id),
+      event: 'team_created',
+      properties: {
+        email: createdUser.email,
+        teamId,
+        teamName: createdTeam.name,
+      },
+    });
+
     await logActivity(teamId, createdUser.id, ActivityType.CREATE_TEAM);
   }
 
@@ -205,6 +259,17 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     teamId: teamId,
     role: userRole
   };
+
+  // Identify user on server side
+  posthog.identify({
+    distinctId: String(createdUser.id),
+    properties: {
+      email: createdUser.email,
+      name: createdUser.name,
+      teamId,
+      userRole,
+    },
+  });
 
   await Promise.all([
     db.insert(teamMembers).values(newTeamMember),
@@ -224,6 +289,18 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 export async function signOut() {
   const user = (await getUser()) as User;
   const userWithTeam = await getUserWithTeam(user.id);
+  
+  // Capture sign out event
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: String(user.id),
+    event: 'user_signed_out',
+    properties: {
+      email: user.email,
+      teamId: userWithTeam?.teamId,
+    },
+  });
+  
   await logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT);
   (await cookies()).delete('session');
 }
@@ -274,6 +351,17 @@ export const updatePassword = validatedActionWithUser(
     const newPasswordHash = await hashPassword(newPassword);
     const userWithTeam = await getUserWithTeam(user.id);
 
+    // Capture password update event
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'user_password_updated',
+      properties: {
+        email: user.email,
+        teamId: userWithTeam?.teamId,
+      },
+    });
+
     await Promise.all([
       db
         .update(users)
@@ -306,6 +394,17 @@ export const deleteAccount = validatedActionWithUser(
     }
 
     const userWithTeam = await getUserWithTeam(user.id);
+
+    // Capture account deletion event
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'account_deletion_initiated',
+      properties: {
+        email: user.email,
+        teamId: userWithTeam?.teamId,
+      },
+    });
 
     await logActivity(
       userWithTeam?.teamId,
@@ -349,6 +448,28 @@ export const updateAccount = validatedActionWithUser(
     const { name, email } = data;
     const userWithTeam = await getUserWithTeam(user.id);
 
+    // Capture account update event
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'user_account_updated',
+      properties: {
+        email,
+        name,
+        teamId: userWithTeam?.teamId,
+      },
+    });
+
+    // Also identify with updated properties
+    posthog.identify({
+      distinctId: String(user.id),
+      properties: {
+        email,
+        name,
+        teamId: userWithTeam?.teamId,
+      },
+    });
+
     await Promise.all([
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
@@ -380,6 +501,18 @@ export const removeTeamMember = validatedActionWithUser(
           eq(teamMembers.teamId, userWithTeam.teamId)
         )
       );
+
+    // Capture team member removal event
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'team_member_removed',
+      properties: {
+        email: user.email,
+        teamId: userWithTeam.teamId,
+        removedMemberId: memberId,
+      },
+    });
 
     await logActivity(
       userWithTeam.teamId,
@@ -443,6 +576,19 @@ export const inviteTeamMember = validatedActionWithUser(
       role,
       invitedBy: user.id,
       status: 'pending'
+    });
+
+    // Capture team member invitation event
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'team_member_invited',
+      properties: {
+        email: user.email,
+        invitedEmail: email,
+        teamId: userWithTeam.teamId,
+        role,
+      },
     });
 
     await logActivity(
