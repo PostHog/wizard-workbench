@@ -31,6 +31,8 @@ gem "lexxy", bc: "lexxy"
 gem "image_processing", "~> 1.14"
 gem "platform_agent"
 gem "aws-sdk-s3", require: false
+gem "posthog-ruby", require: "posthog"
+gem "posthog-rails"
 gem "web-push"
 gem "net-http-persistent"
 gem "zip_kit"
