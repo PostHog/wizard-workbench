@@ -1,3 +1,4 @@
+import posthog from "posthog-js";
 import type { Route } from "./+types/country";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
@@ -7,6 +8,12 @@ export async function clientLoader({ params }: Route.LoaderArgs) {
     `https://restcountries.com/v3.1/name/${countryName}?fullText=true`
   );
   const data = await res.json();
+
+  posthog.capture('country_viewed', {
+    country: data[0]?.name?.common,
+    region: data[0]?.region,
+  });
+
   return data;
 }
 
