@@ -56,3 +56,11 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    window.posthog?.capture('authentication_guide_started', {
+      referrer: document.referrer || null,
+    });
+  });
+</script>

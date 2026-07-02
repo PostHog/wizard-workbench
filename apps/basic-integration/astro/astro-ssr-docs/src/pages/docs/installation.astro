@@ -57,3 +57,19 @@ NEURALFLOW_API_KEY=your_api_key_here</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('pre code').forEach(function (codeEl) {
+      codeEl.style.cursor = 'pointer';
+      codeEl.addEventListener('click', function () {
+        var text = codeEl.textContent || '';
+        navigator.clipboard?.writeText(text).then(function () {
+          window.posthog?.capture('installation_sdk_copied', {
+            snippet_preview: text.slice(0, 80),
+          });
+        });
+      });
+    });
+  });
+</script>
