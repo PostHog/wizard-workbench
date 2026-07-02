@@ -1,4 +1,5 @@
 import './globals.css';
+import { Instrumentation } from './instrumentation';
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
@@ -26,6 +27,7 @@ export default function RootLayout({
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
     >
       <body className="min-h-[100dvh] bg-gray-50">
+        <Instrumentation>
         <SWRConfig
           value={{
             fallback: {
@@ -38,6 +40,7 @@ export default function RootLayout({
         >
           {children}
         </SWRConfig>
+        </Instrumentation>
       </body>
     </html>
   );
