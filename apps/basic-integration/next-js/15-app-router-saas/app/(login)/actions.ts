@@ -91,6 +91,26 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
 
+  try {
+    // Server-side capture for successful sign in
+    try {
+      const getPostHogClient = (await import('@/lib/posthog-server')).default;
+      const client = getPostHogClient();
+      client.capture({
+        distinctId: String(foundUser.id),
+        event: 'user_signed_in',
+        properties: {
+          email: foundUser.email,
+          teamId: foundTeam?.id ?? null
+        }
+      });
+    } catch (err) {
+      console.error('PostHog sign-in capture failed', err);
+    }
+  } catch (err) {
+    console.error('PostHog sign-in capture failed', err);
+  }
+
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
     const priceId = formData.get('priceId') as string;
@@ -212,6 +232,26 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     setSession(createdUser)
   ]);
 
+  try {
+    // Server-side capture for new user signup
+    try {
+      const getPostHogClient = (await import('@/lib/posthog-server')).default;
+      const client = getPostHogClient();
+      client.capture({
+        distinctId: String(createdUser.id),
+        event: 'user_signed_up',
+        properties: {
+          email: createdUser.email,
+          teamId: teamId
+        }
+      });
+    } catch (err) {
+      console.error('PostHog signup capture failed', err);
+    }
+  } catch (err) {
+    console.error('PostHog signup capture failed', err);
+  }
+
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
     const priceId = formData.get('priceId') as string;
@@ -226,6 +266,24 @@ export async function signOut() {
   const userWithTeam = await getUserWithTeam(user.id);
   await logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT);
   (await cookies()).delete('session');
+
+  try {
+    // Capture sign out server-side
+    const userId = user.id;
+    try {
+      const getPostHogClient = (await import('@/lib/posthog-server')).default;
+      const client = getPostHogClient();
+      client.capture({
+        distinctId: String(userId),
+        event: 'user_signed_out',
+        properties: {}
+      });
+    } catch (err) {
+      console.error('PostHog sign-out capture failed', err);
+    }
+  } catch (err) {
+    console.error('PostHog sign-out capture failed', err);
+  }
 }
 
 const updatePasswordSchema = z.object({

@@ -89,6 +89,24 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+
+    try {
+      const getPostHogClient = (await import('@/lib/posthog-server')).default;
+      const client = getPostHogClient();
+      client.capture({
+        distinctId: String(user[0].id),
+        event: 'checkout_completed',
+        properties: {
+          teamId: userTeam[0].teamId,
+          stripeCustomerId: customerId,
+          subscriptionId: subscriptionId,
+          productId: productId
+        }
+      });
+    } catch (err) {
+      console.error('PostHog checkout capture failed', err);
+    }
+
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);

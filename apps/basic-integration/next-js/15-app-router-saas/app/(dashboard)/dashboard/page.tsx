@@ -27,6 +27,20 @@ type ActionState = {
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+// Client-side: capture team management and invite/remove events using fetch-based handlers
+async function captureEvent(eventName: string, properties: Record<string, any>) {
+  try {
+    await fetch('/api/posthog/capture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: eventName, properties })
+    });
+  } catch (err) {
+    // Do not block UI on analytics failures
+    console.error('Failed to capture analytics event', err);
+  }
+}
+
 function SubscriptionSkeleton() {
   return (
     <Card className="mb-8 h-[140px]">
@@ -154,7 +168,10 @@ function TeamMembers() {
                 </div>
               </div>
               {index > 1 ? (
-                <form action={removeAction}>
+                <form
+                  action={removeAction}
+                  onSubmit={() => captureEvent('team_member_removed', { memberId: member.id })}
+                >
                   <input type="hidden" name="memberId" value={member.id} />
                   <Button
                     type="submit"

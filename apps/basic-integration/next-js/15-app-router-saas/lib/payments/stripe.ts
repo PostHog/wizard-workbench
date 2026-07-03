@@ -120,6 +120,28 @@ export async function createCustomerPortalSession(team: Team) {
     });
   }
 
+  // Add server-side capture when user requests the customer portal
+  try {
+    const { PostHog } = await import('posthog-node');
+    const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, {
+      host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+      flushAt: 1,
+      flushInterval: 0
+    });
+
+    await posthog.capture({
+      distinctId: String(team.id),
+      event: 'manage_subscription_clicked',
+      properties: {
+        teamId: team.id
+      }
+    });
+
+    await posthog.shutdown();
+  } catch (err) {
+    console.error('PostHog capture for manage subscription failed', err);
+  }
+
   return stripe.billingPortal.sessions.create({
     customer: team.stripeCustomerId,
     return_url: `${process.env.BASE_URL}/dashboard`,
