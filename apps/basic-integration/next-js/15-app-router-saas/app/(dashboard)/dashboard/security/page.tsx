@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Lock, Trash2, Loader2 } from 'lucide-react';
 import { useActionState } from 'react';
+import posthog from 'posthog-js';
 import { updatePassword, deleteAccount } from '@/app/(login)/actions';
 
 type PasswordState = {
@@ -43,7 +44,15 @@ export default function SecurityPage() {
           <CardTitle>Password</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" action={passwordAction}>
+          <form
+            className="space-y-4"
+            action={passwordAction}
+            onSubmit={() => {
+              posthog.capture('password_update_submitted', {
+                source: 'security_settings'
+              });
+            }}
+          >
             <div>
               <Label htmlFor="current-password" className="mb-2">
                 Current Password
@@ -123,7 +132,15 @@ export default function SecurityPage() {
           <p className="text-sm text-gray-500 mb-4">
             Account deletion is non-reversable. Please proceed with caution.
           </p>
-          <form action={deleteAction} className="space-y-4">
+          <form
+            action={deleteAction}
+            className="space-y-4"
+            onSubmit={() => {
+              posthog.capture('account_deletion_submitted', {
+                source: 'security_settings'
+              });
+            }}
+          >
             <div>
               <Label htmlFor="delete-password" className="mb-2">
                 Confirm Password

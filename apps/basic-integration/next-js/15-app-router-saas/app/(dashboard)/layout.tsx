@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { use, useState, Suspense } from 'react';
+import { useState, Suspense } from 'react';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
 import {
@@ -24,7 +25,12 @@ function UserMenu() {
   const router = useRouter();
 
   async function handleSignOut() {
+    posthog.capture('navigation_sign_out_clicked', {
+      source: 'user_menu'
+    });
+
     await signOut();
+    posthog.reset();
     mutate('/api/user');
     router.push('/');
   }
