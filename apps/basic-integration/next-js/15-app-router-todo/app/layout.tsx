@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   description: 'A full-stack todo application built with Next.js 15',
 };
 
+import '../instrumentation-client';
+
 export default function RootLayout({
   children,
 }: Readonly<{

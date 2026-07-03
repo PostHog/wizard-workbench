@@ -1,10 +1,13 @@
 'use client';
 
+'use client';
+
 import { Todo } from '@/lib/data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 interface TodoItemProps {
   todo: Todo;
@@ -20,7 +23,14 @@ export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
           <div className="flex items-start gap-3 flex-1">
             <Checkbox
               checked={todo.completed}
-              onChange={(e) => onToggle(todo.id, e.target.checked)}
+              onChange={(e) => {
+                onToggle(todo.id, e.target.checked);
+                try {
+                  posthog.capture('todo_item_toggled', { id: todo.id, completed: e.target.checked, title: todo.title });
+                } catch (e) {
+                  console.error('PostHog capture failed:', e);
+                }
+              }}
               className="mt-1"
             />
             <div className="flex-1">
@@ -37,7 +47,14 @@ export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onDelete(todo.id)}
+            onClick={() => {
+              onDelete(todo.id);
+              try {
+                posthog.capture('todo_item_deleted', { id: todo.id });
+              } catch (e) {
+                console.error('PostHog capture failed:', e);
+              }
+            }}
             className="text-destructive hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
 import { z } from 'zod';
+import PostHogServer from '@/lib/posthog-server';
 
 const updateTodoSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -30,6 +31,12 @@ export async function GET(
     return NextResponse.json(todo);
   } catch (error) {
     console.error('Error fetching todo:', error);
+    try {
+      const ph = PostHogServer();
+      ph.capture({ distinctId: 'server', event: 'server_error', properties: { location: 'GET /api/todos/[id]', error: String(error) } });
+    } catch (e) {
+      console.error('PostHog capture failed:', e);
+    }
     return NextResponse.json(
       { error: 'Failed to fetch todo' },
       { status: 500 }
@@ -59,6 +66,22 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    // Capture server-side todo toggled/updated event
+    try {
+      const ph = PostHogServer();
+      ph.capture({
+        distinctId: 'anonymous',
+        event: 'todo_toggled',
+        properties: {
+          id: updatedTodo.id,
+          completed: updatedTodo.completed,
+          title: updatedTodo.title,
+        },
+      });
+    } catch (e) {
+      console.error('PostHog capture failed:', e);
+    }
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -68,6 +91,12 @@ export async function PATCH(
       );
     }
     console.error('Error updating todo:', error);
+    try {
+      const ph = PostHogServer();
+      ph.capture({ distinctId: 'server', event: 'server_error', properties: { location: 'PATCH /api/todos/[id]', error: String(error) } });
+    } catch (e) {
+      console.error('PostHog capture failed:', e);
+    }
     return NextResponse.json(
       { error: 'Failed to update todo' },
       { status: 500 }
@@ -94,9 +123,27 @@ export async function DELETE(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    // Capture server-side deletion event
+    try {
+      const ph = PostHogServer();
+      ph.capture({
+        distinctId: 'anonymous',
+        event: 'todo_deleted',
+        properties: { id: todoId },
+      });
+    } catch (e) {
+      console.error('PostHog capture failed:', e);
+    }
+
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
     console.error('Error deleting todo:', error);
+    try {
+      const ph = PostHogServer();
+      ph.capture({ distinctId: 'server', event: 'server_error', properties: { location: 'DELETE /api/todos/[id]', error: String(error) } });
+    } catch (e) {
+      console.error('PostHog capture failed:', e);
+    }
     return NextResponse.json(
       { error: 'Failed to delete todo' },
       { status: 500 }

@@ -1,8 +1,11 @@
 'use client';
 
+'use client';
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import posthog from 'posthog-js';
 
 interface TodoFormProps {
   onAdd: (title: string, description: string) => void;
@@ -16,6 +19,14 @@ export function TodoForm({ onAdd }: TodoFormProps) {
     e.preventDefault();
     if (title.trim()) {
       onAdd(title, description);
+
+      // Capture client-side form submit
+      try {
+        posthog.capture('todo_form_submitted', { title, description });
+      } catch (e) {
+        console.error('PostHog capture failed:', e);
+      }
+
       setTitle('');
       setDescription('');
     }

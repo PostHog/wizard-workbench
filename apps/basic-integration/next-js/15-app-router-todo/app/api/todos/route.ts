@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodos, createTodo } from '@/lib/data';
 import { z } from 'zod';
+import PostHogServer from '@/lib/posthog-server';
 
 const todoSchema = z.object({
   title: z.string().min(1).max(255),
@@ -15,6 +16,13 @@ export async function GET() {
     return NextResponse.json(allTodos);
   } catch (error) {
     console.error('Error fetching todos:', error);
+    // Capture server-side error
+    try {
+      const ph = PostHogServer();
+      ph.capture({ distinctId: 'server', event: 'server_error', properties: { location: 'GET /api/todos', error: String(error) } });
+    } catch (e) {
+      console.error('PostHog capture failed:', e);
+    }
     return NextResponse.json(
       { error: 'Failed to fetch todos' },
       { status: 500 }
@@ -34,6 +42,22 @@ export async function POST(request: NextRequest) {
       completed: validatedData.completed,
     });
 
+    // Capture server-side todo created event
+    try {
+      const ph = PostHogServer();
+      ph.capture({
+        distinctId: 'anonymous',
+        event: 'todo_created',
+        properties: {
+          title: newTodo.title,
+          completed: newTodo.completed,
+          id: newTodo.id,
+        },
+      });
+    } catch (e) {
+      console.error('PostHog capture failed:', e);
+    }
+
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -43,6 +67,13 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error('Error creating todo:', error);
+    // Capture server-side error
+    try {
+      const ph = PostHogServer();
+      ph.capture({ distinctId: 'server', event: 'server_error', properties: { location: 'POST /api/todos', error: String(error) } });
+    } catch (e) {
+      console.error('PostHog capture failed:', e);
+    }
     return NextResponse.json(
       { error: 'Failed to create todo' },
       { status: 500 }

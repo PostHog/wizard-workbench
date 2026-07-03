@@ -1,11 +1,14 @@
 'use client';
 
+'use client';
+
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import posthog from 'posthog-js';
 
 export function TodoList() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -13,6 +16,13 @@ export function TodoList() {
 
   useEffect(() => {
     fetchTodos();
+
+    // Capture todos viewed
+    try {
+      posthog.capture('todos_viewed');
+    } catch (e) {
+      console.error('PostHog capture failed:', e);
+    }
   }, []);
 
   const fetchTodos = async () => {
@@ -24,6 +34,11 @@ export function TodoList() {
       }
     } catch (error) {
       console.error('Failed to fetch todos:', error);
+      try {
+        posthog.captureException(error);
+      } catch (e) {
+        console.error('PostHog capture failed:', e);
+      }
     } finally {
       setLoading(false);
     }
@@ -45,6 +60,11 @@ export function TodoList() {
       }
     } catch (error) {
       console.error('Failed to add todo:', error);
+      try {
+        posthog.captureException(error);
+      } catch (e) {
+        console.error('PostHog capture failed:', e);
+      }
     }
   };
 
@@ -64,6 +84,11 @@ export function TodoList() {
       }
     } catch (error) {
       console.error('Failed to update todo:', error);
+      try {
+        posthog.captureException(error);
+      } catch (e) {
+        console.error('PostHog capture failed:', e);
+      }
     }
   };
 
@@ -78,6 +103,11 @@ export function TodoList() {
       }
     } catch (error) {
       console.error('Failed to delete todo:', error);
+      try {
+        posthog.captureException(error);
+      } catch (e) {
+        console.error('PostHog capture failed:', e);
+      }
     }
   };
 
