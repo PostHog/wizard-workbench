@@ -66,6 +66,17 @@ import Layout from '../layouts/Layout.astro';
     const data = Object.fromEntries(formData.entries());
 
     try {
+      // Client-side capture (non-PII): only capture the interest category and company presence
+      try {
+        window.posthog?.capture?.('contact_form_submission_client', {
+          interest: data.interest || 'unknown',
+          has_company: !!data.company,
+          source: 'client'
+        });
+      } catch (err) {
+        /* ignore posthog errors */
+      }
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
