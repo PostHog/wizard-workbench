@@ -21,6 +21,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { captureServerEvent } from '@/lib/posthog-server';
 import {
   validatedAction,
   validatedActionWithUser
@@ -88,7 +89,15 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   await Promise.all([
     setSession(foundUser),
-    logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
+    logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN),
+    captureServerEvent({
+      distinctId: foundUser.id.toString(),
+      event: 'server_user_signed_in',
+      properties: {
+        team_id: foundTeam?.id ?? null,
+        redirect_to: formData.get('redirect') ?? null
+      }
+    })
   ]);
 
   const redirectTo = formData.get('redirect') as string | null;
@@ -209,7 +218,15 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   await Promise.all([
     db.insert(teamMembers).values(newTeamMember),
     logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
-    setSession(createdUser)
+    setSession(createdUser),
+    captureServerEvent({
+      distinctId: createdUser.id.toString(),
+      event: 'server_user_signed_up',
+      properties: {
+        team_id: teamId,
+        invited_signup: Boolean(inviteId)
+      }
+    })
   ]);
 
   const redirectTo = formData.get('redirect') as string | null;
@@ -279,7 +296,15 @@ export const updatePassword = validatedActionWithUser(
         .update(users)
         .set({ passwordHash: newPasswordHash })
         .where(eq(users.id, user.id)),
-      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PASSWORD)
+      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PASSWORD),
+      captureServerEvent({
+        distinctId: user.id.toString(),
+        event: 'password_updated',
+        properties: {
+          team_id: userWithTeam?.teamId ?? null,
+          source: 'security_settings'
+        }
+      })
     ]);
 
     return {
@@ -307,11 +332,17 @@ export const deleteAccount = validatedActionWithUser(
 
     const userWithTeam = await getUserWithTeam(user.id);
 
-    await logActivity(
-      userWithTeam?.teamId,
-      user.id,
-      ActivityType.DELETE_ACCOUNT
-    );
+    await Promise.all([
+      logActivity(userWithTeam?.teamId, user.id, ActivityType.DELETE_ACCOUNT),
+      captureServerEvent({
+        distinctId: user.id.toString(),
+        event: 'account_deletion_requested',
+        properties: {
+          team_id: userWithTeam?.teamId ?? null,
+          source: 'security_settings'
+        }
+      })
+    ]);
 
     // Soft delete
     await db
@@ -351,7 +382,16 @@ export const updateAccount = validatedActionWithUser(
 
     await Promise.all([
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
-      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
+      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT),
+      captureServerEvent({
+        distinctId: user.id.toString(),
+        event: 'account_updated',
+        properties: {
+          team_id: userWithTeam?.teamId ?? null,
+          has_name: Boolean(name),
+          source: 'general_settings'
+        }
+      })
     ]);
 
     return { name, success: 'Account updated successfully.' };

@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
 
@@ -15,6 +16,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const redirect = searchParams.get('redirect');
   const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
+  const [email, setEmail] = useState('');
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     mode === 'signin' ? signIn : signUp,
     { error: '' }
@@ -52,6 +54,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 type="email"
                 autoComplete="email"
                 defaultValue={state.email}
+                onChange={(event) => setEmail(event.target.value)}
                 required
                 maxLength={50}
                 className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
@@ -94,6 +97,21 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
               type="submit"
               className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
               disabled={pending}
+              onClick={() => {
+                if (!email) {
+                  return;
+                }
+
+                posthog.identify(email, {
+                  email
+                });
+                posthog.capture(
+                  mode === 'signin' ? 'user_signed_in' : 'user_signed_up',
+                  {
+                    source: mode === 'signin' ? 'sign_in_page' : 'sign_up_page'
+                  }
+                );
+              }}
             >
               {pending ? (
                 <>

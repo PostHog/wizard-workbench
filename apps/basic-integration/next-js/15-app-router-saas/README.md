@@ -15,6 +15,7 @@ This is a starter template for building a SaaS application using **Next.js** wit
 - Global middleware to protect logged-in routes
 - Local middleware to protect Server Actions or validate Zod schemas
 - Activity logging system for any user events
+- PostHog product analytics with client-side and server-side event capture
 
 ## Tech Stack
 
@@ -107,6 +108,8 @@ In your Vercel project settings (or during deployment), add all the necessary en
 3. `STRIPE_WEBHOOK_SECRET`: Use the webhook secret from the production webhook you created in step 1.
 4. `POSTGRES_URL`: Set this to your production database URL.
 5. `AUTH_SECRET`: Set this to a random string. `openssl rand -base64 32` will generate one.
+6. `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`: Set this to your PostHog project token.
+7. `NEXT_PUBLIC_POSTHOG_HOST`: Set this to your PostHog host URL.
 
 ## Other Templates
 
