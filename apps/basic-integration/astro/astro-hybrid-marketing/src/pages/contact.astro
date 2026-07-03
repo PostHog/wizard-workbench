@@ -55,21 +55,35 @@ import Layout from '../layouts/Layout.astro';
   </section>
 </Layout>
 
-<script>
-  const form = document.getElementById('contact-form') as HTMLFormElement;
-  const messageDiv = document.getElementById('form-message') as HTMLDivElement;
+<script is:inline>
+  const form = document.getElementById('contact-form');
+  const messageDiv = document.getElementById('form-message');
+  let formStarted = false;
 
-  form?.addEventListener('submit', async (e) => {
+  // Track when the user starts filling the form (focusin bubbles from any child)
+  form?.addEventListener('focusin', function() {
+    if (!formStarted) {
+      formStarted = true;
+      window.posthog?.capture('contact_form_started');
+    }
+  }, { once: true });
+
+  form?.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
     try {
+      const sessionId = window.posthog?.get_session_id?.() || null;
+      const distinctId = window.posthog?.get_distinct_id?.() || null;
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(sessionId ? { 'X-PostHog-Session-Id': sessionId } : {}),
+          ...(distinctId ? { 'X-PostHog-Distinct-Id': distinctId } : {}),
         },
         body: JSON.stringify(data),
       });
@@ -79,14 +93,32 @@ import Layout from '../layouts/Layout.astro';
       if (response.ok) {
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
+
+        window.posthog?.capture('contact_form_submitted', {
+          interest: data.interest,
+          has_company: !!data.company,
+        });
+
         form.reset();
+        formStarted = false;
       } else {
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
+
+        window.posthog?.capture('contact_form_error', {
+          error_type: 'api_error',
+          status: response.status,
+          interest: data.interest,
+        });
       }
     } catch (error) {
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
+
+      window.posthog?.capture('contact_form_error', {
+        error_type: 'network_error',
+      });
+      window.posthog?.captureException(error);
     }
   });
 </script>
