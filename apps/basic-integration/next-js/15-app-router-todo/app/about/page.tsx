@@ -1,12 +1,17 @@
+'use client';
+
+import { useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-export const metadata = {
-  title: 'About - Todo App',
-  description: 'Learn more about this Next.js 15 todo application',
-};
-
 export default function AboutPage() {
+  useEffect(() => {
+    posthog.capture('about_page_viewed', {
+      source: 'about_page',
+    });
+  }, []);
+
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-8">
       <div>

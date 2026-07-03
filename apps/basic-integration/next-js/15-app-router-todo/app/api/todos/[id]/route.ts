@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient, shutdownPostHog } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -42,6 +43,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const posthog = getPostHogClient();
+
   try {
     const { id } = await params;
     const todoId = parseInt(id);
@@ -59,6 +62,17 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    posthog.capture({
+      distinctId: 'todo-api',
+      event: 'todo_api_updated',
+      properties: {
+        todo_id: updatedTodo.id,
+        completed: updatedTodo.completed,
+        updated_fields: Object.keys(validatedData),
+      },
+    });
+    await shutdownPostHog();
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -67,6 +81,13 @@ export async function PATCH(
         { status: 400 }
       );
     }
+
+    posthog.captureException(error, 'todo-api', {
+      endpoint: '/api/todos/[id]',
+      method: 'PATCH',
+    });
+    await shutdownPostHog();
+
     console.error('Error updating todo:', error);
     return NextResponse.json(
       { error: 'Failed to update todo' },
@@ -80,6 +101,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const posthog = getPostHogClient();
+
   try {
     const { id } = await params;
     const todoId = parseInt(id);
@@ -88,14 +111,32 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid todo ID' }, { status: 400 });
     }
 
+    const deletedTodo = getTodoById(todoId);
     const deleted = deleteTodo(todoId);
 
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    posthog.capture({
+      distinctId: 'todo-api',
+      event: 'todo_api_deleted',
+      properties: {
+        todo_id: todoId,
+        completed: deletedTodo?.completed ?? null,
+        had_description: Boolean(deletedTodo?.description),
+      },
+    });
+    await shutdownPostHog();
+
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
+    posthog.captureException(error, 'todo-api', {
+      endpoint: '/api/todos/[id]',
+      method: 'DELETE',
+    });
+    await shutdownPostHog();
+
     console.error('Error deleting todo:', error);
     return NextResponse.json(
       { error: 'Failed to delete todo' },
