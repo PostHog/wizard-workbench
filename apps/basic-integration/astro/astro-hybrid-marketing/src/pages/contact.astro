@@ -64,12 +64,14 @@ import Layout from '../layouts/Layout.astro';
 
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
+    const sessionId = (window as any).posthog?.get_session_id?.() || '';
 
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-PostHog-Session-Id': sessionId,
         },
         body: JSON.stringify(data),
       });
@@ -79,14 +81,28 @@ import Layout from '../layouts/Layout.astro';
       if (response.ok) {
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
+
+        // Identify the user and capture the conversion event
+        const email = data['email'] as string;
+        if (email) {
+          (window as any).posthog?.identify(email, { name: data['name'], company: data['company'] });
+        }
+        (window as any).posthog?.capture('contact_form_submitted', {
+          interest: data['interest'],
+          has_company: Boolean(data['company']),
+          $session_id: sessionId || undefined,
+        });
+
         form.reset();
       } else {
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
+        (window as any).posthog?.captureException(new Error(result.error || 'Contact form error'));
       }
     } catch (error) {
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
+      (window as any).posthog?.captureException(error);
     }
   });
 </script>
