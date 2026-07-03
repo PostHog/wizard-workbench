@@ -1,5 +1,6 @@
 'use client';
 
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
@@ -13,6 +14,11 @@ export function SubmitButton() {
       disabled={pending}
       variant="outline"
       className="w-full rounded-full"
+      onClick={() => {
+        posthog.capture('pricing_cta_clicked', {
+          cta_label: 'Get Started'
+        });
+      }}
     >
       {pending ? (
         <>

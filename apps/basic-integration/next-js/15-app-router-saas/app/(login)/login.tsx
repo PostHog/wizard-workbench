@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +21,19 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     { error: '' }
   );
 
+  const handleFormAction = (formData: FormData) => {
+    const hasRedirectToCheckout = formData.get('redirect') === 'checkout';
+    const eventName = mode === 'signin' ? 'sign_in_submitted' : 'sign_up_submitted';
+
+    posthog.capture(eventName, {
+      has_redirect_to_checkout: hasRedirectToCheckout,
+      has_invite: Boolean(formData.get('inviteId')),
+      authentication_flow: mode
+    });
+
+    formAction(formData);
+  };
+
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -34,7 +48,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
+        <form className="space-y-6" action={handleFormAction}>
           <input type="hidden" name="redirect" value={redirect || ''} />
           <input type="hidden" name="priceId" value={priceId || ''} />
           <input type="hidden" name="inviteId" value={inviteId || ''} />
