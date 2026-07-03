@@ -1,4 +1,5 @@
 import { GetServerSideProps } from 'next';
+import posthog from 'posthog-js';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
@@ -192,6 +193,10 @@ function InviteTeamMember() {
 
     startTransition(async () => {
       try {
+        posthog.capture('team_invite_submitted', {
+          invite_role: data.role
+        });
+
         const response = await fetch('/api/team/invite', {
           method: 'POST',
           headers: {
@@ -211,6 +216,7 @@ function InviteTeamMember() {
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred');
       }
     });

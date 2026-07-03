@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { PostHog } from 'posthog-node';
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { buffer } from 'micro';
@@ -40,7 +41,22 @@ export default async function handler(
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted':
       const subscription = event.data.object as Stripe.Subscription;
+      const posthogClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, {
+        host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+        flushAt: 1,
+        flushInterval: 0
+      });
       await handleSubscriptionChange(subscription);
+      await posthogClient.capture({
+        distinctId: String(subscription.customer),
+        event: 'server_subscription_updated',
+        properties: {
+          stripe_subscription_id: subscription.id,
+          subscription_status: subscription.status,
+          event_type: event.type
+        }
+      });
+      await posthogClient.shutdown();
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { PostHog } from 'posthog-node';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
@@ -39,6 +40,12 @@ const signUpSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   inviteId: z.string().optional()
+});
+
+const posthogClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, {
+  host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+  flushAt: 1,
+  flushInterval: 0
 });
 
 export default async function handler(
@@ -163,7 +170,24 @@ export default async function handler(
     await Promise.all([
       db.insert(teamMembers).values(newTeamMember),
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
-      setSession(createdUser, res)
+      setSession(createdUser, res),
+      posthogClient.capture({
+        distinctId: createdUser.id.toString(),
+        event: 'server_sign_up_succeeded',
+        properties: {
+          team_id: teamId,
+          was_invited: Boolean(inviteId),
+          redirect_target: redirect || 'dashboard',
+          has_price_id: Boolean(priceId)
+        }
+      }),
+      posthogClient.identify({
+        distinctId: createdUser.id.toString(),
+        properties: {
+          email: createdUser.email,
+          role: createdUser.role
+        }
+      })
     ]);
 
     if (redirect === 'checkout' && createdTeam) {
@@ -177,7 +201,10 @@ export default async function handler(
 
     return res.status(200).json({ success: true, redirectTo: '/dashboard' });
   } catch (error) {
+    await posthogClient.captureException(error, 'server');
     console.error('Sign up error:', error);
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });
+  } finally {
+    await posthogClient.shutdown();
   }
 }

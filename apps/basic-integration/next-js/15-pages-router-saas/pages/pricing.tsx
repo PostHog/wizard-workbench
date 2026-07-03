@@ -1,5 +1,6 @@
 import { GetServerSideProps } from 'next';
 import { Check, ArrowRight, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
@@ -76,6 +77,13 @@ function PricingCard({
 
     startTransition(async () => {
       try {
+        posthog.capture('pricing_checkout_started', {
+          price_id: priceId,
+          plan_name: name,
+          billing_interval: interval,
+          trial_days: trialDays
+        });
+
         const response = await fetch('/api/stripe/create-checkout', {
           method: 'POST',
           headers: {
@@ -92,6 +100,7 @@ function PricingCard({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         console.error('Checkout error:', err);
       }
     });

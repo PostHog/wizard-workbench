@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { PostHog } from 'posthog-node';
 
 export default async function handler(
   req: NextApiRequest,
@@ -8,7 +9,22 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const posthogClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, {
+    host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+    flushAt: 1,
+    flushInterval: 0
+  });
+
   try {
+    const distinctIdHeader = req.headers['x-posthog-distinct-id'];
+
+    if (typeof distinctIdHeader === 'string' && distinctIdHeader) {
+      await posthogClient.capture({
+        distinctId: distinctIdHeader,
+        event: 'server_user_signed_out'
+      });
+    }
+
     // Delete the session cookie by setting it with an expired date
     res.setHeader(
       'Set-Cookie',
@@ -17,7 +33,10 @@ export default async function handler(
 
     return res.status(200).json({ success: true });
   } catch (error) {
+    await posthogClient.captureException(error, 'server');
     console.error('Sign out error:', error);
     return res.status(500).json({ error: 'Failed to sign out' });
+  } finally {
+    await posthogClient.shutdown();
   }
 }

@@ -1,4 +1,5 @@
 import { GetServerSideProps } from 'next';
+import posthog from 'posthog-js';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { verifyToken } from '@/lib/auth/session';
 import {
@@ -37,6 +38,11 @@ export default function GeneralPage() {
 
     startTransition(async () => {
       try {
+        posthog.capture('account_update_submitted', {
+          has_name: Boolean(data.name),
+          email_domain: data.email.split('@')[1] || 'unknown'
+        });
+
         const response = await fetch('/api/account/update', {
           method: 'POST',
           headers: {
@@ -55,6 +61,7 @@ export default function GeneralPage() {
         setSuccess(result.success);
         setName(result.name);
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred. Please try again.');
       }
     });

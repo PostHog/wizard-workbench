@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
@@ -24,10 +25,19 @@ function UserMenu() {
 
   async function handleSignOut() {
     try {
+      posthog.capture('user_signed_out', {
+        current_path: router.asPath
+      });
+
       // Call sign-out API to delete HttpOnly session cookie
       await fetch('/api/auth/sign-out', {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id()
+        }
       });
+
+      posthog.reset();
 
       // Clear SWR cache
       mutate('/api/user', null, false);
@@ -36,6 +46,7 @@ function UserMenu() {
       // Redirect to home
       router.push('/');
     } catch (error) {
+      posthog.captureException(error);
       console.error('Sign out error:', error);
     }
   }
