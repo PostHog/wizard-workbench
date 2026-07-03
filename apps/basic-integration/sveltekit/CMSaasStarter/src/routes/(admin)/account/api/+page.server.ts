@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -70,6 +71,13 @@ export const actions = {
         email,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_change_requested",
+    })
+    await posthog.flush()
 
     return {
       email,
@@ -172,6 +180,13 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user?.id ?? "server",
+      event: "password_changed",
+    })
+    await posthog.flush()
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +235,13 @@ export const actions = {
         currentPassword,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+    })
+    await posthog.flush()
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -303,6 +325,14 @@ export const actions = {
     // If the profile was just created, send an email to the user and admin
     const newProfile =
       priorProfile?.updated_at === null && priorProfileError === null
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: newProfile ? "profile_created" : "profile_updated",
+    })
+    await posthog.flush()
+
     if (newProfile) {
       await sendAdminEmail({
         subject: "Profile Created",
