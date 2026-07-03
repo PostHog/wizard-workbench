@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -30,6 +31,21 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         description: validatedData.description,
         completed: validatedData.completed,
       });
+
+      // Server-side capture of creation with real distinct id if provided by client
+      const didHeader = req.headers['x-posthog-distinct-id'];
+      const distinctId = Array.isArray(didHeader) ? didHeader[0] : didHeader;
+      if (typeof distinctId === 'string' && distinctId.length > 0) {
+        const posthog = getPostHogClient();
+        posthog.capture({
+          distinctId,
+          event: 'api_todo_created',
+          properties: {
+            todo_id: newTodo.id,
+            has_description: Boolean(newTodo.description && newTodo.description.length > 0),
+          },
+        });
+      }
 
       return res.status(201).json(newTodo);
     } catch (error) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -16,6 +17,13 @@ export function TodoForm({ onAdd }: TodoFormProps) {
     e.preventDefault();
     if (title.trim()) {
       onAdd(title, description);
+
+      // Capture client-side create intent without PII
+      posthog.capture('todo_created', {
+        has_description: description.trim().length > 0,
+        title_length: title.trim().length,
+      });
+
       setTitle('');
       setDescription('');
     }
