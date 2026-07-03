@@ -12,10 +12,25 @@ const currentPath = Astro.url.pathname;
       <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
       <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
       <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="#" class="nav-cta" id="nav-get-started-btn">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  function setupNav() {
+    var btn = document.getElementById('nav-get-started-btn');
+    btn?.removeEventListener('click', handleNavGetStarted);
+    btn?.addEventListener('click', handleNavGetStarted);
+  }
+
+  function handleNavGetStarted() {
+    window.posthog?.capture('nav_get_started_clicked');
+  }
+
+  document.addEventListener('DOMContentLoaded', setupNav);
+  document.addEventListener('astro:page-load', setupNav);
+</script>
 
 <style>
   .nav-link.active {
