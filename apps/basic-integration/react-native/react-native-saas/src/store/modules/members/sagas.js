@@ -2,6 +2,7 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoMembers } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import { getMembersSuccess, inviteMemberSuccess } from './actions';
 
@@ -28,25 +29,36 @@ export function* updateMember({ payload }) {
   try {
     // Demo mode
     if (isDemoMode(token)) {
+      posthog.capture('member_role_updated', {
+        member_id: id,
+        role_names: roles.map(role => role.name),
+        is_demo: true,
+      });
       toast.showSuccess('Member updated');
       return;
     }
 
     yield call(api.put, `members/${id}`, { roles: roles.map(role => role.id) });
 
+    posthog.capture('member_role_updated', {
+      member_id: id,
+      role_names: roles.map(role => role.name),
+      is_demo: false,
+    });
     toast.showSuccess('Member updated');
   } catch (err) {
+    posthog.captureException(err);
     toast.showError('Error updating member');
   }
 }
 
 export function* inviteMember({ payload }) {
-  const { email } = payload;
   const token = yield select(state => state.auth.token);
 
   try {
     // Demo mode - add member directly to the list
     if (isDemoMode(token)) {
+      const { email } = payload;
       const name = email.split('@')[0].replace(/[._]/g, ' ');
       const newMember = {
         id: Date.now(),
@@ -54,14 +66,17 @@ export function* inviteMember({ payload }) {
         roles: [{ id: 3, name: 'Viewer' }],
       };
       yield put(inviteMemberSuccess(newMember));
+      posthog.capture('member_invited', { is_demo: true });
       toast.showSuccess('Member added');
       return;
     }
 
-    yield call(api.post, 'invites', { invites: [email] });
+    yield call(api.post, 'invites', { invites: [payload.email] });
 
+    posthog.capture('member_invited', { is_demo: false });
     toast.showSuccess('Invite sent');
   } catch (err) {
+    posthog.captureException(err);
     toast.showError('Error sending invite');
   }
 }

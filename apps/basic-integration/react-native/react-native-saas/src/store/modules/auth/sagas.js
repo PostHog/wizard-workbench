@@ -4,6 +4,7 @@ import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   signInSuccess,
@@ -44,6 +45,10 @@ export function* signIn({ payload }) {
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
       toast.showSuccess('Welcome to demo mode!');
+      posthog.identify(email, {
+        $set_once: { first_login_date: new Date().toISOString() },
+      });
+      posthog.capture('user_signed_in', { is_demo: true });
       NavigationService.navigate('Main');
       return;
     }
@@ -53,13 +58,21 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+    posthog.identify(email, {
+      $set_once: { first_login_date: new Date().toISOString() },
+    });
+    posthog.capture('user_signed_in', { is_demo: false });
     NavigationService.navigate('Main');
   } catch (err) {
+    posthog.capture('user_sign_in_failed');
+    posthog.captureException(err);
     toast.showError('Invalid credentials');
   }
 }
 
 export function* signOut() {
+  posthog.capture('user_signed_out');
+  posthog.reset();
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
