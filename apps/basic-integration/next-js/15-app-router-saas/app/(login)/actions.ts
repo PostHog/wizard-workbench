@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
+import { getPostHogClient, shutdownPostHog } from '@/lib/posthog-server';
 import {
   User,
   users,
@@ -84,6 +85,21 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
       email,
       password
     };
+  }
+
+  const posthog = getPostHogClient();
+
+  try {
+    posthog.capture({
+      distinctId: foundUser.id.toString(),
+      event: 'server_sign_in_completed',
+      properties: {
+        team_id: foundTeam?.id ?? null,
+        checkout_redirect: formData.get('redirect') === 'checkout'
+      }
+    });
+  } finally {
+    await shutdownPostHog();
   }
 
   await Promise.all([
@@ -205,6 +221,21 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     teamId: teamId,
     role: userRole
   };
+
+  const posthog = getPostHogClient();
+
+  try {
+    posthog.capture({
+      distinctId: createdUser.id.toString(),
+      event: 'server_sign_up_completed',
+      properties: {
+        team_id: teamId,
+        invited_signup: Boolean(inviteId)
+      }
+    });
+  } finally {
+    await shutdownPostHog();
+  }
 
   await Promise.all([
     db.insert(teamMembers).values(newTeamMember),

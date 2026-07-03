@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
+import posthog from 'posthog-js';
+import { useActionState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -77,6 +78,16 @@ export default function GeneralPage() {
     updateAccount,
     {}
   );
+  const hasTrackedSuccess = useRef(false);
+
+  useEffect(() => {
+    if (!state.success || hasTrackedSuccess.current) {
+      return;
+    }
+
+    hasTrackedSuccess.current = true;
+    posthog.capture('account_updated');
+  }, [state.success]);
 
   return (
     <section className="flex-1 p-4 lg:p-8">

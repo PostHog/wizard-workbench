@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import posthog from 'posthog-js';
+import { useActionState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,25 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
+  const hasTrackedSuccess = useRef(false);
+
+  useEffect(() => {
+    if (!state.success || !state.email || hasTrackedSuccess.current) {
+      return;
+    }
+
+    hasTrackedSuccess.current = true;
+
+    posthog.identify(state.email, {
+      email: state.email
+    });
+
+    posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up', {
+      has_redirect: Boolean(redirect),
+      has_invite: Boolean(inviteId),
+      has_checkout_context: Boolean(priceId)
+    });
+  }, [inviteId, mode, priceId, redirect, state.email, state.success]);
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -127,7 +147,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
             <Link
               href={`${mode === 'signin' ? '/sign-up' : '/sign-in'}${
                 redirect ? `?redirect=${redirect}` : ''
-              }${priceId ? `&priceId=${priceId}` : ''}`}
+              }${priceId ? `&priceId=${priceId}` : ''}${inviteId ? `&inviteId=${inviteId}` : ''}`}
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-full shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
             >
               {mode === 'signin'

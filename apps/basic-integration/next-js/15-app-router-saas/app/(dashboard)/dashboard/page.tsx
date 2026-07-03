@@ -1,5 +1,6 @@
 'use client';
 
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -161,6 +162,11 @@ function TeamMembers() {
                     variant="outline"
                     size="sm"
                     disabled={isRemovePending}
+                    onClick={() => {
+                      posthog.capture('team_member_removed', {
+                        role: member.role
+                      });
+                    }}
                   >
                     {isRemovePending ? 'Removing...' : 'Remove'}
                   </Button>
@@ -243,6 +249,9 @@ function InviteTeamMember() {
             type="submit"
             className="bg-orange-500 hover:bg-orange-600 text-white"
             disabled={isInvitePending || !isOwner}
+            onClick={() => {
+              posthog.capture('team_member_invited');
+            }}
           >
             {isInvitePending ? (
               <>

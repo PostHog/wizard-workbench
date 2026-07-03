@@ -1,11 +1,12 @@
 'use client';
 
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Lock, Trash2, Loader2 } from 'lucide-react';
-import { useActionState } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { updatePassword, deleteAccount } from '@/app/(login)/actions';
 
 type PasswordState = {
@@ -32,6 +33,30 @@ export default function SecurityPage() {
     DeleteState,
     FormData
   >(deleteAccount, {});
+  const hasTrackedPasswordSuccess = useRef(false);
+  const hasTrackedDeleteAttempt = useRef(false);
+
+  useEffect(() => {
+    if (!passwordState.success || hasTrackedPasswordSuccess.current) {
+      return;
+    }
+
+    hasTrackedPasswordSuccess.current = true;
+    posthog.capture('password_updated');
+  }, [passwordState.success]);
+
+  useEffect(() => {
+    if (isDeletePending || hasTrackedDeleteAttempt.current) {
+      return;
+    }
+
+    if (deleteState.error) {
+      hasTrackedDeleteAttempt.current = true;
+      posthog.capture('account_deleted', {
+        outcome: 'failed'
+      });
+    }
+  }, [deleteState.error, isDeletePending]);
 
   return (
     <section className="flex-1 p-4 lg:p-8">
@@ -146,6 +171,12 @@ export default function SecurityPage() {
               variant="destructive"
               className="bg-red-600 hover:bg-red-700"
               disabled={isDeletePending}
+              onClick={() => {
+                hasTrackedDeleteAttempt.current = true;
+                posthog.capture('account_deleted', {
+                  outcome: 'submitted'
+                });
+              }}
             >
               {isDeletePending ? (
                 <>
