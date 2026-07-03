@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -14,10 +15,12 @@ new class extends Component
     /**
      * Mount the component.
      */
-    public function mount(): void
+    public function mount(PostHogService $posthog): void
     {
         $this->name = Auth::user()->name;
         $this->email = Auth::user()->email;
+
+        $posthog->capture(Auth::user()->email, 'profile_viewed');
     }
 
     /**
