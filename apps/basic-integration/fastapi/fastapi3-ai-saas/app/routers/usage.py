@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
+from app.posthog_client import posthog_client
 
 router = APIRouter(prefix="/api/usage", tags=["usage"])
 
@@ -77,6 +78,13 @@ async def get_usage(
         credits_used_today=sum(g.credits_used for g in today_gens),
         by_type=by_type,
     )
+
+    if posthog_client:
+        posthog_client.capture("usage_stats_viewed", properties={
+            "period_days": days,
+            "total_generations": stats.total_generations,
+            "total_credits_used": stats.total_credits_used,
+        })
 
     return UsageResponse(
         stats=stats,

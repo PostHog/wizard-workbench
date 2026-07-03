@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
+from app.posthog_client import posthog_client
 
 router = APIRouter(prefix="/api")
 
@@ -54,6 +55,13 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        if posthog_client:
+            posthog_client.capture("content_generation_failed", properties={
+                "generation_type": request.generation_type,
+                "credits_needed": credits_needed,
+                "credits_available": current_user.credits,
+                "reason": "insufficient_credits",
+            })
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -75,6 +83,14 @@ async def generate_content(
         result=mock_content,
         credits_used=credits_needed,
     )
+
+    if posthog_client:
+        posthog_client.capture("content_generated", properties={
+            "generation_type": request.generation_type,
+            "credits_used": credits_needed,
+            "credits_remaining": current_user.credits,
+            "prompt_length": len(request.prompt),
+        })
 
     return GenerateResponse(
         id=generation.id,
