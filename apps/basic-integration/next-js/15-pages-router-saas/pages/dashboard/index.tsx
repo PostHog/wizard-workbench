@@ -1,4 +1,5 @@
 import { GetServerSideProps } from 'next';
+import posthog from 'posthog-js';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
@@ -101,6 +102,10 @@ function TeamMembers() {
           setError(result.error || 'Failed to remove member');
           return;
         }
+
+        posthog.capture('team_member_removed', {
+          member_id: memberId
+        });
 
         // Refresh team data
         mutate('/api/team');
@@ -208,6 +213,9 @@ function InviteTeamMember() {
         }
 
         setSuccess(result.success);
+        posthog.capture('team_member_invited', {
+          role: data.role
+        });
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {

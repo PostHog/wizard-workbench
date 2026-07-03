@@ -1,4 +1,5 @@
 import '@/styles/globals.css';
+import '@/instrumentation-client';
 import type { AppProps } from 'next/app';
 import { Manrope } from 'next/font/google';
 import { SWRConfig } from 'swr';

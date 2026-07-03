@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -160,10 +161,32 @@ export default async function handler(
       role: userRole
     };
 
+    const posthog = getPostHogClient();
+
     await Promise.all([
       db.insert(teamMembers).values(newTeamMember),
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
-      setSession(createdUser, res)
+      setSession(createdUser, res),
+      posthog.capture({
+        distinctId: createdUser.id.toString(),
+        event: 'server_user_signed_up',
+        properties: {
+          user_id: createdUser.id,
+          team_id: teamId,
+          invited_signup: Boolean(inviteId),
+          redirected_to_checkout: redirect === 'checkout',
+          has_price: Boolean(priceId)
+        }
+      }),
+      posthog.identify({
+        distinctId: createdUser.id.toString(),
+        properties: {
+          user_id: createdUser.id,
+          email: createdUser.email,
+          team_id: teamId,
+          role: createdUser.role
+        }
+      })
     ]);
 
     if (redirect === 'checkout' && createdTeam) {

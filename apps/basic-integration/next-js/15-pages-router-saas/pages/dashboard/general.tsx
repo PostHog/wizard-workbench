@@ -1,4 +1,5 @@
 import { GetServerSideProps } from 'next';
+import posthog from 'posthog-js';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { verifyToken } from '@/lib/auth/session';
 import {
@@ -54,6 +55,10 @@ export default function GeneralPage() {
 
         setSuccess(result.success);
         setName(result.name);
+        posthog.capture('account_updated', {
+          has_name: Boolean(data.name),
+          changed_email: user?.email !== data.email
+        });
       } catch (err) {
         setError('An unexpected error occurred. Please try again.');
       }

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,15 @@ export function Login({
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
           return;
+        }
+
+        if (result.success) {
+          posthog.identify(data.email);
+          posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up', {
+            has_checkout_redirect: data.redirect === 'checkout',
+            has_invite: Boolean(data.inviteId),
+            has_price: Boolean(data.priceId)
+          });
         }
 
         if (result.success && result.redirectTo) {
