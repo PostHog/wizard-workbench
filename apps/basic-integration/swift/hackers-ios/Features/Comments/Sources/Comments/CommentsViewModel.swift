@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -132,6 +133,14 @@ public final class CommentsViewModel: @unchecked Sendable {
             var updatedPost = currentPost
             updatedPost.isBookmarked = bookmarksController.isBookmarked(currentPost.id)
             post = updatedPost
+            PostHogSDK.shared.capture("comments_viewed", properties: [
+                "post_id": currentPost.id,
+                "post_title": currentPost.title,
+            ])
+        } else {
+            PostHogSDK.shared.capture("comments_viewed", properties: [
+                "post_id": postID,
+            ])
         }
         await commentsLoader.loadIfNeeded()
         updateVisibleComments()
@@ -211,6 +220,10 @@ public final class CommentsViewModel: @unchecked Sendable {
 
         do {
             try await voteUseCase.upvote(comment: comment, for: post)
+            PostHogSDK.shared.capture("comment_upvoted", properties: [
+                "comment_id": comment.id,
+                "post_id": postID,
+            ])
         } catch {
             comment.upvoted = false
             throw error

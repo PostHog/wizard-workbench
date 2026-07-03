@@ -24,12 +24,13 @@ let package = Package(
         .package(path: "../../Shared"),
         .package(path: "../../DesignSystem"),
         .package(path: "../Authentication"),
-        .package(path: "../Onboarding")
+        .package(path: "../Onboarding"),
+        .package(url: "https://github.com/PostHog/posthog-ios.git", from: "3.64.0")
     ],
     targets: [
         .target(
             name: "Settings",
-            dependencies: ["Domain", "Shared", "DesignSystem", "Authentication", "Onboarding"],
+            dependencies: ["Domain", "Shared", "DesignSystem", "Authentication", "Onboarding", .product(name: "PostHog", package: "posthog-ios")],
         ),
         .testTarget(
             name: "SettingsTests",

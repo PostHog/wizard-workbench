@@ -6,6 +6,7 @@
 //
 
 import DesignSystem
+import PostHog
 import SwiftUI
 
 public struct OnboardingView: View {
@@ -15,6 +16,11 @@ public struct OnboardingView: View {
     public init(onboardingData: OnboardingData, onDismiss: @escaping () -> Void) {
         self.onboardingData = onboardingData
         self.onDismiss = onDismiss
+    }
+
+    private func dismissAndTrack() {
+        PostHogSDK.shared.capture("onboarding_completed")
+        onDismiss()
     }
 
     public var body: some View {
@@ -70,7 +76,7 @@ public struct OnboardingView: View {
     @ViewBuilder
     private var continueButton: some View {
         if #available(iOS 26.0, *) {
-            Button(action: onDismiss) {
+            Button(action: dismissAndTrack) {
                 Text("Continue")
                     .scaledFont(.headline)
                     .foregroundStyle(.white)
@@ -79,7 +85,7 @@ public struct OnboardingView: View {
             }
             .glassEffect(.regular.tint(AppColors.appTintColor))
         } else {
-            Button(action: onDismiss) {
+            Button(action: dismissAndTrack) {
                 Text("Continue")
                     .scaledFont(.headline)
                     .foregroundStyle(.white)
