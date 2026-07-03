@@ -52,6 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -155,15 +156,18 @@ private fun Modifier.voiceRecordingGesture(
                 onSwipeProgressChanged(0f)
                 offsetY = 0f
                 dragging = true
-                onStartRecording()
+                val started = onStartRecording()
+                if (started) PostHog.capture(event = "voice_recording_started")
             },
             onDragCancel = {
                 onCancelRecording()
+                PostHog.capture(event = "voice_recording_cancelled")
                 dragging = false
             },
             onDragEnd = {
                 if (dragging) {
                     onFinishRecording()
+                    PostHog.capture(event = "voice_recording_completed")
                 }
                 dragging = false
             },
