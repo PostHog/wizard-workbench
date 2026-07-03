@@ -32,6 +32,7 @@ export type EmailInviteCardProps = {
   currentUserIsOwner: boolean;
   isInvitingByEmail?: boolean;
   lastResult?: SubmissionResult;
+  onSubmit?: () => void;
   organizationIsFull?: boolean;
   successEmail?: string;
 };
@@ -40,6 +41,7 @@ export function EmailInviteCard({
   currentUserIsOwner,
   isInvitingByEmail = false,
   lastResult,
+  onSubmit,
   organizationIsFull = false,
   successEmail,
 }: EmailInviteCardProps) {
@@ -70,7 +72,14 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(e) => {
+            form.props.onSubmit?.(e);
+            onSubmit?.();
+          }}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

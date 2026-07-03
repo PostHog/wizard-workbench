@@ -47,7 +47,29 @@ const rootConfig = defineConfig({
     staticCacheHeaders(),
     sudoFilesPlugin,
   ],
-  server: { port: 3000 },
+  ssr: {
+    noExternal: ["posthog-js", "@posthog/react"],
+  },
+  server: {
+    port: 3000,
+    proxy: {
+      "/ingest/static": {
+        target: "https://us-assets.i.posthog.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ""),
+      },
+      "/ingest/array": {
+        target: "https://us-assets.i.posthog.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ""),
+      },
+      "/ingest": {
+        target: "https://us.i.posthog.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ""),
+      },
+    },
+  },
 });
 
 const testConfig = defineVitestConfig({

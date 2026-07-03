@@ -15,11 +15,13 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
+  const posthog = (context as PostHogContext).posthog;
   try {
     const { supabase, headers } = context.get(anonymousContext);
     const i18n = getInstance(context);
@@ -173,6 +175,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         }
       }
 
+      posthog?.capture({ distinctId: email, event: "user_logged_in" });
+
       return redirect(href("/organizations"), {
         headers: combineHeaders(headers, inviteLinkHeaders, emailInviteHeaders),
       });
@@ -204,6 +208,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         userAccountId: userProfile.id,
       });
     }
+
+    posthog?.capture({ distinctId: email, event: "user_registered" });
 
     return redirect(href("/onboarding"), {
       headers: combineHeaders(headers, inviteLinkHeaders, emailInviteHeaders),

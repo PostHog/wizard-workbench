@@ -38,11 +38,13 @@ const ONE_MB = 1_000_000;
 export type CreateOrganizationFormCardProps = {
   isCreatingOrganization?: boolean;
   lastResult?: SubmissionResult;
+  onSubmit?: () => void;
 };
 
 export function CreateOrganizationFormCard({
   isCreatingOrganization = false,
   lastResult,
+  onSubmit,
 }: CreateOrganizationFormCardProps) {
   const { t } = useTranslation("organizations", { keyPrefix: "new.form" });
   const { form, fields } = useForm(
@@ -61,7 +63,15 @@ export function CreateOrganizationFormCard({
         </CardHeader>
 
         <CardContent>
-          <Form encType="multipart/form-data" method="POST" {...form.props}>
+          <Form
+            encType="multipart/form-data"
+            method="POST"
+            {...form.props}
+            onSubmit={(e) => {
+              form.props.onSubmit?.(e);
+              onSubmit?.();
+            }}
+          >
             <FieldSet
               className="flex flex-col gap-6"
               disabled={isCreatingOrganization}

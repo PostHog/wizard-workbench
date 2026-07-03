@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { useTranslation } from "react-i18next";
 import { useNavigation } from "react-router";
 
@@ -29,10 +30,15 @@ export async function action(args: Route.ActionArgs) {
 
 export default function ContactSales({ actionData }: Route.ComponentProps) {
   const { t } = useTranslation("billing", { keyPrefix: "contactSales" });
+  const posthog = usePostHog();
 
   const navigation = useNavigation();
   const isContactingSales =
     navigation.formData?.get("intent") === CONTACT_SALES_INTENT;
+
+  const handleContactSalesSubmit = () => {
+    posthog?.capture("contact_sales_submitted");
+  };
 
   return (
     <>
@@ -78,6 +84,7 @@ export default function ContactSales({ actionData }: Route.ComponentProps) {
             <ContactSalesTeam
               isContactingSales={isContactingSales}
               lastResult={actionData?.result}
+              onSubmit={handleContactSalesSubmit}
             />
           )}
         </div>

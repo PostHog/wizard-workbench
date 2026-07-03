@@ -1,4 +1,5 @@
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { IconMail } from "@tabler/icons-react";
 import { Trans, useTranslation } from "react-i18next";
 import { data, Form, href, Link, useNavigation } from "react-router";
@@ -70,6 +71,7 @@ export default function RegisterRoute({
     keyPrefix: "register",
   });
   const { inviteLinkInfo } = loaderData;
+  const posthog = usePostHog();
 
   const isAwaitingEmailConfirmation =
     getIsAwaitingEmailConfirmation(actionData);
@@ -84,6 +86,14 @@ export default function RegisterRoute({
   const isRegisteringWithGoogle =
     navigation.formData?.get("intent") === REGISTER_WITH_GOOGLE_INTENT;
   const isSubmitting = isRegisteringWithEmail || isRegisteringWithGoogle;
+
+  const handleRegisterWithEmail = () => {
+    posthog?.capture("signup_initiated", { method: "email" });
+  };
+
+  const handleRegisterWithGoogle = () => {
+    posthog?.capture("signup_initiated", { method: "google" });
+  };
 
   if (isAwaitingEmailConfirmation) {
     return (
@@ -143,6 +153,7 @@ export default function RegisterRoute({
             <Field>
               <Button
                 name="intent"
+                onClick={handleRegisterWithEmail}
                 type="submit"
                 value={REGISTER_WITH_EMAIL_INTENT}
               >
@@ -165,6 +176,7 @@ export default function RegisterRoute({
           <Field>
             <Button
               name="intent"
+              onClick={handleRegisterWithGoogle}
               type="submit"
               value={REGISTER_WITH_GOOGLE_INTENT}
               variant="outline"

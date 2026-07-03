@@ -23,11 +23,13 @@ import { Textarea } from "~/components/ui/textarea";
 export type ContactSalesTeamProps = {
   isContactingSales?: boolean;
   lastResult?: SubmissionResult;
+  onSubmit?: () => void;
 };
 
 export function ContactSalesTeam({
   isContactingSales = false,
   lastResult,
+  onSubmit,
 }: ContactSalesTeamProps) {
   const { t } = useTranslation("billing", { keyPrefix: "contactSales" });
 
@@ -47,7 +49,14 @@ export function ContactSalesTeam({
         </CardDescription>
       </CardHeader>
 
-      <Form method="POST" {...form.props}>
+      <Form
+        method="POST"
+        {...form.props}
+        onSubmit={(e) => {
+          form.props.onSubmit?.(e);
+          onSubmit?.();
+        }}
+      >
         <FieldSet className="space-y-6" disabled={isContactingSales}>
           <CardContent className="space-y-6">
             <Field data-invalid={fields.firstName.ariaInvalid}>

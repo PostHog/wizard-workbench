@@ -1,4 +1,5 @@
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { IconMail } from "@tabler/icons-react";
 import { Trans, useTranslation } from "react-i18next";
 import { data, Form, href, Link, useNavigation } from "react-router";
@@ -68,6 +69,7 @@ export default function LoginRoute({
 }: Route.ComponentProps) {
   const { t } = useTranslation("userAuthentication", { keyPrefix: "login" });
   const { inviteLinkInfo } = loaderData;
+  const posthog = usePostHog();
 
   const isAwaitingEmailConfirmation =
     getIsAwaitingEmailConfirmation(actionData);
@@ -82,6 +84,14 @@ export default function LoginRoute({
   const isLoggingInWithGoogle =
     navigation.formData?.get("intent") === LOGIN_WITH_GOOGLE_INTENT;
   const isSubmitting = isLoggingInWithEmail || isLoggingInWithGoogle;
+
+  const handleLoginWithEmail = () => {
+    posthog?.capture("login_initiated", { method: "email" });
+  };
+
+  const handleLoginWithGoogle = () => {
+    posthog?.capture("login_initiated", { method: "google" });
+  };
 
   if (isAwaitingEmailConfirmation) {
     return (
@@ -142,6 +152,7 @@ export default function LoginRoute({
             <Field>
               <Button
                 name="intent"
+                onClick={handleLoginWithEmail}
                 type="submit"
                 value={LOGIN_WITH_EMAIL_INTENT}
               >
@@ -164,6 +175,7 @@ export default function LoginRoute({
           <Field>
             <Button
               name="intent"
+              onClick={handleLoginWithGoogle}
               type="submit"
               value={LOGIN_WITH_GOOGLE_INTENT}
               variant="outline"

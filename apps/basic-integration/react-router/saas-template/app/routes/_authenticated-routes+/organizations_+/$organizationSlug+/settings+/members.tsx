@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { useTranslation } from "react-i18next";
 import { data, href, Link, useNavigation } from "react-router";
 
@@ -67,6 +68,7 @@ export default function OrganizationMembersRoute({
   const { t } = useTranslation("organizations", {
     keyPrefix: "settings.teamMembers",
   });
+  const posthog = usePostHog();
   const {
     emailInviteCard,
     inviteLinkCard,
@@ -77,6 +79,10 @@ export default function OrganizationMembersRoute({
   const navigation = useNavigation();
   const isInvitingByEmail =
     navigation.formData?.get("intent") === INVITE_BY_EMAIL_INTENT;
+
+  const handleInviteMember = () => {
+    posthog?.capture("team_member_invited");
+  };
 
   return (
     <div className="px-4 py-4 md:py-6 lg:px-6">
@@ -130,6 +136,7 @@ export default function OrganizationMembersRoute({
               isInvitingByEmail={isInvitingByEmail}
               // @ts-expect-error - This is a submission result
               lastResult={actionData?.result}
+              onSubmit={handleInviteMember}
               successEmail={
                 (actionData as unknown as { success?: string })?.success
               }
