@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -59,6 +60,18 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: `todo-${updatedTodo.id}`,
+      event: 'todo_updated_api',
+      properties: {
+        todo_id: updatedTodo.id,
+        completed: updatedTodo.completed,
+        updated_fields: Object.keys(validatedData),
+      },
+    });
+    await posthog.shutdown();
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -67,6 +80,14 @@ export async function PATCH(
         { status: 400 }
       );
     }
+
+    const posthog = getPostHogClient();
+    posthog.captureException(error, undefined, {
+      endpoint: '/api/todos/[id]',
+      method: 'PATCH',
+    });
+    await posthog.shutdown();
+
     console.error('Error updating todo:', error);
     return NextResponse.json(
       { error: 'Failed to update todo' },
@@ -94,8 +115,25 @@ export async function DELETE(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: `todo-${todoId}`,
+      event: 'todo_deleted_api',
+      properties: {
+        todo_id: todoId,
+      },
+    });
+    await posthog.shutdown();
+
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
+    const posthog = getPostHogClient();
+    posthog.captureException(error, undefined, {
+      endpoint: '/api/todos/[id]',
+      method: 'DELETE',
+    });
+    await posthog.shutdown();
+
     console.error('Error deleting todo:', error);
     return NextResponse.json(
       { error: 'Failed to delete todo' },
