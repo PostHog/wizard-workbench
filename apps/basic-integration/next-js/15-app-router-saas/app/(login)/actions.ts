@@ -20,6 +20,7 @@ import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
 import {
   validatedAction,
@@ -42,6 +43,26 @@ async function logActivity(
     ipAddress: ipAddress || ''
   };
   await db.insert(activityLogs).values(newActivity);
+
+  // Send a corresponding PostHog event for key activities
+  const eventMap: Partial<Record<ActivityType, string>> = {
+    [ActivityType.SIGN_IN]: 'auth_sign_in_succeeded',
+    [ActivityType.SIGN_UP]: 'auth_sign_up_succeeded',
+    [ActivityType.UPDATE_PASSWORD]: 'account_password_updated',
+    [ActivityType.DELETE_ACCOUNT]: 'account_deleted',
+    [ActivityType.UPDATE_ACCOUNT]: 'account_updated',
+    [ActivityType.INVITE_TEAM_MEMBER]: 'team_member_invited',
+    [ActivityType.REMOVE_TEAM_MEMBER]: 'team_member_removed',
+  };
+  const eventName = eventMap[type];
+  if (eventName) {
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: String(userId),
+      event: eventName,
+      properties: { team_id: teamId }
+    });
+  }
 }
 
 const signInSchema = z.object({
