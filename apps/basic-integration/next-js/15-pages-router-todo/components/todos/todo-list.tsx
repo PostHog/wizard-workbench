@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -21,8 +22,24 @@ export function TodoList() {
       if (response.ok) {
         const data = await response.json();
         setTodos(data);
+        posthog.capture('todo_list_loaded', {
+          todo_count: data.length,
+          completed_count: data.filter((todo: Todo) => todo.completed).length,
+        });
+      } else {
+        posthog.capture('todo_creation_failed', {
+          action: 'fetch_todos',
+          status_code: response.status,
+        });
       }
     } catch (error) {
+      posthog.captureException(error as Error, {
+        context: 'fetch_todos',
+      });
+      posthog.capture('todo_creation_failed', {
+        action: 'fetch_todos',
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      });
       console.error('Failed to fetch todos:', error);
     } finally {
       setLoading(false);
@@ -42,8 +59,28 @@ export function TodoList() {
       if (response.ok) {
         const newTodo = await response.json();
         setTodos([...todos, newTodo]);
+        posthog.capture('todo_created', {
+          todo_id: newTodo.id,
+          has_description: Boolean(newTodo.description),
+          active_todo_count: todos.filter((todo) => !todo.completed).length + 1,
+        });
+      } else {
+        const errorBody = await response.json().catch(() => null);
+        posthog.capture('todo_creation_failed', {
+          action: 'create_todo',
+          status_code: response.status,
+          error_message: errorBody?.error,
+        });
       }
     } catch (error) {
+      posthog.captureException(error as Error, {
+        context: 'create_todo',
+        title_length: title.length,
+      });
+      posthog.capture('todo_creation_failed', {
+        action: 'create_todo',
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      });
       console.error('Failed to add todo:', error);
     }
   };
@@ -61,8 +98,16 @@ export function TodoList() {
       if (response.ok) {
         const updatedTodo = await response.json();
         setTodos(todos.map((todo) => (todo.id === id ? updatedTodo : todo)));
+        posthog.capture('todo_completion_toggled', {
+          todo_id: updatedTodo.id,
+          completed: updatedTodo.completed,
+        });
       }
     } catch (error) {
+      posthog.captureException(error as Error, {
+        context: 'toggle_todo',
+        todo_id: id,
+      });
       console.error('Failed to update todo:', error);
     }
   };
@@ -75,8 +120,16 @@ export function TodoList() {
 
       if (response.ok) {
         setTodos(todos.filter((todo) => todo.id !== id));
+        posthog.capture('todo_deleted', {
+          todo_id: id,
+          remaining_todo_count: todos.length - 1,
+        });
       }
     } catch (error) {
+      posthog.captureException(error as Error, {
+        context: 'delete_todo',
+        todo_id: id,
+      });
       console.error('Failed to delete todo:', error);
     }
   };
