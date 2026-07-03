@@ -39,6 +39,12 @@ class Account::ImportsController < ApplicationController
         import.process_later
       end
 
+      PostHog.capture(
+        distinct_id: Current.identity.id,
+        event: "import_started",
+        properties: { account_id: account.external_account_id }
+      )
+
       redirect_to account_import_path(import, script_name: account.slug)
     end
 end
