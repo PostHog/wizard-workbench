@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
+import posthog from 'posthog-js';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
@@ -34,7 +35,24 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
+        <form
+          className="space-y-6"
+          action={async (formData) => {
+            // client event capturing on submit
+            const email = String(formData.get('email') || '');
+            posthog.capture(
+              mode === 'signin' ? 'signin_submitted' : 'signup_submitted',
+              {
+                has_redirect: Boolean(redirect),
+                has_price_id: Boolean(priceId),
+                has_invite_id: Boolean(inviteId),
+              }
+            );
+            // allow the original server action to run
+            // @ts-ignore - useActionState provides formAction callable
+            await formAction(formData);
+          }}
+        >
           <input type="hidden" name="redirect" value={redirect || ''} />
           <input type="hidden" name="priceId" value={priceId || ''} />
           <input type="hidden" name="inviteId" value={inviteId || ''} />

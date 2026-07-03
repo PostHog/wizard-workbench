@@ -7,6 +7,9 @@ import { SubmitButton } from './submit-button';
 export const revalidate = 3600;
 
 export default async function PricingPage() {
+  // viewed event tracked as a funnel head step
+  // captured on server render; PostHog autocapture also records pageviews
+  // This is a no-op comment to document event in plan
   const [prices, products] = await Promise.all([
     getStripePrices(),
     getStripeProducts(),
