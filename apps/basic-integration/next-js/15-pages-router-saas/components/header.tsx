@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
+import posthog from 'posthog-js';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,8 @@ function UserMenu() {
       await fetch('/api/auth/sign-out', {
         method: 'POST'
       });
+
+      posthog.capture('auth_signed_out');
 
       // Clear SWR cache
       mutate('/api/user', null, false);

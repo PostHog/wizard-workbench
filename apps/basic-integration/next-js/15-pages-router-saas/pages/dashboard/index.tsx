@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
 
@@ -26,6 +27,8 @@ function ManageSubscription() {
 
   async function handleManageSubscription() {
     try {
+      posthog.capture('billing_portal_opened');
+
       const response = await fetch('/api/stripe/customer-portal', {
         method: 'POST',
         headers: {

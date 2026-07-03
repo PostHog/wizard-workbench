@@ -3,6 +3,7 @@ import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
+import posthog from 'posthog-js';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
@@ -73,6 +74,12 @@ function PricingCard({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // Capture checkout initiation (no PII)
+    posthog.capture('checkout_initiated', {
+      has_price_id: Boolean(priceId),
+      plan_name: name,
+    });
 
     startTransition(async () => {
       try {

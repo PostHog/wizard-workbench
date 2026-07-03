@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { createPostHogClient } from '@/lib/posthog/server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -46,6 +47,7 @@ export default async function handler(
 
   try {
     const { email, password, redirect, priceId } = req.body;
+    const posthog = createPostHogClient();
 
     const validation = signInSchema.safeParse({ email, password });
     if (!validation.success) {
@@ -68,6 +70,12 @@ export default async function handler(
       .limit(1);
 
     if (userWithTeam.length === 0) {
+      posthog.capture({
+        distinctId: 'unknown',
+        event: 'auth_sign_in_failed',
+        properties: { reason: 'user_not_found' }
+      });
+      await posthog.shutdown();
       return res.status(401).json({
         error: 'Invalid email or password. Please try again.',
         email,
@@ -83,6 +91,12 @@ export default async function handler(
     );
 
     if (!isPasswordValid) {
+      posthog.capture({
+        distinctId: foundUser.id.toString(),
+        event: 'auth_sign_in_failed',
+        properties: { reason: 'invalid_credentials' }
+      });
+      await posthog.shutdown();
       return res.status(401).json({
         error: 'Invalid email or password. Please try again.',
         email,
@@ -95,17 +109,28 @@ export default async function handler(
       logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
     ]);
 
+    posthog.capture({
+      distinctId: foundUser.id.toString(),
+      event: 'auth_sign_in_succeeded',
+      properties: { has_team: Boolean(foundTeam?.id) }
+    });
+
     if (redirect === 'checkout' && foundTeam) {
       const checkoutResult = await createCheckoutSession({
         team: foundTeam,
         priceId,
         userId: foundUser.id
       });
+      await posthog.shutdown();
       return res.status(200).json(checkoutResult);
     }
 
+    await posthog.shutdown();
     return res.status(200).json({ success: true, redirectTo: '/dashboard' });
   } catch (error) {
+    const posthog = createPostHogClient();
+    posthog.capture({ distinctId: 'unknown', event: 'auth_sign_in_failed', properties: { reason: 'exception' } });
+    await posthog.shutdown();
     console.error('Sign in error:', error);
     return res.status(500).json({ error: 'Failed to sign in. Please try again.' });
   }

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { createPostHogClient } from '@/lib/posthog/server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,20 +14,36 @@ export default async function handler(
   try {
     const sessionCookie = req.cookies.session;
     const priceId = req.body.priceId as string;
+    const posthog = createPostHogClient();
 
     const user = await getUser(sessionCookie);
     const team = user ? await getTeamForUser(sessionCookie) : null;
 
     if (!team || !user) {
       // Redirect to sign up if no team
+      posthog.capture({
+        distinctId: 'anonymous',
+        event: 'checkout_session_created',
+        properties: { redirected_to_signup: true }
+      });
+      await posthog.shutdown();
       return res.status(200).json({
         redirectTo: `/sign-up?redirect=checkout&priceId=${priceId}`
       });
     }
 
     const result = await createCheckoutSession({ team, priceId, userId: user.id });
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'checkout_session_created',
+      properties: { redirected_to_signup: false }
+    });
+    await posthog.shutdown();
     return res.status(200).json(result);
   } catch (error) {
+    const posthog = createPostHogClient();
+    posthog.capture({ distinctId: 'anonymous', event: 'checkout_session_created', properties: { error: 'exception' } });
+    await posthog.shutdown();
     console.error('Checkout error:', error);
     return res.status(500).json({ error: 'Failed to create checkout session' });
   }

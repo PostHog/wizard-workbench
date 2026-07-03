@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -38,6 +39,14 @@ export function Login({
       inviteId: formData.get('inviteId') as string
     };
 
+    // Capture attempt (no PII)
+    posthog.capture(mode === 'signin' ? 'auth_sign_in_attempted' : 'auth_sign_up_attempted', {
+      has_redirect: Boolean(data.redirect),
+      has_price_id: Boolean(data.priceId),
+      has_invite_id: Boolean(data.inviteId),
+      mode,
+    });
+
     startTransition(async () => {
       try {
         const response = await fetch(`/api/auth/${mode === 'signin' ? 'sign-in' : 'sign-up'}`, {
@@ -51,11 +60,26 @@ export function Login({
         const result = await response.json();
 
         if (!response.ok) {
+          // Capture failure (no PII)
+          posthog.capture(mode === 'signin' ? 'auth_sign_in_failed' : 'auth_sign_up_failed', {
+            reason: result.error || 'unknown_error',
+            mode,
+          });
           setError(result.error || 'An error occurred');
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
           return;
         }
+
+        // Identify by email and capture success (no PII props)
+        if (data.email) {
+          posthog.identify(data.email);
+        }
+        posthog.capture(mode === 'signin' ? 'auth_sign_in_succeeded' : 'auth_sign_up_succeeded', {
+          has_redirect_to: Boolean(result.redirectTo),
+          went_to_checkout: Boolean(result.url),
+          mode,
+        });
 
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
@@ -64,6 +88,7 @@ export function Login({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.capture('auth_flow_error', { mode });
         setError('An unexpected error occurred. Please try again.');
       }
     });

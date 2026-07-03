@@ -11,6 +11,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { createPostHogClient } from '@/lib/posthog/server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -46,6 +47,7 @@ export default async function handler(
   try {
     const sessionCookie = req.cookies.session;
     const user = await getUser(sessionCookie);
+    const posthog = createPostHogClient();
 
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -107,6 +109,13 @@ export default async function handler(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+
+    posthog.capture({
+      distinctId: user.id.toString(),
+      event: 'team_member_invited',
+      properties: { team_id: userWithTeam.teamId, role }
+    });
+    await posthog.shutdown();
 
     return res.status(200).json({ success: 'Invitation sent successfully' });
   } catch (error) {
