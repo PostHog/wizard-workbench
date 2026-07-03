@@ -1,3 +1,4 @@
+import posthog from './posthog.js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -38,5 +39,11 @@ router.notFound(() => {
 });
 
 // --- Start ---
+
+// Identify user if already logged in (e.g. page refresh)
+if (store.state.currentUser) {
+  const u = store.state.currentUser;
+  posthog.identify(u.id, { name: u.name, email: u.email, role: u.role });
+}
 
 router.start();
