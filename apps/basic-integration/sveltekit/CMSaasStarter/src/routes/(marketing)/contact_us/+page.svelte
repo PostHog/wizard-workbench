@@ -2,6 +2,7 @@
   import { enhance, applyAction } from "$app/forms"
   import type { SubmitFunction } from "@sveltejs/kit"
   import type { FullAutoFill } from "svelte/elements"
+  import { getPostHog, initPostHog } from "$lib/posthog"
 
   let errors: { [fieldName: string]: string } = $state({})
   let loading = $state(false)
@@ -54,8 +55,19 @@
   ]
 
   const handleSubmit: SubmitFunction = () => {
+    initPostHog()
     loading = true
     errors = {}
+
+    getPostHog().capture("contact_form_submitted", {
+      has_company: Boolean(
+        (document.getElementById("company") as HTMLInputElement | null)?.value,
+      ),
+      has_phone: Boolean(
+        (document.getElementById("phone") as HTMLInputElement | null)?.value,
+      ),
+    })
+
     return async ({ update, result }) => {
       await update({ reset: false })
       await applyAction(result)

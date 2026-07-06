@@ -1,6 +1,18 @@
-<script>
+<script lang="ts">
   import "../app.css"
   import { page } from "$app/stores"
+  import { onMount } from "svelte"
+  import { getPostHog, initPostHog } from "$lib/posthog"
+
+  onMount(() => {
+    initPostHog()
+
+    if ($page.error) {
+      getPostHog().captureException(
+        $page.error instanceof Error ? $page.error : new Error(String($page.error)),
+      )
+    }
+  })
 </script>
 
 <div class="hero min-h-[100vh]">

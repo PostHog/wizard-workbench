@@ -6,12 +6,14 @@ import {
   getOrCreateCustomerId,
 } from "../../subscription_helpers.server"
 import type { PageServerLoad } from "./$types"
+import { getPostHogClient } from "$lib/server/posthog"
 const stripe = new Stripe(PRIVATE_STRIPE_API_KEY, { apiVersion: "2023-08-16" })
+const posthog = getPostHogClient()
 
 export const load: PageServerLoad = async ({
   params,
   url,
-  locals: { safeGetSession, supabaseServiceRole },
+  locals: { safeGetSession, supabaseServiceRole, posthogDistinctId },
 }) => {
   const { session, user } = await safeGetSession()
   if (!session) {
@@ -44,6 +46,15 @@ export const load: PageServerLoad = async ({
 
   let checkoutUrl
   try {
+    await posthog.capture({
+      distinctId: user.id ?? posthogDistinctId,
+      event: "checkout_started",
+      properties: {
+        plan_slug: params.slug,
+        billing_provider: "stripe",
+      },
+    })
+
     const stripeSession = await stripe.checkout.sessions.create({
       line_items: [
         {

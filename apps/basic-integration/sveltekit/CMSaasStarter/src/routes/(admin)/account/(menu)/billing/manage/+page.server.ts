@@ -3,11 +3,13 @@ import { error, redirect } from "@sveltejs/kit"
 import Stripe from "stripe"
 import { getOrCreateCustomerId } from "../../../subscription_helpers.server"
 import type { PageServerLoad } from "./$types"
+import { getPostHogClient } from "$lib/server/posthog"
 const stripe = new Stripe(PRIVATE_STRIPE_API_KEY, { apiVersion: "2023-08-16" })
+const posthog = getPostHogClient()
 
 export const load: PageServerLoad = async ({
   url,
-  locals: { safeGetSession, supabaseServiceRole },
+  locals: { safeGetSession, supabaseServiceRole, posthogDistinctId },
 }) => {
   const { session, user } = await safeGetSession()
   if (!session) {
@@ -27,6 +29,14 @@ export const load: PageServerLoad = async ({
 
   let portalLink
   try {
+    await posthog.capture({
+      distinctId: user.id ?? posthogDistinctId,
+      event: "billing_portal_opened",
+      properties: {
+        billing_provider: "stripe",
+      },
+    })
+
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${url.origin}/account/billing`,

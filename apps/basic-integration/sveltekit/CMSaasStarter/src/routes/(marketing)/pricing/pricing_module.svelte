@@ -1,5 +1,6 @@
 <script lang="ts">
   import { pricingPlans } from "./pricing_plans"
+  import { getPostHog, initPostHog } from "$lib/posthog"
 
   interface Props {
     // Module context
@@ -15,6 +16,16 @@
     currentPlanId = "",
     center = true,
   }: Props = $props()
+
+  const capturePlanSelection = (planId: string, hasStripePrice: boolean) => {
+    initPostHog()
+    getPostHog().capture("pricing_plan_selected", {
+      plan_id: planId,
+      cta_label: callToAction,
+      has_stripe_price: hasStripePrice,
+      surface: currentPlanId ? "account" : "marketing",
+    })
+  }
 </script>
 
 <div
@@ -57,6 +68,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                on:click={() => capturePlanSelection(plan.id, Boolean(plan?.stripe_price_id))}
               >
                 {callToAction}
               </a>

@@ -1,9 +1,12 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { getPostHogClient } from "$lib/server/posthog"
 
 /** @type {import('./$types').Actions} */
+const posthog = getPostHogClient()
+
 export const actions = {
-  submitContactUs: async ({ request, locals: { supabaseServiceRole } }) => {
+  submitContactUs: async ({ request, locals: { supabaseServiceRole, posthogDistinctId } }) => {
     const formData = await request.formData()
     const errors: { [fieldName: string]: string } = {}
 
@@ -68,6 +71,16 @@ export const actions = {
       console.error("Error saving contact request", insertError)
       return fail(500, { errors: { _: "Error saving" } })
     }
+
+    await posthog.capture({
+      distinctId: posthogDistinctId,
+      event: "contact_request_submitted",
+      properties: {
+        has_company: Boolean(company),
+        has_phone: Boolean(phone),
+        message_length: message.length,
+      },
+    })
 
     // Send email to admin
     await sendAdminEmail({

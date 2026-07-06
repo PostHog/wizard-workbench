@@ -15,6 +15,7 @@ declare global {
       }>
       session: Session | null
       user: User | null
+      posthogDistinctId: string
     }
     interface PageData {
       session: Session | null
