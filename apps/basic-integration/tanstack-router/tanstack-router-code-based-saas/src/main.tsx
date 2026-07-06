@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import * as React from 'react'
 import ReactDOM from 'react-dom/client'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import {
   ErrorComponent,
   Link,
@@ -86,7 +87,16 @@ function RouterSpinner() {
 
 function RootComponent() {
   return (
-    <>
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN}
+      options={{
+        api_host: '/ingest',
+        ui_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+        defaults: '2026-01-30',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
@@ -132,7 +142,7 @@ function RootComponent() {
         </div>
       </div>
       <TanStackRouterDevtools position="bottom-right" />
-    </>
+    </PostHogProvider>
   )
 }
 
@@ -143,6 +153,15 @@ const indexRoute = createRoute({
 })
 
 function IndexComponent() {
+  const posthog = usePostHog()
+
+  const captureLandingCta = (destination: 'dashboard' | 'login' | 'invoice') => {
+    posthog.capture('cta_clicked', {
+      location: 'home',
+      destination,
+    })
+  }
+
   return (
     <div className={`p-8`}>
       <div className={`max-w-4xl mx-auto`}>
@@ -156,12 +175,14 @@ function IndexComponent() {
           <div className={`flex gap-4`}>
             <Link
               to="/dashboard"
+              onClick={() => captureLandingCta('dashboard')}
               className={`px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors`}
             >
               Go to Dashboard
             </Link>
             <Link
               to="/login"
+              onClick={() => captureLandingCta('login')}
               className={`px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors`}
             >
               Sign In
@@ -212,6 +233,7 @@ function IndexComponent() {
             <Link
               to={invoiceRoute.to}
               params={{ invoiceId: 3 }}
+              onClick={() => captureLandingCta('invoice')}
               className={`px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors`}
             >
               View Invoice
@@ -433,9 +455,22 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async ({ data }) => {
+      posthog.capture('invoice_creation_submitted', {
+        invoice_id: data.id,
+        title_length: data.title.length,
+        has_description: Boolean(data.body),
+      })
+      await router.invalidate()
+    },
+    onError: ({ error }) => {
+      posthog.captureException(error, {
+        source: 'invoice_creation_form',
+      })
+    },
   })
 
   return (
@@ -514,12 +549,28 @@ const invoiceRoute = createRoute({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async ({ data }) => {
+      if (data) {
+        posthog.capture('invoice_updated', {
+          invoice_id: data.id,
+          title_length: data.title.length,
+          has_notes: Boolean(search.notes),
+        })
+      }
+      await router.invalidate()
+    },
+    onError: ({ error }) => {
+      posthog.captureException(error, {
+        source: 'invoice_update_form',
+        invoice_id: invoice.id,
+      })
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -602,6 +653,12 @@ function InvoiceComponent() {
                   ...old,
                   showNotes: old.showNotes ? undefined : true,
                 })}
+                onClick={() => {
+                  posthog.capture('invoice_notes_toggled', {
+                    invoice_id: invoice.id,
+                    next_state: search.showNotes ? 'hidden' : 'visible',
+                  })
+                }}
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 from={invoiceRoute.fullPath}
                 params={true}
@@ -685,6 +742,7 @@ const usersLayoutRoute = createRoute({
 const roles = ['Admin', 'Member', 'Viewer', 'Editor', 'Manager']
 
 function UsersLayoutComponent() {
+  const posthog = usePostHog()
   const navigate = useNavigate({ from: usersLayoutRoute.fullPath })
   const { usersView } = usersLayoutRoute.useSearch()
   const users = usersLayoutRoute.useLoaderData()
@@ -715,8 +773,12 @@ function UsersLayoutComponent() {
     )
   }, [sortedUsers, filterBy])
 
-  const setSortBy = (sortBy: UsersViewSortBy) =>
-    navigate({
+  const setSortBy = (sortBy: UsersViewSortBy) => {
+    posthog.capture('team_sort_changed', {
+      sort_by: sortBy,
+    })
+
+    return navigate({
       search: (old) => {
         return {
           ...old,
@@ -728,6 +790,7 @@ function UsersLayoutComponent() {
       },
       replace: true,
     })
+  }
 
   React.useEffect(() => {
     navigate({
@@ -742,7 +805,14 @@ function UsersLayoutComponent() {
       },
       replace: true,
     })
-  }, [filterDraft])
+  }, [filterDraft, navigate])
+
+  const handleFilterBlur = () => {
+    posthog.capture('team_filter_applied', {
+      filter_length: filterDraft.trim().length,
+      has_filter: Boolean(filterDraft.trim()),
+    })
+  }
 
   return (
     <div className="flex-1 flex h-full">
@@ -759,6 +829,7 @@ function UsersLayoutComponent() {
           <input
             value={filterDraft}
             onChange={(e) => setFilterDraft(e.target.value)}
+            onBlur={handleFilterBlur}
             placeholder="Search team members..."
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
           />
@@ -781,6 +852,12 @@ function UsersLayoutComponent() {
                 key={user.id}
                 to="/dashboard/users/user"
                 search={{ userId: user.id }}
+                onClick={() => {
+                  posthog.capture('team_member_opened', {
+                    team_member_id: user.id,
+                    role,
+                  })
+                }}
                 className="flex items-center gap-3 p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 activeProps={{ className: `bg-blue-50 dark:bg-blue-900/20 border-l-2 border-l-blue-600` }}
               >
@@ -1002,6 +1079,7 @@ const profileRoute = createRoute({
 })
 
 function ProfileComponent() {
+  const posthog = usePostHog()
   const { username } = profileRoute.useRouteContext()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
@@ -1049,7 +1127,15 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => {
+                posthog.capture('subscription_upgrade_clicked', {
+                  plan_name: 'free',
+                  source: 'account_settings',
+                })
+              }}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Upgrade
             </button>
           </div>
@@ -1067,6 +1153,10 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                posthog.capture('user_logged_out', {
+                  source: 'account_settings',
+                })
+                posthog.reset()
                 auth.logout()
                 router.invalidate()
               }}
@@ -1093,6 +1183,7 @@ const loginRoute = createRoute({
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -1102,7 +1193,21 @@ function LoginComponent() {
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    auth.login(username)
+
+    const normalizedUsername = username.trim()
+    if (!normalizedUsername) {
+      return
+    }
+
+    auth.login(normalizedUsername)
+    posthog.identify(normalizedUsername, {
+      username: normalizedUsername,
+      current_plan: 'free',
+    })
+    posthog.capture('user_logged_in', {
+      auth_method: 'demo_username',
+      redirect_present: Boolean(search.redirect),
+    })
     router.invalidate()
   }
 
@@ -1138,6 +1243,10 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('user_logged_out', {
+                  source: 'login_screen',
+                })
+                posthog.reset()
                 auth.logout()
                 router.invalidate()
               }}
