@@ -1,0 +1,37 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1807735?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Next.js project structure (pages router)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • sign_in_submitted Captures when a returning user submits the sign-in form.
+                               • sign_up_submitted Captures when a new user submits the sign-up form.
+                               • pricing_checkout_started Captures when a visitor starts a checkout flow from pricing.
+                               • subscription_portal_opened Captures when an authenticated user opens subscription management.
+                               • team_member_invite_submitted Captures when a team owner submits an invite for a teammate.
+                               • account_update_submitted Captures when a user submits account profile changes.
+                               • user_signed_in Captures successful sign-in on the server after credentials are validated.
+                               • user_signed_up Captures successful sign-up on the server after account creation completes.
+                               • checkout_session_created Captures creation of a Stripe checkout session for a selected plan.
+                               • checkout_completed Captures successful Stripe checkout completion and subscription activation.
+                               • stripe_subscription_updated Captures Stripe webhook subscription updates that change billing state.
+                               • team_member_invited Captures successful teammate invitation creation on the server.
+                               • account_updated Captures successful account profile updates on the server.
+                               • user_signed_out Captures when an authenticated user signs out.
+
+                               Learn more: https://posthog.com/docs/libraries/next-js?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue

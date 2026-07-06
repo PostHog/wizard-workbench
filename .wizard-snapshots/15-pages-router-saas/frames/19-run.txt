@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Use those signals to decide what to build next.            ◼ Analyze project
+                                                                                           ◼ Install SDK
+                                PostHog has all the dev tools you need.                    ◼ Initialize PostHog
+                                                                                           ◻ Instrument events
+                                  ◆ Product Analytics     ◆ Error Tracking                 ◻ Set env vars
+                                  ◆ Web Analytics         ◆ Session Replay                 ◻ Verify
+                                  ◆ Feature Flags         ◆ Data Pipelines                 ◻ Create dashboard
+                                  ◆ Experiments           ◆ Data Warehouse                 ◻ Write setup report
+
+                                                                                           ⠦ Progress: 3/8 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Inserting PostHog capture code and initialization files.
+                                ◆ Initializing PostHog in the Next.js entry points and API helpers.
+
+                                 Status   Event plan   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status

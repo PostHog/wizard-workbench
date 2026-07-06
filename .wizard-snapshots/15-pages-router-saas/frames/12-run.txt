@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Welcome.                                                   ▶ Analyzing project
+                                                                                           ◻ Install SDK
+                                The Wizard is an agent.                                    ◻ Initialize PostHog
+                                                                                           ◻ Instrument events
+                                It handles the entire PostHog setup process on your        ◻ Set env vars
+                                behalf.                                                    ◻ Verify
+                                                                                           ◻ Create dashboard
+                                As we speak, it's building a plan to set up PostHog in     ◻ Write setup report
+                                your project.
+                                                                                           ⠇ Progress: 0/8 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Reading the skill steps and project structure
+                                ◆ Checking project structure.
+
+                                 Status   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status
