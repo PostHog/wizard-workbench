@@ -10,6 +10,7 @@ import { useMemo } from "react";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePostHog } from "posthog-react-native";
 import { Link2, MessageSquareText } from "lucide-react-native";
 
 import type { Item } from "@/shared/types";
@@ -17,12 +18,21 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export const Post = ({ id, title, url, score, text, kids }: Item) => {
   const QC = useQueryClient();
+  const posthog = usePostHog();
 
   const isExternal = useMemo(() => {
     return text === undefined;
   }, [text]);
 
   const navigateToDetails = async () => {
+    posthog.capture("story_opened", {
+      item_id: id,
+      has_external_url: Boolean(url),
+      has_text: typeof text === "string",
+      comment_count: kids?.length || 0,
+      score: score || 0,
+    });
+
     await QC.prefetchQuery({
       queryKey: getItemDetailsQueryKey(id),
       queryFn: getItemQueryFn,
@@ -34,8 +44,15 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
-          if (isExternal) Linking.openURL(url);
-          else await navigateToDetails();
+          if (isExternal) {
+            posthog.capture("story_link_opened", {
+              item_id: id,
+              story_host: url ? new URL(url).host : null,
+              comment_count: kids?.length || 0,
+              score: score || 0,
+            });
+            Linking.openURL(url);
+          } else await navigateToDetails();
         }}
       >
         <Text style={{ color: "black", fontSize: 20, fontWeight: 500 }}>
@@ -86,6 +103,12 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           <Pressable
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              posthog.capture("story_link_opened", {
+                item_id: id,
+                story_host: new URL(url).host,
+                comment_count: kids?.length || 0,
+                score: score || 0,
+              });
               Linking.openURL(url);
             }}
           >

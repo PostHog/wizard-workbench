@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { FlatList, ListRenderItem, View } from "react-native";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { usePostHog } from "posthog-react-native";
 
 import { Post } from "@/components/posts/Post";
 import { Spinner } from "@/components/Spinner";
@@ -26,6 +27,9 @@ const ItemSeparatorComponent = () => (
 );
 
 export const Posts = ({ storyType }: { storyType: StoryType }) => {
+  const posthog = usePostHog();
+  const trackedPageCount = useRef(0);
+
   const storyListQuery = useQuery({
     queryKey: ["storyIds", storyType],
     queryFn: async () => {
@@ -70,6 +74,34 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
       .flat()
       .filter(({ dead, deleted }) => dead !== true && deleted !== true);
   }, [data]);
+
+  useEffect(() => {
+    if (!storyListQuery.data || !posts || posts.length === 0) {
+      return;
+    }
+
+    posthog.capture("story_list_loaded", {
+      story_type: storyType,
+      total_story_ids: storyListQuery.data.length,
+      loaded_story_count: posts.length,
+    });
+  }, [posthog, posts, storyListQuery.data, storyType]);
+
+  useEffect(() => {
+    const pageCount = data?.pages.length ?? 0;
+
+    if (pageCount <= 1 || pageCount <= trackedPageCount.current) {
+      trackedPageCount.current = pageCount;
+      return;
+    }
+
+    posthog.capture("story_feed_paginated", {
+      story_type: storyType,
+      page_count: pageCount,
+      loaded_story_count: posts?.length ?? 0,
+    });
+    trackedPageCount.current = pageCount;
+  }, [data?.pages.length, posthog, posts?.length, storyType]);
 
   return (
     <FlatList

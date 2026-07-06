@@ -1,6 +1,7 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useEffect, useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { FlatList, ListRenderItem, View } from "react-native";
+import { usePostHog } from "posthog-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Post } from "@/components/posts/Post";
@@ -16,9 +17,10 @@ type Props = Pick<User, "id" | "submitted"> & {
 };
 
 export const Activities = ({ id, submitted, children }: Props) => {
+  const posthog = usePostHog();
+  const trackedPageCount = useRef(0);
   const { bottom } = useSafeAreaInsets();
-  const { data, hasNextPage, isLoading, isFetchingNextPage, fetchNextPage } =
-    useInfiniteQuery({
+  const { data, hasNextPage, isLoading, fetchNextPage } = useInfiniteQuery({
       queryKey: [id, "activities"],
       queryFn: async ({ pageParam = 0 }) => {
         if (!submitted) return [];
@@ -48,6 +50,34 @@ export const Activities = ({ id, submitted, children }: Props) => {
       .flat()
       .filter(({ dead, deleted }) => dead !== true && deleted !== true);
   }, [data]);
+
+  useEffect(() => {
+    if (!activities) {
+      return;
+    }
+
+    posthog.capture("user_activities_loaded", {
+      profile_id: id,
+      total_activity_ids: submitted?.length || 0,
+      loaded_activity_count: activities.length,
+    });
+  }, [activities, id, posthog, submitted?.length]);
+
+  useEffect(() => {
+    const pageCount = data?.pages.length ?? 0;
+
+    if (pageCount <= 1 || pageCount <= trackedPageCount.current) {
+      trackedPageCount.current = pageCount;
+      return;
+    }
+
+    posthog.capture("user_activities_paginated", {
+      profile_id: id,
+      page_count: pageCount,
+      loaded_activity_count: activities?.length ?? 0,
+    });
+    trackedPageCount.current = pageCount;
+  }, [activities?.length, data?.pages.length, id, posthog]);
 
   return (
     <FlatList

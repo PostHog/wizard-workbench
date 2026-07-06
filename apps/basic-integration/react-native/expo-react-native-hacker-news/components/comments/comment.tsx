@@ -11,6 +11,7 @@ import RenderHTML from "react-native-render-html";
 import { router, usePathname } from "expo-router";
 import { formatDistanceToNowStrict } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePostHog } from "posthog-react-native";
 import { MessageSquareText } from "lucide-react-native";
 
 import type { Item } from "@/shared/types";
@@ -19,6 +20,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export const Comment = (item: Item) => {
   const QC = useQueryClient();
+  const posthog = usePostHog();
   const pathname = usePathname();
   const { width: windowWidth } = useWindowDimensions();
 
@@ -99,6 +101,14 @@ export const Comment = (item: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog.capture("comment_opened", {
+              item_id: item.id,
+              author_id: item.by,
+              source_path: pathname,
+              reply_count: item.kids?.length || 0,
+              score: item.score || 0,
+            });
+
             await QC.prefetchQuery({
               queryKey: getItemDetailsQueryKey(item.id),
               queryFn: getItemQueryFn,

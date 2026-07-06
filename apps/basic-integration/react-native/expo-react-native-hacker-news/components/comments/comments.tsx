@@ -1,6 +1,7 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useEffect, useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { FlatList, ListRenderItem, View } from "react-native";
+import { usePostHog } from "posthog-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Spinner } from "@/components/Spinner";
@@ -15,9 +16,10 @@ type Props = Pick<Item, "id" | "kids"> & {
 };
 
 export const Comments = ({ id, kids, children }: Props) => {
+  const posthog = usePostHog();
+  const trackedPageCount = useRef(0);
   const { bottom } = useSafeAreaInsets();
-  const { data, hasNextPage, isLoading, isFetchingNextPage, fetchNextPage } =
-    useInfiniteQuery({
+  const { data, hasNextPage, isLoading, fetchNextPage } = useInfiniteQuery({
       queryKey: [id, "comments"],
       queryFn: async ({ pageParam = 0 }) => {
         if (!kids) return [];
@@ -47,6 +49,34 @@ export const Comments = ({ id, kids, children }: Props) => {
       .flat()
       .filter(({ dead, deleted }) => dead !== true && deleted !== true);
   }, [data]);
+
+  useEffect(() => {
+    if (!comments) {
+      return;
+    }
+
+    posthog.capture("comment_thread_loaded", {
+      item_id: id,
+      total_comment_ids: kids?.length || 0,
+      loaded_comment_count: comments.length,
+    });
+  }, [comments, id, kids?.length, posthog]);
+
+  useEffect(() => {
+    const pageCount = data?.pages.length ?? 0;
+
+    if (pageCount <= 1 || pageCount <= trackedPageCount.current) {
+      trackedPageCount.current = pageCount;
+      return;
+    }
+
+    posthog.capture("comment_thread_paginated", {
+      item_id: id,
+      page_count: pageCount,
+      loaded_comment_count: comments?.length ?? 0,
+    });
+    trackedPageCount.current = pageCount;
+  }, [comments?.length, data?.pages.length, id, posthog]);
 
   return (
     <FlatList
