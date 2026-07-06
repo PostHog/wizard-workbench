@@ -1,12 +1,29 @@
 #!/usr/bin/env python3
 """User Management Service - A pure Python background service for managing users."""
 
+import atexit
+import os
 import uuid
 from datetime import datetime
 from typing import Optional
 
+from posthog import Posthog
+
 from database import UserDatabase
 from models import User
+
+
+def initialize_posthog():
+    """Initialize PostHog client from environment variables."""
+    project_token = os.getenv('POSTHOG_PROJECT_TOKEN')
+    if not project_token:
+        return None
+
+    return Posthog(
+        project_token,
+        host=os.getenv('POSTHOG_HOST'),
+        enable_exception_autocapture=True,
+    )
 
 
 class UserService:
@@ -16,7 +33,47 @@ class UserService:
         """Initialize the user service."""
         self.db = UserDatabase()
         self.service_id = str(uuid.uuid4())
+        self.posthog_client = initialize_posthog()
+        if self.posthog_client:
+            atexit.register(self.posthog_client.shutdown)
         print(f"User service initialized (ID: {self.service_id})")
+
+    def _capture_event(self, event, distinct_id=None, properties=None):
+        """Capture analytics event when PostHog is configured."""
+        if not self.posthog_client or not distinct_id:
+            return
+
+        self.posthog_client.capture(
+            event=event,
+            distinct_id=distinct_id,
+            properties=properties or {}
+        )
+
+    def _capture_exception(self, exception, distinct_id=None, properties=None):
+        """Capture analytics exception when PostHog is configured."""
+        if not self.posthog_client:
+            return
+
+        self.posthog_client.capture_exception(
+            exception,
+            distinct_id=distinct_id,
+            properties=properties or {}
+        )
+
+    def _set_person_properties(self, user: User):
+        """Sync user traits to PostHog person properties."""
+        if not self.posthog_client:
+            return
+
+        self.posthog_client.set(
+            distinct_id=user.user_id,
+            properties={
+                'email': user.email,
+                'username': user.username,
+                'full_name': user.full_name,
+                'is_active': user.is_active,
+            }
+        )
 
     def register_user(self, email: str, username: str, full_name: Optional[str] = None, metadata: Optional[dict] = None) -> Optional[User]:
         """Register a new user."""
@@ -35,6 +92,16 @@ class UserService:
         )
 
         if self.db.create_user(user):
+            self._set_person_properties(user)
+            self._capture_event(
+                'user_registered',
+                distinct_id=user.user_id,
+                properties={
+                    'has_full_name': bool(full_name),
+                    'has_metadata': bool(metadata),
+                    'metadata_key_count': len(metadata or {}),
+                }
+            )
             print(f"✓ User registered: {username} ({email})")
             return user
         else:
@@ -62,6 +129,13 @@ class UserService:
         success = self.db.deactivate_user(user_id)
 
         if success:
+            self._capture_event(
+                'user_deactivated',
+                distinct_id=user_id,
+                properties={
+                    'reason_provided': bool(reason),
+                }
+            )
             print(f"✓ User deactivated: {user_id}")
         else:
             print(f"✗ Failed to deactivate user: {user_id}")
@@ -94,6 +168,8 @@ class UserService:
 
     def shutdown(self):
         """Shutdown the service gracefully."""
+        if self.posthog_client:
+            self.posthog_client.shutdown()
         print(f"Service {self.service_id} shutting down...")
 
 
@@ -103,69 +179,77 @@ def main():
     print("User Management Service")
     print("=" * 60)
 
-    # Initialize service
-    service = UserService()
+    service = None
+    try:
+        # Initialize service
+        service = UserService()
 
-    # Example usage: Register some test users
-    print("\n--- Registering Test Users ---")
+        # Example usage: Register some test users
+        print("\n--- Registering Test Users ---")
 
-    user1 = service.register_user(
-        email="alice@example.com",
-        username="alice",
-        full_name="Alice Smith",
-        metadata={'role': 'admin', 'department': 'engineering'}
-    )
-
-    user2 = service.register_user(
-        email="bob@example.com",
-        username="bob",
-        full_name="Bob Johnson",
-        metadata={'role': 'user', 'department': 'marketing'}
-    )
-
-    user3 = service.register_user(
-        email="charlie@example.com",
-        username="charlie"
-    )
-
-    # List all users
-    print("\n--- Listing All Users ---")
-    users = service.list_all_users()
-    print(f"Total users: {len(users)}")
-    for user in users:
-        status = "Active" if user.is_active else "Inactive"
-        print(f"  - {user.username} ({user.email}) - {status}")
-
-    # Update a user
-    if user1:
-        print("\n--- Updating User Profile ---")
-        service.update_user_profile(
-            user1.user_id,
-            full_name="Alice M. Smith",
-            metadata={'role': 'admin', 'department': 'engineering', 'title': 'Senior Engineer'}
+        user1 = service.register_user(
+            email="alice@example.com",
+            username="alice",
+            full_name="Alice Smith",
+            metadata={'role': 'admin', 'department': 'engineering'}
         )
 
-    # Deactivate a user
-    if user3:
-        print("\n--- Deactivating User ---")
-        service.deactivate_user(user3.user_id, reason="User requested account suspension")
+        user2 = service.register_user(
+            email="bob@example.com",
+            username="bob",
+            full_name="Bob Johnson",
+            metadata={'role': 'user', 'department': 'marketing'}
+        )
 
-    # List active users only
-    print("\n--- Listing Active Users ---")
-    active_users = service.list_all_users(active_only=True)
-    print(f"Active users: {len(active_users)}")
-    for user in active_users:
-        print(f"  - {user.username} ({user.email})")
+        user3 = service.register_user(
+            email="charlie@example.com",
+            username="charlie"
+        )
 
-    # Export users
-    print("\n--- Exporting Users ---")
-    exported = service.export_users()
-    print(f"Exported {len(exported)} users")
+        # List all users
+        print("\n--- Listing All Users ---")
+        users = service.list_all_users()
+        print(f"Total users: {len(users)}")
+        for user in users:
+            status = "Active" if user.is_active else "Inactive"
+            print(f"  - {user.username} ({user.email}) - {status}")
 
-    # Shutdown
-    print("\n--- Shutting Down Service ---")
-    service.shutdown()
-    print("Service stopped.")
+        # Update a user
+        if user1:
+            print("\n--- Updating User Profile ---")
+            service.update_user_profile(
+                user1.user_id,
+                full_name="Alice M. Smith",
+                metadata={'role': 'admin', 'department': 'engineering', 'title': 'Senior Engineer'}
+            )
+
+        # Deactivate a user
+        if user3:
+            print("\n--- Deactivating User ---")
+            service.deactivate_user(user3.user_id, reason="User requested account suspension")
+
+        # List active users only
+        print("\n--- Listing Active Users ---")
+        active_users = service.list_all_users(active_only=True)
+        print(f"Active users: {len(active_users)}")
+        for user in active_users:
+            print(f"  - {user.username} ({user.email})")
+
+        # Export users
+        print("\n--- Exporting Users ---")
+        exported = service.export_users()
+        print(f"Exported {len(exported)} users")
+
+    except Exception as error:
+        if service:
+            service._capture_exception(error, properties={'service': 'user_management'})
+        raise
+    finally:
+        # Shutdown
+        print("\n--- Shutting Down Service ---")
+        if service:
+            service.shutdown()
+        print("Service stopped.")
 
 
 if __name__ == "__main__":

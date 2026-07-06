@@ -7,14 +7,20 @@ const uploadMeetingForm = document.getElementById('uploadMeetingForm');
 const logoutBtn = document.getElementById('logoutBtn');
 const toast = document.getElementById('toast');
 
+let posthog = null;
+
 let currentUser = null;
 let allMeetings = [];
 let currentMeetingId = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+    await initializePostHog();
     await checkAuth();
     await loadMeetings();
+    captureEvent('dashboard_loaded', {
+        meeting_count: allMeetings.length,
+    });
     await loadStats();
 
     // Event listeners
@@ -49,6 +55,13 @@ async function checkAuth() {
         }
 
         currentUser = data.user;
+        if (posthog) {
+            posthog.identify(currentUser.id, {
+                email: currentUser.email,
+                username: currentUser.username,
+                full_name: currentUser.full_name,
+            });
+        }
         document.getElementById('currentUser').textContent = currentUser.email;
     } catch (error) {
         window.location.href = '/';
@@ -57,6 +70,9 @@ async function checkAuth() {
 
 async function handleLogout() {
     try {
+        captureEvent('logout_clicked', {
+            meeting_count: allMeetings.length,
+        });
         await fetch('/api/auth/logout', { method: 'POST' });
         window.location.href = '/';
     } catch (error) {
@@ -172,6 +188,11 @@ async function handleUploadMeeting(e) {
         transcript: formData.get('transcript'),
     };
 
+    captureEvent('meeting_upload_started', {
+        title_length: meetingData.title.length,
+        transcript_length: meetingData.transcript.length,
+    });
+
     // Show loading state
     const submitBtn = uploadMeetingForm.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
@@ -220,6 +241,13 @@ async function openMeetingDetail(meetingId) {
         }
 
         currentMeetingId = meetingId;
+        captureEvent('meeting_viewed', {
+            meeting_id: meeting.meeting_id,
+            action_item_count: meeting.action_items.length,
+            key_point_count: meeting.key_points.length,
+            participant_count: meeting.participants.length,
+            duration_minutes: meeting.duration_minutes,
+        });
 
         // Populate modal
         document.getElementById('detailTitle').textContent = meeting.title;
@@ -310,6 +338,33 @@ function showToast(message, type = 'success') {
     setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
+}
+
+function captureEvent(eventName, properties = {}) {
+    if (!posthog) {
+        return;
+    }
+
+    posthog.capture(eventName, properties);
+}
+
+async function initializePostHog() {
+    try {
+        const response = await fetch('/api/posthog/config');
+        const config = await response.json();
+
+        if (!config.token || !config.host || !window.posthog) {
+            return;
+        }
+
+        window.posthog.init(config.token, {
+            api_host: config.host,
+            person_profiles: 'identified_only',
+        });
+        posthog = window.posthog;
+    } catch (error) {
+        posthog = null;
+    }
 }
 
 function escapeHtml(text) {

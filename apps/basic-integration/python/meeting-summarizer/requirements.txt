@@ -1,4 +1,4 @@
 # User Service - Pure Python dependencies
 # AI Meeting Summarizer - Pure Python dependencies
 # This service uses only Python standard library
-# No external dependencies required
+posthog>=7.22.0
