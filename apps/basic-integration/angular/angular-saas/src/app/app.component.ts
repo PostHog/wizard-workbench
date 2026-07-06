@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy, DestroyRef, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { I18nService } from '@app/i18n';
 import { Title } from '@angular/platform-browser';
@@ -8,6 +9,8 @@ import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppUpdateService, Logger } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
+import { PosthogService } from '@core/services/posthog.service';
+import { CredentialsService } from '@app/auth/services/credentials.service';
 
 @Component({
   selector: 'app-root',
@@ -24,6 +27,9 @@ export class AppComponent implements OnInit {
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly posthogService = inject(PosthogService);
+  private readonly credentialsService = inject(CredentialsService);
 
   title = 'angular-boilerplate';
 
@@ -31,6 +37,23 @@ export class AppComponent implements OnInit {
     // Setup logger
     if (environment.production) {
       Logger.enableProductionMode();
+    }
+
+    if (isPlatformBrowser(this.platformId)) {
+      this.posthogService.init(environment.posthogKey, {
+        api_host: environment.posthogHost,
+        capture_exceptions: true,
+      });
+
+      const user = this.credentialsService.credentials();
+      if (user) {
+        this.posthogService.posthog.identify(user.id, {
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+        });
+      }
     }
 
     // Initialize i18nService with default language and supported languages
