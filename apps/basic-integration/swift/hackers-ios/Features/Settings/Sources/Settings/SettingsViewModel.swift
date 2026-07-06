@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -61,22 +62,30 @@ public final class SettingsViewModel: @unchecked Sendable {
 
     private func propagateChangesIfNeeded<Value>(_ keyPath: KeyPath<SettingsViewModel, Value>, _ value: Value) {
         guard hasLoadedSettings else { return }
+        let settingName: String
         switch keyPath {
         case \.safariReaderMode:
             settingsUseCase.safariReaderMode = value as! Bool
+            settingName = "safari_reader_mode"
         case \.openInDefaultBrowser:
             settingsUseCase.openInDefaultBrowser = value as! Bool
+            settingName = "open_in_default_browser"
         case \.showThumbnails:
             settingsUseCase.showThumbnails = value as! Bool
+            settingName = "show_thumbnails"
         case \.rememberFeedCategory:
             settingsUseCase.rememberFeedCategory = value as! Bool
+            settingName = "remember_feed_category"
         case \.textSize:
             settingsUseCase.textSize = value as! TextSize
+            settingName = "text_size"
         case \.compactFeedDesign:
             settingsUseCase.compactFeedDesign = value as! Bool
+            settingName = "compact_feed_design"
         default:
-            break
+            return
         }
+        PostHogSDK.shared.capture("settings_changed", properties: ["setting": settingName])
     }
 
     // User actions
