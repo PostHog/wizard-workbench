@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                                                                           ▶ Analyzing project
+                                                                                           ◻ Install SDK
+                                                                                           ◻ Initialize PostHog
+                                                                                           ◻ Instrument events
+                                                                                           ◻ Set env vars
+                                                                                           ◻ Verify
+                                                                                           ◻ Create dashboard
+                                                                                           ◻ Write setup report
+
+                                                                                           ⠏ Progress: 0/8 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Starting project analysis
+                                ◆ Checking project structure.
+
+                                 Status   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status

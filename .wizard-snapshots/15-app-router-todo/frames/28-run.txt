@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+                                Tips                                                       Tasks
+
+                                ◆ You can also track people and groups with PostHog        ◼ Analyze project
+                                Events can be associated with the humans who generate      ◼ Install SDK
+                                them, letting you understand a specific user or            ◼ Initialize PostHog
+                                customer's situation.                                      ◼ Instrument events
+                                                                                           ◼ Set env vars
+                                ◆ Get way more detail using properties                     ◼ Verify
+                                Events and person records can have any properties you      ▶ Creating dashboard
+                                want. Track things like how they found your website,       ◻ Write setup report
+                                what subscription tier they choose, and much more.         ◼ Fix verification issues
+
+                                ◆ Use PostHog in Slack                                     ⠴ Progress: 7/9 completed
+                                Connect the PostHog Slack app to analyze data and ship 
+                                product changes — deploy flags, open PRs, run queries — 
+                                just by tagging @PostHog: https://posthog.com/slack
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Inserting PostHog capture code and initialization.
+                                ◆ Finding and correcting errors in analytics and route handlers.
+
+                                 Status   Event plan   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status

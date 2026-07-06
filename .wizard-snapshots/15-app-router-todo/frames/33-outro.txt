@@ -1,0 +1,31 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1807732?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Next.js project structure (app router)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • todo_created Captures when a new todo is successfully created through the API.
+                               • todo_create_failed Captures when todo creation fails validation or encounters a server error.
+                               • todo_completion_toggled Captures when a todo is marked completed or restored through the API.
+                               • todo_deleted Captures when a todo is successfully deleted through the API.
+                               • todo_update_failed Captures when updating or deleting a todo fails because of invalid input or server errors.
+                               • todo_submitted Captures when the user submits the form to create a new todo from the interface.
+                               • todo_toggle_clicked Captures when the user toggles a todo completion state from the interface.
+                               • todo_delete_clicked Captures when the user clicks to delete a todo from the interface.
+
+                               Learn more: https://posthog.com/docs/libraries/next-js?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
