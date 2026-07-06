@@ -13,13 +13,12 @@ export function useAuth() {
       throw new Error('Username and password are required')
     }
 
-    // Fake auth - accepts any username and password
     const sanitizedUsername = username.trim()
     user.value = sanitizedUsername
     localStorage.setItem(AUTH_KEY, sanitizedUsername)
-    
+
     await router.push('/')
-    
+
     return {
       success: true,
       user: sanitizedUsername,

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import posthog from 'posthog-js'
 import type { MediaType } from '../types'
 import { QUERY_LIST } from '../constants/lists'
 import { listMedia, getMedia } from '../composables/useTMDB'
@@ -18,6 +19,15 @@ const heroItem = ref<any>({
   runtime: 120,
 })
 
+const handleHeroClick = () => {
+  posthog.capture('hero_media_opened', {
+    media_id: String(heroItem.value.id),
+    media_type: type.value,
+    media_title: heroItem.value.title || heroItem.value.name || 'unknown',
+    source: 'home_hero',
+  })
+}
+
 onMounted(async () => {
   try {
     const queries = [QUERY_LIST.movie[0], QUERY_LIST.tv[0]]
@@ -28,6 +38,10 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('Error loading hero item:', error)
+    posthog.captureException(error as Error, {
+      feature_area: 'home_hero',
+      media_type: type.value,
+    })
   }
 })
 </script>
@@ -35,7 +49,7 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen bg-black text-white">
     <div v-if="heroItem" class="mb-10">
-      <router-link :to="`/${type}/${heroItem.id}`">
+      <router-link :to="`/${type}/${heroItem.id}`" @click="handleHeroClick">
         <MediaHero :item="heroItem" />
       </router-link>
     </div>

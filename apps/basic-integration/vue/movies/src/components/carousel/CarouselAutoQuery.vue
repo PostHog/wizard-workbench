@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import posthog from 'posthog-js'
 import type { QueryItem } from '../../types'
 import { listMedia } from '../../composables/useTMDB'
 import MediaCard from '../media/MediaCard.vue'
@@ -12,12 +13,25 @@ const props = defineProps<{
 const items = ref<any[]>([])
 const loading = ref(true)
 
+const handleExploreMore = () => {
+  posthog.capture('carousel_more_clicked', {
+    media_type: props.query.type,
+    query_key: props.query.query,
+    query_title: props.query.title,
+  })
+}
+
 onMounted(async () => {
   try {
     const result = await listMedia(props.query.type, props.query.query, 1)
     items.value = result.results || []
   } catch (error) {
     console.error('Error loading media:', error)
+    posthog.captureException(error as Error, {
+      feature_area: 'carousel',
+      media_type: props.query.type,
+      query_key: props.query.query,
+    })
   } finally {
     loading.value = false
   }
@@ -30,7 +44,7 @@ onMounted(async () => {
       {{ query.title }}
     </template>
     <template #more>
-      <router-link :to="`/${query.type}/category/${query.query}`" class="n-link">
+      <router-link :to="`/${query.type}/category/${query.query}`" class="n-link" @click="handleExploreMore">
         Explore more
       </router-link>
     </template>

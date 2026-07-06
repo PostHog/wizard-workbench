@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute } from 'vue-router'
 import type { Media } from '../types'
 import { getMedia, getRecommendations } from '../composables/useTMDB'
 import { formatTime, formatVote, getTrailer } from '../composables/utils'
 import MediaCard from '../components/media/MediaCard.vue'
 import CarouselBase from '../components/carousel/CarouselBase.vue'
-
-console.log('MediaDetailView component loaded')
 
 const props = defineProps<{
   type?: 'movie' | 'tv'
@@ -64,27 +63,41 @@ const trailerUrl = computed(() => item.value ? getTrailer(item.value) : null)
 
 async function loadMedia() {
   loading.value = true
-  // Reset to fake data immediately for visual feedback
   item.value = {
     ...fakeItem,
     id: id.value || '123',
     title: type.value === 'movie' ? 'Loading...' : undefined,
     name: type.value === 'tv' ? 'Loading...' : undefined,
   }
-  
+
   try {
     const media = await getMedia(type.value as any, id.value)
     item.value = media
-    
+    posthog.capture('media_detail_viewed', {
+      media_id: String(media.id),
+      media_type: type.value,
+      media_title: media.title || media.name || 'unknown',
+      genre_count: media.genres?.length || 0,
+    })
+
     try {
       const recs = await getRecommendations(type.value as any, id.value, 1)
       recommendations.value = recs.results || []
     } catch (recError) {
       recommendations.value = []
+      posthog.captureException(recError as Error, {
+        feature_area: 'recommendations',
+        media_id: String(id.value),
+        media_type: type.value,
+      })
     }
   } catch (error) {
-    // Keep fake data if real data fails
     console.error('Error loading media:', error)
+    posthog.captureException(error as Error, {
+      feature_area: 'media_detail',
+      media_id: String(id.value),
+      media_type: type.value,
+    })
   } finally {
     loading.value = false
   }
@@ -100,7 +113,13 @@ watch(() => route.fullPath, () => {
 }, { immediate: false })
 
 function playTrailer() {
-  if (trailerUrl.value) {
+  if (trailerUrl.value && item.value) {
+    posthog.capture('trailer_played', {
+      media_id: String(item.value.id),
+      media_type: type.value,
+      media_title: item.value.title || item.value.name || 'unknown',
+      source: 'media_detail',
+    })
     showModal.value = true
   }
 }
@@ -197,6 +216,7 @@ function closeModal() {
           v-for="rec in recommendations"
           :key="rec.id"
           :item="rec"
+          :query="{ title: 'Recommendations', query: 'recommendations', type: type.value as any }"
           :type="type.value as any"
           class="flex-1 w-40 md:w-60"
         />

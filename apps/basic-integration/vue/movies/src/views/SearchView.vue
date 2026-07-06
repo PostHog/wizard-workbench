@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute } from 'vue-router'
 import { searchShows } from '../composables/useTMDB'
 import type { Media } from '../types'
@@ -11,20 +12,30 @@ const results = ref<Media[]>([])
 const loading = ref(false)
 
 const search = async () => {
-  if (!query.value.trim()) {
+  const trimmedQuery = query.value.trim()
+  if (!trimmedQuery) {
     results.value = []
     return
   }
 
   loading.value = true
   try {
-    const response = await searchShows(query.value, 1)
+    const response = await searchShows(trimmedQuery, 1)
     results.value = response.results.filter((item: Media) => 
       item.media_type === 'movie' || item.media_type === 'tv'
     ) as Media[]
+    posthog.capture('search_performed', {
+      query_length: trimmedQuery.length,
+      result_count: results.value.length,
+      source: route.query.q ? 'url_query' : 'search_form',
+    })
   } catch (error) {
     console.error('Search error:', error)
     results.value = []
+    posthog.captureException(error as Error, {
+      feature_area: 'search',
+      query_length: trimmedQuery.length,
+    })
   } finally {
     loading.value = false
   }
@@ -71,6 +82,7 @@ watch(() => route.query.q, (newQuery) => {
           v-for="item in results"
           :key="item.id"
           :item="item"
+          :query="{ title: 'Search Results', query: 'search_results', type: (item.media_type || 'movie') as any }"
           :type="(item.media_type || 'movie') as any"
           class="w-full"
         />
