@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 
 @MainActor
 @Observable
@@ -23,7 +24,14 @@ public final class SessionService: AuthenticationServiceProtocol {
         Task { [weak self] in
             guard let self else { return }
             let user = await authenticationUseCase.getCurrentUser()
-            await MainActor.run { self.user = user }
+            await MainActor.run {
+                self.user = user
+                if let user {
+                    PostHogSDK.shared.identify(user.username, userProperties: [
+                        "username": user.username,
+                    ])
+                }
+            }
         }
 
         logoutObserver = NotificationCenter.default.addObserver(
@@ -64,6 +72,12 @@ public final class SessionService: AuthenticationServiceProtocol {
     public func authenticate(username: String, password: String) async throws -> AuthenticationState {
         try await authenticationUseCase.authenticate(username: username, password: password)
         user = await authenticationUseCase.getCurrentUser()
+        if let user {
+            PostHogSDK.shared.identify(user.username, userProperties: [
+                "username": user.username,
+            ])
+        }
+        PostHogSDK.shared.capture("login_succeeded")
         return .authenticated
     }
 
@@ -71,7 +85,11 @@ public final class SessionService: AuthenticationServiceProtocol {
         Task { [weak self] in
             guard let self else { return }
             try? await authenticationUseCase.logout()
-            await MainActor.run { self.user = nil }
+            await MainActor.run {
+                PostHogSDK.shared.capture("logout_completed")
+                PostHogSDK.shared.reset()
+                self.user = nil
+            }
         }
     }
 

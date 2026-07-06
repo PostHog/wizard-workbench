@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 
 @MainActor
@@ -63,6 +64,10 @@ public final class SupportViewModel: @unchecked Sendable {
             let products = try await supportUseCase.availableProducts()
             subscriptionProduct = products.first { $0.kind == .subscription }
             tipProducts = products.filter { $0.kind == .tip }
+            PostHogSDK.shared.capture("support_products_loaded", properties: [
+                "subscription_available": subscriptionProduct != nil,
+                "tip_product_count": tipProducts.count,
+            ])
         } catch {
             alertInfo = AlertInfo(
                 title: "Unable to Load Products",
@@ -75,6 +80,10 @@ public final class SupportViewModel: @unchecked Sendable {
 
     public func purchase(product: SupportProduct) {
         processingProductId = product.id
+        PostHogSDK.shared.capture("support_purchase_started", properties: [
+            "product_id": product.id,
+            "product_kind": product.kind.rawValue,
+        ])
         Task { @MainActor [weak self] in
             guard let self else { return }
             defer { self.processingProductId = nil }
@@ -83,6 +92,12 @@ public final class SupportViewModel: @unchecked Sendable {
                 self.handle(result: result, for: product)
                 if result == .success, product.kind == .subscription {
                     self.isSubscribed = true
+                }
+                if result == .success {
+                    PostHogSDK.shared.capture("support_purchase_completed", properties: [
+                        "product_id": product.id,
+                        "product_kind": product.kind.rawValue,
+                    ])
                 }
             } catch {
                 self.alertInfo = AlertInfo(

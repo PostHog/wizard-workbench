@@ -8,6 +8,7 @@
 import DesignSystem
 import Domain
 import Foundation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -121,6 +122,13 @@ public struct CommentsView<Store: NavigationStoreProtocol>: View {
                 }
             }
             await viewModel.loadComments()
+            if let post = viewModel.post {
+                PostHogSDK.shared.capture("comments_viewed", properties: [
+                    "post_id": post.id,
+                    "comment_count": post.commentsCount,
+                    "has_story_text": post.text?.isEmpty == false,
+                ])
+            }
             if let targetID = pendingCommentID {
                 _ = await viewModel.revealComment(withId: targetID)
             }
@@ -184,6 +192,13 @@ public struct CommentsView<Store: NavigationStoreProtocol>: View {
     private func toggleCommentVisibility(_ comment: Comment, scrollTo: @escaping (String) -> Void) {
         listAnimationsEnabled = true
         let wasVisible = comment.visibility == .visible
+
+        PostHogSDK.shared.capture("comment_thread_toggled", properties: [
+            "post_id": viewModel.postID,
+            "comment_id": comment.id,
+            "comment_level": comment.level,
+            "is_collapsing": wasVisible,
+        ])
 
         withAnimation(.easeInOut(duration: 0.3)) {
             viewModel.toggleCommentVisibility(comment)

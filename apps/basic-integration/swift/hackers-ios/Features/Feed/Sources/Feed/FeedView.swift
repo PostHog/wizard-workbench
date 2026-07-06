@@ -7,6 +7,7 @@
 
 import DesignSystem
 import Domain
+import PostHog
 import Shared
 import SwiftUI
 
@@ -100,6 +101,11 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
             // Set the navigation store for the voting view model
             votingViewModel.navigationStore = navigationStore
             await viewModel.loadFeed()
+            PostHogSDK.shared.capture("feed_viewed", properties: [
+                "feed_type": selectedPostType.rawValue,
+                "is_sidebar": isSidebar,
+                "has_active_search": viewModel.hasActiveSearch,
+            ])
         }
         .onChange(of: navigationStore.selectedPost) { oldPost, newPost in
             // When selectedPost changes in navigation store (e.g., from comments view),
@@ -194,7 +200,15 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
             showThumbnails: viewModel.showThumbnails,
             compactMode: viewModel.compactFeedDesign,
             onLinkTap: { handleLinkTap(post: post) },
-            onCommentsTap: isSidebar ? nil : { navigationStore.showPost(post) },
+            onCommentsTap: isSidebar ? nil : {
+                PostHogSDK.shared.capture("post_opened", properties: [
+                    "post_id": post.id,
+                    "feed_type": selectedPostType.rawValue,
+                    "destination": "comments",
+                    "is_sidebar": isSidebar,
+                ])
+                navigationStore.showPost(post)
+            },
             onPostUpdated: { updatedPost in
                 viewModel.replacePost(updatedPost)
             },
@@ -306,7 +320,12 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
 
         Button {
             Task {
-                _ = await viewModel.toggleBookmark(for: post)
+                let isBookmarked = await viewModel.toggleBookmark(for: post)
+                PostHogSDK.shared.capture("bookmark_toggled", properties: [
+                    "post_id": post.id,
+                    "feed_type": selectedPostType.rawValue,
+                    "is_bookmarked": isBookmarked,
+                ])
             }
         } label: {
             Label(
@@ -365,6 +384,14 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
     }
 
     private func handleLinkTap(post: Domain.Post) {
+        let destination = isHackerNewsItemURL(post.url) ? "comments" : "external_link"
+        PostHogSDK.shared.capture("post_opened", properties: [
+            "post_id": post.id,
+            "feed_type": selectedPostType.rawValue,
+            "destination": destination,
+            "is_sidebar": isSidebar,
+        ])
+
         guard !isHackerNewsItemURL(post.url) else {
             navigationStore.showPost(post)
             return

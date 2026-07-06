@@ -9,6 +9,7 @@ import Authentication
 import DesignSystem
 import Domain
 import MessageUI
+import PostHog
 import Shared
 import SwiftUI
 
@@ -242,6 +243,12 @@ public struct SettingsView: View {
                 .accessibilityLabel("Close"))
         }
         .textScaling(for: viewModel.textSize)
+        .onAppear {
+            PostHogSDK.shared.capture("settings_viewed", properties: [
+                "is_authenticated": isAuthenticated,
+                "has_current_username": currentUsername != nil,
+            ])
+        }
     }
 
     private var versionLabel: some View {
