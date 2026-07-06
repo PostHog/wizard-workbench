@@ -20,7 +20,11 @@ export const checkoutAction = withTeam(async (formData, team) => {
     await posthog.shutdown();
   }
 
-  await createCheckoutSession({ team: team, priceId });
+  await createCheckoutSession({
+    team: team,
+    priceId,
+    posthogDistinctId: String(user?.id)
+  });
 });
 
 export const customerPortalAction = withTeam(async (_, team) => {

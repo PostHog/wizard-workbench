@@ -13,16 +13,20 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function createCheckoutSession({
   team,
-  priceId
+  priceId,
+  posthogDistinctId
 }: {
   team: Team | null;
   priceId: string;
+  posthogDistinctId?: string;
 }) {
   const user = await getUser();
 
   if (!team || !user) {
     redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
   }
+
+  const distinctId = posthogDistinctId ?? user.id.toString();
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
@@ -36,10 +40,16 @@ export async function createCheckoutSession({
     success_url: `${process.env.BASE_URL}/api/stripe/checkout?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.BASE_URL}/pricing`,
     customer: team.stripeCustomerId || undefined,
-    client_reference_id: user.id.toString(),
+    client_reference_id: distinctId,
     allow_promotion_codes: true,
+    metadata: {
+      posthog_person_distinct_id: distinctId
+    },
     subscription_data: {
-      trial_period_days: 14
+      trial_period_days: 14,
+      metadata: {
+        posthog_person_distinct_id: distinctId
+      }
     }
   });
 
