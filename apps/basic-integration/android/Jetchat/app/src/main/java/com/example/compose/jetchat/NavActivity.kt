@@ -40,6 +40,7 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.compose.jetchat.auth.LoginScreen
 import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -68,6 +69,13 @@ class NavActivity : AppCompatActivity() {
                     if (drawerOpen) {
                         // Open drawer and reset state in VM.
                         LaunchedEffect(Unit) {
+                            PostHog.capture(
+                                event = "drawer_opened",
+                                properties = mapOf(
+                                    "source" to "navigation_icon",
+                                    "selected_menu" to selectedMenu,
+                                ),
+                            )
                             // wrap in try-finally to handle interruption whiles opening drawer
                             try {
                                 drawerState.open()

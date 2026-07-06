@@ -41,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -68,6 +69,7 @@ import com.example.compose.jetchat.components.baselineHeight
 import com.example.compose.jetchat.data.colleagueProfile
 import com.example.compose.jetchat.data.meProfile
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -81,6 +83,17 @@ fun ProfileScreen(
     }
 
     val scrollState = rememberScrollState()
+
+    LaunchedEffect(userData.userId) {
+        PostHog.capture(
+            event = "profile_viewed",
+            properties = mapOf(
+                "profile_type" to if (userData.isMe()) "self" else "other",
+                "has_timezone" to (userData.timeZone != null),
+                "has_twitter" to userData.twitter.isNotBlank(),
+            ),
+        )
+    }
 
     BoxWithConstraints(
         modifier = Modifier

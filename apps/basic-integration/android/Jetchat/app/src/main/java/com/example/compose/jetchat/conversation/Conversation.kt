@@ -61,6 +61,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -91,6 +92,7 @@ import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -114,6 +116,17 @@ fun ConversationContent(
 
     val scrollState = rememberLazyListState()
     val topBarState = rememberTopAppBarState()
+
+    LaunchedEffect(uiState.channelName, uiState.channelMembers) {
+        PostHog.capture(
+            event = "conversation_viewed",
+            properties = mapOf(
+                "channel_name" to uiState.channelName,
+                "channel_members" to uiState.channelMembers,
+                "message_count" to uiState.messages.size,
+            ),
+        )
+    }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topBarState)
     val scope = rememberCoroutineScope()
 
