@@ -1,8 +1,9 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
+import { usePostHog } from "@posthog/react";
 import { useAuth } from "~/context/AuthContext";
-import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
+import { claimCountry, likeCountry, visitCountry, getCurrentUser } from "~/lib/utils/auth";
 
 export async function clientLoader() {
   try {
@@ -35,6 +36,7 @@ export async function clientLoader() {
 
 export default function Countries({ loaderData }: Route.ComponentProps) {
   const { user } = useAuth();
+  const posthog = usePostHog();
   const [search, setSearch] = useState<string>("");
   const [region, setRegion] = useState<string>("");
 
@@ -138,6 +140,17 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         claimCountry(countryName);
+                        const updatedUser = getCurrentUser();
+
+                        if (updatedUser) {
+                          posthog?.capture("country_claimed", {
+                            country_name: countryName,
+                            region: country.region,
+                            total_points: updatedUser.totalPoints,
+                            claimed_countries_count: updatedUser.claimedCountries.length,
+                          });
+                        }
+
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -151,6 +164,17 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         likeCountry(countryName);
+                        const updatedUser = getCurrentUser();
+
+                        if (updatedUser) {
+                          posthog?.capture("country_liked", {
+                            country_name: countryName,
+                            region: country.region,
+                            total_points: updatedUser.totalPoints,
+                            liked_countries_count: updatedUser.likedCountries.length,
+                          });
+                        }
+
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -164,6 +188,17 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         visitCountry(countryName);
+                        const updatedUser = getCurrentUser();
+
+                        if (updatedUser) {
+                          posthog?.capture("country_visited", {
+                            country_name: countryName,
+                            region: country.region,
+                            total_points: updatedUser.totalPoints,
+                            visited_countries_count: updatedUser.visitedCountries.length,
+                          });
+                        }
+
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"

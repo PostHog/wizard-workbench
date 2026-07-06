@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { usePostHog } from '@posthog/react'
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
 
@@ -14,11 +15,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
+  const posthog = usePostHog()
 
   useEffect(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
-  }, [])
+
+    if (currentUser) {
+      posthog?.identify(currentUser.id, {
+        email: currentUser.email,
+        username: currentUser.username,
+      })
+    }
+  }, [posthog])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
@@ -41,6 +50,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    if (user) {
+      posthog?.capture('user_logged_out', {
+        claimed_countries_count: user.claimedCountries.length,
+        liked_countries_count: user.likedCountries.length,
+        visited_countries_count: user.visitedCountries.length,
+        total_points: user.totalPoints,
+      })
+    }
+
+    posthog?.reset()
     fakeLogout()
     setUser(null)
   }
