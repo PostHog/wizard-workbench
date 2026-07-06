@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import type { Media, MediaType } from '~/types'
 
-defineProps<{
+const props = defineProps<{
   item: Media
   type: MediaType
 }>()
+const { $posthog } = useNuxtApp()
 
 const tab = ref<'overview' | 'videos' | 'photos'>('overview')
+
+watch(tab, (value) => {
+  $posthog?.capture('media_tab_selected', {
+    tab: value,
+    media_id: props.item.id,
+    media_type: props.type,
+  })
+}, { immediate: true })
 </script>
 
 <template>

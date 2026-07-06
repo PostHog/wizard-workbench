@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import type { Person } from '~/types'
 
-defineProps<{
+const props = defineProps<{
   item: Person
 }>()
+const { $posthog } = useNuxtApp()
 
 const tab = ref<'known' | 'credits' | 'photos'>('known')
+
+watch(tab, (value) => {
+  $posthog?.capture('person_tab_selected', {
+    tab: value,
+    person_id: props.item.id,
+  })
+}, { immediate: true })
 </script>
 
 <template>

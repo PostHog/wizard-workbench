@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Media } from '~/types'
 
+const { $posthog } = useNuxtApp()
 const route = useRoute()
 const router = useRouter()
 const input = ref((route.query.s || '').toString())
@@ -11,13 +12,18 @@ const items = ref<Media[]>([])
 const currentSearch = ref(input.value)
 
 function search() {
-  if (currentSearch.value === input.value)
+  const nextSearch = input.value.toString().trim()
+
+  if (!nextSearch || currentSearch.value === nextSearch)
     return
 
-  currentSearch.value = input.value.toString()
+  currentSearch.value = nextSearch
   count.value = undefined
   items.value = []
-  router.replace({ query: { s: input.value } })
+  $posthog?.capture('search_submitted', {
+    query_length: nextSearch.length,
+  })
+  router.replace({ query: { s: nextSearch } })
 }
 
 async function fetch(page: number) {
