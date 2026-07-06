@@ -1,4 +1,5 @@
 class Account::ImportsController < ApplicationController
+  include PosthogTrackable
   layout "public"
 
   disallow_account_scope only: %i[ new create ]
@@ -33,12 +34,27 @@ class Account::ImportsController < ApplicationController
 
     def start_import(account)
       import = nil
+      distinct_id = PosthogTrackable.distinct_id_for_identity(Current.identity)
 
       Current.set(account: account) do
         import = account.imports.create!(identity: Current.identity, file: params[:file])
         import.process_later
       end
 
+      PostHog.capture(
+        distinct_id: distinct_id,
+        event: "account_import_started",
+        properties: {
+          account_id: account.id,
+          account_slug: account.slug,
+          import_id: import.id
+        }
+      )
+
       redirect_to account_import_path(import, script_name: account.slug)
+    rescue => e
+      PostHog.capture_exception(e, distinct_id)
+      raise
     end
+  end
 end

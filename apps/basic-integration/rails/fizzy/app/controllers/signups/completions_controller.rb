@@ -1,4 +1,5 @@
 class Signups::CompletionsController < ApplicationController
+  include PosthogTrackable
   layout "public"
 
   disallow_account_scope
@@ -23,6 +24,27 @@ class Signups::CompletionsController < ApplicationController
     end
 
     def welcome_to_account
+      distinct_id = PosthogTrackable.distinct_id_for_identity(Current.identity)
+
+      PostHog.identify(
+        distinct_id: distinct_id,
+        properties: {
+          account_id: @signup.account.id,
+          account_slug: @signup.account.slug,
+          name: Current.identity&.user&.name,
+          verified: Current.identity&.user&.verified?
+        }.compact
+      )
+
+      PostHog.capture(
+        distinct_id: distinct_id,
+        event: "signup_completed",
+        properties: {
+          account_id: @signup.account.id,
+          account_slug: @signup.account.slug
+        }
+      )
+
       respond_to do |format|
         format.html do
           flash[:welcome_letter] = true
@@ -31,6 +53,9 @@ class Signups::CompletionsController < ApplicationController
 
         format.json { render json: { account_id: @signup.account.id }, status: :created }
       end
+    rescue => e
+      PostHog.capture_exception(e, distinct_id)
+      raise
     end
 
     def invalid_signup

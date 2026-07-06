@@ -1,4 +1,5 @@
 class JoinCodesController < ApplicationController
+  include PosthogTrackable
   allow_unauthenticated_access
   rate_limit to: 10, within: 3.minutes, only: :create, with: -> { head :too_many_requests }
 
@@ -14,6 +15,26 @@ class JoinCodesController < ApplicationController
   def create
     @join_code.redeem_if { |account| @identity.join(account) }
     user = User.active.find_by!(account: @join_code.account, identity: @identity)
+    distinct_id = PosthogTrackable.distinct_id_for_identity(@identity)
+
+    PostHog.identify(
+      distinct_id: distinct_id,
+      properties: {
+        account_id: user.account_id,
+        role: user.role,
+        verified: user.verified?
+      }
+    )
+
+    PostHog.capture(
+      distinct_id: distinct_id,
+      event: "join_code_redeemed",
+      properties: {
+        account_id: @join_code.account.id,
+        account_slug: @join_code.account.slug,
+        requires_verification: !user.setup?
+      }
+    )
 
     if @identity == Current.identity && user.setup?
       redirect_to landing_url(script_name: @join_code.account.slug)
@@ -26,6 +47,9 @@ class JoinCodesController < ApplicationController
         @identity.send_magic_link,
         return_to: new_users_verification_url(script_name: @join_code.account.slug)
     end
+  rescue => e
+    PostHog.capture_exception(e, distinct_id || PosthogTrackable.distinct_id_for_identity(@identity))
+    raise
   end
 
   private

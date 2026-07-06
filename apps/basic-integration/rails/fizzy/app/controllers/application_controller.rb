@@ -1,4 +1,6 @@
 class ApplicationController < ActionController::Base
+  helper_method :current_user
+
   include Authentication
   include Authorization
   include BlockSearchEngineIndexing
@@ -10,4 +12,9 @@ class ApplicationController < ActionController::Base
   etag { "v1" }
   stale_when_importmap_changes
   allow_browser versions: :modern
+
+  private
+    def current_user
+      Current.user
+    end
 end

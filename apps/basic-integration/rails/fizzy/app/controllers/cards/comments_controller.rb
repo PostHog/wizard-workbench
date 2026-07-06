@@ -1,4 +1,5 @@
 class Cards::CommentsController < ApplicationController
+  include PosthogTrackable
   include CardScoped
 
   before_action :set_comment, only: %i[ show edit update destroy ]
@@ -11,6 +12,17 @@ class Cards::CommentsController < ApplicationController
 
   def create
     @comment = @card.comments.create!(comment_params)
+
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "comment_created",
+      properties: {
+        account_id: Current.account.id,
+        board_id: @card.board_id,
+        card_id: @card.id,
+        comment_id: @comment.id
+      }
+    )
 
     respond_to do |format|
       format.turbo_stream

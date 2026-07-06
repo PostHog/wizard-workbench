@@ -1,4 +1,5 @@
 class Sessions::MagicLinksController < ApplicationController
+  include PosthogTrackable
   disallow_account_scope
   require_unauthenticated_access
   rate_limit to: 10, within: 15.minutes, only: :create, with: :rate_limit_exceeded
@@ -44,10 +45,34 @@ class Sessions::MagicLinksController < ApplicationController
       clear_pending_authentication_token
       start_new_session_for magic_link.identity
 
+      distinct_id = PosthogTrackable.distinct_id_for_identity(magic_link.identity)
+      user = magic_link.identity.user_for(Current.account)
+
+      PostHog.identify(
+        distinct_id: distinct_id,
+        properties: {
+          account_id: user&.account_id,
+          role: user&.role,
+          verified: user&.verified?
+        }.compact
+      )
+
+      PostHog.capture(
+        distinct_id: distinct_id,
+        event: "magic_link_authenticated",
+        properties: {
+          login_method: "magic_link",
+          requires_signup_completion: requires_signup_completion?(magic_link)
+        }
+      )
+
       respond_to do |format|
         format.html { redirect_to after_sign_in_url(magic_link) }
         format.json { render json: { session_token: session_token, requires_signup_completion: requires_signup_completion?(magic_link) } }
       end
+    rescue => e
+      PostHog.capture_exception(e, distinct_id)
+      raise
     end
 
     def email_address_mismatch

@@ -1,4 +1,5 @@
 class WebhooksController < ApplicationController
+  include PosthogTrackable
   include BoardScoped
 
   before_action :ensure_admin
@@ -17,6 +18,18 @@ class WebhooksController < ApplicationController
 
   def create
     webhook = @board.webhooks.create!(webhook_params)
+
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "webhook_created",
+      properties: {
+        account_id: Current.account.id,
+        board_id: @board.id,
+        webhook_id: webhook.id,
+        subscribed_actions_count: webhook.subscribed_actions.size
+      }
+    )
+
     redirect_to webhook
   end
 

@@ -1,4 +1,5 @@
 class Users::DataExportsController < ApplicationController
+  include PosthogTrackable
   before_action :set_user
   before_action :ensure_current_user
   before_action :ensure_export_limit_not_exceeded, only: :create
@@ -10,7 +11,18 @@ class Users::DataExportsController < ApplicationController
   end
 
   def create
-    @user.data_exports.create!(account: Current.account).build_later
+    export = @user.data_exports.create!(account: Current.account)
+    export.build_later
+
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "data_export_requested",
+      properties: {
+        account_id: Current.account.id,
+        export_id: export.id
+      }
+    )
+
     redirect_to @user, notice: "Export started. You'll receive an email when it's ready."
   end
 
