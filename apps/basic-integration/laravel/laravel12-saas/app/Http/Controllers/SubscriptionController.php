@@ -7,15 +7,22 @@ use App\Actions\Billing\GetSubscriptionSummary;
 use App\Actions\Billing\RedirectToBillingPortal;
 use App\Actions\Billing\SwapPlan;
 use App\Domains\Billing\PlanCatalog;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Http\Request;
 
 class SubscriptionController extends Controller
 {
-    public function index(Request $request, PlanCatalog $catalog, GetSubscriptionSummary $summary)
+    public function index(Request $request, PlanCatalog $catalog, GetSubscriptionSummary $summary, PostHogService $posthog)
     {
         $plans = $catalog->all();
         $data = $summary($request->user());
+        $user = $request->user();
+
+        // PostHog: Track subscription page view (top of billing funnel)
+        $posthog->capture($user->email, 'subscription_page_viewed', [
+            'has_active_subscription' => $data['hasActiveSubscription'] ?? false,
+        ]);
 
         return view('subscriptions.index', [
             'plans' => $plans,
@@ -23,10 +30,17 @@ class SubscriptionController extends Controller
         ]);
     }
 
-    public function checkout(Request $request, PlanCatalog $catalog, CheckoutPlan $checkoutPlan)
+    public function checkout(Request $request, PlanCatalog $catalog, CheckoutPlan $checkoutPlan, PostHogService $posthog)
     {
         $plan = $catalog->findOrFail($request->plan);
         $user = $request->user();
+
+        // PostHog: Track subscription checkout initiated
+        $posthog->identify($user->email, $user->getPostHogProperties());
+        $posthog->capture($user->email, 'subscription_started', [
+            'plan_name' => $plan->name,
+            'plan_price' => $plan->price,
+        ]);
 
         // Stub out subscription if Stripe isn't configured (for demo/development)
         if (!CheckoutPlan::isStripeConfigured()) {
@@ -61,14 +75,22 @@ class SubscriptionController extends Controller
         return redirect()->route('dashboard')->with('success', 'Demo subscription created for ' . $plan->name . '. (Stripe not configured)');
     }
 
-    public function swap(Request $request, PlanCatalog $catalog, SwapPlan $swapPlan)
+    public function swap(Request $request, PlanCatalog $catalog, SwapPlan $swapPlan, PostHogService $posthog)
     {
         $plan = $catalog->findOrFail($request->plan);
         $user = $request->user();
 
         if ($user->subscribed('default')) {
             try {
+                $currentPlanId = $user->subscription('default')->stripe_price;
                 $swapPlan($user, $plan);
+
+                // PostHog: Track plan swap
+                $posthog->capture($user->email, 'subscription_plan_swapped', [
+                    'new_plan_name' => $plan->name,
+                    'new_plan_price' => $plan->price,
+                    'previous_plan_id' => $currentPlanId,
+                ]);
 
                 return redirect()->route('subscribe')->with('success', 'Your subscription has been updated to '.$plan->name.'.');
             } catch (Exception $e) {
@@ -79,8 +101,13 @@ class SubscriptionController extends Controller
         return redirect()->route('subscribe')->with('error', 'You don\'t have an active subscription.');
     }
 
-    public function redirectToBillingPortal(Request $request, RedirectToBillingPortal $billingPortal)
+    public function redirectToBillingPortal(Request $request, RedirectToBillingPortal $billingPortal, PostHogService $posthog)
     {
-        return $billingPortal($request->user());
+        $user = $request->user();
+
+        // PostHog: Track billing portal access
+        $posthog->capture($user->email, 'billing_portal_opened');
+
+        return $billingPortal($user);
     }
 }
