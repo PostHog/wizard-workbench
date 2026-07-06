@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+                                Tips                                                       Tasks
+
+                                ◆ You can also track people and groups with PostHog        ◼ Analyze project
+                                Events can be associated with the humans who generate      ◼ Plan event tracking
+                                them, letting you understand a specific user or            ◼ Install SDK
+                                customer's situation.                                      ◼ Initialize PostHog
+                                                                                           ◼ Instrument events
+                                ◆ Get way more detail using properties                     ◼ Verify
+                                Events and person records can have any properties you      ◼ Create dashboard
+                                want. Track things like how they found your website,       ▶ Writing setup report
+                                what subscription tier they choose, and much more.
+                                                                                           ⠧ Progress: 7/8 completed
+                                ◆ Use PostHog in Slack
+                                Connect the PostHog Slack app to analyze data and ship 
+                                product changes — deploy flags, open PRs, run queries — 
+                                just by tagging @PostHog: https://posthog.com/slack
+
+                                ◆ You can track Stripe revenue with PostHog
+                                Add Stripe as a data source while you wait: 
+                                https://app.posthog.com/project/data-warehouse/new-sourc
+                                e?kind=Stripe
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Initializing PostHog in app entry points and shared helpers.
+                                ◆ Finalizing PostHog initialization and event plan.
+
+                                 Status   Event plan   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status

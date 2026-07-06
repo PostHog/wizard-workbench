@@ -1,0 +1,34 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1807733?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Next.js project structure (app router)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • marketing_cta_clicked Captures clicks on the landing page deployment call to action.
+                               • pricing_checkout_started Captures when a visitor starts checkout from a pricing plan card.
+                               • checkout_session_created Captures successful Stripe checkout session creation on the server.
+                               • user_signed_in Captures successful sign-in for an existing account.
+                               • user_signed_up Captures successful account creation and initial session establishment.
+                               • team_member_invited Captures when an owner sends a team invitation.
+                               • team_member_removed Captures when a team member is removed from a workspace.
+                               • account_updated Captures successful account profile updates.
+                               • password_updated Captures successful password changes.
+                               • account_deleted Captures successful account deletion requests.
+                               • stripe_subscription_updated Captures Stripe webhook subscription lifecycle updates.
+
+                               Learn more: https://posthog.com/docs/libraries/next-js?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
