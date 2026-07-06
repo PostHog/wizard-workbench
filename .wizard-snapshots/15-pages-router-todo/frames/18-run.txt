@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Events are the foundation of the PostHog platform.         ◼ Analyze project
+                                                                                           ◼ Install SDK
+                                Every time an action is performed in your codebase —       ▶ Initializing PostHog
+                                like button clicks, function calls, or thrown errors —     ◻ Instrument events
+                                we can capture an event.                                   ◻ Set env vars
+                                                                                           ◻ Verify
+                                Events are sent to PostHog and joined with other product   ◻ Create dashboard
+                                data.                                                      ◻ Write setup report
+
+                                                                                           ⠼ Progress: 2/8 completed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Generating events based on project.
+                                ◆ Installing the PostHog SDK packages.
+
+                                 Status   Event plan   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status

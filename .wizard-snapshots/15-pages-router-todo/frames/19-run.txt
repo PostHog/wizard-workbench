@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+                                Learn                                                      Tasks
+
+                                Use those signals to decide what to build next.            ◼ Analyze project
+                                                                                           ◼ Install SDK
+                                PostHog has all the dev tools you need.                    ◼ Initialize PostHog
+                                                                                           ▶ Instrumenting events
+                                  ◆ Product Analytics     ◆ Error Tracking                 ◻ Set env vars
+                                  ◆ Web Analytics         ◆ Session Replay                 ◻ Verify
+                                  ◆ Feature Flags         ◆ Data Pipelines                 ◻ Create dashboard
+                                  ◆ Experiments           ◆ Data Warehouse                 ◻ Write setup report
+                                  ◆ LLM Analytics         ◆ Surveys
+                                  ◆ Workflows             ◆ Logs                           ⠧ Progress: 3/8 completed
+                                  ◆ Product Tours         ◆ Support
+                                  ◆ Revenue Analytics     ◆ Endpoints
+                                  ◆ Customer Analytics    ◆ PostHog Code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                ┊ Planning PostHog initialization changes and event capture updates.
+                                ◆ Inserting PostHog capture code for initialization and todo flows.
+
+                                 Status   Event plan   Tail logs   HN 
+
+                                ←→ switch tab  s toggle status

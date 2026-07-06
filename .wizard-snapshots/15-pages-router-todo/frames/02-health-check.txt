@@ -1,0 +1,49 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                      ╭──────────────────────────────────────────────────────────────────────╮
+                                                      │                                                                      │
+                                                      │                     Ongoing service disruptions                      │
+                                                      │                                                                      │
+                                                      │   ◼ Down ◼ Degraded ◼ No connection                                  │
+                                                      │                                                                      │
+                                                      │    ◼ Anthropic                                                       │
+                                                      │                                                                      │
+                                                      │   The Wizard cannot start while these services are down.             │
+                                                      │                                                                      │
+                                                      │   You can still download the PostHog integration skills and          │
+                                                      │   continue with another agent.                                       │
+                                                      │                                                                      │
+                                                      │   ────────────────────────────────────────────────────────────────   │
+                                                      │                                                                      │
+                                                      │    Continue anyway?                                                  │
+                                                      │                                                                      │
+                                                      │     ▸ Continue [Enter]    Download skills & Exit [Esc]               │
+                                                      │                                                                      │
+                                                      ╰──────────────────────────────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                ←→ switch  esc cancel  enter confirm

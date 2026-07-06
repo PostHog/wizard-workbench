@@ -1,0 +1,33 @@
+                               PostHog Wizard v2.38.1                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1807724?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your Next.js project structure (pages router)
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • todo_created Captures when a new todo item is successfully created from the main form.
+                               • todo_completion_toggled Captures when a user marks a todo complete or incomplete from the todo list.
+                               • todo_deleted Captures when a todo item is successfully removed from the list.
+                               • todo_list_load_failed Captures when loading the todo list fails in the client.
+                               • todo_create_failed Captures when creating a todo fails in the client.
+                               • todo_update_failed Captures when updating a todo fails in the client.
+                               • todo_delete_failed Captures when deleting a todo fails in the client.
+                               • todo_created_api Captures on the server when the todo creation API successfully creates a todo.
+                               • todo_updated_api Captures on the server when the todo update API successfully modifies a todo.
+                               • todo_deleted_api Captures on the server when the todo delete API successfully removes a todo.
+
+                               Learn more: https://posthog.com/docs/libraries/next-js?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
