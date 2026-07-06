@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -220,6 +221,8 @@ public final class FeedViewModel: @unchecked Sendable {
 
         postType = newType
         persistLastFeedCategoryIfNeeded()
+        // PostHog: Capture feed category change
+        PostHogSDK.shared.capture("feed_category_changed", properties: ["category": newType.rawValue])
         reset(clearPosts: true)  // Clear posts immediately to prevent flash of old data
         await feedLoader.refresh()
     }
@@ -311,6 +314,11 @@ public final class FeedViewModel: @unchecked Sendable {
                 await MainActor.run {
                     self.searchResults = annotated
                     self.isSearchInProgress = false
+                    // PostHog: Capture search event
+                    PostHogSDK.shared.capture("search_performed", properties: [
+                        "query": currentQuery,
+                        "result_count": annotated.count,
+                    ])
                 }
             } catch {
                 if Task.isCancelled { return }

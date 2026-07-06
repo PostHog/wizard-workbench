@@ -7,6 +7,7 @@
 
 import Domain
 import Foundation
+import PostHog
 
 public final class BookmarksController: @unchecked Sendable {
     private let bookmarksUseCase: any BookmarksUseCase
@@ -59,6 +60,12 @@ public final class BookmarksController: @unchecked Sendable {
             } else {
                 cachedIDs.remove(post.id)
             }
+            // PostHog: Capture bookmark toggle
+            PostHogSDK.shared.capture("post_bookmarked", properties: [
+                "post_id": post.id,
+                "post_title": post.title,
+                "bookmarked": newState,
+            ])
             NotificationCenter.default.post(
                 name: .bookmarksDidChange,
                 object: nil,

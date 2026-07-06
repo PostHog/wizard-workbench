@@ -58,6 +58,18 @@
             isEnabled = "YES">
          </AdditionalOption>
       </AdditionalOptions>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "POSTHOG_API_KEY"
+            value = "phx_API_KEY_IS_HARDCODED"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "POSTHOG_HOST"
+            value = "https://us.i.posthog.com"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
