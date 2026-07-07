@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Query
+from posthog import capture
 from pydantic import BaseModel
 
 from app.dependencies import DbSession, RequiredUser
@@ -76,6 +77,14 @@ async def get_usage(
         generations_today=len(today_gens),
         credits_used_today=sum(g.credits_used for g in today_gens),
         by_type=by_type,
+    )
+
+    capture(
+        "usage_stats_viewed",
+        properties={
+            "days_range": days,
+            "total_generations": stats.total_generations,
+        },
     )
 
     return UsageResponse(
