@@ -1,5 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { redirect } from '@tanstack/react-router'
+import * as React from 'react'
+import { usePostHog } from '@posthog/react'
 import { auth } from '../utils/auth'
 
 export const Route = createFileRoute('/_auth')({
@@ -24,4 +26,18 @@ export const Route = createFileRoute('/_auth')({
       username: auth.username,
     }
   },
+  component: AuthComponent,
 })
+
+function AuthComponent() {
+  const { username } = Route.useRouteContext()
+  const posthog = usePostHog()
+
+  React.useEffect(() => {
+    if (username) {
+      posthog.identify(username, { username })
+    }
+  }, [username])
+
+  return <Outlet />
+}
