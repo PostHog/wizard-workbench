@@ -16,6 +16,14 @@ class User < ApplicationRecord
   has_many :pinned_cards, through: :pins, source: :card
   has_many :data_exports, class_name: "User::DataExport", dependent: :destroy
 
+  def posthog_distinct_id
+    identity&.id&.to_s || id.to_s
+  end
+
+  def posthog_properties
+    { name: name, account_id: account&.external_account_id&.to_s, role: role }
+  end
+
   def deactivate
     transaction do
       accesses.destroy_all
