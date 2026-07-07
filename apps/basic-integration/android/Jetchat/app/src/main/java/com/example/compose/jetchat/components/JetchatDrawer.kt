@@ -60,6 +60,7 @@ import com.example.compose.jetchat.data.colleagueProfile
 import com.example.compose.jetchat.data.meProfile
 import com.example.compose.jetchat.theme.JetchatTheme
 import com.example.compose.jetchat.widget.WidgetReceiver
+import com.posthog.PostHog
 
 @Composable
 fun JetchatDrawerContent(
@@ -301,6 +302,7 @@ private fun WidgetDiscoverability() {
             .padding(horizontal = 12.dp)
             .clip(CircleShape)
             .clickable(onClick = {
+                PostHog.capture(event = "widget_added_to_homescreen")
                 addWidgetToHomeScreen(context)
             }),
         verticalAlignment = CenterVertically,
