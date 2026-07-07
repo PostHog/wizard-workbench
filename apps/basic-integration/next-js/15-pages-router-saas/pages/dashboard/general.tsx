@@ -14,6 +14,7 @@ import { Loader2 } from 'lucide-react';
 import useSWR from 'swr';
 import { User } from '@/lib/db/schema';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -54,8 +55,10 @@ export default function GeneralPage() {
 
         setSuccess(result.success);
         setName(result.name);
+        posthog.capture('account_updated');
       } catch (err) {
         setError('An unexpected error occurred. Please try again.');
+        posthog.captureException(err);
       }
     });
   }
