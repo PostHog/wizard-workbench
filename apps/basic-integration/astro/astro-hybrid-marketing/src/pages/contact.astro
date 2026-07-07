@@ -56,6 +56,8 @@ import Layout from '../layouts/Layout.astro';
 </Layout>
 
 <script>
+  declare const window: Window & { posthog?: any };
+
   const form = document.getElementById('contact-form') as HTMLFormElement;
   const messageDiv = document.getElementById('form-message') as HTMLDivElement;
 
@@ -66,10 +68,15 @@ import Layout from '../layouts/Layout.astro';
     const data = Object.fromEntries(formData.entries());
 
     try {
+      const sessionId = window.posthog?.get_session_id?.() || '';
+      const distinctId = window.posthog?.get_distinct_id?.() || '';
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-PostHog-Session-Id': sessionId,
+          'X-PostHog-Distinct-Id': distinctId,
         },
         body: JSON.stringify(data),
       });
@@ -79,6 +86,16 @@ import Layout from '../layouts/Layout.astro';
       if (response.ok) {
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
+        // Identify the person now that we have their name and email
+        window.posthog?.identify(window.posthog.get_distinct_id(), {
+          name: data.name as string,
+          email: data.email as string,
+          company: data.company as string || undefined,
+        });
+        window.posthog?.capture('contact_form_submitted', {
+          interest: data.interest,
+          has_company: Boolean(data.company),
+        });
         form.reset();
       } else {
         messageDiv.className = 'form-message error';
@@ -87,6 +104,7 @@ import Layout from '../layouts/Layout.astro';
     } catch (error) {
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
+      window.posthog?.captureException(error);
     }
   });
 </script>
