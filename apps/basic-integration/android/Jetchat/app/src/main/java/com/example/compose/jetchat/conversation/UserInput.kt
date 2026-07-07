@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -284,19 +285,28 @@ private fun UserInputSelector(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.EMOJI) },
+            onClick = {
+                PostHog.capture(event = "emoji_selector_opened")
+                onSelectorChange(InputSelector.EMOJI)
+            },
             icon = painterResource(id = R.drawable.ic_mood),
             selected = currentInputSelector == InputSelector.EMOJI,
             description = stringResource(id = R.string.emoji_selector_bt_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.DM) },
+            onClick = {
+                PostHog.capture(event = "direct_message_attempted")
+                onSelectorChange(InputSelector.DM)
+            },
             icon = painterResource(id = R.drawable.ic_alternate_email),
             selected = currentInputSelector == InputSelector.DM,
             description = stringResource(id = R.string.dm_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.PICTURE) },
+            onClick = {
+                PostHog.capture(event = "photo_attachment_attempted")
+                onSelectorChange(InputSelector.PICTURE)
+            },
             icon = painterResource(id = R.drawable.ic_insert_photo),
             selected = currentInputSelector == InputSelector.PICTURE,
             description = stringResource(id = R.string.attach_photo_desc),
@@ -445,6 +455,9 @@ private fun UserInputText(
             onSwipeOffsetChange = { offset -> swipeOffset.value = offset },
             onStartRecording = {
                 val consumed = !isRecordingMessage
+                if (!isRecordingMessage) {
+                    PostHog.capture(event = "voice_message_started")
+                }
                 isRecordingMessage = true
                 consumed
             },

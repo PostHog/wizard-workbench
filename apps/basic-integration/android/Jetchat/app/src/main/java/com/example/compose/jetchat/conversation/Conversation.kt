@@ -91,6 +91,7 @@ import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -203,6 +204,13 @@ fun ConversationContent(
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "channel_name" to uiState.channelName,
+                            "message_length" to content.length,
+                        ),
+                    )
                 },
                 resetScroll = {
                     scope.launch {
@@ -309,7 +317,13 @@ fun Messages(messages: List<Message>, navigateToProfile: (String) -> Unit, scrol
 
                 item {
                     Message(
-                        onAuthorClick = { name -> navigateToProfile(name) },
+                        onAuthorClick = { name ->
+                            PostHog.capture(
+                                event = "message_author_profile_clicked",
+                                properties = mapOf("author_name" to name),
+                            )
+                            navigateToProfile(name)
+                        },
                         msg = content,
                         isUserMe = content.author == authorMe,
                         isFirstMessageByAuthor = isFirstMessageByAuthor,
