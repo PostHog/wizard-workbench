@@ -6,6 +6,7 @@ import { renderProjects } from './pages/projects.js';
 import { renderProjectDetail } from './pages/project-detail.js';
 import { renderSettings } from './pages/settings.js';
 import { renderActivity } from './pages/activity.js';
+import { posthog } from './posthog.js';
 
 /**
  * Auth guard — redirects to login if no user is logged in.
@@ -38,5 +39,11 @@ router.notFound(() => {
 });
 
 // --- Start ---
+
+// Identify already-logged-in user on page load
+if (store.state.currentUser) {
+  const u = store.state.currentUser;
+  posthog.identify(u.id, { name: u.name, role: u.role });
+}
 
 router.start();
