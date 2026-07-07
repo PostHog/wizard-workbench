@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -59,6 +60,19 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    const patchDistinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') ?? 'anonymous';
+    const patchSessionId = request.headers.get('X-POSTHOG-SESSION-ID');
+    const posthogPatch = getPostHogClient();
+    posthogPatch.capture({
+      distinctId: patchDistinctId,
+      event: 'server_todo_updated',
+      properties: {
+        todo_id: todoId,
+        completed: updatedTodo.completed,
+        ...(patchSessionId ? { $session_id: patchSessionId } : {}),
+      },
+    });
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -93,6 +107,18 @@ export async function DELETE(
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
+
+    const deleteDistinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') ?? 'anonymous';
+    const deleteSessionId = request.headers.get('X-POSTHOG-SESSION-ID');
+    const posthogDelete = getPostHogClient();
+    posthogDelete.capture({
+      distinctId: deleteDistinctId,
+      event: 'server_todo_deleted',
+      properties: {
+        todo_id: todoId,
+        ...(deleteSessionId ? { $session_id: deleteSessionId } : {}),
+      },
+    });
 
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
