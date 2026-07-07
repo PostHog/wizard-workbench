@@ -21,6 +21,7 @@ import { updateStripeCustomer } from "~/features/billing/stripe-helpers.server";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
 import { OrganizationMembershipRole } from "~/generated/client";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { forbidden } from "~/utils/http-responses.server";
 import { slugify } from "~/utils/slugify.server";
@@ -43,6 +44,7 @@ export async function generalOrganizationSettingsAction({
   const { headers, organization, role } = context.get(
     organizationMembershipContext,
   );
+  const posthog = (context as PostHogContext).posthog;
   const i18n = getInstance(context);
 
   if (role !== OrganizationMembershipRole.owner) {
@@ -128,6 +130,10 @@ export async function generalOrganizationSettingsAction({
     }
 
     case DELETE_ORGANIZATION_INTENT: {
+      posthog?.capture({
+        event: "organization_deleted",
+        properties: { organization_id: organization.id },
+      });
       await deleteOrganization(organization.id);
       return redirectWithToast(
         href("/organizations"),
