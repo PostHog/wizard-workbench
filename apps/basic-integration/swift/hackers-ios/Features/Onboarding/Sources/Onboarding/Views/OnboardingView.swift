@@ -6,6 +6,7 @@
 //
 
 import DesignSystem
+import PostHog
 import SwiftUI
 
 public struct OnboardingView: View {
@@ -14,7 +15,10 @@ public struct OnboardingView: View {
 
     public init(onboardingData: OnboardingData, onDismiss: @escaping () -> Void) {
         self.onboardingData = onboardingData
-        self.onDismiss = onDismiss
+        self.onDismiss = {
+            PostHogSDK.shared.capture("onboarding_completed")
+            onDismiss()
+        }
     }
 
     public var body: some View {

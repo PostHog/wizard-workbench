@@ -5,8 +5,12 @@
 //  Copyright © 2025 Weiran Zhang. All rights reserved.
 //
 
+import PostHog
 import Shared
 import SwiftUI
+
+private let posthogProjectToken = "phc_nmum54dVqUBEAmNrWgHdnRF8HRSCVQhxL6kRhy4GCV6a"
+private let posthogHost = "https://us.i.posthog.com"
 
 @main
 struct HackersApp: App {
@@ -16,6 +20,15 @@ struct HackersApp: App {
 
     // Keep AppDelegate for legacy services and setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
+    init() {
+        let config = PostHogConfig(
+            apiKey: ProcessInfo.processInfo.environment["POSTHOG_PROJECT_TOKEN"] ?? posthogProjectToken,
+            host: ProcessInfo.processInfo.environment["POSTHOG_HOST"] ?? posthogHost
+        )
+        config.captureApplicationLifecycleEvents = true
+        PostHogSDK.shared.setup(config)
+    }
 
     var body: some Scene {
         WindowGroup {
