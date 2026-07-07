@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -58,12 +59,29 @@ export function Login({
         }
 
         if (result.success && result.redirectTo) {
+          if (mode === 'signup') {
+            posthog.identify(result.userId?.toString() ?? data.email, {
+              email: data.email,
+            });
+            posthog.capture('signed_up', { method: 'email' });
+          } else {
+            posthog.identify(result.userId?.toString() ?? data.email, {
+              email: data.email,
+            });
+            posthog.capture('signed_in', { method: 'email' });
+          }
           router.push(result.redirectTo);
         } else if (result.url) {
           // Stripe checkout redirect
+          if (mode === 'signup') {
+            posthog.capture('signed_up', { method: 'email' });
+          } else {
+            posthog.capture('signed_in', { method: 'email' });
+          }
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred. Please try again.');
       }
     });
