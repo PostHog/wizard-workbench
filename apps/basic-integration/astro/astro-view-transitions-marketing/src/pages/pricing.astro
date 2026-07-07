@@ -24,7 +24,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Basic integrations</li>
             <li>Email support</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-plan="starter" data-plan-price="29">Get Started</a>
         </div>
 
         <div class="pricing-card featured">
@@ -40,7 +40,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Advanced analytics</li>
             <li>Custom workflows</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
+          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;" data-plan="pro" data-plan-price="99">Start Free Trial</a>
         </div>
 
         <div class="pricing-card">
@@ -57,9 +57,37 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" id="enterprise-contact-sales-btn">Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
+
+<script is:inline>
+  function setupPricingPage() {
+    document.querySelectorAll('[data-plan]').forEach(function(btn) {
+      btn.removeEventListener('click', onPlanClick);
+      btn.addEventListener('click', onPlanClick);
+    });
+
+    const contactSalesBtn = document.getElementById('enterprise-contact-sales-btn');
+    contactSalesBtn?.removeEventListener('click', onContactSalesClick);
+    contactSalesBtn?.addEventListener('click', onContactSalesClick);
+  }
+
+  function onPlanClick(event) {
+    const btn = event.currentTarget;
+    window.posthog?.capture('pricing_plan_selected', {
+      plan_name: btn.dataset.plan,
+      plan_price_usd: Number(btn.dataset.planPrice)
+    });
+  }
+
+  function onContactSalesClick() {
+    window.posthog?.capture('contact_sales_clicked', { plan_name: 'enterprise' });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupPricingPage);
+  document.addEventListener('astro:page-load', setupPricingPage);
+</script>
 </Layout>
