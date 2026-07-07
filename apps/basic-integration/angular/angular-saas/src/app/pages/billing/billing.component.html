@@ -35,7 +35,7 @@
             </li>
           }
         </ul>
-        <button [class.btn-primary]="plan.recommended && plan.id !== currentPlan()" [class.btn-outline]="!plan.recommended || plan.id === currentPlan()" [disabled]="plan.id === currentPlan()">
+        <button [class.btn-primary]="plan.recommended && plan.id !== currentPlan()" [class.btn-outline]="!plan.recommended || plan.id === currentPlan()" [disabled]="plan.id === currentPlan()" (click)="selectPlan(plan)">
           {{ plan.id === currentPlan() ? 'Current Plan' : 'Upgrade' }}
         </button>
       </div>
@@ -71,7 +71,7 @@
         <span>{{ invoice.date }}</span>
         <span>${{ invoice.amount }}.00</span>
         <span class="status" [class]="invoice.status">{{ invoice.status | titlecase }}</span>
-        <button class="btn-text">Download</button>
+        <button class="btn-text" (click)="downloadInvoice(invoice)">Download</button>
       </div>
     }
   </div>
