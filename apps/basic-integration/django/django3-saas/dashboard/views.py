@@ -1,3 +1,5 @@
+import posthog
+from posthog import new_context, identify_context, capture
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -60,6 +62,13 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            user_id = str(request.user.id)
+            with new_context():
+                identify_context(user_id)
+                capture('project_created', properties={
+                    'has_description': bool(project.description),
+                })
+
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +92,11 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            user_id = str(request.user.id)
+            with new_context():
+                identify_context(user_id)
+                capture('project_updated')
+
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -104,6 +118,11 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+
+        user_id = str(request.user.id)
+        with new_context():
+            identify_context(user_id)
+            capture('project_deleted')
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')

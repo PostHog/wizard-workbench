@@ -1,4 +1,6 @@
 import uuid
+import posthog
+from posthog import new_context, identify_context, capture
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -21,6 +23,12 @@ if STRIPE_CONFIGURED:
 def pricing(request):
     """Display pricing plans."""
     plans = Plan.objects.filter(is_active=True)
+    user_id = str(request.user.id) if request.user.is_authenticated else 'anonymous'
+    with new_context():
+        identify_context(user_id)
+        posthog.capture(user_id, 'pricing_page_viewed', properties={
+            'plan_count': plans.count(),
+        })
     return render(request, 'billing/pricing.html', {'plans': plans})
 
 
@@ -55,8 +63,16 @@ def subscribe(request, plan_slug):
                     },
                     allow_promotion_codes=True,
                 )
+                user_id = str(request.user.id)
+                with new_context():
+                    identify_context(user_id)
+                    capture('checkout_initiated', properties={
+                        'plan_slug': plan.slug,
+                        'plan_interval': plan.interval,
+                    })
                 return redirect(checkout_session.url)
             except Exception as e:
+                posthog.capture_exception(e)
                 messages.error(request, f'Payment error: {str(e)}')
                 return redirect('billing:pricing')
         else:
@@ -70,6 +86,13 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            user_id = str(request.user.id)
+            with new_context():
+                identify_context(user_id)
+                capture('subscription_started', properties={
+                    'plan_slug': plan.slug,
+                    'plan_interval': plan.interval,
+                })
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -130,13 +153,28 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+                user_id = str(request.user.id)
+                with new_context():
+                    identify_context(user_id)
+                    capture('subscription_plan_changed', properties={
+                        'new_plan_slug': plan.slug,
+                        'new_plan_interval': plan.interval,
+                    })
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
+                posthog.capture_exception(e)
                 messages.error(request, f'Error changing plan: {str(e)}')
         else:
             # Demo mode
             subscription.plan = plan
             subscription.save()
+            user_id = str(request.user.id)
+            with new_context():
+                identify_context(user_id)
+                capture('subscription_plan_changed', properties={
+                    'new_plan_slug': plan.slug,
+                    'new_plan_interval': plan.interval,
+                })
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -165,12 +203,20 @@ def cancel(request):
                     cancel_at_period_end=True,
                 )
             except Exception as e:
+                posthog.capture_exception(e)
                 messages.error(request, f'Error canceling: {str(e)}')
                 return redirect('billing:manage')
 
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        user_id = str(request.user.id)
+        with new_context():
+            identify_context(user_id)
+            capture('subscription_canceled', properties={
+                'plan_slug': subscription.plan.slug,
+                'plan_interval': subscription.plan.interval,
+            })
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -269,6 +315,12 @@ def _handle_checkout_completed(session):
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
     )
+    with new_context():
+        identify_context(str(user.id))
+        capture('checkout_completed', properties={
+            'plan_slug': plan.slug,
+            'plan_interval': plan.interval,
+        })
 
 
 def _handle_subscription_updated(subscription_data):
@@ -323,5 +375,10 @@ def _handle_payment_failed(invoice):
         )
         subscription.status = 'past_due'
         subscription.save()
+        with new_context():
+            identify_context(str(subscription.user_id))
+            capture('payment_failed', properties={
+                'plan_slug': subscription.plan.slug,
+            })
     except Subscription.DoesNotExist:
         pass
