@@ -9,6 +9,23 @@ import bundleAnalyzer from 'vite-bundle-analyzer'
 export default defineConfig(({ command }) => ({
   server: {
     port: 3000,
+    proxy: {
+      '/ingest/static': {
+        target: 'https://us-assets.i.posthog.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ''),
+      },
+      '/ingest/array': {
+        target: 'https://us-assets.i.posthog.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ''),
+      },
+      '/ingest': {
+        target: 'https://us.i.posthog.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ''),
+      },
+    },
   },
   css: {
     postcss: {
@@ -29,14 +46,14 @@ export default defineConfig(({ command }) => ({
     }),
   },
   ssr: {
-    /* 
+    /*
       - On prod build, we want to bundle all libraries.
       - On dev build, libraries are externalized to speed up the build. But some of them might need
         to be transpiled for module compatibility on the server, so include them in the dev bundle.
 
       https://vite.dev/config/ssr-options#ssr-noexternal
     */
-    noExternal: command === 'build' ? true : ['gsap'],
+    noExternal: command === 'build' ? true : ['gsap', 'posthog-js', '@posthog/react'],
   },
   plugins: [
     reactRouter(),
