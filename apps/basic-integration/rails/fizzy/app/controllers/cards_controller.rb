@@ -40,6 +40,12 @@ class CardsController < ApplicationController
   end
 
   def destroy
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_deleted",
+      properties: { card_id: @card.id, board_id: @card.board_id }
+    )
+
     @card.destroy!
 
     respond_to do |format|
