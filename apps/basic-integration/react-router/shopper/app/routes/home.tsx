@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { Link } from "react-router";
 import type { Route } from "./+types/home";
 
@@ -9,6 +10,8 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+  const posthog = usePostHog();
+
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="text-center max-w-3xl mx-auto">
@@ -20,6 +23,7 @@ export default function Home() {
         </p>
         <Link
           to="/products"
+          onClick={() => posthog?.capture("start_shopping_clicked")}
           className="inline-block bg-indigo-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition shadow-lg hover:shadow-xl"
         >
           Start Shopping
