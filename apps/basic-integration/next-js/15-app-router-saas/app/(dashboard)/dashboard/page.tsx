@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -61,7 +62,13 @@ function ManageSubscription() {
               </p>
             </div>
             <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={() => posthog.capture('customer_portal_opened', {
+                  plan_name: teamData?.planName,
+                })}
+              >
                 Manage Subscription
               </Button>
             </form>
