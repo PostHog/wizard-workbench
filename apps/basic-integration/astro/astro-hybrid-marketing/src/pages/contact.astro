@@ -66,10 +66,14 @@ import Layout from '../layouts/Layout.astro';
     const data = Object.fromEntries(formData.entries());
 
     try {
+      const posthog = (window as any).posthog;
+      const sessionId = posthog?.get_session_id?.() || '';
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-PostHog-Session-Id': sessionId,
         },
         body: JSON.stringify(data),
       });
@@ -77,6 +81,15 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        // Identify the lead by email (person profile — PII stays in identify, not capture)
+        posthog?.identify(String(data.email), {
+          name: data.name,
+          ...(data.company ? { company: data.company } : {}),
+        });
+        posthog?.capture('contact_form_submitted', {
+          interest: data.interest,
+        });
+
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
@@ -85,6 +98,7 @@ import Layout from '../layouts/Layout.astro';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
       }
     } catch (error) {
+      (window as any).posthog?.captureException(error);
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
     }
