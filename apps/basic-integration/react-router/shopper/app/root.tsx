@@ -11,6 +11,7 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { CartProvider } from "./context/CartContext";
 import Navbar from "./components/Navbar";
+import { usePostHog } from "@posthog/react";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -55,6 +56,9 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog();
+  posthog?.captureException(error);
+
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
