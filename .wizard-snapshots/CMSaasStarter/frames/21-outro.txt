@@ -1,0 +1,33 @@
+                               PostHog Wizard v2.39.0                                                                    Feedback: wizard@posthog.com 
+
+                               ✔ Successfully installed PostHog!
+
+                               Dashboard:
+                               https://us.posthog.com/project/483112/dashboard/1818086?utm_source=wizard&utm_medium=cli&utm_content=outro-dashboard
+
+                               Check ./posthog-setup-report.md for details
+
+                               What the agent did:
+                               • Analyzed your SvelteKit project structure
+                               • Created and configured PostHog initializers
+                               • Integrated PostHog into your application
+                               • Added environment variables to .env file
+
+                               Events added:
+                               • user_signed_in Fired when a user successfully signs in via the Supabase auth flow.
+                               • user_signed_up Fired when a new user completes registration via the Supabase auth flow.
+                               • user_signed_out Fired when a user signs out of their account.
+                               • contact_form_submitted Fired when a visitor successfully submits the contact us form.
+                               • checkout_started Fired when a user initiates a Stripe checkout session for a subscription plan.
+                               • billing_portal_accessed Fired when a user opens the Stripe billing portal to manage their subscription.
+                               • profile_updated Fired when a user saves changes to their profile (name, company, website).
+                               • account_deleted Fired when a user permanently deletes their account.
+                               • password_changed Fired when a user successfully changes their password.
+                               • email_subscription_toggled Fired when a user changes their email subscription preference.
+
+                               Learn more: https://posthog.com/docs/libraries/svelte?utm_source=wizard&utm_medium=cli&utm_content=outro-docs
+
+                               Note: This wizard uses an LLM agent to analyze and modify your project. Please review the changes made.
+                               How did this work for you? Drop us a line: wizard@posthog.com
+
+                               Press any key to continue
