@@ -7,6 +7,7 @@
 
 import DesignSystem
 import Domain
+import PostHog
 import Shared
 import SwiftUI
 
@@ -370,6 +371,11 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
             return
         }
 
+        PostHogSDK.shared.capture("post_link_opened", properties: [
+            "post_id": post.id,
+            "post_title": post.title,
+        ])
+
         if isSidebar {
             navigationStore.showPost(post)
             selectedPostId = post.id
@@ -467,6 +473,10 @@ struct PostRowView: View {
         let wasUpvoted = mutablePost.upvoted
 
         if wasUpvoted {
+            PostHogSDK.shared.capture("post_upvoted", properties: [
+                "post_id": post.id,
+                "post_title": post.title,
+            ])
             await MainActor.run {
                 onPostUpdated?(mutablePost)
             }
