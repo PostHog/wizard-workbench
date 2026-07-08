@@ -59,3 +59,17 @@ console.log('Extracted data:', document.data);</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    window.posthog?.capture('quickstart_viewed');
+
+    document.querySelectorAll('pre code').forEach(function (codeBlock) {
+      codeBlock.addEventListener('copy', function () {
+        window.posthog?.capture('code_snippet_copied', {
+          snippet_preview: (codeBlock.textContent || '').slice(0, 80)
+        });
+      });
+    });
+  });
+</script>
