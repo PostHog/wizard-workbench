@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { stripe } from "../stripe";
+import { getUser } from "../users";
 import { posthog } from "../posthog";
 
 export const checkoutRouter = Router();
@@ -16,6 +17,9 @@ checkoutRouter.post("/", async (req, res) => {
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
+    const user = userId ? getUser(userId) : undefined;
+    const posthogDistinctId = user?.posthogDistinctId || customerEmail;
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
@@ -23,6 +27,9 @@ checkoutRouter.post("/", async (req, res) => {
       cancel_url: `${frontendUrl}/?canceled=true`,
       client_reference_id: userId,
       customer_email: customerEmail,
+      subscription_data: {
+        metadata: { posthog_person_distinct_id: posthogDistinctId },
+      },
     });
 
     res.json({ url: session.url });
