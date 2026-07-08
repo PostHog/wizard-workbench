@@ -91,6 +91,7 @@ import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -202,6 +203,13 @@ fun ConversationContent(
                 onMessageSent = { content ->
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
+                    )
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "channel_name" to uiState.channelName,
+                            "message_length" to content.length,
+                        ),
                     )
                 },
                 resetScroll = {
@@ -337,6 +345,7 @@ fun Messages(messages: List<Message>, navigateToProfile: (String) -> Unit, scrol
             // Only show if the scroller is not at the bottom
             enabled = jumpToBottomButtonEnabled,
             onClicked = {
+                PostHog.capture(event = "conversation_scrolled_to_bottom")
                 scope.launch {
                     scrollState.animateScrollToItem(0)
                 }

@@ -48,6 +48,7 @@ import com.example.compose.jetchat.MainViewModel
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 
 class ProfileFragment : Fragment() {
 
@@ -85,6 +86,7 @@ class ProfileFragment : Fragment() {
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
                                     .clickable(onClick = {
+                                        PostHog.capture(event = "profile_more_options_opened")
                                         functionalityNotAvailablePopupShown = true
                                     })
                                     .padding(horizontal = 12.dp, vertical = 16.dp)
