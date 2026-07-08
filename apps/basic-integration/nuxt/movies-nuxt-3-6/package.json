@@ -10,6 +10,10 @@
     "lint": "eslint .",
     "typecheck": "vue-tsc --noEmit"
   },
+  "dependencies": {
+    "posthog-js": "^1.398.6",
+    "posthog-node": "^5.40.0"
+  },
   "devDependencies": {
     "@antfu/eslint-config": "^0.39.5",
     "@iconify-json/carbon": "^1.1.17",

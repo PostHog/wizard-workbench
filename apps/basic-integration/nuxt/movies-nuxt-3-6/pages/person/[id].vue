@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const id = useRouteParam<string>('id')
 const person = await getPerson(id.value)
+const { $posthog: posthog } = useNuxtApp()
 
 const $img = useImage()
 
@@ -10,6 +11,10 @@ useHead({
     { name: 'description', content: person.biography || person.name },
     { property: 'og:image', content: $img(`/tmdb${person.profile_path}`, { width: 1200, height: 630 }) },
   ],
+})
+
+posthog?.capture('person_viewed', {
+  person_id: person.id,
 })
 </script>
 
