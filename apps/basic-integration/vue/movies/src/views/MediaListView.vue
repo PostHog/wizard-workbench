@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import posthog from 'posthog-js'
 import type { MediaType } from '../types'
 import { QUERY_LIST } from '../constants/lists'
 import { listMedia, getMedia } from '../composables/useTMDB'
@@ -36,6 +37,11 @@ onMounted(async () => {
   try {
     if (queries.value.length > 0) {
       const list = await listMedia(mediaType.value, queries.value[0].query, 1)
+      posthog.capture('media_list_loaded', {
+        media_type: mediaType.value,
+        category_query: queries.value[0].query,
+        result_count: list.results.length,
+      })
       if (list.results.length > 0) {
         const item = await getMedia(mediaType.value, list.results[0].id)
         heroItem.value = item
@@ -43,6 +49,7 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('Error loading hero item:', error)
+    posthog.captureException(error)
   }
 })
 </script>

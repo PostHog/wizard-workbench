@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import posthog from 'posthog-js'
 import type { QueryItem } from '../../types'
 import { listMedia } from '../../composables/useTMDB'
 import MediaCard from '../media/MediaCard.vue'
@@ -30,7 +31,11 @@ onMounted(async () => {
       {{ query.title }}
     </template>
     <template #more>
-      <router-link :to="`/${query.type}/category/${query.query}`" class="n-link">
+      <router-link
+        :to="`/${query.type}/category/${query.query}`"
+        class="n-link"
+        @click="posthog.capture('carousel_more_clicked', { media_type: query.type, category_query: query.query, category_title: query.title })"
+      >
         Explore more
       </router-link>
     </template>

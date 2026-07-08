@@ -1,14 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
+import posthog from 'posthog-js'
 import { useAuth } from '../composables/useAuth'
 
 const route = useRoute()
-const router = useRouter()
 const { user, logout } = useAuth()
 
 const handleLogout = async () => {
+  posthog.capture('logout_clicked', {
+    current_path: route.path,
+  })
   await logout()
+}
+
+const captureNavItemClick = (destination: string) => {
+  posthog.capture('nav_item_clicked', {
+    destination,
+    current_path: route.path,
+  })
 }
 
 const isActive = (path: string) => {
@@ -28,6 +37,7 @@ const isActive = (path: string) => {
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :class="{ 'text-primary': isActive('/') && route.path === '/' }"
       aria-label="Home"
+      @click="captureNavItemClick('home')"
     >
       <span
         :class="isActive('/') && route.path === '/' ? 'i-ph-house-fill text-primary' : 'i-ph-house'"
@@ -40,6 +50,7 @@ const isActive = (path: string) => {
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :class="{ 'text-primary': isActive('/movie') }"
       aria-label="Movies"
+      @click="captureNavItemClick('movie')"
     >
       <span
         :class="isActive('/movie') ? 'i-ph-film-strip-fill text-primary' : 'i-ph-film-strip'"
@@ -52,6 +63,7 @@ const isActive = (path: string) => {
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :class="{ 'text-primary': isActive('/tv') }"
       aria-label="TV Shows"
+      @click="captureNavItemClick('tv')"
     >
       <span
         :class="isActive('/tv') ? 'i-ph-television-simple-fill text-primary' : 'i-ph-television-simple'"
@@ -64,6 +76,7 @@ const isActive = (path: string) => {
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :class="{ 'text-primary': isActive('/search') }"
       aria-label="Search"
+      @click="captureNavItemClick('search')"
     >
       <span
         :class="isActive('/search') ? 'i-ph-magnifying-glass-fill text-primary' : 'i-ph-magnifying-glass'"
