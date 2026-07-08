@@ -1,5 +1,6 @@
 import sqlalchemy as sa
-from flask import request, url_for, abort
+from flask import request, url_for, abort, current_app
+from posthog import identify_context
 from app import db
 from app.models import User
 from app.api import bp
@@ -57,6 +58,12 @@ def create_user():
     user.from_dict(data, new_user=True)
     db.session.add(user)
     db.session.commit()
+    with current_app.posthog_client.new_context(fresh=True):
+        identify_context(str(user.id))
+        current_app.posthog_client.capture(
+            'api_user_created',
+            properties={'created_via': 'api'},
+        )
     return user.to_dict(), 201, {'Location': url_for('api.get_user',
                                                      id=user.id)}
 
