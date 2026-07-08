@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-
+import { usePostHog } from '@posthog/react'
 import { fetchInvoices } from '../utils/mockTodos'
 
 export const Route = createFileRoute('/dashboard/')({
@@ -9,6 +9,7 @@ export const Route = createFileRoute('/dashboard/')({
 
 function DashboardIndexComponent() {
   const invoices = Route.useLoaderData()
+  const posthog = usePostHog()
 
   const totalRevenue = invoices.length * 1250
   const pendingCount = Math.floor(invoices.length * 0.3)
@@ -56,6 +57,7 @@ function DashboardIndexComponent() {
             <Link
               to="/dashboard/invoices"
               className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              onClick={() => posthog.capture('dashboard_cta_clicked', { cta: 'create_invoice' })}
             >
               <span className="text-xl">📄</span>
               <div>
@@ -66,6 +68,7 @@ function DashboardIndexComponent() {
             <Link
               to="/dashboard/users"
               className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              onClick={() => posthog.capture('dashboard_cta_clicked', { cta: 'manage_team' })}
             >
               <span className="text-xl">👥</span>
               <div>
