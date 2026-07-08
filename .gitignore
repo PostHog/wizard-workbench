@@ -103,3 +103,6 @@ temp/
 # @ablaszkiewicz debug files
 scripts/select-app.sh
 Makefile
+
+# Personal scratch space
+scratch/

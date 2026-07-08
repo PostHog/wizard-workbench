@@ -29,6 +29,24 @@ apps/
 
 To add a new test app, create a directory under the appropriate workflow folder in `/apps`.
 
+## Workbench ownership
+
+Reviews are auto-requested via [`.github/CODEOWNERS`](.github/CODEOWNERS) — the
+file is the source of truth; this table just mirrors it for readability.
+`team-wizard-docs` is the default reviewer; the team-owned apps below route
+review to their owning team instead.
+
+| Path | Owning team |
+|---|---|
+| `*` (everything else, including all other apps) | `@PostHog/team-wizard-docs` |
+| `/apps/basic-integration/` | `@PostHog/team-wizard-docs` |
+| `/apps/error-tracking-upload-source-maps/` | `@PostHog/team-error-tracking` |
+| `/apps/self-driving/` | `@PostHog/team-self-driving` |
+
+Ownership is by directory. Apps not listed above fall through the default and
+are owned by `team-wizard-docs`. Today CODEOWNERS only auto-requests review —
+approval is not a merge gate.
+
 ## Services
 
 The `services/` directory is a toolbox for scripts and utilities to help with Wizard development.
