@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import posthog from 'posthog-js'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -51,8 +52,13 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem('auth-user')
-  
+  const storedUser = localStorage.getItem('auth-user')
+  const isAuthenticated = !!storedUser
+
+  if (storedUser) {
+    posthog.identify(storedUser)
+  }
+
   if (to.path === '/login') {
     if (isAuthenticated) {
       next('/')
