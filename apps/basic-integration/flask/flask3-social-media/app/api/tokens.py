@@ -1,3 +1,4 @@
+from flask import current_app
 from app import db
 from app.api import bp
 from app.api.auth import basic_auth, token_auth
@@ -6,8 +7,10 @@ from app.api.auth import basic_auth, token_auth
 @bp.route('/tokens', methods=['POST'])
 @basic_auth.login_required
 def get_token():
-    token = basic_auth.current_user().get_token()
+    user = basic_auth.current_user()
+    token = user.get_token()
     db.session.commit()
+    current_app.posthog.capture(distinct_id=str(user.id), event='api_token_issued')
     return {'token': token}
 
 
