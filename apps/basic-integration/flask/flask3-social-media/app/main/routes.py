@@ -4,6 +4,8 @@ from flask import render_template, flash, redirect, url_for, request, g, \
 from flask_login import current_user, login_required
 from flask_babel import _, get_locale
 import sqlalchemy as sa
+import posthog
+from posthog import capture, identify_context, new_context
 from langdetect import detect, LangDetectException
 from app import db
 from app.main.forms import EditProfileForm, EmptyForm, PostForm, SearchForm, \
@@ -36,6 +38,12 @@ def index():
                     language=language)
         db.session.add(post)
         db.session.commit()
+        with new_context():
+            identify_context(str(current_user.id))
+            capture('post_created', properties={
+                'post_language': language,
+                'post_length': len(form.post.data),
+            })
         flash(_('Your post is now live!'))
         return redirect(url_for('main.index'))
     page = request.args.get('page', 1, type=int)
@@ -126,6 +134,9 @@ def follow(username):
             return redirect(url_for('main.user', username=username))
         current_user.follow(user)
         db.session.commit()
+        with new_context():
+            identify_context(str(current_user.id))
+            capture('user_followed', properties={'followed_user_id': user.id})
         flash(_('You are following %(username)s!', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -147,6 +158,9 @@ def unfollow(username):
             return redirect(url_for('main.user', username=username))
         current_user.unfollow(user)
         db.session.commit()
+        with new_context():
+            identify_context(str(current_user.id))
+            capture('user_unfollowed', properties={'unfollowed_user_id': user.id})
         flash(_('You are not following %(username)s.', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -168,6 +182,12 @@ def search():
     if not g.search_form.validate():
         return redirect(url_for('main.explore'))
     page = request.args.get('page', 1, type=int)
+    with new_context():
+        identify_context(str(current_user.id))
+        capture('search_performed', properties={
+            'query_length': len(g.search_form.q.data),
+            'page': page,
+        })
     posts, total = Post.search(g.search_form.q.data, page,
                                current_app.config['POSTS_PER_PAGE'])
     next_url = url_for('main.search', q=g.search_form.q.data, page=page + 1) \
@@ -190,6 +210,12 @@ def send_message(recipient):
         user.add_notification('unread_message_count',
                               user.unread_message_count())
         db.session.commit()
+        with new_context():
+            identify_context(str(current_user.id))
+            capture('message_sent', properties={
+                'message_length': len(form.message.data),
+                'recipient_id': user.id,
+            })
         flash(_('Your message has been sent.'))
         return redirect(url_for('main.user', username=recipient))
     return render_template('send_message.html', title=_('Send Message'),
@@ -224,6 +250,9 @@ def export_posts():
     else:
         current_user.launch_task('export_posts', _('Exporting posts...'))
         db.session.commit()
+        with new_context():
+            identify_context(str(current_user.id))
+            capture('posts_exported')
     return redirect(url_for('main.user', username=current_user.username))
 
 
