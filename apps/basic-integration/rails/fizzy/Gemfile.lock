@@ -326,6 +326,11 @@ GEM
     platform_agent (1.0.1)
       activesupport (>= 5.2.0)
       useragent (~> 0.16.3)
+    posthog-rails (3.17.0)
+      posthog-ruby (= 3.18.0)
+      railties (>= 5.2.0)
+    posthog-ruby (3.18.0)
+      concurrent-ruby (~> 1)
     pp (0.6.3)
       prettyprint
     prettyprint (0.2.0)
@@ -521,6 +526,8 @@ DEPENDENCIES
   mocha
   net-http-persistent
   platform_agent
+  posthog-rails
+  posthog-ruby
   propshaft
   puma (>= 5.0)
   rack-mini-profiler
