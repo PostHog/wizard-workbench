@@ -2,11 +2,34 @@
 """User Management Service - A pure Python background service for managing users."""
 
 import uuid
+import os
+import atexit
 from datetime import datetime
 from typing import Optional
 
+from dotenv import load_dotenv
+from posthog import Posthog
+
 from database import UserDatabase
 from models import User
+
+load_dotenv()
+
+
+def _initialize_posthog():
+    token = os.getenv('POSTHOG_PROJECT_TOKEN')
+    if not token:
+        return None
+    client = Posthog(
+        token,
+        host=os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com'),
+        enable_exception_autocapture=True
+    )
+    atexit.register(client.shutdown)
+    return client
+
+
+posthog_client = _initialize_posthog()
 
 
 class UserService:
@@ -63,6 +86,8 @@ class UserService:
 
         if success:
             print(f"✓ User deactivated: {user_id}")
+            if posthog_client:
+                posthog_client.capture(distinct_id=user_id, event="user_deactivated")
         else:
             print(f"✗ Failed to deactivate user: {user_id}")
 
