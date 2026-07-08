@@ -7,6 +7,7 @@ use App\Support\Branding;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Cashier\Cashier;
+use PostHog\PostHog;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +24,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (config('posthog.api_key')) {
+            PostHog::init(
+                config('posthog.api_key'),
+                [
+                    'host' => config('posthog.host'),
+                    'debug' => config('posthog.debug'),
+                ]
+            );
+        }
 
         Cashier::useSubscriptionModel(Subscription::class);
 
