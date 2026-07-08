@@ -1,4 +1,20 @@
 import { createServer } from 'node:http';
+import { randomUUID } from 'node:crypto';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
+
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -30,108 +46,149 @@ const server = createServer(async (req, res) => {
   const path = url.pathname;
   const method = req.method;
 
-  try {
-    // --- Groups ---
+  const distinctId = req.headers['x-posthog-distinct-id'] || randomUUID();
+  const sessionId = req.headers['x-posthog-session-id'];
 
-    if (method === 'GET' && path === '/api/groups') {
-      const result = groups.map((g) => ({
-        ...g,
-        contact_count: contacts.filter((c) => c.group_id === g.id).length,
-      }));
-      return json(res, 200, result);
-    }
+  await posthog.withContext(
+    { distinctId, ...(sessionId ? { sessionId } : {}) },
+    async () => {
+      try {
+        // --- Groups ---
 
-    if (method === 'POST' && path === '/api/groups') {
-      const body = await parseBody(req);
-      if (!body.name) return json(res, 400, { error: 'name is required' });
+        if (method === 'GET' && path === '/api/groups') {
+          const result = groups.map((g) => ({
+            ...g,
+            contact_count: contacts.filter((c) => c.group_id === g.id).length,
+          }));
+          return json(res, 200, result);
+        }
 
-      const group = { id: nextGroupId++, name: body.name };
-      groups.push(group);
-      return json(res, 201, group);
-    }
+        if (method === 'POST' && path === '/api/groups') {
+          const body = await parseBody(req);
+          if (!body.name) return json(res, 400, { error: 'name is required' });
 
-    // --- Contacts ---
+          const group = { id: nextGroupId++, name: body.name };
+          groups.push(group);
+          posthog.capture({
+            event: 'group_created',
+            properties: { group_id: group.id },
+          });
+          return json(res, 201, group);
+        }
 
-    if (method === 'GET' && path === '/api/contacts') {
-      let result = contacts;
-      const groupId = url.searchParams.get('group_id');
-      const search = url.searchParams.get('search');
+        // --- Contacts ---
 
-      if (groupId) {
-        result = result.filter((c) => c.group_id === parseInt(groupId, 10));
+        if (method === 'GET' && path === '/api/contacts') {
+          let result = contacts;
+          const groupId = url.searchParams.get('group_id');
+          const search = url.searchParams.get('search');
+
+          if (groupId) {
+            result = result.filter((c) => c.group_id === parseInt(groupId, 10));
+          }
+          if (search) {
+            const q = search.toLowerCase();
+            result = result.filter(
+              (c) =>
+                c.name.toLowerCase().includes(q) ||
+                c.email.toLowerCase().includes(q) ||
+                (c.phone && c.phone.includes(q))
+            );
+            posthog.capture({
+              event: 'contacts_searched',
+              properties: {
+                search_term_length: search.length,
+                has_group_filter: !!groupId,
+              },
+            });
+          }
+
+          return json(res, 200, { contacts: result, total: result.length });
+        }
+
+        if (method === 'POST' && path === '/api/contacts') {
+          const body = await parseBody(req);
+
+          if (!body.name || !body.email) {
+            return json(res, 400, { error: 'name and email are required' });
+          }
+
+          const contact = {
+            id: nextContactId++,
+            name: body.name,
+            email: body.email,
+            phone: body.phone || null,
+            company: body.company || null,
+            group_id: body.group_id || 1,
+            created_at: new Date().toISOString(),
+          };
+          contacts.push(contact);
+          posthog.capture({
+            event: 'contact_created',
+            properties: {
+              contact_id: contact.id,
+              has_phone: !!contact.phone,
+              has_company: !!contact.company,
+              group_id: contact.group_id,
+            },
+          });
+          return json(res, 201, contact);
+        }
+
+        // GET /api/contacts/:id
+        const getMatch = method === 'GET' && path.match(/^\/api\/contacts\/(\d+)$/);
+        if (getMatch) {
+          const contact = contacts.find((c) => c.id === parseInt(getMatch[1], 10));
+          if (!contact) return json(res, 404, { error: 'Contact not found' });
+          return json(res, 200, contact);
+        }
+
+        // PATCH /api/contacts/:id
+        const patchMatch = method === 'PATCH' && path.match(/^\/api\/contacts\/(\d+)$/);
+        if (patchMatch) {
+          const contact = contacts.find((c) => c.id === parseInt(patchMatch[1], 10));
+          if (!contact) return json(res, 404, { error: 'Contact not found' });
+
+          const body = await parseBody(req);
+          const updatedFields = [];
+          if (body.name !== undefined) { contact.name = body.name; updatedFields.push('name'); }
+          if (body.email !== undefined) { contact.email = body.email; updatedFields.push('email'); }
+          if (body.phone !== undefined) { contact.phone = body.phone; updatedFields.push('phone'); }
+          if (body.company !== undefined) { contact.company = body.company; updatedFields.push('company'); }
+          if (body.group_id !== undefined) { contact.group_id = body.group_id; updatedFields.push('group_id'); }
+
+          posthog.capture({
+            event: 'contact_updated',
+            properties: {
+              contact_id: contact.id,
+              fields_updated: updatedFields,
+            },
+          });
+          return json(res, 200, contact);
+        }
+
+        // DELETE /api/contacts/:id
+        const deleteMatch = method === 'DELETE' && path.match(/^\/api\/contacts\/(\d+)$/);
+        if (deleteMatch) {
+          const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
+          if (index === -1) return json(res, 404, { error: 'Contact not found' });
+
+          const [deleted] = contacts.splice(index, 1);
+          posthog.capture({
+            event: 'contact_deleted',
+            properties: { contact_id: deleted.id },
+          });
+          res.writeHead(204);
+          return res.end();
+        }
+
+        json(res, 404, { error: 'Not found' });
+      } catch (err) {
+        posthog.captureException(err);
+        json(res, 500, { error: 'Internal server error' });
       }
-      if (search) {
-        const q = search.toLowerCase();
-        result = result.filter(
-          (c) =>
-            c.name.toLowerCase().includes(q) ||
-            c.email.toLowerCase().includes(q) ||
-            (c.phone && c.phone.includes(q))
-        );
-      }
-
-      return json(res, 200, { contacts: result, total: result.length });
     }
-
-    if (method === 'POST' && path === '/api/contacts') {
-      const body = await parseBody(req);
-
-      if (!body.name || !body.email) {
-        return json(res, 400, { error: 'name and email are required' });
-      }
-
-      const contact = {
-        id: nextContactId++,
-        name: body.name,
-        email: body.email,
-        phone: body.phone || null,
-        company: body.company || null,
-        group_id: body.group_id || 1,
-        created_at: new Date().toISOString(),
-      };
-      contacts.push(contact);
-      return json(res, 201, contact);
-    }
-
-    // GET /api/contacts/:id
-    const getMatch = method === 'GET' && path.match(/^\/api\/contacts\/(\d+)$/);
-    if (getMatch) {
-      const contact = contacts.find((c) => c.id === parseInt(getMatch[1], 10));
-      if (!contact) return json(res, 404, { error: 'Contact not found' });
-      return json(res, 200, contact);
-    }
-
-    // PATCH /api/contacts/:id
-    const patchMatch = method === 'PATCH' && path.match(/^\/api\/contacts\/(\d+)$/);
-    if (patchMatch) {
-      const contact = contacts.find((c) => c.id === parseInt(patchMatch[1], 10));
-      if (!contact) return json(res, 404, { error: 'Contact not found' });
-
-      const body = await parseBody(req);
-      if (body.name !== undefined) contact.name = body.name;
-      if (body.email !== undefined) contact.email = body.email;
-      if (body.phone !== undefined) contact.phone = body.phone;
-      if (body.company !== undefined) contact.company = body.company;
-      if (body.group_id !== undefined) contact.group_id = body.group_id;
-
-      return json(res, 200, contact);
-    }
-
-    // DELETE /api/contacts/:id
-    const deleteMatch = method === 'DELETE' && path.match(/^\/api\/contacts\/(\d+)$/);
-    if (deleteMatch) {
-      const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
-      if (index === -1) return json(res, 404, { error: 'Contact not found' });
-
-      contacts.splice(index, 1);
-      res.writeHead(204);
-      return res.end();
-    }
-
-    json(res, 404, { error: 'Not found' });
-  } catch (err) {
-    json(res, 500, { error: 'Internal server error' });
-  }
+  );
 });
 
 const PORT = process.env.PORT || 3004;
