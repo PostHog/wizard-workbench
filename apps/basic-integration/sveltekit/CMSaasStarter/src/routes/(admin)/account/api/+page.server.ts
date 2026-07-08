@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -27,6 +28,12 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    getPostHogClient().capture({
+      distinctId: session.user.id,
+      event: "email_subscription_toggled",
+      properties: { subscribed: !newUnsubscribedStatus },
+    })
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -70,6 +77,11 @@ export const actions = {
         email,
       })
     }
+
+    getPostHogClient().capture({
+      distinctId: session.user.id,
+      event: "email_update_initiated",
+    })
 
     return {
       email,
@@ -172,6 +184,11 @@ export const actions = {
       })
     }
 
+    getPostHogClient().capture({
+      distinctId: user?.id ?? "unknown",
+      event: "password_updated",
+    })
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +237,11 @@ export const actions = {
         currentPassword,
       })
     }
+
+    getPostHogClient().capture({
+      distinctId: user?.id ?? "unknown",
+      event: "account_deleted",
+    })
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -318,6 +340,22 @@ export const actions = {
         template_properties: {
           companyName: "SaaS Starter",
           WebsiteBaseUrl: WebsiteBaseUrl,
+        },
+      })
+
+      getPostHogClient().capture({
+        distinctId: user.id,
+        event: "profile_created",
+        properties: {
+          $set: { company_name: companyName, website },
+        },
+      })
+    } else {
+      getPostHogClient().capture({
+        distinctId: user.id,
+        event: "profile_updated",
+        properties: {
+          $set: { company_name: companyName, website },
         },
       })
     }
