@@ -18,7 +18,7 @@ import Layout from '../layouts/Layout.astro';
         helping teams focus on what matters most.
       </p>
 
-      <div class="about-grid">
+      <div class="about-grid" id="about-stats-grid">
         <div class="about-card">
           <h3>10K+</h3>
           <p>Active Users</p>
@@ -70,3 +70,33 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupAboutTracking() {
+    const statsGrid = document.getElementById('about-stats-grid');
+
+    if (!statsGrid || statsGrid.dataset.phTracked === 'true') {
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting || statsGrid.dataset.phTracked === 'true') {
+          return;
+        }
+
+        statsGrid.dataset.phTracked = 'true';
+        window.posthog?.capture('about_stats_viewed', {
+          section_name: 'company_stats',
+          page_name: 'about'
+        });
+        observer.disconnect();
+      });
+    }, { threshold: 0.5 });
+
+    observer.observe(statsGrid);
+  }
+
+  document.addEventListener('DOMContentLoaded', setupAboutTracking);
+  document.addEventListener('astro:page-load', setupAboutTracking);
+</script>
