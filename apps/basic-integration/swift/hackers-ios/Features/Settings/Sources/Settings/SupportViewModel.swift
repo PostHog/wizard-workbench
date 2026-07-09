@@ -81,10 +81,24 @@ public final class SupportViewModel: @unchecked Sendable {
             do {
                 let result = try await self.supportUseCase.purchase(productId: product.id)
                 self.handle(result: result, for: product)
+                if result == .success {
+                    PostHogAnalytics.capture("support_purchase_completed", properties: [
+                        "product_id": product.id,
+                        "product_kind": product.kind == .subscription ? "subscription" : "tip"
+                    ])
+                }
                 if result == .success, product.kind == .subscription {
                     self.isSubscribed = true
                 }
             } catch {
+                PostHogAnalytics.capture("support_purchase_failed", properties: [
+                    "product_id": product.id,
+                    "product_kind": product.kind == .subscription ? "subscription" : "tip"
+                ])
+                PostHogAnalytics.captureError(error, properties: [
+                    "flow": "support_purchase",
+                    "product_id": product.id
+                ])
                 self.alertInfo = AlertInfo(
                     title: "Purchase Failed",
                     message: error.localizedDescription
@@ -102,7 +116,13 @@ public final class SupportViewModel: @unchecked Sendable {
                 let result = try await self.supportUseCase.restorePurchases()
                 await self.updateSubscriptionStatus()
                 self.handleRestore(result: result)
+                if result == .success {
+                    PostHogAnalytics.capture("support_restore_completed")
+                }
             } catch {
+                PostHogAnalytics.captureError(error, properties: [
+                    "flow": "support_restore"
+                ])
                 self.alertInfo = AlertInfo(
                     title: "Restore Failed",
                     message: error.localizedDescription

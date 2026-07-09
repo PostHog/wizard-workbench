@@ -162,12 +162,21 @@ public final class CommentsViewModel: @unchecked Sendable {
                 self.post?.commentsCount = commentCountExcludingStoryText
                 self.isPostLoading = false
                 self.onCommentsLoaded?(loadedComments)
+                PostHogAnalytics.capture("comments_loaded", properties: [
+                    "post_id": annotatedPost.id,
+                    "post_type": annotatedPost.postType.rawValue,
+                    "comment_count": commentCountExcludingStoryText
+                ])
             }
 
             return loadedComments
         } catch {
             await MainActor.run {
                 self.isPostLoading = false
+                PostHogAnalytics.captureError(error, properties: [
+                    "flow": "comments_load",
+                    "post_id": self.postID
+                ])
             }
             throw error
         }
@@ -229,6 +238,11 @@ public final class CommentsViewModel: @unchecked Sendable {
         }
 
         updateVisibleComments()
+        PostHogAnalytics.capture("comment_thread_revealed", properties: [
+            "post_id": postID,
+            "comment_id": id,
+            "comment_level": targetComment.level
+        ])
         return true
     }
 

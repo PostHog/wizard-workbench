@@ -6,6 +6,7 @@
 //
 
 import DesignSystem
+import Shared
 import SwiftUI
 
 public struct OnboardingView: View {
@@ -39,7 +40,7 @@ public struct OnboardingView: View {
             .navigationBarBackButtonHidden()
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                        Button(action: onDismiss) {
+                        Button(action: dismissOnboarding) {
                             Image(systemName: "xmark")
                                 .font(.headline)
                         }
@@ -70,7 +71,7 @@ public struct OnboardingView: View {
     @ViewBuilder
     private var continueButton: some View {
         if #available(iOS 26.0, *) {
-            Button(action: onDismiss) {
+            Button(action: dismissOnboarding) {
                 Text("Continue")
                     .scaledFont(.headline)
                     .foregroundStyle(.white)
@@ -79,7 +80,7 @@ public struct OnboardingView: View {
             }
             .glassEffect(.regular.tint(AppColors.appTintColor))
         } else {
-            Button(action: onDismiss) {
+            Button(action: dismissOnboarding) {
                 Text("Continue")
                     .scaledFont(.headline)
                     .foregroundStyle(.white)
@@ -90,5 +91,13 @@ public struct OnboardingView: View {
             .clipShape(.rect(cornerRadius: 12))
             .buttonStyle(.plain)
         }
+    }
+
+    private func dismissOnboarding() {
+        PostHogAnalytics.capture("onboarding_dismissed", properties: [
+            "item_count": onboardingData.items.count,
+            "title": onboardingData.title
+        ])
+        onDismiss()
     }
 }

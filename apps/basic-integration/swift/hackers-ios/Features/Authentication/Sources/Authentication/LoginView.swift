@@ -249,6 +249,10 @@ public struct LoginView: View {
 
     private func performLogin() {
         focusedField = nil
+        PostHogAnalytics.capture("login_submitted", properties: [
+            "has_username": !viewModel.username.isEmpty,
+            "entry_point": "login_sheet"
+        ])
         Task { @MainActor in
             let enteredUsername = viewModel.username
             let success = await viewModel.performLogin()

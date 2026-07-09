@@ -34,6 +34,13 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // init default settings
         UserDefaults.standard.registerDefaults()
 
+        let environment = ProcessInfo.processInfo.environment
+        if let apiKey = environment["POSTHOG_API_KEY"],
+           let host = environment["POSTHOG_HOST"]
+        {
+            PostHogAnalytics.setup(apiKey: apiKey, host: host)
+        }
+
         return true
     }
 }

@@ -59,6 +59,12 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
                        let selectedPost = viewModel.posts.first(where: { $0.id == postId })
                     {
                         selectedPostId = postId
+                        PostHogAnalytics.capture("post_opened", properties: [
+                            "source": "sidebar",
+                            "post_id": selectedPost.id,
+                            "post_type": selectedPost.postType.rawValue,
+                            "comment_count": selectedPost.commentsCount
+                        ])
                         navigationStore.showPost(selectedPost)
                     }
                 },
@@ -366,11 +372,24 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
 
     private func handleLinkTap(post: Domain.Post) {
         guard !isHackerNewsItemURL(post.url) else {
+            PostHogAnalytics.capture("post_opened", properties: [
+                "source": isSidebar ? "sidebar" : "comments_button",
+                "post_id": post.id,
+                "post_type": post.postType.rawValue,
+                "comment_count": post.commentsCount
+            ])
             navigationStore.showPost(post)
             return
         }
 
         if isSidebar {
+            PostHogAnalytics.capture("post_opened", properties: [
+                "source": "sidebar",
+                "post_id": post.id,
+                "post_type": post.postType.rawValue,
+                "comment_count": post.commentsCount,
+                "destination": "in_app_browser"
+            ])
             navigationStore.showPost(post)
             selectedPostId = post.id
         }

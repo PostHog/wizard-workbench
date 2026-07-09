@@ -178,6 +178,11 @@ public final class FeedViewModel: @unchecked Sendable {
             let storedPosts = await bookmarksController.bookmarkedPosts()
             return await MainActor.run {
                 postIds = Set(storedPosts.map(\.id))
+                PostHogAnalytics.capture("feed_loaded", properties: [
+                    "post_type": postType.rawValue,
+                    "result_count": storedPosts.count,
+                    "source": "bookmarks"
+                ])
                 return storedPosts
             }
         }
@@ -207,6 +212,11 @@ public final class FeedViewModel: @unchecked Sendable {
 
                 let newPostIds = annotatedPosts.map(\.id)
                 self.postIds.formUnion(newPostIds)
+                PostHogAnalytics.capture("feed_loaded", properties: [
+                    "post_type": self.postType.rawValue,
+                    "result_count": annotatedPosts.count,
+                    "page_index": self.pageIndex
+                ])
                 return annotatedPosts
             }
         } catch {
@@ -256,6 +266,11 @@ public final class FeedViewModel: @unchecked Sendable {
     @MainActor
     public func toggleBookmark(for post: Domain.Post) async -> Bool {
         let newState = await bookmarksController.toggle(post: post)
+        PostHogAnalytics.capture("bookmark_toggled", properties: [
+            "post_id": post.id,
+            "post_type": post.postType.rawValue,
+            "bookmarked": newState
+        ])
         await handleBookmarksUpdate(postId: post.id, isBookmarked: newState)
         return newState
     }
@@ -311,6 +326,10 @@ public final class FeedViewModel: @unchecked Sendable {
                 await MainActor.run {
                     self.searchResults = annotated
                     self.isSearchInProgress = false
+                    PostHogAnalytics.capture("feed_searched", properties: [
+                        "query_length": currentQuery.trimmingCharacters(in: .whitespacesAndNewlines).count,
+                        "result_count": annotated.count
+                    ])
                 }
             } catch {
                 if Task.isCancelled { return }
@@ -318,6 +337,9 @@ public final class FeedViewModel: @unchecked Sendable {
                     self.searchResults = []
                     self.isSearchInProgress = false
                     self.searchError = error
+                    PostHogAnalytics.captureError(error, properties: [
+                        "flow": "feed_search"
+                    ])
                 }
             }
         }
