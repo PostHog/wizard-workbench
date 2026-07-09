@@ -3,6 +3,7 @@ import type { Media } from '~/types'
 
 const route = useRoute()
 const router = useRouter()
+const { $posthog } = useNuxtApp()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
@@ -11,13 +12,22 @@ const items = ref<Media[]>([])
 const currentSearch = ref(input.value)
 
 function search() {
-  if (currentSearch.value === input.value)
+  const nextSearch = input.value.toString().trim()
+  if (currentSearch.value === nextSearch)
     return
 
-  currentSearch.value = input.value.toString()
+  currentSearch.value = nextSearch
   count.value = undefined
   items.value = []
-  router.replace({ query: { s: input.value } })
+  error.value = undefined
+
+  if (nextSearch) {
+    $posthog?.capture('search_started', {
+      query_length: nextSearch.length,
+    })
+  }
+
+  router.replace({ query: { s: nextSearch || undefined } })
 }
 
 async function fetch(page: number) {
@@ -27,9 +37,22 @@ async function fetch(page: number) {
     const data = await searchShows(currentSearch.value, page)
     count.value = data.total_results ?? count.value
     items.value.push(...data.results)
+
+    if (page === 1) {
+      $posthog?.capture('search_results_loaded', {
+        query_length: currentSearch.value.length,
+        results_count: data.total_results ?? data.results.length,
+      })
+    }
   }
   catch (e: any) {
     error.value = e
+    $posthog?.capture('search_failed', {
+      query_length: currentSearch.value.length,
+      page,
+      error_message: e?.message || 'Unknown search error',
+    })
+    $posthog?.captureException(e instanceof Error ? e : new Error('Search failed'))
   }
 }
 
