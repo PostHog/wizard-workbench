@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from posthog import identify_context, new_context
 
 from app.dependencies import CurrentUser, DbSession, RequiredUser
 from app.models import Generation, APIKey, Activity
@@ -51,6 +52,19 @@ async def dashboard(request: Request, current_user: RequiredUser, db: DbSession)
         .limit(5)
         .all()
     )
+
+    with new_context():
+        identify_context(str(current_user.id))
+        request.app.state.posthog.capture(
+            "dashboard_viewed",
+            properties={
+                "credits_balance": current_user.credits,
+                "recent_generation_count": len(recent),
+                "total_generations": total_generations,
+                "total_credits_used": total_credits_used,
+                "active_api_key_count": api_key_count,
+            },
+        )
 
     return templates.TemplateResponse(
         request,

@@ -1,8 +1,9 @@
 """Authentication dependencies for FastAPI."""
 
 from typing import Annotated, Optional
+from uuid import UUID
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, Header, HTTPException, status
 from itsdangerous import BadSignature, URLSafeSerializer
 from sqlalchemy.orm import Session
 
@@ -52,7 +53,34 @@ def create_session_token(user_id: int) -> str:
     return serializer.dumps({"user_id": user_id})
 
 
+def get_posthog_distinct_id(
+    x_posthog_distinct_id: Annotated[Optional[str], Header()] = None,
+    current_user: Annotated[Optional[User], Depends(get_current_user)] = None,
+) -> Optional[str]:
+    """Resolve a stable distinct ID for PostHog events."""
+    if x_posthog_distinct_id:
+        return x_posthog_distinct_id
+    if current_user:
+        return str(current_user.id)
+    return None
+
+
+def get_posthog_session_id(
+    x_posthog_session_id: Annotated[Optional[str], Header()] = None,
+) -> Optional[str]:
+    """Resolve a forwarded PostHog session ID if present."""
+    if not x_posthog_session_id:
+        return None
+
+    try:
+        return str(UUID(x_posthog_session_id))
+    except ValueError:
+        return None
+
+
 # Type aliases for cleaner dependency injection
 CurrentUser = Annotated[Optional[User], Depends(get_current_user)]
 RequiredUser = Annotated[User, Depends(require_auth)]
 DbSession = Annotated[Session, Depends(get_db)]
+PostHogDistinctId = Annotated[Optional[str], Depends(get_posthog_distinct_id)]
+PostHogSessionId = Annotated[Optional[str], Depends(get_posthog_session_id)]

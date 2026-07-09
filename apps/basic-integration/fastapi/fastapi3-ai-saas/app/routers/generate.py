@@ -2,10 +2,11 @@
 
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
+from posthog import identify_context, new_context, set_context_session
 from pydantic import BaseModel, Field
 
-from app.dependencies import DbSession, RequiredUser
+from app.dependencies import DbSession, PostHogDistinctId, PostHogSessionId, RequiredUser
 from app.models import Generation
 
 router = APIRouter(prefix="/api")
@@ -42,8 +43,11 @@ class CreditsResponse(BaseModel):
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_content(
     request: GenerateRequest,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
+    posthog_distinct_id: PostHogDistinctId,
+    posthog_session_id: PostHogSessionId,
 ):
     """Generate AI content (mock implementation).
 
@@ -54,6 +58,19 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        with new_context():
+            identify_context(posthog_distinct_id or str(current_user.id))
+            if posthog_session_id:
+                set_context_session(posthog_session_id)
+            http_request.app.state.posthog.capture(
+                "content_generation_blocked",
+                properties={
+                    "generation_type": request.generation_type,
+                    "credits_needed": credits_needed,
+                    "credits_balance": current_user.credits,
+                },
+            )
+
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -75,6 +92,21 @@ async def generate_content(
         result=mock_content,
         credits_used=credits_needed,
     )
+
+    with new_context():
+        identify_context(posthog_distinct_id or str(current_user.id))
+        if posthog_session_id:
+            set_context_session(posthog_session_id)
+        http_request.app.state.posthog.capture(
+            "content_generation_requested",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+                "prompt_length": len(request.prompt),
+                "generation_id": generation.id,
+            },
+        )
 
     return GenerateResponse(
         id=generation.id,

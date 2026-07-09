@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from posthog import identify_context, new_context
 
 from app.config import get_settings
 from app.dependencies import CurrentUser, DbSession, RequiredUser, create_session_token
@@ -34,6 +35,21 @@ async def login(
     user = User.authenticate(db, email, password)
 
     if user:
+        with new_context():
+            identify_context(str(user.id))
+            request.app.state.posthog.capture(
+                "user_logged_in",
+                properties={
+                    "$set": {
+                        "email": user.email,
+                        "credits": user.credits,
+                        "is_active": user.is_active,
+                    },
+                    "login_method": "password",
+                    "credits_balance": user.credits,
+                },
+            )
+
         response = RedirectResponse(url="/dashboard", status_code=302)
         response.set_cookie(
             key="session_token",
@@ -71,6 +87,21 @@ async def signup(
 
     user = User.create(db, email=email, password=password, credits=settings.default_credits)
 
+    with new_context():
+        identify_context(str(user.id))
+        request.app.state.posthog.capture(
+            "user_signed_up",
+            properties={
+                "$set": {
+                    "email": user.email,
+                    "credits": user.credits,
+                    "is_active": user.is_active,
+                },
+                "signup_method": "form",
+                "starting_credits": user.credits,
+            },
+        )
+
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(
         key="session_token",
@@ -82,8 +113,17 @@ async def signup(
 
 
 @router.get("/logout")
-async def logout(current_user: RequiredUser):
+async def logout(request: Request, current_user: RequiredUser):
     """Logout user."""
+    with new_context():
+        identify_context(str(current_user.id))
+        request.app.state.posthog.capture(
+            "user_logged_out",
+            properties={
+                "credits_balance": current_user.credits,
+            },
+        )
+
     response = RedirectResponse(url="/", status_code=302)
     response.delete_cookie(key="session_token")
     return response

@@ -2,7 +2,8 @@
 
 from typing import List
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
+from posthog import identify_context, new_context
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
@@ -55,6 +56,7 @@ async def list_api_keys(current_user: RequiredUser, db: DbSession):
 @router.post("", response_model=APIKeyCreated, status_code=status.HTTP_201_CREATED)
 async def create_api_key(
     request: APIKeyCreate,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -73,6 +75,17 @@ async def create_api_key(
 
     api_key = APIKey.create(db, user_id=current_user.id, name=request.name)
 
+    with new_context():
+        identify_context(str(current_user.id))
+        http_request.app.state.posthog.capture(
+            "api_key_created",
+            properties={
+                "api_key_id": api_key.id,
+                "api_key_name_length": len(api_key.name),
+                "active_api_key_count": active_count + 1,
+            },
+        )
+
     return APIKeyCreated(
         id=api_key.id,
         name=api_key.name,
@@ -86,6 +99,7 @@ async def create_api_key(
 @router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_api_key(
     key_id: int,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -103,5 +117,18 @@ async def revoke_api_key(
 
     api_key.is_active = False
     db.commit()
+
+    with new_context():
+        identify_context(str(current_user.id))
+        http_request.app.state.posthog.capture(
+            "api_key_revoked",
+            properties={
+                "api_key_id": api_key.id,
+                "active_api_key_count": db.query(APIKey).filter(
+                    APIKey.user_id == current_user.id,
+                    APIKey.is_active == True,
+                ).count(),
+            },
+        )
 
     return None

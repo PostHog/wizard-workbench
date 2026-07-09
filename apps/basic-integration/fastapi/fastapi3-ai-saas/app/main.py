@@ -1,17 +1,26 @@
 """Acme AI - FastAPI SaaS Application."""
 
+import atexit
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
+from posthog import Posthog
 
 from app.config import get_settings
 from app.database import init_db
+from app.middleware import PostHogMiddleware
 from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
 
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
+posthog_client = Posthog(
+    settings.posthog_api_key,
+    host=settings.posthog_host,
+    enable_exception_autocapture=True,
+)
+atexit.register(posthog_client.shutdown)
 
 
 @asynccontextmanager
@@ -22,12 +31,16 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    posthog_client.shutdown()
+
 
 app = FastAPI(
     title=settings.app_name,
     description="AI content generation platform",
     lifespan=lifespan,
 )
+app.add_middleware(PostHogMiddleware)
+app.state.posthog = posthog_client
 
 # Include routers
 app.include_router(auth.router)
