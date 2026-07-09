@@ -8,7 +8,9 @@ import {
   useOutlet,
   type MetaFunction,
 } from 'react-router'
+import { useEffect } from 'react'
 import gsap from 'gsap'
+import { usePostHog } from '@posthog/react'
 
 import type { Route } from './+types/root'
 import stylesheet from './app.css?url'
@@ -20,6 +22,10 @@ import Footer from '@/components/footer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+import { posthogMiddleware } from '@/lib/posthog-middleware'
+import { fakeUser } from '@/lib/data/fake-data'
+
+export const middleware = [posthogMiddleware]
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -84,9 +90,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const posthog = usePostHog()
   const element = useOutlet()
-
   const location = useLocation()
+
+  useEffect(() => {
+    posthog?.identify(fakeUser.username, {
+      username: fakeUser.username,
+      display_name: fakeUser.displayName,
+    })
+  }, [posthog])
 
   return (
     <RouteTransitionManager
@@ -135,6 +148,9 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined
+
+  const posthog = usePostHog()
+  posthog?.captureException(error)
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? '404' : 'Error'
