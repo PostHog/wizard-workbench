@@ -17,7 +17,20 @@ class WebhooksController < ApplicationController
 
   def create
     webhook = @board.webhooks.create!(webhook_params)
+
+    posthog_capture(
+      "webhook_created",
+      {
+        webhook_id: webhook.id,
+        board_id: @board.id,
+        subscribed_action_count: webhook.subscribed_actions.size
+      }
+    )
+
     redirect_to webhook
+  rescue => error
+    PostHog.capture_exception(error, Current.user.posthog_distinct_id, { controller: self.class.name, action: "create" }) if Current.user
+    raise
   end
 
   def edit

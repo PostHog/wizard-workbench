@@ -28,10 +28,21 @@ class BoardsController < ApplicationController
   def create
     @board = Board.create! board_params.with_defaults(all_access: true)
 
+    posthog_capture(
+      "board_created",
+      {
+        board_id: @board.id,
+        visibility: @board.all_access? ? "all_access" : "restricted"
+      }
+    )
+
     respond_to do |format|
       format.html { redirect_to board_path(@board) }
       format.json { head :created, location: board_path(@board, format: :json) }
     end
+  rescue => error
+    PostHog.capture_exception(error, Current.user.posthog_distinct_id, { controller: self.class.name, action: "create" }) if Current.user
+    raise
   end
 
   def edit

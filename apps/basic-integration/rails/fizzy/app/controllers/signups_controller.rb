@@ -14,10 +14,23 @@ class SignupsController < ApplicationController
   def create
     signup = Signup.new(signup_params)
     if signup.valid?(:identity_creation)
-      redirect_to_session_magic_link signup.create_identity
+      magic_link = signup.create_identity
+      PostHog.capture(
+        distinct_id: magic_link.identity.id,
+        event: "signup_requested",
+        properties: {
+          signup_method: "email",
+          magic_link_purpose: magic_link.purpose
+        }
+      )
+      redirect_to_session_magic_link magic_link
     else
       head :unprocessable_entity
     end
+  rescue => error
+    distinct_id = signup&.identity&.id || "anonymous_signup"
+    PostHog.capture_exception(error, distinct_id, { controller: self.class.name, action: "create" })
+    raise
   end
 
   private

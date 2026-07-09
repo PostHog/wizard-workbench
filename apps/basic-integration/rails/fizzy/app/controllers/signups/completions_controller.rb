@@ -11,10 +11,22 @@ class Signups::CompletionsController < ApplicationController
     @signup = Signup.new(signup_params)
 
     if @signup.complete
+      posthog_identify(@signup.user)
+      posthog_capture(
+        "user_signed_up",
+        {
+          signup_method: "magic_link",
+          account_id: @signup.account.id
+        },
+        user: @signup.user
+      )
       welcome_to_account
     else
       invalid_signup
     end
+  rescue => error
+    PostHog.capture_exception(error, Current.identity&.id || "anonymous_signup_completion", { controller: self.class.name, action: "create" })
+    raise
   end
 
   private
