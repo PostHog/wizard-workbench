@@ -19,3 +19,12 @@ const currentPath = Astro.url.pathname;
     </main>
   </div>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', function () {
+    window.posthog?.capture('docs_page_viewed', {
+      path: window.location.pathname,
+      title: document.title
+    });
+  });
+</script>
