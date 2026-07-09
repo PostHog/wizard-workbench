@@ -8,7 +8,9 @@ import {
   useWindowDimensions,
 } from "react-native";
 import * as Haptics from "expo-haptics";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { usePostHog } from "posthog-react-native";
 import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -22,6 +24,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -37,6 +40,30 @@ export default function ItemDetails() {
     queryFn: getItemQueryFn,
     enabled: !!item?.parent && item.type === "comment",
   });
+
+  useEffect(() => {
+    if (item) {
+      posthog.capture("item_detail_viewed", {
+        item_id: item.id,
+        item_type: item.type,
+        has_url: Boolean(item.url),
+        comment_count: item.kids?.length || 0,
+      });
+    }
+  }, [item, posthog]);
+
+  useEffect(() => {
+    if (item === undefined) {
+      return;
+    }
+
+    if (item === null) {
+      posthog.captureException(new Error("Item details returned no data"), {
+        area: "item_detail",
+        item_id: itemId,
+      });
+    }
+  }, [item, itemId, posthog]);
 
   return (
     <View style={styles.page}>
@@ -72,7 +99,16 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              onPress={() => {
+                posthog.capture("comment_author_opened", {
+                  item_id: item.id,
+                  author_id: item.by,
+                  source: "item_detail_header",
+                });
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -163,6 +199,12 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture("story_external_link_opened", {
+                    item_id: item.id,
+                    has_comments: Boolean(item.kids?.length),
+                    url_host: new URL(item.url).host,
+                    source: "item_detail",
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +236,14 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog.capture("parent_item_opened", {
+                  item_id: item.id,
+                  parent_item_id: parentItem.id,
+                  parent_item_type: parentItem.type,
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{

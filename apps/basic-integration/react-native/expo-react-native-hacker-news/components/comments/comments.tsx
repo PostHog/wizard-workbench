@@ -1,7 +1,8 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useEffect, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { FlatList, ListRenderItem, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePostHog } from "posthog-react-native";
 
 import { Spinner } from "@/components/Spinner";
 import { Comment } from "@/components/comments/comment";
@@ -16,6 +17,7 @@ type Props = Pick<Item, "id" | "kids"> & {
 
 export const Comments = ({ id, kids, children }: Props) => {
   const { bottom } = useSafeAreaInsets();
+  const posthog = usePostHog();
   const { data, hasNextPage, isLoading, isFetchingNextPage, fetchNextPage } =
     useInfiniteQuery({
       queryKey: [id, "comments"],
@@ -47,6 +49,15 @@ export const Comments = ({ id, kids, children }: Props) => {
       .flat()
       .filter(({ dead, deleted }) => dead !== true && deleted !== true);
   }, [data]);
+
+  useEffect(() => {
+    if (comments) {
+      posthog.capture("comment_thread_loaded", {
+        item_id: id,
+        comment_count: comments.length,
+      });
+    }
+  }, [comments, id, posthog]);
 
   return (
     <FlatList

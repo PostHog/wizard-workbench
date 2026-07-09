@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { FlatList, ListRenderItem, View } from "react-native";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { usePostHog } from "posthog-react-native";
 
 import { Post } from "@/components/posts/Post";
 import { Spinner } from "@/components/Spinner";
@@ -26,6 +27,7 @@ const ItemSeparatorComponent = () => (
 );
 
 export const Posts = ({ storyType }: { storyType: StoryType }) => {
+  const posthog = usePostHog();
   const storyListQuery = useQuery({
     queryKey: ["storyIds", storyType],
     queryFn: async () => {
@@ -70,6 +72,24 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
       .flat()
       .filter(({ dead, deleted }) => dead !== true && deleted !== true);
   }, [data]);
+
+  useEffect(() => {
+    if (storyListQuery.data) {
+      posthog.capture("story_feed_loaded", {
+        story_type: storyType,
+        story_count: storyListQuery.data.length,
+      });
+    }
+  }, [posthog, storyListQuery.data, storyType]);
+
+  useEffect(() => {
+    if (storyListQuery.error instanceof Error) {
+      posthog.captureException(storyListQuery.error, {
+        area: "story_feed",
+        story_type: storyType,
+      });
+    }
+  }, [posthog, storyListQuery.error, storyType]);
 
   return (
     <FlatList
