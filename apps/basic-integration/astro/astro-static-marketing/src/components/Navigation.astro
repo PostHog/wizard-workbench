@@ -4,18 +4,36 @@ const currentPath = Astro.url.pathname;
 
 <nav class="nav">
   <div class="container nav-inner">
-    <a href="/" class="nav-logo">
+    <a href="/" class="nav-logo" data-nav-label="home-logo">
       <span>NeuralFlow</span> AI
     </a>
     <ul class="nav-links">
-      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]}>Features</a></li>
-      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
-      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
-      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/features" data-nav-label="features" class:list={["nav-link", { active: currentPath === '/features' }]}>Features</a></li>
+      <li><a href="/pricing" data-nav-label="pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
+      <li><a href="/about" data-nav-label="about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
+      <li><a href="/docs" data-nav-label="docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
+      <li><a href="#" class="nav-cta" data-nav-label="get-started">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-nav-label]').forEach((link) => {
+      link.addEventListener('click', () => {
+        const label = link.getAttribute('data-nav-label') || 'unknown';
+        const href = link.getAttribute('href') || '';
+        const eventName = link.classList.contains('nav-cta') ? 'navigation_cta_clicked' : 'navigation_link_clicked';
+
+        window.captureMarketingEvent?.(eventName, {
+          navigation_label: label,
+          href,
+          current_path: window.location.pathname,
+        });
+      });
+    });
+  });
+</script>
 
 <style>
   .nav-link.active {

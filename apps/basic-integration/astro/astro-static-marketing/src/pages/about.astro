@@ -19,19 +19,19 @@ import Layout from '../layouts/Layout.astro';
       </p>
 
       <div class="about-grid">
-        <div class="about-card">
+        <div class="about-card" data-about-metric="active-users">
           <h3>10K+</h3>
           <p>Active Users</p>
         </div>
-        <div class="about-card">
+        <div class="about-card" data-about-metric="documents-processed">
           <h3>500M+</h3>
           <p>Documents Processed</p>
         </div>
-        <div class="about-card">
+        <div class="about-card" data-about-metric="uptime-sla">
           <h3>99.9%</h3>
           <p>Uptime SLA</p>
         </div>
-        <div class="about-card">
+        <div class="about-card" data-about-metric="countries">
           <h3>50+</h3>
           <p>Countries</p>
         </div>
@@ -46,22 +46,22 @@ import Layout from '../layouts/Layout.astro';
         <p>The people building the future of work</p>
       </div>
       <div class="team-grid">
-        <div class="team-member">
+        <div class="team-member" data-team-member="ceo-cofounder">
           <div class="team-avatar">👩‍💻</div>
           <h4>Sarah Chen</h4>
           <p>CEO & Co-founder</p>
         </div>
-        <div class="team-member">
+        <div class="team-member" data-team-member="cto-cofounder">
           <div class="team-avatar">👨‍💻</div>
           <h4>Marcus Johnson</h4>
           <p>CTO & Co-founder</p>
         </div>
-        <div class="team-member">
+        <div class="team-member" data-team-member="head-of-ai-research">
           <div class="team-avatar">👩‍🔬</div>
           <h4>Dr. Emily Park</h4>
           <p>Head of AI Research</p>
         </div>
-        <div class="team-member">
+        <div class="team-member" data-team-member="head-of-design">
           <div class="team-avatar">👨‍🎨</div>
           <h4>Alex Rivera</h4>
           <p>Head of Design</p>
@@ -70,3 +70,25 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-about-metric]').forEach((card) => {
+      card.addEventListener('click', () => {
+        window.captureMarketingEvent?.('about_metric_highlight_clicked', {
+          metric_name: card.getAttribute('data-about-metric') || 'unknown',
+          current_path: window.location.pathname,
+        });
+      });
+    });
+
+    document.querySelectorAll('[data-team-member]').forEach((card) => {
+      card.addEventListener('click', () => {
+        window.captureMarketingEvent?.('team_member_highlight_clicked', {
+          team_member_role: card.getAttribute('data-team-member') || 'unknown',
+          current_path: window.location.pathname,
+        });
+      });
+    });
+  });
+</script>
