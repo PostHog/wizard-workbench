@@ -15,12 +15,14 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   try {
+    const posthog = (context as PostHogContext).posthog;
     const { supabase, headers } = context.get(anonymousContext);
     const i18n = getInstance(context);
     const { inviteLinkInfo, headers: inviteLinkHeaders } =
@@ -173,6 +175,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         }
       }
 
+      posthog?.capture({
+        distinctId: maybeUser.id,
+        event: "user_logged_in",
+        properties: { login_method: "google" },
+      });
+
       return redirect(href("/organizations"), {
         headers: combineHeaders(headers, inviteLinkHeaders, emailInviteHeaders),
       });
@@ -204,6 +212,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         userAccountId: userProfile.id,
       });
     }
+
+    posthog?.capture({
+      distinctId: userProfile.id,
+      event: "user_registered",
+      properties: { registration_method: "google" },
+    });
 
     return redirect(href("/onboarding"), {
       headers: combineHeaders(headers, inviteLinkHeaders, emailInviteHeaders),

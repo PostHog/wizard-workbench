@@ -2,17 +2,21 @@ import { data, Form, href, Link, redirect } from "react-router";
 import { z } from "zod";
 
 import type { Route } from "./+types/pastes";
-import { canCreatePaste } from "~/features/pastebin/paste-helpers.server";
 import { organizationMembershipContext } from "~/features/organizations/organizations-middleware.server";
+import { canCreatePaste } from "~/features/pastebin/paste-helpers.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { prisma } from "~/utils/database.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
 const createPasteSchema = z.object({
+  content: z.string().min(1).max(100_000), // 100KB max
   intent: z.literal("create"),
-  title: z.string().min(1).max(200),
-  content: z.string().min(1).max(100000), // 100KB max
+  isPublic: z
+    .string()
+    .optional()
+    .transform((val) => val === "on"),
   language: z.string().optional(),
-  isPublic: z.string().optional().transform((val) => val === "on"),
+  title: z.string().min(1).max(200),
 });
 
 const deletePasteSchema = z.object({
@@ -27,32 +31,39 @@ const pasteActionSchema = z.discriminatedUnion("intent", [
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const { organizationSlug } = params;
-  
+
   // If there's a pasteId in the URL, this route shouldn't handle it
   const url = new URL(request.url);
-  const pathParts = url.pathname.split('/');
-  const pasteIndex = pathParts.indexOf('pastes');
-  if (pasteIndex !== -1 && pathParts[pasteIndex + 1] && pathParts[pasteIndex + 1] !== '') {
+  const pathParts = url.pathname.split("/");
+  const pasteIndex = pathParts.indexOf("pastes");
+  if (
+    pasteIndex !== -1 &&
+    pathParts[pasteIndex + 1] &&
+    pathParts[pasteIndex + 1] !== ""
+  ) {
     // There's a pasteId, let the detail route handle it
     throw new Response("", { status: 404 });
   }
-  const { user, organization, headers } = context.get(organizationMembershipContext);
+  const { user, organization, headers } = context.get(
+    organizationMembershipContext,
+  );
 
   if (organization.slug !== organizationSlug) {
-    throw redirect(href("/organizations/:organizationSlug/pastes", { organizationSlug: organization.slug }));
+    throw redirect(
+      href("/organizations/:organizationSlug/pastes", {
+        organizationSlug: organization.slug,
+      }),
+    );
   }
 
   const pastes = await prisma.paste.findMany({
-    where: {
-      organizationId: organization.id,
-    },
     include: {
       createdBy: {
         select: {
-          id: true,
-          name: true,
           email: true,
+          id: true,
           imageUrl: true,
+          name: true,
         },
       },
     },
@@ -60,6 +71,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       createdAt: "desc",
     },
     take: 100, // Limit to 100 most recent
+    where: {
+      organizationId: organization.id,
+    },
   });
 
   const pasteLimits = await canCreatePaste(organization.id);
@@ -68,16 +82,14 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const pastesWithFormattedDates = pastes.map((paste) => ({
     ...paste,
     formattedCreatedAt: new Intl.DateTimeFormat("en-US", {
-      month: "numeric",
       day: "numeric",
+      month: "numeric",
       year: "numeric",
     }).format(new Date(paste.createdAt)),
   }));
 
   return data(
     {
-      pastes: pastesWithFormattedDates,
-      pasteLimits,
       breadcrumb: {
         title: "Pastes",
         to: href("/organizations/:organizationSlug/pastes", {
@@ -85,17 +97,26 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         }),
       },
       pageTitle: "Pastes",
+      pasteLimits,
+      pastes: pastesWithFormattedDates,
     },
     { headers },
   );
 }
 
 export async function action({ params, request, context }: Route.ActionArgs) {
+  const posthog = (context as PostHogContext).posthog;
   const { organizationSlug } = params;
-  const { user, organization, headers } = context.get(organizationMembershipContext);
+  const { user, organization, headers } = context.get(
+    organizationMembershipContext,
+  );
 
   if (organization.slug !== organizationSlug) {
-    throw redirect(href("/organizations/:organizationSlug/pastes", { organizationSlug: organization.slug }));
+    throw redirect(
+      href("/organizations/:organizationSlug/pastes", {
+        organizationSlug: organization.slug,
+      }),
+    );
   }
 
   const result = await validateFormData(request, pasteActionSchema);
@@ -108,7 +129,6 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 
   switch (body.intent) {
     case "create": {
-
       // Check if organization can create more pastes
       const limits = await canCreatePaste(organization.id);
       if (!limits.canCreate) {
@@ -126,12 +146,23 @@ export async function action({ params, request, context }: Route.ActionArgs) {
 
       const paste = await prisma.paste.create({
         data: {
-          title: body.title,
           content: body.content,
-          language: body.language || null,
-          isPublic: body.isPublic || false,
-          organizationId: organization.id,
           createdById: user.id,
+          isPublic: body.isPublic || false,
+          language: body.language || null,
+          organizationId: organization.id,
+          title: body.title,
+        },
+      });
+
+      posthog?.capture({
+        distinctId: user.id,
+        event: "paste_created",
+        properties: {
+          is_public: paste.isPublic,
+          language: paste.language ?? undefined,
+          organization_id: organization.id,
+          paste_id: paste.id,
         },
       });
 
@@ -145,7 +176,6 @@ export async function action({ params, request, context }: Route.ActionArgs) {
     }
 
     case "delete": {
-
       // Verify paste belongs to organization
       const paste = await prisma.paste.findFirst({
         where: {
@@ -155,11 +185,23 @@ export async function action({ params, request, context }: Route.ActionArgs) {
       });
 
       if (!paste) {
-        return data({ errors: { _form: ["Paste not found"] } }, { status: 404 });
+        return data(
+          { errors: { _form: ["Paste not found"] } },
+          { status: 404 },
+        );
       }
 
       await prisma.paste.delete({
         where: { id: body.pasteId },
+      });
+
+      posthog?.capture({
+        distinctId: user.id,
+        event: "paste_deleted",
+        properties: {
+          organization_id: organization.id,
+          paste_id: body.pasteId,
+        },
       });
 
       return redirect(
@@ -176,7 +218,10 @@ export const meta: Route.MetaFunction = ({ loaderData }) => [
   { title: loaderData?.pageTitle || "Pastes" },
 ];
 
-export default function PastesRoute({ loaderData, params }: Route.ComponentProps) {
+export default function PastesRoute({
+  loaderData,
+  params,
+}: Route.ComponentProps) {
   const { pastes, pasteLimits } = loaderData;
 
   return (
@@ -185,22 +230,26 @@ export default function PastesRoute({ loaderData, params }: Route.ComponentProps
         <div>
           <h1 className="text-2xl font-bold">📋 Your Pastes</h1>
           <p className="text-muted-foreground text-sm">
-            {pasteLimits.currentCount} / {pasteLimits.limit === Infinity ? "∞" : pasteLimits.limit} pastes used
+            {pasteLimits.currentCount} /{" "}
+            {pasteLimits.limit === Number.POSITIVE_INFINITY
+              ? "∞"
+              : pasteLimits.limit}{" "}
+            pastes used
           </p>
         </div>
         {pasteLimits.canCreate ? (
           <a
-            href="#create-paste"
             className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-10 items-center justify-center rounded-md px-4 py-2 text-sm font-medium"
+            href="#create-paste"
           >
             + New Paste
           </a>
         ) : (
           <Link
+            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-10 items-center justify-center rounded-md px-4 py-2 text-sm font-medium"
             to={href("/organizations/:organizationSlug/settings/billing", {
               organizationSlug: params.organizationSlug,
             })}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-10 items-center justify-center rounded-md px-4 py-2 text-sm font-medium"
           >
             Upgrade to Create More
           </Link>
@@ -220,13 +269,15 @@ export default function PastesRoute({ loaderData, params }: Route.ComponentProps
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {pastes.map((paste) => (
             <Link
+              className="hover:border-primary group rounded-lg border bg-card p-4 transition-colors"
               key={paste.id}
               to={`/paste/${paste.id}`}
-              className="hover:border-primary group rounded-lg border bg-card p-4 transition-colors"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="font-semibold group-hover:underline">{paste.title}</h3>
+                  <h3 className="font-semibold group-hover:underline">
+                    {paste.title}
+                  </h3>
                   <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
                     {paste.content.substring(0, 100)}
                     {paste.content.length > 100 ? "..." : ""}
@@ -244,53 +295,53 @@ export default function PastesRoute({ loaderData, params }: Route.ComponentProps
       )}
 
       {/* Create Paste Form */}
-      <div id="create-paste" className="mt-8 rounded-lg border bg-card p-6">
+      <div className="mt-8 rounded-lg border bg-card p-6" id="create-paste">
         <h2 className="mb-4 text-xl font-semibold">Create New Paste</h2>
-        <Form method="post" className="space-y-4">
-          <input type="hidden" name="intent" value="create" />
+        <Form className="space-y-4" method="post">
+          <input name="intent" type="hidden" value="create" />
           <div>
-            <label htmlFor="title" className="mb-2 block text-sm font-medium">
+            <label className="mb-2 block text-sm font-medium" htmlFor="title">
               Title
             </label>
             <input
-              type="text"
-              id="title"
-              name="title"
-              required
-              maxLength={200}
               className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              id="title"
+              maxLength={200}
+              name="title"
               placeholder="My Awesome Paste"
+              required
+              type="text"
             />
           </div>
           <div>
-            <label htmlFor="content" className="mb-2 block text-sm font-medium">
+            <label className="mb-2 block text-sm font-medium" htmlFor="content">
               Content
             </label>
             <textarea
+              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full rounded-md border px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               id="content"
               name="content"
+              placeholder="Paste your content here..."
               required
               rows={10}
-              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full rounded-md border px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-              placeholder="Paste your content here..."
             />
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <input
-                type="checkbox"
+                className="h-4 w-4"
                 id="isPublic"
                 name="isPublic"
-                className="h-4 w-4"
+                type="checkbox"
               />
-              <label htmlFor="isPublic" className="text-sm">
+              <label className="text-sm" htmlFor="isPublic">
                 Make public
               </label>
             </div>
             <button
-              type="submit"
-              disabled={!pasteLimits.canCreate}
               className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 inline-flex h-10 items-center justify-center rounded-md px-4 py-2 text-sm font-medium"
+              disabled={!pasteLimits.canCreate}
+              type="submit"
             >
               Create Paste
             </button>
@@ -299,10 +350,10 @@ export default function PastesRoute({ loaderData, params }: Route.ComponentProps
             <p className="text-destructive text-sm">
               You've reached your paste limit.{" "}
               <Link
+                className="underline"
                 to={href("/organizations/:organizationSlug/settings/billing", {
                   organizationSlug: params.organizationSlug,
                 })}
-                className="underline"
               >
                 Upgrade your plan
               </Link>{" "}
@@ -314,4 +365,3 @@ export default function PastesRoute({ loaderData, params }: Route.ComponentProps
     </div>
   );
 }
-

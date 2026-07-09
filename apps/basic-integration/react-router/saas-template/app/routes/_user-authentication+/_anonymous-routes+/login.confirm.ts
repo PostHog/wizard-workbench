@@ -15,11 +15,13 @@ import {
   saveUserAccountToDatabase,
 } from "~/features/user-accounts/user-accounts-model.server";
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
 import { redirectWithToast } from "~/utils/toast.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
+  const posthog = (context as PostHogContext).posthog;
   const { supabase, headers } = context.get(anonymousContext);
   const i18n = getInstance(context);
   const { inviteLinkInfo, headers: inviteLinkHeaders } =
@@ -55,6 +57,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       user.email,
     );
 
+  const isNewUser = !userAccount;
   const finalUserAccount =
     userAccount ??
     (await saveUserAccountToDatabase({
@@ -189,6 +192,20 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           // flow.
           redirect(href("/onboarding/user-account"), { headers });
     }
+  }
+
+  if (isNewUser) {
+    posthog?.capture({
+      distinctId: finalUserAccount.id,
+      event: "user_registered",
+      properties: { registration_method: "email" },
+    });
+  } else {
+    posthog?.capture({
+      distinctId: finalUserAccount.id,
+      event: "user_logged_in",
+      properties: { login_method: "email" },
+    });
   }
 
   return redirect(href("/organizations"), {

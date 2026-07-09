@@ -21,6 +21,7 @@ import { updateStripeCustomer } from "~/features/billing/stripe-helpers.server";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
 import { OrganizationMembershipRole } from "~/generated/client";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { forbidden } from "~/utils/http-responses.server";
 import { slugify } from "~/utils/slugify.server";
@@ -40,7 +41,8 @@ export async function generalOrganizationSettingsAction({
   params,
   context,
 }: Route.ActionArgs) {
-  const { headers, organization, role } = context.get(
+  const posthog = (context as PostHogContext).posthog;
+  const { headers, organization, role, user } = context.get(
     organizationMembershipContext,
   );
   const i18n = getInstance(context);
@@ -115,6 +117,12 @@ export async function generalOrganizationSettingsAction({
         }
       }
 
+      posthog?.capture({
+        distinctId: user.id,
+        event: "organization_updated",
+        properties: { organization_id: organization.id },
+      });
+
       const toastHeaders = await createToastHeaders({
         title: i18n.t(
           "organizations:settings.general.toast.organizationProfileUpdated",
@@ -129,6 +137,13 @@ export async function generalOrganizationSettingsAction({
 
     case DELETE_ORGANIZATION_INTENT: {
       await deleteOrganization(organization.id);
+
+      posthog?.capture({
+        distinctId: user.id,
+        event: "organization_deleted",
+        properties: { organization_id: organization.id },
+      });
+
       return redirectWithToast(
         href("/organizations"),
         {
