@@ -2,6 +2,7 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoProjects } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   getProjectsSuccess,
@@ -36,6 +37,7 @@ export function* createProject({ payload }) {
       yield put(createProjectSuccess(newProject));
       yield put(closeProjectModal());
       toast.showSuccess('Project created');
+      posthog.capture('project_created', { project_title: title, is_demo: true });
       return;
     }
 
@@ -45,8 +47,10 @@ export function* createProject({ payload }) {
     yield put(closeProjectModal());
 
     toast.showSuccess('Project created');
+    posthog.capture('project_created', { project_title: title });
   } catch (err) {
     toast.showError('Error creating project');
+    posthog.capture('project_create_failed', { project_title: title });
   }
 }
 
