@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -164,7 +165,15 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                     textFieldFocusState = focused
                 },
                 onMessageSent = {
+                    val messageLength = textState.text.length
                     onMessageSent(textState.text)
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "message_length" to messageLength,
+                            "input_mode" to currentInputSelector.name.lowercase(),
+                        ),
+                    )
                     // Reset text field and close keyboard
                     textState = TextFieldValue()
                     // Move scroll to bottom
@@ -176,7 +185,15 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                 onSelectorChange = { currentInputSelector = it },
                 sendMessageEnabled = textState.text.isNotBlank(),
                 onMessageSent = {
+                    val messageLength = textState.text.length
                     onMessageSent(textState.text)
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "message_length" to messageLength,
+                            "input_mode" to currentInputSelector.name.lowercase(),
+                        ),
+                    )
                     // Reset text field and close keyboard
                     textState = TextFieldValue()
                     // Move scroll to bottom
@@ -648,7 +665,15 @@ fun EmojiTable(onTextAdded: (String) -> Unit, modifier: Modifier = Modifier) {
                     val emoji = emojis[x * EMOJI_COLUMNS + y]
                     Text(
                         modifier = Modifier
-                            .clickable(onClick = { onTextAdded(emoji) })
+                            .clickable(onClick = {
+                                onTextAdded(emoji)
+                                PostHog.capture(
+                                    event = "emoji_selected",
+                                    properties = mapOf(
+                                        "emoji_value" to emoji,
+                                    ),
+                                )
+                            })
                             .sizeIn(minWidth = 42.dp, minHeight = 42.dp)
                             .padding(8.dp),
                         text = emoji,

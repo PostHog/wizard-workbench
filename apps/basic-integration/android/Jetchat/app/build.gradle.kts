@@ -34,6 +34,17 @@ android {
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        buildConfigField(
+            "String",
+            "POSTHOG_PROJECT_API_KEY",
+            "\"${System.getenv("POSTHOG_PROJECT_API_KEY") ?: ""}\"",
+        )
+        buildConfigField(
+            "String",
+            "POSTHOG_HOST",
+            "\"${System.getenv("POSTHOG_HOST") ?: ""}\"",
+        )
+
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -106,6 +117,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.navigation.fragment)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation("com.posthog:posthog-android:3.+")
 
     implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.material3)

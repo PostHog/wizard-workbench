@@ -17,6 +17,9 @@
 package com.example.compose.jetchat
 
 import androidx.lifecycle.ViewModel
+import com.posthog.PostHog
+import java.nio.charset.StandardCharsets
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -26,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class MainViewModel : ViewModel() {
 
     private val _drawerShouldBeOpened = MutableStateFlow(false)
+    private var identifiedDistinctId: String? = null
     val drawerShouldBeOpened = _drawerShouldBeOpened.asStateFlow()
 
     // Dead-simple fake auth state for demo purposes.
@@ -44,9 +48,38 @@ class MainViewModel : ViewModel() {
     fun login(username: String, password: String) {
         // Fake auth: accept anything; password intentionally unused.
         _loggedInUsername.value = username
+
+        val normalizedUsername = username.trim()
+        val distinctId = normalizedUsername.toPostHogDistinctId()
+        identifiedDistinctId = distinctId
+
+        PostHog.identify(
+            distinctId = distinctId,
+            userProperties = mapOf(
+                "username" to normalizedUsername,
+                "auth_provider" to "demo_credentials",
+            ),
+        )
+        PostHog.capture(
+            event = "user_logged_in",
+            properties = mapOf(
+                "auth_provider" to "demo_credentials",
+            ),
+        )
     }
 
     fun logout() {
+        PostHog.capture(
+            event = "user_logged_out",
+            properties = mapOf(
+                "was_identified" to (identifiedDistinctId != null),
+            ),
+        )
+        PostHog.reset()
+        identifiedDistinctId = null
         _loggedInUsername.value = null
     }
 }
+
+private fun String.toPostHogDistinctId(): String =
+    UUID.nameUUIDFromBytes(trim().lowercase().toByteArray(StandardCharsets.UTF_8)).toString()

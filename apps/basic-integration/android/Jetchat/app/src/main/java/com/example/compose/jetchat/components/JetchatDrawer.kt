@@ -60,6 +60,7 @@ import com.example.compose.jetchat.data.colleagueProfile
 import com.example.compose.jetchat.data.meProfile
 import com.example.compose.jetchat.theme.JetchatTheme
 import com.example.compose.jetchat.widget.WidgetReceiver
+import com.posthog.PostHog
 
 @Composable
 fun JetchatDrawerContent(
@@ -319,7 +320,22 @@ private fun addWidgetToHomeScreen(context: Context) {
     val appWidgetManager = AppWidgetManager.getInstance(context)
     val myProvider = ComponentName(context, WidgetReceiver::class.java)
     if (widgetAddingIsSupported(context)) {
-        appWidgetManager.requestPinAppWidget(myProvider, null, null)
+        try {
+            PostHog.capture(
+                event = "widget_pin_requested",
+                properties = mapOf(
+                    "entrypoint" to "drawer",
+                ),
+            )
+            appWidgetManager.requestPinAppWidget(myProvider, null, null)
+        } catch (exception: Exception) {
+            PostHog.captureException(
+                exception = exception,
+                properties = mapOf(
+                    "context" to "widget_pin_request",
+                ),
+            )
+        }
     }
 }
 
