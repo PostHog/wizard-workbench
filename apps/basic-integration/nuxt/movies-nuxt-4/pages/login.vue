@@ -1,19 +1,36 @@
 <script setup lang="ts">
+import { getPostHogDistinctId } from '~/utils/posthog'
+
 const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
 const { login } = useAuth()
+const posthog = usePostHog()
 
-const handleLogin = async () => {
+async function handleLogin() {
   error.value = ''
   loading.value = true
 
   try {
-    await login(username.value, password.value)
-  } catch (e: any) {
+    const trimmedUsername = username.value.trim()
+    await login(trimmedUsername, password.value)
+    posthog?.identify(getPostHogDistinctId(trimmedUsername))
+    posthog?.capture('user_logged_in', {
+      authentication_method: 'password',
+      login_surface: 'login_page',
+    })
+  }
+  catch (e: any) {
     error.value = e.message || 'Login failed'
-  } finally {
+    posthog?.capture('user_login_failed', {
+      authentication_method: 'password',
+      login_surface: 'login_page',
+      error_type: e?.statusCode ? 'http_error' : 'client_error',
+    })
+    posthog?.captureException(e)
+  }
+  finally {
     loading.value = false
   }
 }
@@ -48,7 +65,7 @@ const handleLogin = async () => {
               :disabled="loading"
             />
           </div>
-          
+
           <div>
             <label for="password" class="block text-sm font-medium text-gray-300 mb-2">
               Password

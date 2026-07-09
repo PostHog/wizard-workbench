@@ -1,5 +1,21 @@
 <script setup lang="ts">
+const posthog = usePostHog()
 const { user, logout } = useAuth()
+
+function captureNavigationClick(destination: string) {
+  posthog?.capture('navigation_item_clicked', {
+    destination,
+    is_authenticated: Boolean(user.value),
+  })
+}
+
+async function handleLogout() {
+  posthog?.capture('user_logged_out', {
+    logout_surface: 'primary_navigation',
+  })
+  posthog?.reset()
+  await logout()
+}
 </script>
 
 <template>
@@ -17,6 +33,7 @@ const { user, logout } = useAuth()
       :title="$t('Home')"
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :aria-label="$t('Home')"
+      @click="captureNavigationClick('home')"
     >
       <span :class="isActive ? 'i-ph-house-fill text-primary' : 'i-ph-house'" aria-hidden="true" />
       <span class="sr-only">{{ $t('Home') }}</span>
@@ -27,6 +44,7 @@ const { user, logout } = useAuth()
       :title="$t('Movies')"
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :aria-label="$t('Movies')"
+      @click="captureNavigationClick('movies')"
     >
       <span :class="isActive ? 'i-ph-film-strip-fill text-primary' : 'i-ph-film-strip'" aria-hidden="true" />
       <span class="sr-only">{{ $t('Movies') }}</span>
@@ -37,6 +55,7 @@ const { user, logout } = useAuth()
       :title="$t('TV Shows')"
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :aria-label="$t('TV Shows')"
+      @click="captureNavigationClick('tv')"
     >
       <span :class="isActive ? 'i-ph-television-simple-fill text-primary' : 'i-ph-television-simple'" aria-hidden="true" />
       <span class="sr-only">{{ $t('TV Shows') }}</span>
@@ -47,6 +66,7 @@ const { user, logout } = useAuth()
       :title="$t('Search')"
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :aria-label="$t('Search')"
+      @click="captureNavigationClick('search')"
     >
       <span :class="isActive ? 'i-ph-magnifying-glass-fill text-primary' : 'i-ph-magnifying-glass'" aria-hidden="true" />
       <span class="sr-only">{{ $t('Search') }}</span>
@@ -55,10 +75,10 @@ const { user, logout } = useAuth()
       <span class="text-sm text-gray-400">{{ user }}</span>
       <button
         type="button"
-        @click="logout"
         class="text-2xl hover:text-primary cursor-pointer transition-colors flex items-center justify-center"
         :title="$t('Logout')"
         :aria-label="$t('Logout')"
+        @click="handleLogout"
       >
         <span class="i-ph-sign-out" aria-hidden="true" />
         <span class="sr-only">{{ $t('Logout') }}</span>
