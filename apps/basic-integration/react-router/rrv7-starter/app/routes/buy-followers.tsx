@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { followerPackages } from '@/lib/data/fake-data'
@@ -19,6 +20,7 @@ export const meta: Route.MetaFunction = () => {
 }
 
 export default function BuyFollowers() {
+  const posthog = usePostHog()
   const navigate = useNavigate()
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
@@ -26,19 +28,37 @@ export default function BuyFollowers() {
   const handlePurchase = () => {
     if (selectedPackage === null) return
     setPurchased(true)
-    
+
+    const pkg = followerPackages[selectedPackage]
+    const totalFollowers = pkg.amount + pkg.bonus
+
+    posthog?.capture('buy_followers_checkout_started', {
+      package_amount: pkg.amount,
+      bonus_amount: pkg.bonus,
+      total_followers: totalFollowers,
+      price: pkg.price,
+      selected_package_index: selectedPackage,
+    })
+
     setTimeout(() => {
-      const pkg = followerPackages[selectedPackage]
-      const totalFollowers = pkg.amount + pkg.bonus
-      
       // Save to localStorage
-      addFollowers(totalFollowers)
-      addPurchasedFollowers(totalFollowers)
-      
+      const updatedFollowers = addFollowers(totalFollowers)
+      const updatedPurchasedFollowers = addPurchasedFollowers(totalFollowers)
+
+      posthog?.capture('buy_followers_completed', {
+        package_amount: pkg.amount,
+        bonus_amount: pkg.bonus,
+        total_followers: totalFollowers,
+        price: pkg.price,
+        selected_package_index: selectedPackage,
+        updated_followers_total: updatedFollowers,
+        total_purchased_followers: updatedPurchasedFollowers,
+      })
+
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
       setSelectedPackage(null)
-      
+
       // Navigate to profile to see the updated count
       navigate('/profile')
     }, 1500)
@@ -75,7 +95,16 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => {
+                  setSelectedPackage(index)
+                  posthog?.capture('buy_followers_package_selected', {
+                    package_amount: pkg.amount,
+                    bonus_amount: pkg.bonus,
+                    total_followers: totalFollowers,
+                    price: pkg.price,
+                    package_index: index,
+                  })
+                }}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected

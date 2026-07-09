@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { useState, useEffect } from 'react'
 import { StatCard } from '@/components/StatCard'
 import { fakeMetrics } from '@/lib/data/fake-data'
@@ -19,6 +20,7 @@ export const meta: Route.MetaFunction = () => {
 }
 
 export default function Analytics() {
+  const posthog = usePostHog()
   const [metrics, setMetrics] = useState<FakeMetric[]>(fakeMetrics)
   const [followers, setFollowers] = useState(0)
   const [purchasedFollowers, setPurchasedFollowers] = useState(0)
@@ -28,6 +30,13 @@ export default function Analytics() {
     const purchased = getPurchasedFollowers()
     setFollowers(currentFollowers)
     setPurchasedFollowers(purchased)
+
+    posthog?.capture('analytics_summary_viewed', {
+      follower_count: currentFollowers,
+      purchased_followers: purchased,
+      metric_cards_shown: fakeMetrics.length,
+      has_purchased_followers: purchased > 0,
+    })
 
     // Update metrics with real localStorage data
     setMetrics((prev) => {
@@ -41,7 +50,7 @@ export default function Analytics() {
       }
       return updated
     })
-  }, [])
+  }, [posthog])
 
   return (
     <div className="min-h-screen bg-background pt-header pb-8">
