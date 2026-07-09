@@ -28,8 +28,8 @@ export class LogoutComponent implements OnInit {
             window.location.reload();
           });
         },
-        error: () => {
-          console.error('Error logging out');
+        error: (error) => {
+          console.error('Error logging out', error);
         },
       });
     }

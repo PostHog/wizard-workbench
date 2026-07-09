@@ -2,6 +2,7 @@ import { Component, input, output, inject, ChangeDetectionStrategy } from '@angu
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ModalComponent } from '../modal/modal.component';
 import { DataService } from '@app/@core/services/data.service';
+import { PostHogService } from '@core/services';
 import { HotToastService } from '@ngxpert/hot-toast';
 
 @Component({
@@ -121,6 +122,7 @@ export class CreateProjectModalComponent {
   private readonly dataService = inject(DataService);
   private readonly toast = inject(HotToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly posthogService = inject(PostHogService);
 
   isOpen = input(false);
   close = output<void>();
@@ -138,6 +140,11 @@ export class CreateProjectModalComponent {
     const { name, description, status } = this.projectForm.getRawValue();
 
     this.dataService.addProject({ name, description, status });
+    this.posthogService.client.capture('project_created', {
+      status,
+      has_description: Boolean(description),
+      project_name_length: name.length,
+    });
 
     this.toast.success(`Project "${name}" created!`);
     this.projectForm.reset({ name: '', description: '', status: 'active' });
