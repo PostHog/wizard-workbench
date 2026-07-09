@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { notFound } from '@tanstack/react-router'
+import { getPostHogClient } from './posthog-server'
 
 export type Invoice = {
   id: number
@@ -130,7 +131,21 @@ export const createInvoiceFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     console.info('Creating invoice...', data)
-    return createInvoice(data)
+    const invoice = createInvoice(data)
+
+    getPostHogClient().capture({
+      distinctId: 'system:invoice-workflow',
+      event: 'invoice_created_server',
+      properties: {
+        invoice_id: String(invoice.id),
+        amount: invoice.amount,
+        has_description: Boolean(invoice.description.trim()),
+        status: invoice.status,
+        source: 'server_fn',
+      },
+    })
+
+    return invoice
   })
 
 export const markInvoicePaid = createServerFn({ method: 'POST' })
@@ -145,5 +160,17 @@ export const markInvoicePaid = createServerFn({ method: 'POST' })
     if (!invoice) {
       throw new Error('Invoice not found')
     }
+
+    getPostHogClient().capture({
+      distinctId: 'system:invoice-workflow',
+      event: 'invoice_paid_server',
+      properties: {
+        invoice_id: String(invoice.id),
+        amount: invoice.amount,
+        due_date: invoice.dueDate,
+        source: 'server_fn',
+      },
+    })
+
     return invoice
   })

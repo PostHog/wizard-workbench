@@ -7,6 +7,26 @@ import { nitro } from 'nitro/vite'
 export default defineConfig({
   server: {
     port: 3000,
+    proxy: {
+      '/ingest/static': {
+        target: 'https://us-assets.i.posthog.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ''),
+        secure: false,
+      },
+      '/ingest/array': {
+        target: 'https://us-assets.i.posthog.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ''),
+        secure: false,
+      },
+      '/ingest': {
+        target: process.env.POSTHOG_HOST,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ''),
+        secure: false,
+      },
+    },
   },
   plugins: [
     tailwindcss(),
