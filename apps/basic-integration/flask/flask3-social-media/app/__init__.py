@@ -1,6 +1,9 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from flask import Flask, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -8,6 +11,7 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -19,6 +23,13 @@ except ImportError:
     Redis = None
     rq = None
 from config import Config
+
+posthog_client = Posthog(
+    os.environ.get('POSTHOG_PROJECT_TOKEN', ''),
+    host=os.environ.get('POSTHOG_HOST', 'https://us.i.posthog.com'),
+    enable_exception_autocapture=True,
+)
+atexit.register(posthog_client.shutdown)
 
 
 def get_locale():
