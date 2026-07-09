@@ -1,14 +1,18 @@
 """Simulated AI summarizer for meeting transcripts."""
 
 import re
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 
 class AISummarizer:
     """Simulates AI-powered meeting summarization."""
 
     @staticmethod
-    def analyze_transcript(transcript: str) -> Tuple[str, List[str], List[str], List[str], int]:
+    def analyze_transcript(
+        transcript: str,
+        distinct_id: str = 'anonymous',
+        posthog_client=None,
+    ) -> Tuple[str, List[str], List[str], List[str], int]:
         """
         Analyze a meeting transcript and extract key information.
 
@@ -38,6 +42,19 @@ class AISummarizer:
         # Estimate duration (roughly 150 words per minute speaking rate)
         word_count = len(text.split())
         duration_minutes = max(1, round(word_count / 150))
+
+        if posthog_client is not None:
+            posthog_client.capture(
+                distinct_id=distinct_id,
+                event='transcript_analyzed',
+                properties={
+                    'transcript_word_count': word_count,
+                    'participant_count': len(participants),
+                    'action_item_count': len(action_items),
+                    'key_point_count': len(key_points),
+                    'estimated_duration_minutes': duration_minutes,
+                }
+            )
 
         return summary, action_items, key_points, participants, duration_minutes
 

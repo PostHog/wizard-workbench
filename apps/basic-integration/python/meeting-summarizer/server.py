@@ -4,6 +4,7 @@ AI Meeting Summarizer - Python Web Application
 Automatically summarize meetings with AI-powered analysis.
 """
 
+import atexit
 import json
 import logging
 import signal
@@ -20,9 +21,22 @@ from threading import Lock
 import traceback
 import mimetypes
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
+from posthog import Posthog
+
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+
+posthog_client = Posthog(
+    os.getenv('POSTHOG_PROJECT_TOKEN', ''),
+    host=os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com'),
+    enable_exception_autocapture=True,
+)
+atexit.register(posthog_client.shutdown)
 
 
 # Session management
@@ -207,6 +221,13 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 meetings = self.db.list_meetings(user.user_id)
+                posthog_client.capture(
+                    distinct_id=user.user_id,
+                    event='meetings_listed',
+                    properties={
+                        'meeting_count': len(meetings),
+                    }
+                )
                 self._send_json({
                     'meetings': [m.to_dict() for m in meetings],
                     'count': len(meetings)
@@ -223,6 +244,15 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 meeting_id = path.split('/')[-1]
                 meeting = self.db.get_meeting(meeting_id)
                 if meeting and meeting.user_id == user.user_id:
+                    posthog_client.capture(
+                        distinct_id=user.user_id,
+                        event='meeting_viewed',
+                        properties={
+                            'meeting_id': meeting.meeting_id,
+                            'duration_minutes': meeting.duration_minutes,
+                            'participant_count': len(meeting.participants),
+                        }
+                    )
                     self._send_json(meeting.to_dict())
                 else:
                     self._send_json({'error': 'Meeting not found'}, 404)
@@ -274,6 +304,18 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
 
+                    posthog_client.set(
+                        distinct_id=user.user_id,
+                        properties={
+                            'username': user.username,
+                            'is_active': user.is_active,
+                        }
+                    )
+                    posthog_client.capture(
+                        distinct_id=user.user_id,
+                        event='user_logged_in',
+                    )
+
                     # Send response with session cookie
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
@@ -291,6 +333,13 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     self.wfile.write(response_data.encode('utf-8'))
                 else:
                     logging.warning(f"Login failed for: {email} (user {'found but inactive' if user else 'not found'})")
+                    posthog_client.capture(
+                        distinct_id='anonymous',
+                        event='user_login_failed',
+                        properties={
+                            'reason': 'user_not_found' if not user else 'user_inactive',
+                        }
+                    )
                     self._send_json({'error': 'User not found or inactive'}, 401)
                 return
 
@@ -298,6 +347,12 @@ class SaaSHandler(BaseHTTPRequestHandler):
             if path == '/api/auth/logout':
                 session_id = self._get_session_id()
                 if session_id:
+                    session = self.sessions.get_session(session_id)
+                    if session:
+                        posthog_client.capture(
+                            distinct_id=session['user_id'],
+                            event='user_logged_out',
+                        )
                     self.sessions.delete_session(session_id)
 
                 self._set_headers(200, 'application/json')
@@ -332,6 +387,13 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_user(user):
+                    posthog_client.capture(
+                        distinct_id=current_user.user_id,
+                        event='user_created',
+                        properties={
+                            'new_user_id': user.user_id,
+                        }
+                    )
                     self._send_json(user.to_dict(), 201)
                 else:
                     self._send_json({'error': 'User already exists'}, 409)
@@ -352,7 +414,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
                 # Process transcript with AI
                 transcript = data['transcript']
-                summary, action_items, key_points, participants, duration = AISummarizer.analyze_transcript(transcript)
+                summary, action_items, key_points, participants, duration = AISummarizer.analyze_transcript(transcript, distinct_id=current_user.user_id, posthog_client=posthog_client)
 
                 # Create meeting
                 meeting = Meeting(
@@ -370,6 +432,18 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    posthog_client.capture(
+                        distinct_id=current_user.user_id,
+                        event='meeting_created',
+                        properties={
+                            'meeting_id': meeting.meeting_id,
+                            'duration_minutes': meeting.duration_minutes,
+                            'participant_count': len(meeting.participants),
+                            'action_item_count': len(meeting.action_items),
+                            'key_point_count': len(meeting.key_points),
+                            'transcript_word_count': len(transcript.split()),
+                        }
+                    )
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -428,6 +502,13 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 user_id = path.split('/')[-1]
 
                 if self.db.delete_user(user_id):
+                    posthog_client.capture(
+                        distinct_id=current_user.user_id,
+                        event='user_deleted',
+                        properties={
+                            'deleted_user_id': user_id,
+                        }
+                    )
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'User not found'}, 404)
@@ -449,6 +530,14 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    posthog_client.capture(
+                        distinct_id=current_user.user_id,
+                        event='meeting_deleted',
+                        properties={
+                            'meeting_id': meeting_id,
+                            'duration_minutes': meeting.duration_minutes,
+                        }
+                    )
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
@@ -527,7 +616,7 @@ John: I think that covers it. I'll send out meeting notes within the hour.
 
 Sarah: Great, thank you everyone."""
 
-        summary, action_items, key_points, participants, duration = AISummarizer.analyze_transcript(sample_transcript)
+        summary, action_items, key_points, participants, duration = AISummarizer.analyze_transcript(sample_transcript, distinct_id=demo_user.user_id, posthog_client=posthog_client)
 
         sample_meeting = Meeting(
             meeting_id=str(uuid.uuid4()),
