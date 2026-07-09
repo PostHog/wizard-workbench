@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
+import { captureServerEvent, captureServerException } from '@/lib/posthog-server';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
@@ -88,9 +89,24 @@ export async function GET(request: NextRequest) {
       })
       .where(eq(teams.id, userTeam[0].teamId));
 
+    await captureServerEvent({
+      distinctId: String(user[0].id),
+      event: 'checkout_completed',
+      properties: {
+        team_id: userTeam[0].teamId,
+        price_id: plan.id,
+        product_id: productId,
+        plan_name: (plan.product as Stripe.Product).name,
+        subscription_id: subscriptionId,
+        subscription_status: subscription.status,
+        checkout_session_id: session.id
+      }
+    });
+
     await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
+    await captureServerException(error, 'stripe_checkout_route');
     console.error('Error handling successful checkout:', error);
     return NextResponse.redirect(new URL('/error', request.url));
   }

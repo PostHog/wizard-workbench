@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { PostHogUserIdentification } from '@/components/posthog-user-identification';
 import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
@@ -36,6 +37,7 @@ export default function RootLayout({
             }
           }}
         >
+          <PostHogUserIdentification />
           {children}
         </SWRConfig>
       </body>
