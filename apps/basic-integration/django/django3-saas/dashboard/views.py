@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
+import posthog
+from posthog import new_context, identify_context
 from .models import Project, ActivityLog
 from .forms import ProjectForm
 
@@ -12,6 +14,13 @@ def index(request):
     projects = request.user.projects.all()[:5]
     activities = request.user.activities.all()[:10]
     subscription = request.user.get_active_subscription()
+
+    with new_context():
+        identify_context(str(request.user.pk))
+        posthog.capture('dashboard_viewed', properties={
+            'project_count': request.user.projects.count(),
+            'has_subscription': bool(subscription),
+        })
 
     # Calculate usage metrics for the user
     now = timezone.now()
@@ -60,6 +69,13 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            with new_context():
+                identify_context(str(request.user.pk))
+                posthog.capture('project_created', properties={
+                    'is_active': project.is_active,
+                    'has_description': bool(project.description),
+                })
+
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +99,14 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            with new_context():
+                identify_context(str(request.user.pk))
+                posthog.capture('project_updated', properties={
+                    'project_id': str(project.pk),
+                    'is_active': project.is_active,
+                    'changed_fields_count': len(form.changed_data),
+                })
+
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -104,6 +128,12 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+
+        with new_context():
+            identify_context(str(request.user.pk))
+            posthog.capture('project_deleted', properties={
+                'project_id': str(pk),
+            })
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')

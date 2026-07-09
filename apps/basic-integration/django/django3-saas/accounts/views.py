@@ -8,12 +8,36 @@ from django.contrib.auth.views import (
 )
 from django.contrib import messages
 from django.urls import reverse_lazy
+import posthog
+from posthog import new_context, identify_context
 from .forms import RegisterForm, LoginForm, ProfileForm
 
 
 class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+
+        with new_context():
+            identify_context(str(user.pk))
+            posthog.set(
+                distinct_id=str(user.pk),
+                properties={
+                    'email': user.email,
+                    'username': user.username,
+                    'company_name': user.company_name,
+                    'is_staff': user.is_staff,
+                    'email_verified': user.is_email_verified(),
+                },
+            )
+            posthog.capture('user_logged_in', properties={
+                'login_method': 'password',
+            })
+
+        return response
 
 
 class CustomLogoutView(LogoutView):
@@ -49,6 +73,23 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+
+            with new_context():
+                identify_context(str(user.pk))
+                posthog.set(
+                    distinct_id=str(user.pk),
+                    properties={
+                        'email': user.email,
+                        'username': user.username,
+                        'company_name': user.company_name,
+                        'is_staff': user.is_staff,
+                        'email_verified': user.is_email_verified(),
+                    },
+                )
+                posthog.capture('user_signed_up', properties={
+                    'has_company_name': bool(user.company_name),
+                })
+
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -62,7 +103,26 @@ def settings(request):
     if request.method == 'POST':
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
-            form.save()
+            user = form.save()
+
+            with new_context():
+                identify_context(str(user.pk))
+                posthog.set(
+                    distinct_id=str(user.pk),
+                    properties={
+                        'email': user.email,
+                        'username': user.username,
+                        'company_name': user.company_name,
+                        'is_staff': user.is_staff,
+                        'email_verified': user.is_email_verified(),
+                    },
+                )
+                posthog.capture('settings_updated', properties={
+                    'updated_company_name': 'company_name' in form.changed_data,
+                    'updated_email': 'email' in form.changed_data,
+                    'updated_name': bool({'first_name', 'last_name'} & set(form.changed_data)),
+                })
+
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
