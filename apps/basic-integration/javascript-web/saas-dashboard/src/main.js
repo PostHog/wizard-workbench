@@ -1,3 +1,4 @@
+import posthog from 'posthog-js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -6,6 +7,26 @@ import { renderProjects } from './pages/projects.js';
 import { renderProjectDetail } from './pages/project-detail.js';
 import { renderSettings } from './pages/settings.js';
 import { renderActivity } from './pages/activity.js';
+
+const posthogKey = import.meta.env.VITE_POSTHOG_KEY;
+const posthogHost = import.meta.env.VITE_POSTHOG_HOST;
+
+if (posthogKey && posthogHost) {
+  posthog.init(posthogKey, {
+    api_host: posthogHost,
+    defaults: '2026-05-30',
+    capture_pageview: false,
+  });
+
+  const currentUser = store.state.currentUser;
+  if (currentUser?.id) {
+    posthog.identify(currentUser.id, {
+      email: currentUser.email,
+      name: currentUser.name,
+      role: currentUser.role,
+    });
+  }
+}
 
 /**
  * Auth guard — redirects to login if no user is logged in.

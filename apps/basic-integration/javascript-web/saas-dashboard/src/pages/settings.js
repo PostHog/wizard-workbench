@@ -1,3 +1,4 @@
+import posthog from 'posthog-js';
 import { api } from '../api.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
@@ -83,23 +84,43 @@ export async function renderSettings() {
     // Theme
     document.getElementById('theme-select').addEventListener('change', async (e) => {
       await api.updateSettings({ theme: e.target.value });
+      posthog.capture('settings_updated', {
+        setting_name: 'theme',
+        setting_value: e.target.value,
+      });
       document.body.dataset.theme = e.target.value;
     });
 
     // Notifications
     document.getElementById('email-notif').addEventListener('change', async (e) => {
       await api.updateSettings({ emailNotifications: e.target.checked });
+      posthog.capture('settings_updated', {
+        setting_name: 'email_notifications',
+        setting_value: e.target.checked,
+      });
     });
 
     document.getElementById('weekly-digest').addEventListener('change', async (e) => {
       await api.updateSettings({ weeklyDigest: e.target.checked });
+      posthog.capture('settings_updated', {
+        setting_name: 'weekly_digest',
+        setting_value: e.target.checked,
+      });
     });
 
     // Reset
     document.getElementById('reset-data-btn').addEventListener('click', () => {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
+        posthog.capture('workspace_reset', {
+          triggered_from: 'settings',
+        });
         store.reset();
         store.login(user.email);
+        posthog.identify(user.id, {
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        });
         renderSettings();
       }
     });
