@@ -1,9 +1,31 @@
 import { createServer } from 'node:http';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_PROJECT_TOKEN, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
 let nextContactId = 1;
 let nextGroupId = 2;
+
+function getDistinctId(req) {
+  return req.headers['x-contact-user-id'] || req.headers['x-posthog-distinct-id'] || 'anonymous';
+}
+
+function captureEvent(req, event, properties = {}) {
+  posthog.capture({
+    distinctId: getDistinctId(req),
+    event,
+    properties: {
+      endpoint: req.url,
+      method: req.method,
+      ...properties,
+    },
+  });
+}
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -47,6 +69,10 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      captureEvent(req, 'group_created', {
+        group_id: group.id,
+        contact_count: 0,
+      });
       return json(res, 201, group);
     }
 
@@ -70,6 +96,14 @@ const server = createServer(async (req, res) => {
         );
       }
 
+      if (groupId || search) {
+        captureEvent(req, 'contacts_filtered', {
+          group_id: groupId ? parseInt(groupId, 10) : null,
+          has_search_query: Boolean(search),
+          result_count: result.length,
+        });
+      }
+
       return json(res, 200, { contacts: result, total: result.length });
     }
 
@@ -90,6 +124,22 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      posthog.identify({
+        distinctId: String(contact.id),
+        properties: {
+          email: contact.email,
+          name: contact.name,
+          phone: contact.phone,
+          company: contact.company,
+          group_id: contact.group_id,
+        },
+      });
+      captureEvent(req, 'contact_created', {
+        contact_id: contact.id,
+        group_id: contact.group_id,
+        has_phone: Boolean(contact.phone),
+        has_company: Boolean(contact.company),
+      });
       return json(res, 201, contact);
     }
 
@@ -114,6 +164,22 @@ const server = createServer(async (req, res) => {
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      posthog.identify({
+        distinctId: String(contact.id),
+        properties: {
+          email: contact.email,
+          name: contact.name,
+          phone: contact.phone,
+          company: contact.company,
+          group_id: contact.group_id,
+        },
+      });
+      captureEvent(req, 'contact_updated', {
+        contact_id: contact.id,
+        group_id: contact.group_id,
+        updated_fields: Object.keys(body),
+      });
+
       return json(res, 200, contact);
     }
 
@@ -123,13 +189,22 @@ const server = createServer(async (req, res) => {
       const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
-      contacts.splice(index, 1);
+      const [deletedContact] = contacts.splice(index, 1);
+      captureEvent(req, 'contact_deleted', {
+        contact_id: deletedContact.id,
+        group_id: deletedContact.group_id,
+        had_company: Boolean(deletedContact.company),
+      });
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    posthog.captureException(err, getDistinctId(req), {
+      endpoint: req.url,
+      method: req.method,
+    });
     json(res, 500, { error: 'Internal server error' });
   }
 });
@@ -139,3 +214,10 @@ const PORT = process.env.PORT || 3004;
 server.listen(PORT, () => {
   console.log(`Native HTTP contacts API running on http://localhost:${PORT}`);
 });
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, async () => {
+    await posthog.shutdown();
+    process.exit(0);
+  });
+}
