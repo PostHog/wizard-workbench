@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
@@ -11,7 +12,7 @@ new #[Layout('layouts.guest')] class extends Component
     /**
      * Send an email verification notification to the user.
      */
-    public function sendVerification(): void
+    public function sendVerification(PostHogService $posthog): void
     {
         if (Auth::user()->hasVerifiedEmail()) {
             $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
@@ -20,6 +21,9 @@ new #[Layout('layouts.guest')] class extends Component
         }
 
         Auth::user()->sendEmailVerificationNotification();
+
+        // PostHog: Track verification email resend
+        $posthog->capture(Auth::user()->email, 'email_verification_sent');
 
         Session::flash('status', 'verification-link-sent');
     }
