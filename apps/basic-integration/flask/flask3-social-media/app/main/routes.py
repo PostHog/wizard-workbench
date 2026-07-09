@@ -3,6 +3,7 @@ from flask import render_template, flash, redirect, url_for, request, g, \
     current_app
 from flask_login import current_user, login_required
 from flask_babel import _, get_locale
+from posthog import new_context
 import sqlalchemy as sa
 from langdetect import detect, LangDetectException
 from app import db
@@ -11,6 +12,17 @@ from app.main.forms import EditProfileForm, EmptyForm, PostForm, SearchForm, \
 from app.models import User, Post, Message, Notification
 from app.translate import translate
 from app.main import bp
+
+
+def capture_posthog_event(event_name, distinct_id, properties=None,
+                          person_properties=None):
+    client = current_app.posthog_client
+    if not client or not distinct_id:
+        return
+    with new_context():
+        client.set(distinct_id=distinct_id, properties=person_properties or {})
+        client.capture(distinct_id=distinct_id, event=event_name,
+                       properties=properties or {})
 
 
 @bp.before_app_request
@@ -36,6 +48,18 @@ def index():
                     language=language)
         db.session.add(post)
         db.session.commit()
+        capture_posthog_event(
+            'post_created',
+            distinct_id=str(current_user.id),
+            properties={
+                'post_length': len(post.body),
+                'language': language or 'unknown',
+            },
+            person_properties={
+                'username': current_user.username,
+                'email': current_user.email,
+            },
+        )
         flash(_('Your post is now live!'))
         return redirect(url_for('main.index'))
     page = request.args.get('page', 1, type=int)
@@ -102,6 +126,18 @@ def edit_profile():
         current_user.username = form.username.data
         current_user.about_me = form.about_me.data
         db.session.commit()
+        capture_posthog_event(
+            'profile_updated',
+            distinct_id=str(current_user.id),
+            properties={
+                'has_about_me': bool(current_user.about_me),
+                'about_me_length': len(current_user.about_me or ''),
+            },
+            person_properties={
+                'username': current_user.username,
+                'email': current_user.email,
+            },
+        )
         flash(_('Your changes have been saved.'))
         return redirect(url_for('main.edit_profile'))
     elif request.method == 'GET':
@@ -126,6 +162,18 @@ def follow(username):
             return redirect(url_for('main.user', username=username))
         current_user.follow(user)
         db.session.commit()
+        capture_posthog_event(
+            'user_followed',
+            distinct_id=str(current_user.id),
+            properties={
+                'target_user_id': str(user.id),
+                'target_username': user.username,
+            },
+            person_properties={
+                'username': current_user.username,
+                'email': current_user.email,
+            },
+        )
         flash(_('You are following %(username)s!', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -147,6 +195,18 @@ def unfollow(username):
             return redirect(url_for('main.user', username=username))
         current_user.unfollow(user)
         db.session.commit()
+        capture_posthog_event(
+            'user_unfollowed',
+            distinct_id=str(current_user.id),
+            properties={
+                'target_user_id': str(user.id),
+                'target_username': user.username,
+            },
+            person_properties={
+                'username': current_user.username,
+                'email': current_user.email,
+            },
+        )
         flash(_('You are not following %(username)s.', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -190,6 +250,18 @@ def send_message(recipient):
         user.add_notification('unread_message_count',
                               user.unread_message_count())
         db.session.commit()
+        capture_posthog_event(
+            'message_sent',
+            distinct_id=str(current_user.id),
+            properties={
+                'recipient_user_id': str(user.id),
+                'message_length': len(msg.body),
+            },
+            person_properties={
+                'username': current_user.username,
+                'email': current_user.email,
+            },
+        )
         flash(_('Your message has been sent.'))
         return redirect(url_for('main.user', username=recipient))
     return render_template('send_message.html', title=_('Send Message'),
@@ -202,6 +274,17 @@ def messages():
     current_user.last_message_read_time = datetime.now(timezone.utc)
     current_user.add_notification('unread_message_count', 0)
     db.session.commit()
+    capture_posthog_event(
+        'messages_viewed',
+        distinct_id=str(current_user.id),
+        properties={
+            'unread_message_count': current_user.unread_message_count(),
+        },
+        person_properties={
+            'username': current_user.username,
+            'email': current_user.email,
+        },
+    )
     page = request.args.get('page', 1, type=int)
     query = current_user.messages_received.select().order_by(
         Message.timestamp.desc())
@@ -224,6 +307,17 @@ def export_posts():
     else:
         current_user.launch_task('export_posts', _('Exporting posts...'))
         db.session.commit()
+        capture_posthog_event(
+            'posts_export_requested',
+            distinct_id=str(current_user.id),
+            properties={
+                'post_count': current_user.posts_count(),
+            },
+            person_properties={
+                'username': current_user.username,
+                'email': current_user.email,
+            },
+        )
     return redirect(url_for('main.user', username=current_user.username))
 
 

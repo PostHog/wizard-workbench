@@ -3,6 +3,7 @@ import sys
 import time
 import sqlalchemy as sa
 from flask import render_template
+from posthog import new_context
 from rq import get_current_job
 from app import create_app, db
 from app.models import User, Post, Task
@@ -49,8 +50,25 @@ def export_posts(user_id):
             attachments=[('posts.json', 'application/json',
                           json.dumps({'posts': data}, indent=4))],
             sync=True)
-    except Exception:
+        if app.posthog_client:
+            with new_context():
+                app.posthog_client.set(
+                    distinct_id=str(user.id),
+                    properties={
+                        'username': user.username,
+                        'email': user.email,
+                    },
+                )
+                app.posthog_client.capture(
+                    distinct_id=str(user.id),
+                    event='posts_export_completed',
+                    properties={'post_count': total_posts},
+                )
+    except Exception as exc:
         _set_task_progress(100)
+        if app.posthog_client:
+            with new_context():
+                app.posthog_client.capture_exception(exc)
         app.logger.error('Unhandled exception', exc_info=sys.exc_info())
     finally:
         _set_task_progress(100)
