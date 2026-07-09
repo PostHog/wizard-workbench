@@ -1,3 +1,4 @@
+import posthog from 'posthog-js'
 import type { Credits, Media, MediaType, PageResult, Person } from '../types'
 import { LRUCache } from 'lru-cache'
 import { hash as ohash } from 'ohash'
@@ -24,7 +25,16 @@ async function _fetchTMDB(url: string, params: Record<string, string | number | 
   
   const response = await fetch(fullUrl)
   if (!response.ok) {
-    throw new Error(`TMDB API error: ${response.statusText}`)
+    const error = new Error(`TMDB API error: ${response.statusText}`)
+    posthog.capture('tmdb_request_failed', {
+      endpoint: url,
+      status_code: response.status,
+    })
+    posthog.captureException(error, {
+      endpoint: url,
+      status_code: response.status,
+    })
+    throw error
   }
   return response.json()
 }

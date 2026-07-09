@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import posthog from 'posthog-js'
 import type { MediaType } from '../types'
 import { QUERY_LIST } from '../constants/lists'
 import { listMedia, getMedia } from '../composables/useTMDB'
@@ -25,6 +26,11 @@ onMounted(async () => {
     if (list.results.length > 0) {
       const item = await getMedia(type.value, list.results[0].id)
       heroItem.value = item
+      posthog.capture('home_hero_loaded', {
+        media_type: type.value,
+        hero_media_id: String(item.id),
+        source_query: queries[0].query,
+      })
     }
   } catch (error) {
     console.error('Error loading hero item:', error)
