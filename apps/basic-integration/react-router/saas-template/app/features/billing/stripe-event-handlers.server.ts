@@ -1,3 +1,4 @@
+import { PostHog } from "posthog-node";
 import type { Stripe } from "stripe";
 
 import { updateOrganizationInDatabaseById } from "../organizations/organizations-model.server";
@@ -22,6 +23,14 @@ import {
 } from "./stripe-subscription-schedule-model.server";
 import { stripeAdmin } from "~/features/billing/stripe-admin.server";
 import { getErrorMessage } from "~/utils/get-error-message";
+
+function createPosthogClient() {
+  return new PostHog(process.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ?? "", {
+    flushAt: 1,
+    flushInterval: 0,
+    host: process.env.VITE_PUBLIC_POSTHOG_HOST,
+  });
+}
 
 const ok = () => Response.json({ message: "OK" });
 
@@ -121,6 +130,19 @@ export const handleStripeCheckoutSessionCompletedEvent = async (
           organizationId: organization.id,
         });
       }
+
+      const posthog = createPosthogClient();
+      posthog.capture({
+        distinctId: event.data.object.metadata.organizationId,
+        event: "subscription_checkout_completed",
+        properties: {
+          amount_total: event.data.object.amount_total,
+          currency: event.data.object.currency,
+          organization_id: event.data.object.metadata.organizationId,
+          organization_name: organization.name,
+        },
+      });
+      await posthog.shutdown().catch(() => {});
     } else {
       console.error("No organization ID found in checkout session metadata");
       prettyPrint(event);
@@ -177,6 +199,22 @@ export const handleStripeCustomerSubscriptionDeletedEvent = async (
 ) => {
   try {
     await updateStripeSubscriptionFromAPIInDatabase(event.data.object);
+
+    const posthog = createPosthogClient();
+    const customerId =
+      typeof event.data.object.customer === "string"
+        ? event.data.object.customer
+        : event.data.object.customer.id;
+    posthog.capture({
+      distinctId: customerId,
+      event: "subscription_cancelled",
+      properties: {
+        cancel_at_period_end: event.data.object.cancel_at_period_end,
+        stripe_customer_id: customerId,
+        stripe_subscription_id: event.data.object.id,
+      },
+    });
+    await posthog.shutdown().catch(() => {});
   } catch (error) {
     const message = getErrorMessage(error);
     prettyPrint(event);

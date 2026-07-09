@@ -10,6 +10,7 @@ import {
 import type { Route } from ".react-router/types/app/routes/_user-authentication+/_anonymous-routes+/+types/register";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { retrieveUserAccountFromDatabaseByEmail } from "~/features/user-accounts/user-accounts-model.server";
+import type { PostHogContext } from "~/lib/posthog-middleware.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { badRequest } from "~/utils/http-responses.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
@@ -22,6 +23,7 @@ const registerSchema = z.discriminatedUnion("intent", [
 export async function registerAction({ request, context }: Route.ActionArgs) {
   const { supabase, headers } = context.get(anonymousContext);
   const i18n = getInstance(context);
+  const posthog = (context as PostHogContext).posthog;
   const result = await validateFormData(request, registerSchema);
 
   if (!result.success) {
@@ -78,6 +80,11 @@ export async function registerAction({ request, context }: Route.ActionArgs) {
         throw error;
       }
 
+      posthog?.capture({
+        event: "user_registered",
+        properties: { method: "email" },
+      });
+
       return { ...data, email: body.email, result: undefined };
     }
     case "registerWithGoogle": {
@@ -89,6 +96,11 @@ export async function registerAction({ request, context }: Route.ActionArgs) {
       if (error) {
         throw error;
       }
+
+      posthog?.capture({
+        event: "user_registered",
+        properties: { method: "google" },
+      });
 
       return redirect(data.url, { headers });
     }
