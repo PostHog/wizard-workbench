@@ -69,10 +69,10 @@
                     billing flows, and a config-driven brand + SEO system.
                 </p>
                 <div class="flex flex-wrap items-center gap-4 animate-fade-up" style="animation-delay: 0.16s;">
-                    <a href="{{ route('register') }}" class="rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-ink-900/15 transition hover:bg-ink-700">
+                    <a href="{{ route('register') }}?ref=home_hero_primary" class="rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-ink-900/15 transition hover:bg-ink-700">
                         Start building
                     </a>
-                    <a href="{{ route('features') }}" class="rounded-full border border-ink-900/15 bg-white/80 px-6 py-3 text-sm font-semibold text-ink-900 transition hover:border-ink-900/30">
+                    <a href="{{ route('features') }}?ref=home_hero_secondary" class="rounded-full border border-ink-900/15 bg-white/80 px-6 py-3 text-sm font-semibold text-ink-900 transition hover:border-ink-900/30">
                         Explore features
                     </a>
                 </div>
@@ -165,7 +165,7 @@
                     <p class="text-sm font-semibold uppercase tracking-[0.2em] text-ink-600">Pricing</p>
                     <h2 class="text-3xl font-semibold text-ink-900">Clear tiers that map to your Stripe plans.</h2>
                 </div>
-                <a href="{{ route('pricing') }}" class="rounded-full border border-ink-900/15 bg-white px-5 py-2 text-sm font-semibold text-ink-900 transition hover:border-ink-900/30">
+                <a href="{{ route('pricing') }}?ref=home_pricing_section" class="rounded-full border border-ink-900/15 bg-white px-5 py-2 text-sm font-semibold text-ink-900 transition hover:border-ink-900/30">
                     View full pricing
                 </a>
             </div>
@@ -201,10 +201,10 @@
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-4">
-                    <a href="{{ route('register') }}" class="rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink-900">
+                    <a href="{{ route('register') }}?ref=home_footer_primary" class="rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink-900">
                         Start building
                     </a>
-                    <a href="{{ route('login') }}" class="rounded-full border border-white/40 px-6 py-3 text-sm font-semibold text-white">
+                    <a href="{{ route('login') }}?ref=home_footer_secondary" class="rounded-full border border-white/40 px-6 py-3 text-sm font-semibold text-white">
                         Talk to sales
                     </a>
                 </div>

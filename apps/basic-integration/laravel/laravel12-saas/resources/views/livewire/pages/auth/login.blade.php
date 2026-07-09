@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use App\Services\PostHogService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -20,10 +22,19 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
+        $user = Auth::user();
+        $posthog = app(PostHogService::class);
+
+        $posthog->identify($user->getPostHogDistinctId(), $user->getPostHogPersonProperties());
+        $posthog->capture($user->getPostHogDistinctId(), 'user_logged_in', [
+            'login_method' => 'password',
+            'remember_me' => $this->form->remember,
+        ]);
+
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: false);
     }
 
-        public function googleLogin()
+    public function googleLogin()
     {
         return redirect()->route('socialite.redirect', 'google');
     }

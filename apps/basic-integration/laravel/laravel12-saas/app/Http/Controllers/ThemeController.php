@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PostHogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -24,9 +25,10 @@ class ThemeController extends Controller
     /**
      * Update the user's theme preference in the session.
      */
-    public function update(Request $request): JsonResponse
+    public function update(Request $request, PostHogService $posthog): JsonResponse
     {
         $theme = $request->input('theme', 'light');
+        $requestedTheme = $theme;
 
         // Validate that the theme is available in DaisyUI 5
         if (! in_array($theme, $this->availableThemes)) {
@@ -35,6 +37,14 @@ class ThemeController extends Controller
 
         // Store theme in session for SSR rendering
         session(['theme' => $theme]);
+
+        if ($request->user()) {
+            $posthog->capture($request->user()->getPostHogDistinctId(), 'theme_updated', [
+                'theme' => $theme,
+                'requested_theme' => $requestedTheme,
+                'theme_was_valid' => $requestedTheme === $theme,
+            ]);
+        }
 
         return response()->json(['success' => true, 'theme' => $theme]);
     }

@@ -1,3 +1,14 @@
+@php
+    $user = auth()->user();
+
+    if ($user) {
+        app(\App\Services\PostHogService::class)->capture($user->getPostHogDistinctId(), 'profile_viewed', [
+            'email_verified' => $user->hasVerifiedEmail(),
+            'has_social_account' => filled($user->provider),
+        ]);
+    }
+@endphp
+
 <x-app-layout title="Settings">
     <div class="mb-6">
         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-ink-600">Account</p>
