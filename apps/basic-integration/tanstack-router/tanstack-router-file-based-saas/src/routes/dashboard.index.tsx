@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-
+import * as React from 'react'
+import { usePostHog } from '@posthog/react'
 import { fetchInvoices } from '../utils/mockTodos'
 
 export const Route = createFileRoute('/dashboard/')({
@@ -9,10 +10,21 @@ export const Route = createFileRoute('/dashboard/')({
 
 function DashboardIndexComponent() {
   const invoices = Route.useLoaderData()
+  const posthog = usePostHog()
 
   const totalRevenue = invoices.length * 1250
   const pendingCount = Math.floor(invoices.length * 0.3)
   const paidCount = invoices.length - pendingCount
+
+  React.useEffect(() => {
+    posthog.capture('dashboard_viewed', {
+      total_invoices: invoices.length,
+      total_revenue: totalRevenue,
+      paid_count: paidCount,
+      pending_count: pendingCount,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="p-6">
