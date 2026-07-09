@@ -93,46 +93,52 @@ export function fakeLogout(): void {
   setCurrentUser(null)
 }
 
-export function claimCountry(countryName: string): void {
+export function claimCountry(countryName: string): string[] {
   const user = getCurrentUser()
-  if (!user) return
+  if (!user) return []
 
   if (!user.claimedCountries.includes(countryName)) {
-    const previousAchievementsCount = user.achievements.length
+    const prevAchievements = [...user.achievements]
     user.claimedCountries.push(countryName)
     user.totalPoints += 100
     checkAchievements(user)
     saveUser(user)
     setCurrentUser(user)
+    return user.achievements.filter((a) => !prevAchievements.includes(a))
   }
+  return []
 }
 
-export function likeCountry(countryName: string): void {
+export function likeCountry(countryName: string): string[] {
   const user = getCurrentUser()
-  if (!user) return
+  if (!user) return []
 
   if (!user.likedCountries.includes(countryName)) {
-    const previousAchievementsCount = user.achievements.length
+    const prevAchievements = [...user.achievements]
     user.likedCountries.push(countryName)
     user.totalPoints += 10
     checkAchievements(user)
     saveUser(user)
     setCurrentUser(user)
+    return user.achievements.filter((a) => !prevAchievements.includes(a))
   }
+  return []
 }
 
-export function visitCountry(countryName: string): void {
+export function visitCountry(countryName: string): string[] {
   const user = getCurrentUser()
-  if (!user) return
+  if (!user) return []
 
   if (!user.visitedCountries.includes(countryName)) {
-    const previousAchievementsCount = user.achievements.length
+    const prevAchievements = [...user.achievements]
     user.visitedCountries.push(countryName)
     user.totalPoints += 50
     checkAchievements(user)
     saveUser(user)
     setCurrentUser(user)
+    return user.achievements.filter((a) => !prevAchievements.includes(a))
   }
+  return []
 }
 
 function checkAchievements(user: FakeUser): void {
