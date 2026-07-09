@@ -1,4 +1,5 @@
 import {
+  PUBLIC_POSTHOG_PROJECT_TOKEN,
   PUBLIC_SUPABASE_ANON_KEY,
   PUBLIC_SUPABASE_URL,
 } from "$env/static/public"
@@ -63,6 +64,7 @@ export const load = async ({ fetch, data, depends, url }) => {
     profile,
     user,
     amr: aal?.currentAuthenticationMethods,
+    posthogConfigured: Boolean(PUBLIC_POSTHOG_PROJECT_TOKEN),
   }
 }
 

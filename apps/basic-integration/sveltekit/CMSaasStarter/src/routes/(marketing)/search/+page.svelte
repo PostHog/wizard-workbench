@@ -5,6 +5,7 @@
   import Fuse from "fuse.js"
   import { goto } from "$app/navigation"
   import { dev } from "$app/environment"
+  import { posthog } from "$lib/posthog"
 
   const fuseOptions = {
     keys: [
@@ -49,12 +50,29 @@
     }
   }
   let results: Result[] = $state([])
+  let lastTrackedQuery = $state("")
 
   // searchQuery is $page.url.hash minus the "#" at the beginning if present
   let searchQuery = $state(decodeURIComponent($page.url.hash.slice(1) ?? ""))
   $effect(() => {
     if (fuse) {
       results = fuse.search(searchQuery)
+    }
+  })
+
+  $effect(() => {
+    const trimmedQuery = searchQuery.trim()
+    if (
+      browser &&
+      trimmedQuery.length >= 2 &&
+      results.length > 0 &&
+      trimmedQuery !== lastTrackedQuery
+    ) {
+      posthog.capture("search_used", {
+        query_length: trimmedQuery.length,
+        result_count: results.length,
+      })
+      lastTrackedQuery = trimmedQuery
     }
   })
   // Update the URL hash when searchQuery changes so the browser can bookmark/share the search results

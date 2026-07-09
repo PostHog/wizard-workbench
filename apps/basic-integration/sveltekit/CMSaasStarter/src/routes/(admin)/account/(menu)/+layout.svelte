@@ -1,8 +1,10 @@
 <script lang="ts">
   import "../../../../app.css"
+  import { goto } from "$app/navigation"
   import { writable } from "svelte/store"
   import { setContext } from "svelte"
   import { WebsiteName } from "../../../../config"
+  import { posthog } from "$lib/posthog"
   interface Props {
     children?: import("svelte").Snippet
   }
@@ -141,7 +143,18 @@
       </li>
 
       <li class="mt-auto">
-        <a href="/account/sign_out" class="mt-auto text-base">Sign Out</a>
+        <a
+          href="/account/sign_out"
+          class="mt-auto text-base"
+          onclick={(event) => {
+            event.preventDefault()
+            posthog.capture("auth_signed_out", {
+              source: "account_navigation",
+            })
+            posthog.reset()
+            goto("/account/sign_out")
+          }}
+        >Sign Out</a>
       </li>
     </ul>
   </div>

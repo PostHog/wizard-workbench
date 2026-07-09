@@ -1,8 +1,16 @@
 <script lang="ts">
   import { Auth } from "@supabase/auth-ui-svelte"
   import { sharedAppearance, oauthProviders } from "../login_config"
+  import { onMount } from "svelte"
+  import { posthog } from "$lib/posthog"
 
   let { data } = $props()
+
+  onMount(() => {
+    posthog.capture("auth_sign_up_viewed", {
+      provider_count: oauthProviders.length,
+    })
+  })
 </script>
 
 <svelte:head>
