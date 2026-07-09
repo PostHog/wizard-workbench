@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { usePostHog } from '@posthog/react'
 import { NotFound } from '~/components/NotFound'
 import { UserErrorComponent } from '~/components/UserError'
 import { fetchUser } from '../utils/users'
@@ -14,13 +16,22 @@ export const Route = createFileRoute('/users/$userId')({
 
 function UserComponent() {
   const user = Route.useLoaderData()
+  const posthog = usePostHog()
   const roles = ['Admin', 'Developer', 'Designer', 'Manager', 'Analyst']
   const roleIndex = typeof user.id === 'number' ? user.id % roles.length : 0
+  const role = roles[roleIndex]
   const initials = user.name
     .split(' ')
     .map((n) => n[0])
     .join('')
     .slice(0, 2)
+
+  useEffect(() => {
+    posthog.capture('team_member_viewed', {
+      user_id: user.id,
+      role,
+    })
+  }, [user.id])
 
   return (
     <div className="p-6">
@@ -30,7 +41,7 @@ function UserComponent() {
         </div>
         <div>
           <h2 className="text-2xl font-bold">{user.name}</h2>
-          <p className="text-gray-500 dark:text-gray-400">{roles[roleIndex]}</p>
+          <p className="text-gray-500 dark:text-gray-400">{role}</p>
           <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm">
             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
             Active
