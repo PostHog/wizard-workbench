@@ -7,6 +7,7 @@ from typing import Optional
 
 from database import UserDatabase
 from models import User
+from posthog_client import capture_event, identify_user, get_posthog_client
 
 
 class UserService:
@@ -35,6 +36,12 @@ class UserService:
         )
 
         if self.db.create_user(user):
+            identify_user(user)
+            capture_event(user.user_id, 'user_registered', {
+                'has_full_name': bool(full_name),
+                'has_metadata': bool(metadata),
+                'service_id': self.service_id
+            })
             print(f"✓ User registered: {username} ({email})")
             return user
         else:
@@ -62,6 +69,10 @@ class UserService:
         success = self.db.deactivate_user(user_id)
 
         if success:
+            capture_event(user_id, 'user_deactivated', {
+                'has_reason': bool(reason),
+                'service_id': self.service_id
+            })
             print(f"✓ User deactivated: {user_id}")
         else:
             print(f"✗ Failed to deactivate user: {user_id}")
@@ -94,6 +105,9 @@ class UserService:
 
     def shutdown(self):
         """Shutdown the service gracefully."""
+        client = get_posthog_client()
+        if client:
+            client.shutdown()
         print(f"Service {self.service_id} shutting down...")
 
 

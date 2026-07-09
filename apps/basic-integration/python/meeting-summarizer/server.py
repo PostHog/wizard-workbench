@@ -23,6 +23,7 @@ import mimetypes
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+from posthog_client import get_posthog_client, capture_event, capture_exception, identify_user
 
 
 # Session management
@@ -69,6 +70,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
     db = UserDatabase()
     sessions = SessionManager()
+    posthog_client = get_posthog_client()
 
     def _set_headers(self, status_code=200, content_type='text/html'):
         """Set response headers"""
@@ -107,6 +109,22 @@ class SaaSHandler(BaseHTTPRequestHandler):
             if session:
                 return self.db.get_user(session['user_id'])
         return None
+
+    def _get_request_session_id(self):
+        """Get a correlation-friendly session identifier for analytics."""
+        return self.headers.get('X-POSTHOG-SESSION-ID') or self._get_session_id()
+
+    def _build_meeting_properties(self, meeting):
+        """Build non-PII properties for meeting analytics."""
+        return {
+            'meeting_id': meeting.meeting_id,
+            'title_length': len(meeting.title or ''),
+            'transcript_length': len(meeting.transcript or ''),
+            'action_item_count': len(meeting.action_items or []),
+            'key_point_count': len(meeting.key_points or []),
+            'participant_count': len(meeting.participants or []),
+            'duration_minutes': meeting.duration_minutes
+        }
 
     def _serve_static_file(self, file_path):
         """Serve a static file"""
@@ -157,6 +175,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
             if path == '/api/auth/status':
                 user = self._get_current_user()
                 if user:
+                    identify_user(user)
                     self._send_json({
                         'authenticated': True,
                         'user': {
@@ -207,6 +226,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 meetings = self.db.list_meetings(user.user_id)
+                capture_event(user.user_id, 'meetings_list_viewed', {
+                    'meeting_count': len(meetings),
+                    'session_id': self._get_request_session_id()
+                })
                 self._send_json({
                     'meetings': [m.to_dict() for m in meetings],
                     'count': len(meetings)
@@ -223,6 +246,9 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 meeting_id = path.split('/')[-1]
                 meeting = self.db.get_meeting(meeting_id)
                 if meeting and meeting.user_id == user.user_id:
+                    properties = self._build_meeting_properties(meeting)
+                    properties['session_id'] = self._get_request_session_id()
+                    capture_event(user.user_id, 'meeting_viewed', properties)
                     self._send_json(meeting.to_dict())
                 else:
                     self._send_json({'error': 'Meeting not found'}, 404)
@@ -236,6 +262,12 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 stats = self.db.get_meeting_stats(user.user_id)
+                capture_event(user.user_id, 'dashboard_stats_viewed', {
+                    'total_meetings': stats['total_meetings'],
+                    'total_hours': stats['total_hours'],
+                    'avg_duration': stats['avg_duration'],
+                    'session_id': self._get_request_session_id()
+                })
                 self._send_json(stats)
                 return
 
@@ -271,8 +303,14 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 # Demo: any password works as long as user exists and is active
                 if user and user.is_active:
                     logging.info(f"Login successful for: {email}")
+                    identify_user(user)
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
+                    capture_event(user.user_id, 'user_logged_in', {
+                        'authentication_method': 'password_demo',
+                        'session_id': session_id,
+                        'is_active': user.is_active
+                    })
 
                     # Send response with session cookie
                     self.send_response(200)
@@ -291,6 +329,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     self.wfile.write(response_data.encode('utf-8'))
                 else:
                     logging.warning(f"Login failed for: {email} (user {'found but inactive' if user else 'not found'})")
+                    capture_event(hashlib.sha256((email or 'unknown').encode('utf-8')).hexdigest(), 'login_failed', {
+                        'authentication_method': 'password_demo',
+                        'failure_reason': 'user_not_found_or_inactive'
+                    })
                     self._send_json({'error': 'User not found or inactive'}, 401)
                 return
 
@@ -332,6 +374,13 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_user(user):
+                    identify_user(user)
+                    capture_event(current_user.user_id, 'user_created', {
+                        'created_user_id': user.user_id,
+                        'has_full_name': bool(user.full_name),
+                        'has_metadata': bool(user.metadata),
+                        'session_id': self._get_request_session_id()
+                    })
                     self._send_json(user.to_dict(), 201)
                 else:
                     self._send_json({'error': 'User already exists'}, 409)
@@ -370,6 +419,9 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    properties = self._build_meeting_properties(meeting)
+                    properties['session_id'] = self._get_request_session_id()
+                    capture_event(current_user.user_id, 'meeting_created', properties)
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -380,6 +432,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_json({'error': 'Invalid JSON'}, 400)
         except Exception as e:
+            capture_exception(e, properties={'path': getattr(self, 'path', 'unknown'), 'method': 'POST'})
             logging.error(f"Error in POST request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
@@ -401,6 +454,12 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
                 if self.db.update_user(user_id, **data):
                     updated_user = self.db.get_user(user_id)
+                    identify_user(updated_user)
+                    capture_event(current_user.user_id, 'user_profile_updated', {
+                        'updated_user_id': user_id,
+                        'updated_field_count': len(data),
+                        'session_id': self._get_request_session_id()
+                    })
                     self._send_json(updated_user.to_dict())
                 else:
                     self._send_json({'error': 'User not found'}, 404)
@@ -409,6 +468,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
             self._send_json({'error': 'Not found'}, 404)
 
         except Exception as e:
+            capture_exception(e, properties={'path': getattr(self, 'path', 'unknown'), 'method': 'PUT'})
             logging.error(f"Error in PUT request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
@@ -428,6 +488,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 user_id = path.split('/')[-1]
 
                 if self.db.delete_user(user_id):
+                    capture_event(current_user.user_id, 'user_deleted', {
+                        'deleted_user_id': user_id,
+                        'session_id': self._get_request_session_id()
+                    })
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'User not found'}, 404)
@@ -449,6 +513,9 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    properties = self._build_meeting_properties(meeting)
+                    properties['session_id'] = self._get_request_session_id()
+                    capture_event(current_user.user_id, 'meeting_deleted', properties)
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
@@ -457,6 +524,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
             self._send_json({'error': 'Not found'}, 404)
 
         except Exception as e:
+            capture_exception(e, properties={'path': getattr(self, 'path', 'unknown'), 'method': 'DELETE'})
             logging.error(f"Error in DELETE request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
@@ -477,6 +545,9 @@ def setup_logging():
 def signal_handler(signum, frame):
     """Handle shutdown signals gracefully"""
     logging.info(f"Received signal {signum}, shutting down...")
+    client = get_posthog_client()
+    if client:
+        client.shutdown()
     sys.exit(0)
 
 
@@ -585,6 +656,9 @@ def main():
     except KeyboardInterrupt:
         logging.info("Server stopped by user")
     finally:
+        client = get_posthog_client()
+        if client:
+            client.shutdown()
         server.server_close()
         logging.info("Server shut down")
 
