@@ -3,7 +3,7 @@ const currentPath = Astro.url.pathname;
 const isDocs = currentPath.startsWith('/docs');
 ---
 
-<nav class="nav">
+<nav class="nav" data-posthog-nav>
   <div class="nav-inner">
     <a href="/" class="nav-logo">
       <span>NeuralFlow</span> Docs
@@ -16,3 +16,24 @@ const isDocs = currentPath.startsWith('/docs');
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('[data-posthog-nav]')?.addEventListener('click', (event) => {
+      const link = event.target instanceof Element ? event.target.closest('a') : null;
+      if (!(link instanceof HTMLAnchorElement)) return;
+
+      const label = link.textContent?.trim() || 'unknown';
+      const destination = link.getAttribute('href') || '';
+      const location = link.classList.contains('nav-cta') ? 'primary_cta' : 'navigation';
+
+      window.posthog?.capture('docs_nav_clicked', {
+        link_label: label,
+        destination,
+        location,
+        current_path: window.location.pathname,
+        is_external: link.target === '_blank' || destination.startsWith('http'),
+      });
+    });
+  });
+</script>

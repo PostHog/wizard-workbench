@@ -5,17 +5,72 @@ import DocsSidebar from '../components/DocsSidebar.astro';
 interface Props {
   title: string;
   description?: string;
+  contentType?: string;
 }
 
-const { title, description } = Astro.props;
+const { title, description, contentType = 'docs' } = Astro.props;
 const currentPath = Astro.url.pathname;
 ---
 
 <Layout title={title} description={description}>
+  <div
+    data-posthog-page
+    data-posthog-content-type={contentType}
+    data-posthog-path={currentPath}
+  >
   <div class="docs-layout">
     <DocsSidebar currentPath={currentPath} />
     <main class="docs-content">
       <slot />
+      <div class="docs-feedback">
+        <p>Was this page useful?</p>
+        <div class="docs-feedback-actions">
+          <button type="button" data-feedback="helpful">Helpful</button>
+          <button type="button" data-feedback="needs_improvement">Could be better</button>
+        </div>
+      </div>
     </main>
   </div>
+  </div>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const pageElement = document.querySelector('[data-posthog-page]');
+    const feedbackButtons = document.querySelectorAll('[data-feedback]');
+    if (!pageElement || feedbackButtons.length === 0) return;
+
+    feedbackButtons.forEach((button) => {
+      button.addEventListener('click', async () => {
+        const feedback = button.getAttribute('data-feedback');
+        if (!feedback) return;
+
+        try {
+          const distinctId = window.posthog?.get_distinct_id?.() || '';
+          const sessionId = window.posthog?.get_session_id?.() || '';
+          const page = pageElement.getAttribute('data-posthog-path') || window.location.pathname;
+          const contentType = pageElement.getAttribute('data-posthog-content-type') || 'docs';
+
+          window.posthog?.capture('docs_content_feedback_submitted', {
+            feedback,
+            page,
+            content_type: contentType,
+            source: 'client',
+          });
+
+          await fetch('/api/docs-feedback', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-POSTHOG-DISTINCT-ID': distinctId,
+              'X-PostHog-Session-Id': sessionId,
+            },
+            body: JSON.stringify({ feedback, page, contentType }),
+          });
+        } catch (error) {
+          window.posthog?.captureException?.(error);
+        }
+      });
+    });
+  });
+</script>

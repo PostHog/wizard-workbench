@@ -33,7 +33,7 @@ const sections = [
 ];
 ---
 
-<aside class="docs-sidebar">
+<aside class="docs-sidebar" data-posthog-sidebar>
   {sections.map((section) => (
     <div class="sidebar-section">
       <h3 class="sidebar-title">{section.title}</h3>
@@ -52,3 +52,22 @@ const sections = [
     </div>
   ))}
 </aside>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('[data-posthog-sidebar]')?.addEventListener('click', (event) => {
+      const link = event.target instanceof Element ? event.target.closest('a') : null;
+      if (!(link instanceof HTMLAnchorElement)) return;
+
+      const section = link.closest('.sidebar-section')?.querySelector('.sidebar-title')?.textContent?.trim() || 'unknown';
+      const label = link.textContent?.trim() || 'unknown';
+
+      window.posthog?.capture('docs_sidebar_link_clicked', {
+        section,
+        link_label: label,
+        destination: link.getAttribute('href') || '',
+        current_path: window.location.pathname,
+      });
+    });
+  });
+</script>

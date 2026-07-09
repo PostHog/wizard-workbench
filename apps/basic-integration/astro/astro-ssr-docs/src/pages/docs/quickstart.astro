@@ -16,11 +16,13 @@ const renderTime = new Date().toISOString();
 
   <h2>Step 2: Install the SDK</h2>
 
-  <pre><code>npm install @neuralflow/sdk</code></pre>
+  <pre><code id="quickstart-install-command">npm install @neuralflow/sdk</code></pre>
 
   <h2>Step 3: Process a Document</h2>
 
-  <pre><code>import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
+  <div class="code-example">
+    <button type="button" class="copy-button" data-copy-target="quickstart-sdk-example">Copy example</button>
+    <pre><code id="quickstart-sdk-example">import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
 import fs from 'fs';
 
 const client = new NeuralFlow({'{'}
@@ -34,6 +36,7 @@ const document = await client.documents.create({'{'}
 {'}'});
 
 console.log('Extracted data:', document.data);</code></pre>
+  </div>
 
   <h2>Step 4: View Results</h2>
   <p>The extracted data will be returned as structured JSON:</p>
@@ -59,3 +62,32 @@ console.log('Extracted data:', document.data);</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  async function copyCode(targetId) {
+    const target = document.getElementById(targetId);
+    const code = target?.textContent;
+    if (!code) return;
+
+    try {
+      await navigator.clipboard.writeText(code);
+      window.posthog?.capture('docs_quickstart_code_copied', {
+        snippet_name: targetId,
+        current_path: window.location.pathname,
+      });
+    } catch (error) {
+      window.posthog?.captureException?.(error);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-copy-target]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const targetId = button.getAttribute('data-copy-target');
+        if (targetId) {
+          copyCode(targetId);
+        }
+      });
+    });
+  });
+</script>

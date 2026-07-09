@@ -11,46 +11,56 @@ const renderTime = new Date().toISOString();
   <h2>Documents</h2>
 
   <h3>Create Document</h3>
+  <button type="button" class="copy-button" data-endpoint-name="create_document" data-endpoint-path="POST /v1/documents">Track endpoint interest</button>
   <pre><code>POST /v1/documents</code></pre>
   <p>Upload and process a new document.</p>
 
   <h3>Get Document</h3>
+  <button type="button" class="copy-button" data-endpoint-name="get_document" data-endpoint-path="GET /v1/documents/:id">Track endpoint interest</button>
   <pre><code>GET /v1/documents/:id</code></pre>
   <p>Retrieve a processed document and its extracted data.</p>
 
   <h3>List Documents</h3>
+  <button type="button" class="copy-button" data-endpoint-name="list_documents" data-endpoint-path="GET /v1/documents">Track endpoint interest</button>
   <pre><code>GET /v1/documents</code></pre>
   <p>List all documents with pagination.</p>
 
   <h3>Delete Document</h3>
+  <button type="button" class="copy-button" data-endpoint-name="delete_document" data-endpoint-path="DELETE /v1/documents/:id">Track endpoint interest</button>
   <pre><code>DELETE /v1/documents/:id</code></pre>
   <p>Permanently delete a document.</p>
 
   <h2>Workflows</h2>
 
   <h3>Create Workflow</h3>
+  <button type="button" class="copy-button" data-endpoint-name="create_workflow" data-endpoint-path="POST /v1/workflows">Track endpoint interest</button>
   <pre><code>POST /v1/workflows</code></pre>
   <p>Create a new automation workflow.</p>
 
   <h3>Execute Workflow</h3>
+  <button type="button" class="copy-button" data-endpoint-name="execute_workflow" data-endpoint-path="POST /v1/workflows/:id/execute">Track endpoint interest</button>
   <pre><code>POST /v1/workflows/:id/execute</code></pre>
   <p>Manually trigger a workflow execution.</p>
 
   <h3>Get Execution</h3>
+  <button type="button" class="copy-button" data-endpoint-name="get_execution" data-endpoint-path="GET /v1/executions/:id">Track endpoint interest</button>
   <pre><code>GET /v1/executions/:id</code></pre>
   <p>Get the status and results of a workflow execution.</p>
 
   <h2>Webhooks</h2>
 
   <h3>Create Webhook</h3>
+  <button type="button" class="copy-button" data-endpoint-name="create_webhook" data-endpoint-path="POST /v1/webhooks">Track endpoint interest</button>
   <pre><code>POST /v1/webhooks</code></pre>
   <p>Register a new webhook endpoint.</p>
 
   <h3>List Webhooks</h3>
+  <button type="button" class="copy-button" data-endpoint-name="list_webhooks" data-endpoint-path="GET /v1/webhooks">Track endpoint interest</button>
   <pre><code>GET /v1/webhooks</code></pre>
   <p>List all registered webhooks.</p>
 
   <h3>Delete Webhook</h3>
+  <button type="button" class="copy-button" data-endpoint-name="delete_webhook" data-endpoint-path="DELETE /v1/webhooks/:id">Track endpoint interest</button>
   <pre><code>DELETE /v1/webhooks/:id</code></pre>
   <p>Remove a webhook registration.</p>
 
@@ -58,3 +68,17 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-endpoint-name]').forEach((button) => {
+      button.addEventListener('click', () => {
+        window.posthog?.capture('docs_api_endpoint_reference_selected', {
+          endpoint_name: button.getAttribute('data-endpoint-name') || 'unknown',
+          endpoint_path: button.getAttribute('data-endpoint-path') || '',
+          current_path: window.location.pathname,
+        });
+      });
+    });
+  });
+</script>

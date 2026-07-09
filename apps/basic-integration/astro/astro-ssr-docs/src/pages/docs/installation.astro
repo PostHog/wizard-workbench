@@ -11,11 +11,17 @@ const renderTime = new Date().toISOString();
   <h2>Node.js / JavaScript</h2>
   <p>Install the NeuralFlow SDK using your preferred package manager:</p>
 
-  <pre><code>npm install @neuralflow/sdk</code></pre>
+  <div class="code-example">
+    <button type="button" class="copy-button" data-install-command="npm">Copy npm command</button>
+    <pre><code id="install-npm-command">npm install @neuralflow/sdk</code></pre>
+  </div>
 
   <p>Or with yarn:</p>
 
-  <pre><code>yarn add @neuralflow/sdk</code></pre>
+  <div class="code-example">
+    <button type="button" class="copy-button" data-install-command="yarn">Copy yarn command</button>
+    <pre><code id="install-yarn-command">yarn add @neuralflow/sdk</code></pre>
+  </div>
 
   <h3>Basic Setup</h3>
   <p>Initialize the client with your API key:</p>
@@ -57,3 +63,32 @@ NEURALFLOW_API_KEY=your_api_key_here</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  async function copyInstallCommand(packageManager) {
+    const target = document.getElementById(`install-${packageManager}-command`);
+    const command = target?.textContent;
+    if (!command) return;
+
+    try {
+      await navigator.clipboard.writeText(command);
+      window.posthog?.capture('docs_installation_package_manager_selected', {
+        package_manager: packageManager,
+        current_path: window.location.pathname,
+      });
+    } catch (error) {
+      window.posthog?.captureException?.(error);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-install-command]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const packageManager = button.getAttribute('data-install-command');
+        if (packageManager) {
+          copyInstallCommand(packageManager);
+        }
+      });
+    });
+  });
+</script>

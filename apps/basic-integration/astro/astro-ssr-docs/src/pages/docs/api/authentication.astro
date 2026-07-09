@@ -14,10 +14,13 @@ const renderTime = new Date().toISOString();
     and include them in the Authorization header.
   </p>
 
-  <pre><code>curl -X POST https://api.neuralflow.io/v1/documents \
+  <div class="code-example">
+    <button type="button" class="copy-button" data-copy-target="api-auth-example">Copy auth example</button>
+    <pre><code id="api-auth-example">curl -X POST https://api.neuralflow.io/v1/documents \
   -H "Authorization: Bearer nf_sk_live_abc123..." \
   -H "Content-Type: application/json" \
   -d '{'{'}...{'}'}'</code></pre>
+  </div>
 
   <h2>Key Types</h2>
   <ul>
@@ -56,3 +59,22 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('[data-copy-target="api-auth-example"]')?.addEventListener('click', async () => {
+      const content = document.getElementById('api-auth-example')?.textContent;
+      if (!content) return;
+
+      try {
+        await navigator.clipboard.writeText(content);
+        window.posthog?.capture('docs_api_auth_example_copied', {
+          snippet_name: 'api-auth-example',
+          current_path: window.location.pathname,
+        });
+      } catch (error) {
+        window.posthog?.captureException?.(error);
+      }
+    });
+  });
+</script>

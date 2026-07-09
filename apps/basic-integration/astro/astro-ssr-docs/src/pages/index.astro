@@ -54,3 +54,32 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </footer>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('.hero-buttons')?.addEventListener('click', (event) => {
+      const link = event.target instanceof Element ? event.target.closest('a') : null;
+      if (!(link instanceof HTMLAnchorElement)) return;
+
+      window.posthog?.capture('docs_cta_clicked', {
+        cta_label: link.textContent?.trim() || 'unknown',
+        destination: link.getAttribute('href') || '',
+        section: 'hero',
+        current_path: window.location.pathname,
+      });
+    });
+
+    document.querySelector('.features-grid')?.addEventListener('click', (event) => {
+      const card = event.target instanceof Element ? event.target.closest('a.feature-card') : null;
+      if (!(card instanceof HTMLAnchorElement)) return;
+
+      const heading = card.querySelector('h3')?.textContent?.trim() || 'unknown';
+
+      window.posthog?.capture('docs_section_selected', {
+        section_label: heading,
+        destination: card.getAttribute('href') || '',
+        current_path: window.location.pathname,
+      });
+    });
+  });
+</script>
