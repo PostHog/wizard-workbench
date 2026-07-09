@@ -58,17 +58,132 @@ interface Frame {
   text: string;
 }
 
-/** The captured key-moment frames from a run's snapshot dir, in order. */
+/**
+ * The captured key-moment frames from a run's snapshot dir, in order. Prefers
+ * the colored `.ans` capture (the wizard's frameAnsi output) over a `.txt` frame
+ * of the same name; falls back to `.txt` for older runs.
+ */
 function readFrames(dir: string): Frame[] {
   if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((f) => f.endsWith(".txt"))
+  const files = readdirSync(dir).filter(
+    (f) => f.endsWith(".ans") || f.endsWith(".txt"),
+  );
+  const hasAns = new Set(
+    files.filter((f) => f.endsWith(".ans")).map((f) => f.slice(0, -4)),
+  );
+  return files
+    .filter((f) => f.endsWith(".ans") || !hasAns.has(f.slice(0, -4)))
     .sort()
     .map((file) => ({ file, text: readFileSync(join(dir, file), "utf8") }));
 }
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// The 16 base terminal colors, then the 6×6×6 cube and grayscale ramp — the
+// xterm 256-color palette that frameAnsi's `38;5;N` / `48;5;N` codes index into.
+const ANSI16 = [
+  "#000000", "#800000", "#008000", "#808000", "#000080", "#800080", "#008080", "#c0c0c0",
+  "#808080", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff",
+];
+function xterm256(n: number): string {
+  if (n < 16) return ANSI16[n] ?? "#c9d1d9";
+  const hex = (v: number) => (v & 255).toString(16).padStart(2, "0");
+  if (n < 232) {
+    const c = n - 16;
+    const ramp = [0, 95, 135, 175, 215, 255];
+    return `#${hex(ramp[Math.floor(c / 36) % 6])}${hex(ramp[Math.floor(c / 6) % 6])}${hex(ramp[c % 6])}`;
+  }
+  const v = 8 + (n - 232) * 10;
+  return `#${hex(v)}${hex(v)}${hex(v)}`;
+}
+
+interface Sgr {
+  fg?: string;
+  bg?: string;
+  bold?: boolean;
+  dim?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  inverse?: boolean;
+  strike?: boolean;
+}
+
+// Fold one run of SGR parameters into the active style. Handles the codes
+// frameAnsi emits: reset, attributes, named colors, and 256/truecolor.
+function applyCodes(s: Sgr, params: number[]): void {
+  for (let i = 0; i < params.length; i++) {
+    const c = params[i];
+    if (c === 0) { for (const k of Object.keys(s)) delete (s as Record<string, unknown>)[k]; }
+    else if (c === 1) s.bold = true;
+    else if (c === 2) s.dim = true;
+    else if (c === 3) s.italic = true;
+    else if (c === 4) s.underline = true;
+    else if (c === 7) s.inverse = true;
+    else if (c === 9) s.strike = true;
+    else if (c === 22) { s.bold = s.dim = undefined; }
+    else if (c === 23) s.italic = undefined;
+    else if (c === 24) s.underline = undefined;
+    else if (c === 27) s.inverse = undefined;
+    else if (c === 29) s.strike = undefined;
+    else if (c >= 30 && c <= 37) s.fg = ANSI16[c - 30];
+    else if (c >= 90 && c <= 97) s.fg = ANSI16[c - 90 + 8];
+    else if (c >= 40 && c <= 47) s.bg = ANSI16[c - 40];
+    else if (c >= 100 && c <= 107) s.bg = ANSI16[c - 100 + 8];
+    else if (c === 39) s.fg = undefined;
+    else if (c === 49) s.bg = undefined;
+    else if (c === 38 || c === 48) {
+      const color =
+        params[i + 1] === 5
+          ? ((i += 2), xterm256(params[i]))
+          : params[i + 1] === 2
+            ? ((i += 4), `#${[params[i - 2], params[i - 1], params[i]].map((v) => (v & 255).toString(16).padStart(2, "0")).join("")}`)
+            : undefined;
+      if (color) c === 38 ? (s.fg = color) : (s.bg = color);
+    }
+  }
+}
+
+function styleFor(s: Sgr): string {
+  let fg = s.fg;
+  let bg = s.bg;
+  if (s.inverse) { const f = fg ?? "#c9d1d9"; const b = bg ?? "#010409"; fg = b; bg = f; }
+  const parts: string[] = [];
+  if (fg) parts.push(`color:${fg}`);
+  if (bg) parts.push(`background:${bg}`);
+  if (s.bold) parts.push("font-weight:bold");
+  if (s.dim) parts.push("opacity:.6");
+  if (s.italic) parts.push("font-style:italic");
+  const deco = [s.underline && "underline", s.strike && "line-through"].filter(Boolean);
+  if (deco.length) parts.push(`text-decoration:${deco.join(" ")}`);
+  return parts.join(";");
+}
+
+// Serialize a captured frame to HTML: wrap each styled run in a <span>, so the
+// rasterized report shows the colored CLI. Plain (.txt) frames have no escapes,
+// so this degrades to escapeHtml. Stray non-SGR control sequences are dropped.
+function ansiToHtml(raw: string): string {
+  const state: Sgr = {};
+  const re = /\x1b\[([0-9;]*)m/g;
+  let out = "";
+  let last = 0;
+  let m: RegExpExecArray | null;
+  const flush = (text: string) => {
+    if (!text) return;
+    const clean = text.replace(/\x1b\[[0-9;?]*[@-~]/g, "");
+    if (!clean) return;
+    const style = styleFor(state);
+    out += style ? `<span style="${style}">${escapeHtml(clean)}</span>` : escapeHtml(clean);
+  };
+  while ((m = re.exec(raw))) {
+    flush(raw.slice(last, m.index));
+    const params = m[1] === "" ? [0] : m[1].split(";").map((n) => parseInt(n, 10) || 0);
+    applyCodes(state, params);
+    last = re.lastIndex;
+  }
+  flush(raw.slice(last));
+  return out;
 }
 
 function reportHtml(
@@ -81,7 +196,7 @@ function reportHtml(
       (f) => `
     <section class="row" data-frame="${f.file}">
       <h2>${f.file} <span class="t">(${fmtElapsed(timings[f.file] ?? 0)})</span></h2>
-      <pre>${escapeHtml(f.text)}</pre>
+      <pre>${ansiToHtml(f.text)}</pre>
     </section>`,
     )
     .join("");
