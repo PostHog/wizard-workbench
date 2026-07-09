@@ -55,21 +55,77 @@ import Layout from '../layouts/Layout.astro';
   </section>
 </Layout>
 
-<script>
+<script is:inline>
   const form = document.getElementById('contact-form') as HTMLFormElement;
   const messageDiv = document.getElementById('form-message') as HTMLDivElement;
+  const nameInput = document.getElementById('name') as HTMLInputElement;
+  const emailInput = document.getElementById('email') as HTMLInputElement;
+  const companyInput = document.getElementById('company') as HTMLInputElement;
+  const interestInput = document.getElementById('interest') as HTMLSelectElement;
+  const messageInput = document.getElementById('message') as HTMLTextAreaElement;
+
+  let hasTrackedFormStart = false;
+
+  const createDistinctId = async (email: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizedEmail));
+    const hash = Array.from(new Uint8Array(digest))
+      .map((value) => value.toString(16).padStart(2, '0'))
+      .join('');
+
+    return `contact:${hash}`;
+  };
+
+  const identifyVisitor = async () => {
+    const email = emailInput?.value?.trim();
+    if (!email) {
+      return;
+    }
+
+    const distinctId = await createDistinctId(email);
+
+    window.posthog?.identify(distinctId, {
+      email,
+      company: companyInput?.value?.trim() || undefined,
+      interest: interestInput?.value || undefined,
+      contact_name: nameInput?.value?.trim() || undefined,
+    });
+  };
+
+  const trackFormStart = () => {
+    if (hasTrackedFormStart) {
+      return;
+    }
+
+    hasTrackedFormStart = true;
+    window.posthog?.capture('contact_form_started', {
+      page_name: 'contact',
+      interest: interestInput?.value || 'unselected',
+      has_company: Boolean(companyInput?.value?.trim())
+    });
+  };
+
+  [nameInput, emailInput, companyInput, interestInput, messageInput].forEach((field) => {
+    field?.addEventListener('focus', trackFormStart, { once: true });
+  });
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
+    const sessionId = window.posthog?.get_session_id?.() || '';
+    const distinctId = window.posthog?.get_distinct_id?.() || '';
+
+    await identifyVisitor();
 
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-POSTHOG-SESSION-ID': sessionId,
+          'X-POSTHOG-DISTINCT-ID': distinctId,
         },
         body: JSON.stringify(data),
       });
@@ -77,14 +133,32 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        window.posthog?.capture('contact_form_submitted', {
+          page_name: 'contact',
+          interest: interestInput?.value || 'unknown',
+          has_company: Boolean(companyInput?.value?.trim())
+        });
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
+        hasTrackedFormStart = false;
       } else {
+        window.posthog?.capture('contact_form_submission_failed', {
+          page_name: 'contact',
+          interest: interestInput?.value || 'unknown',
+          error_type: 'validation_error',
+          status_code: response.status
+        });
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
       }
     } catch (error) {
+      window.posthog?.captureException?.(error as Error);
+      window.posthog?.capture('contact_form_submission_failed', {
+        page_name: 'contact',
+        interest: interestInput?.value || 'unknown',
+        error_type: 'network_error'
+      });
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
     }
