@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -164,10 +165,17 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                     textFieldFocusState = focused
                 },
                 onMessageSent = {
-                    onMessageSent(textState.text)
-                    // Reset text field and close keyboard
+                    val messageText = textState.text
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "message_length" to messageText.length,
+                            "contains_emoji" to messageText.any { it.code > 0x7F },
+                            "contains_link" to messageText.contains("http"),
+                        ),
+                    )
+                    onMessageSent(messageText)
                     textState = TextFieldValue()
-                    // Move scroll to bottom
                     resetScroll()
                 },
                 focusState = textFieldFocusState,
@@ -176,10 +184,18 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                 onSelectorChange = { currentInputSelector = it },
                 sendMessageEnabled = textState.text.isNotBlank(),
                 onMessageSent = {
-                    onMessageSent(textState.text)
-                    // Reset text field and close keyboard
+                    val messageText = textState.text
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "message_length" to messageText.length,
+                            "contains_emoji" to messageText.any { it.code > 0x7F },
+                            "contains_link" to messageText.contains("http"),
+                            "send_path" to "button",
+                        ),
+                    )
+                    onMessageSent(messageText)
                     textState = TextFieldValue()
-                    // Move scroll to bottom
                     resetScroll()
                     dismissKeyboard()
                 },
@@ -284,31 +300,46 @@ private fun UserInputSelector(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.EMOJI) },
+            onClick = {
+                PostHog.capture(event = "composer_tool_selected", properties = mapOf("tool" to "emoji"))
+                onSelectorChange(InputSelector.EMOJI)
+            },
             icon = painterResource(id = R.drawable.ic_mood),
             selected = currentInputSelector == InputSelector.EMOJI,
             description = stringResource(id = R.string.emoji_selector_bt_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.DM) },
+            onClick = {
+                PostHog.capture(event = "composer_tool_selected", properties = mapOf("tool" to "direct_message"))
+                onSelectorChange(InputSelector.DM)
+            },
             icon = painterResource(id = R.drawable.ic_alternate_email),
             selected = currentInputSelector == InputSelector.DM,
             description = stringResource(id = R.string.dm_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.PICTURE) },
+            onClick = {
+                PostHog.capture(event = "composer_tool_selected", properties = mapOf("tool" to "picture"))
+                onSelectorChange(InputSelector.PICTURE)
+            },
             icon = painterResource(id = R.drawable.ic_insert_photo),
             selected = currentInputSelector == InputSelector.PICTURE,
             description = stringResource(id = R.string.attach_photo_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.MAP) },
+            onClick = {
+                PostHog.capture(event = "composer_tool_selected", properties = mapOf("tool" to "map"))
+                onSelectorChange(InputSelector.MAP)
+            },
             icon = painterResource(id = R.drawable.ic_place),
             selected = currentInputSelector == InputSelector.MAP,
             description = stringResource(id = R.string.map_selector_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.PHONE) },
+            onClick = {
+                PostHog.capture(event = "composer_tool_selected", properties = mapOf("tool" to "phone"))
+                onSelectorChange(InputSelector.PHONE)
+            },
             icon = painterResource(id = R.drawable.ic_duo),
             selected = currentInputSelector == InputSelector.PHONE,
             description = stringResource(id = R.string.videochat_desc),
@@ -648,7 +679,16 @@ fun EmojiTable(onTextAdded: (String) -> Unit, modifier: Modifier = Modifier) {
                     val emoji = emojis[x * EMOJI_COLUMNS + y]
                     Text(
                         modifier = Modifier
-                            .clickable(onClick = { onTextAdded(emoji) })
+                            .clickable(onClick = {
+                                PostHog.capture(
+                                    event = "emoji_inserted",
+                                    properties = mapOf(
+                                        "emoji" to emoji,
+                                        "source" to "emoji_selector",
+                                    ),
+                                )
+                                onTextAdded(emoji)
+                            })
                             .sizeIn(minWidth = 42.dp, minHeight = 42.dp)
                             .padding(8.dp),
                         text = emoji,

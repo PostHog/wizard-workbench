@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.AnimatingFabContent
+import com.posthog.PostHog
 import com.example.compose.jetchat.components.baselineHeight
 import com.example.compose.jetchat.data.colleagueProfile
 import com.example.compose.jetchat.data.meProfile
@@ -111,7 +112,16 @@ fun ProfileScreen(
                 .align(Alignment.BottomEnd)
                 // Offsets the FAB to compensate for CoordinatorLayout collapsing behaviour
                 .offset(y = ((-100).dp)),
-            onFabClicked = { functionalityNotAvailablePopupShown = true },
+            onFabClicked = {
+                PostHog.capture(
+                    event = "profile_action_clicked",
+                    properties = mapOf(
+                        "action" to if (userData.isMe()) "edit_profile" else "message_user",
+                        "profile_kind" to if (userData.isMe()) "self" else "other",
+                    ),
+                )
+                functionalityNotAvailablePopupShown = true
+            },
         )
     }
 }

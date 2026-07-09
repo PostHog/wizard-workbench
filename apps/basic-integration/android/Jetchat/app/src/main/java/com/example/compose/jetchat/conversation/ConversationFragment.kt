@@ -18,6 +18,7 @@ package com.example.compose.jetchat.conversation
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import com.posthog.PostHog
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
@@ -45,7 +46,13 @@ class ConversationFragment : Fragment() {
                     ConversationContent(
                         uiState = exampleUiState,
                         navigateToProfile = { user ->
-                            // Click callback
+                            PostHog.capture(
+                                event = "conversation_member_opened",
+                                properties = mapOf(
+                                    "source_screen" to "conversation",
+                                    "selected_profile" to if (user == getString(R.string.author_me)) "self" else "other",
+                                ),
+                            )
                             val bundle = bundleOf("userId" to user)
                             findNavController().navigate(
                                 R.id.nav_profile,

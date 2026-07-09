@@ -18,6 +18,7 @@ package com.example.compose.jetchat.widget
 
 import android.content.Context
 import androidx.glance.GlanceId
+import com.posthog.PostHog
 import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
@@ -27,6 +28,13 @@ import com.example.compose.jetchat.widget.composables.MessagesWidget
 class JetChatWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        PostHog.capture(
+            event = "widget_rendered",
+            properties = mapOf(
+                "widget_type" to "unread_messages",
+                "message_count" to unreadMessages.size,
+            ),
+        )
         provideContent {
             GlanceTheme {
                 MessagesWidget(unreadMessages.toList())

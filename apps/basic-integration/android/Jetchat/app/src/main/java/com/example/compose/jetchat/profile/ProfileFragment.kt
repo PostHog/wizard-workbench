@@ -18,6 +18,7 @@ package com.example.compose.jetchat.profile
 
 import android.content.Context
 import android.os.Bundle
+import com.posthog.PostHog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -96,6 +97,14 @@ class ProfileFragment : Fragment() {
                 }
             }
         }
+
+        PostHog.capture(
+            event = "profile_viewed",
+            properties = mapOf(
+                "profile_kind" to if (viewModel.userData.value?.isMe() == true) "self" else "other",
+                "entry_point" to "navigation",
+            ),
+        )
 
         rootView.findViewById<ComposeView>(R.id.profile_compose_view).apply {
             setContent {

@@ -90,6 +90,7 @@ import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
+import com.posthog.PostHog
 import com.example.compose.jetchat.theme.JetchatTheme
 import kotlinx.coroutines.launch
 
@@ -255,7 +256,17 @@ fun ChannelNameBar(
                 painterResource(id = R.drawable.ic_search),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
-                    .clickable(onClick = { functionalityNotAvailablePopupShown = true })
+                    .clickable(onClick = {
+                        PostHog.capture(
+                            event = "conversation_feature_clicked",
+                            properties = mapOf(
+                                "feature" to "search",
+                                "channel_name" to channelName,
+                                "channel_members" to channelMembers,
+                            ),
+                        )
+                        functionalityNotAvailablePopupShown = true
+                    })
                     .padding(horizontal = 12.dp, vertical = 16.dp)
                     .height(24.dp),
                 contentDescription = stringResource(id = R.string.search),
@@ -265,7 +276,17 @@ fun ChannelNameBar(
                 painterResource(id = R.drawable.ic_info),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
-                    .clickable(onClick = { functionalityNotAvailablePopupShown = true })
+                    .clickable(onClick = {
+                        PostHog.capture(
+                            event = "conversation_feature_clicked",
+                            properties = mapOf(
+                                "feature" to "info",
+                                "channel_name" to channelName,
+                                "channel_members" to channelMembers,
+                            ),
+                        )
+                        functionalityNotAvailablePopupShown = true
+                    })
                     .padding(horizontal = 12.dp, vertical = 16.dp)
                     .height(24.dp),
                 contentDescription = stringResource(id = R.string.info),
