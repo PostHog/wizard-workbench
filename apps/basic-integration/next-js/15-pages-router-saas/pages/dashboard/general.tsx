@@ -52,9 +52,22 @@ export default function GeneralPage() {
           return;
         }
 
+        const { default: posthog } = await import('posthog-js');
+
+        posthog.capture('account_updated', {
+          has_name: Boolean(data.name),
+          email_domain_changed: user?.email?.split('@')[1] !== data.email.split('@')[1]
+        });
+
+        if (result.distinctId) {
+          posthog.identify(result.distinctId, result.personProperties);
+        }
+
         setSuccess(result.success);
         setName(result.name);
       } catch (err) {
+        const { default: posthog } = await import('posthog-js');
+        posthog.captureException(err);
         setError('An unexpected error occurred. Please try again.');
       }
     });

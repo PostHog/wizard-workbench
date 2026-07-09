@@ -12,6 +12,11 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import {
+  captureServerEvent,
+  captureServerException,
+  identifyServerUser
+} from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -90,9 +95,29 @@ export default async function handler(
       });
     }
 
+    const distinctId = foundUser.id.toString();
+    const personProperties = {
+      email: foundUser.email,
+      name: foundUser.name,
+      role: foundUser.role
+    };
+
     await Promise.all([
       setSession(foundUser, res),
-      logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
+      logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN),
+      identifyServerUser({
+        distinctId,
+        properties: personProperties
+      }),
+      captureServerEvent({
+        distinctId,
+        event: 'server_user_signed_in',
+        properties: {
+          redirect_target: redirect || '/dashboard',
+          started_checkout: redirect === 'checkout',
+          has_team: Boolean(foundTeam)
+        }
+      })
     ]);
 
     if (redirect === 'checkout' && foundTeam) {
@@ -101,11 +126,24 @@ export default async function handler(
         priceId,
         userId: foundUser.id
       });
-      return res.status(200).json(checkoutResult);
+      return res.status(200).json({
+        ...checkoutResult,
+        success: true,
+        distinctId,
+        personProperties
+      });
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      distinctId,
+      personProperties
+    });
   } catch (error) {
+    await captureServerException(error, 'anonymous', {
+      endpoint: '/api/auth/sign-in'
+    });
     console.error('Sign in error:', error);
     return res.status(500).json({ error: 'Failed to sign in. Please try again.' });
   }

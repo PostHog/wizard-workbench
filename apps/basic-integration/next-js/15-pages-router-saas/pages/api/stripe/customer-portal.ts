@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCustomerPortalSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { captureServerEvent, captureServerException } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,8 +26,22 @@ export default async function handler(
     }
 
     const portalSession = await createCustomerPortalSession(team);
+
+    await captureServerEvent({
+      distinctId: user.id.toString(),
+      event: 'server_subscription_portal_opened',
+      properties: {
+        team_id: team.id,
+        plan_name: team.planName || 'free',
+        subscription_status: team.subscriptionStatus || 'inactive'
+      }
+    });
+
     return res.status(200).json({ url: portalSession.url });
   } catch (error) {
+    await captureServerException(error, 'anonymous', {
+      endpoint: '/api/stripe/customer-portal'
+    });
     console.error('Customer portal error:', error);
     return res.status(500).json({ error: 'Failed to create customer portal session' });
   }

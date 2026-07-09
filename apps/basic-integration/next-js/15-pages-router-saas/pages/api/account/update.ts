@@ -9,6 +9,11 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import {
+  captureServerEvent,
+  captureServerException,
+  identifyServerUser
+} from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -61,11 +66,39 @@ export default async function handler(
 
     await Promise.all([
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
-      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
+      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT),
+      identifyServerUser({
+        distinctId: user.id.toString(),
+        properties: {
+          email,
+          name,
+          role: user.role
+        }
+      }),
+      captureServerEvent({
+        distinctId: user.id.toString(),
+        event: 'server_account_updated',
+        properties: {
+          has_name: Boolean(name),
+          changed_email_domain: user.email.split('@')[1] !== email.split('@')[1]
+        }
+      })
     ]);
 
-    return res.status(200).json({ name, success: 'Account updated successfully.' });
+    return res.status(200).json({
+      name,
+      success: 'Account updated successfully.',
+      distinctId: user.id.toString(),
+      personProperties: {
+        email,
+        name,
+        role: user.role
+      }
+    });
   } catch (error) {
+    await captureServerException(error, 'anonymous', {
+      endpoint: '/api/account/update'
+    });
     console.error('Update account error:', error);
     return res.status(500).json({ error: 'Failed to update account' });
   }

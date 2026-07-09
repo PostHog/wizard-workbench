@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,18 @@ export function Login({
           return;
         }
 
+        if (result.distinctId) {
+          posthog.identify(result.distinctId, result.personProperties);
+        }
+
+        if (result.success) {
+          posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up', {
+            redirect_target: result.redirectTo || redirect || null,
+            started_checkout: redirect === 'checkout',
+            invite_flow: Boolean(inviteId)
+          });
+        }
+
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
@@ -64,6 +77,7 @@ export function Login({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred. Please try again.');
       }
     });

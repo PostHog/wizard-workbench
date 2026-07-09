@@ -36,9 +36,17 @@ function ManageSubscription() {
       const result = await response.json();
 
       if (response.ok && result.url) {
+        const { default: posthog } = await import('posthog-js');
+
+        posthog.capture('subscription_portal_opened', {
+          current_plan: teamData?.planName || 'free',
+          subscription_status: teamData?.subscriptionStatus || 'inactive'
+        });
         window.location.href = result.url;
       }
     } catch (err) {
+      const { default: posthog } = await import('posthog-js');
+      posthog.captureException(err);
       console.error('Failed to open customer portal');
     }
   }
@@ -102,9 +110,17 @@ function TeamMembers() {
           return;
         }
 
+        const { default: posthog } = await import('posthog-js');
+
+        posthog.capture('team_member_removed', {
+          team_size_before_removal: teamData?.teamMembers.length || 0
+        });
+
         // Refresh team data
         mutate('/api/team');
       } catch (err) {
+        const { default: posthog } = await import('posthog-js');
+        posthog.captureException(err);
         setError('An unexpected error occurred');
       }
     });
@@ -207,10 +223,19 @@ function InviteTeamMember() {
           return;
         }
 
+        const { default: posthog } = await import('posthog-js');
+
+        posthog.capture('team_member_invited', {
+          invited_role: data.role,
+          inviter_role: user?.role || 'unknown'
+        });
+
         setSuccess(result.success);
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {
+        const { default: posthog } = await import('posthog-js');
+        posthog.captureException(err);
         setError('An unexpected error occurred');
       }
     });

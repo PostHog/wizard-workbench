@@ -9,6 +9,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { captureServerEvent, captureServerException } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -71,14 +72,27 @@ export default async function handler(
         )
       );
 
-    await logActivity(
-      userWithTeam.teamId,
-      user.id,
-      ActivityType.REMOVE_TEAM_MEMBER
-    );
+    await Promise.all([
+      logActivity(
+        userWithTeam.teamId,
+        user.id,
+        ActivityType.REMOVE_TEAM_MEMBER
+      ),
+      captureServerEvent({
+        distinctId: user.id.toString(),
+        event: 'server_team_member_removed',
+        properties: {
+          team_id: userWithTeam.teamId,
+          removed_member_id: memberId
+        }
+      })
+    ]);
 
     return res.status(200).json({ success: 'Team member removed successfully' });
   } catch (error) {
+    await captureServerException(error, 'anonymous', {
+      endpoint: '/api/team/remove-member'
+    });
     console.error('Remove team member error:', error);
     return res.status(500).json({ error: 'Failed to remove team member' });
   }

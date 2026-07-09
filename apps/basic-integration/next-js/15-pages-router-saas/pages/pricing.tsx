@@ -85,6 +85,14 @@ function PricingCard({
         });
 
         const result = await response.json();
+        const { default: posthog } = await import('posthog-js');
+
+        posthog.capture('checkout_started', {
+          plan_name: name.toLowerCase(),
+          billing_interval: interval,
+          has_trial: trialDays > 0,
+          destination: result.redirectTo ? 'sign-up' : 'stripe_checkout'
+        });
 
         if (result.redirectTo) {
           router.push(result.redirectTo);
@@ -92,6 +100,8 @@ function PricingCard({
           window.location.href = result.url;
         }
       } catch (err) {
+        const { default: posthog } = await import('posthog-js');
+        posthog.captureException(err);
         console.error('Checkout error:', err);
       }
     });
