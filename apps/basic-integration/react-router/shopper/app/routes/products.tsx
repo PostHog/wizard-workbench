@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { Link } from "react-router";
 import type { Route } from "./+types/products";
 import { getProducts, getCategories, type Product } from "../data/products";
@@ -13,20 +14,41 @@ export async function clientLoader() {
 
 export default function Products({ loaderData }: Route.ComponentProps) {
   const { products, categories } = loaderData;
+  const posthog = usePostHog();
   const { addToCart } = useCart();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+    posthog?.capture("product_added_to_cart", {
+      product_id: product.id,
+      product_name: product.name,
+      product_category: product.category,
+      price: product.price,
+      quantity: 1,
+      source: "product_grid",
+    });
   };
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
+    posthog?.capture("products_filtered", {
+      filter_type: "search",
+      search_length: term.trim().length,
+      selected_category: selectedCategory || "all",
+      has_search_term: term.trim().length > 0,
+    });
   };
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
+    posthog?.capture("products_filtered", {
+      filter_type: "category",
+      selected_category: category || "all",
+      has_search_term: searchTerm.trim().length > 0,
+      search_length: searchTerm.trim().length,
+    });
   };
 
   const filteredProducts = products.filter((product) => {

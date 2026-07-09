@@ -1,15 +1,31 @@
+import { usePostHog } from "@posthog/react";
 import { Link } from "react-router";
 import { useCart, type CartItem } from "../context/CartContext";
 
 export default function Cart() {
+  const posthog = usePostHog();
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+    posthog?.capture("cart_item_removed", {
+      product_id: item.id,
+      product_name: item.name,
+      product_category: item.category,
+      previous_quantity: item.quantity,
+      cart_value_before_removal: getCartTotal(),
+    });
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+    posthog?.capture("cart_quantity_updated", {
+      product_id: item.id,
+      product_name: item.name,
+      product_category: item.category,
+      previous_quantity: item.quantity,
+      new_quantity: Math.max(newQuantity, 0),
+    });
   };
 
   if (cart.length === 0) {
@@ -154,6 +170,13 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={() =>
+                posthog?.capture("checkout_started", {
+                  cart_item_count: cart.length,
+                  cart_quantity_total: cart.reduce((total, item) => total + item.quantity, 0),
+                  subtotal: getCartTotal(),
+                })
+              }
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout

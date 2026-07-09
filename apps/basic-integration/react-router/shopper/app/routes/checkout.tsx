@@ -1,8 +1,10 @@
+import { usePostHog } from "@posthog/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useCart } from "../context/CartContext";
 
 export default function Checkout() {
+  const posthog = usePostHog();
   const { cart, getCartTotal, clearCart } = useCart();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -42,12 +44,47 @@ export default function Checkout() {
     e.preventDefault();
     setIsProcessing(true);
 
-    setTimeout(() => {
-      clearCart();
+    posthog?.identify(formData.email, {
+      email: formData.email,
+    });
+    posthog?.capture("checkout_submitted", {
+      cart_item_count: cart.length,
+      cart_quantity_total: cart.reduce((total, item) => total + item.quantity, 0),
+      subtotal: getCartTotal(),
+      has_saved_contact: Boolean(formData.email),
+      shipping_city_present: Boolean(formData.city.trim()),
+    });
+
+    try {
+      setTimeout(() => {
+        const orderValue = getCartTotal() * 1.1;
+        const purchasedItems = cart.map((item) => ({
+          product_id: item.id,
+          product_name: item.name,
+          product_category: item.category,
+          quantity: item.quantity,
+          price: item.price,
+        }));
+
+        clearCart();
+        setIsProcessing(false);
+        posthog?.capture("order_completed", {
+          order_value: orderValue,
+          cart_item_count: purchasedItems.length,
+          cart_quantity_total: purchasedItems.reduce((total, item) => total + item.quantity, 0),
+          products: purchasedItems,
+        });
+        alert("Order placed successfully! Thank you for your purchase.");
+        navigate("/products");
+      }, 2000);
+    } catch (error) {
       setIsProcessing(false);
-      alert("Order placed successfully! Thank you for your purchase.");
-      navigate("/products");
-    }, 2000);
+      posthog?.captureException(error);
+      posthog?.capture("checkout_error_captured", {
+        stage: "submit",
+        cart_item_count: cart.length,
+      });
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
