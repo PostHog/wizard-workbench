@@ -19,19 +19,19 @@ import Layout from '../layouts/Layout.astro';
       </p>
 
       <div class="about-grid">
-        <div class="about-card">
+        <div class="about-card" data-about-stat="active_users" tabindex="0" role="button">
           <h3>10K+</h3>
           <p>Active Users</p>
         </div>
-        <div class="about-card">
+        <div class="about-card" data-about-stat="documents_processed" tabindex="0" role="button">
           <h3>500M+</h3>
           <p>Documents Processed</p>
         </div>
-        <div class="about-card">
+        <div class="about-card" data-about-stat="uptime_sla" tabindex="0" role="button">
           <h3>99.9%</h3>
           <p>Uptime SLA</p>
         </div>
-        <div class="about-card">
+        <div class="about-card" data-about-stat="countries" tabindex="0" role="button">
           <h3>50+</h3>
           <p>Countries</p>
         </div>
@@ -46,22 +46,22 @@ import Layout from '../layouts/Layout.astro';
         <p>The people building the future of work</p>
       </div>
       <div class="team-grid">
-        <div class="team-member">
+        <div class="team-member" data-team-role="ceo_cofounder" tabindex="0" role="button">
           <div class="team-avatar">👩‍💻</div>
           <h4>Sarah Chen</h4>
           <p>CEO & Co-founder</p>
         </div>
-        <div class="team-member">
+        <div class="team-member" data-team-role="cto_cofounder" tabindex="0" role="button">
           <div class="team-avatar">👨‍💻</div>
           <h4>Marcus Johnson</h4>
           <p>CTO & Co-founder</p>
         </div>
-        <div class="team-member">
+        <div class="team-member" data-team-role="head_of_ai_research" tabindex="0" role="button">
           <div class="team-avatar">👩‍🔬</div>
           <h4>Dr. Emily Park</h4>
           <p>Head of AI Research</p>
         </div>
-        <div class="team-member">
+        <div class="team-member" data-team-role="head_of_design" tabindex="0" role="button">
           <div class="team-avatar">👨‍🎨</div>
           <h4>Alex Rivera</h4>
           <p>Head of Design</p>
@@ -70,3 +70,41 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-about-stat]').forEach((card) => {
+      const captureStat = () => {
+        const target = card;
+        window.posthog?.capture('about_stat_engaged', {
+          stat_name: target.dataset.aboutStat || 'unknown'
+        });
+      };
+
+      card.addEventListener('click', captureStat);
+      card.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          captureStat();
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-team-role]').forEach((member) => {
+      const captureTeamSelection = () => {
+        const target = member;
+        window.posthog?.capture('team_profile_selected', {
+          team_role: target.dataset.teamRole || 'unknown'
+        });
+      };
+
+      member.addEventListener('click', captureTeamSelection);
+      member.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          captureTeamSelection();
+        }
+      });
+    });
+  });
+</script>
