@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -79,6 +80,47 @@ const rootRoute = createRootRouteWithContext<{
   component: RootComponent,
 })
 
+const posthogOptions = {
+  api_host: '/ingest',
+  ui_host:
+    import.meta.env.VITE_PUBLIC_POSTHOG_HOST || 'https://us.posthog.com',
+  defaults: '2026-01-30' as const,
+  capture_pageview: 'history_change' as const,
+  capture_exceptions: true,
+  debug: import.meta.env.DEV,
+}
+
+const analytics = {
+  identifyUser(username: string) {
+    const distinctId = `user:${username.toLowerCase()}`
+
+    auth.username = username
+    auth.distinctId = distinctId
+    localStorage.setItem('cloudflow.username', username)
+    localStorage.setItem('cloudflow.distinct_id', distinctId)
+
+    return distinctId
+  },
+  clearUser() {
+    localStorage.removeItem('cloudflow.username')
+    localStorage.removeItem('cloudflow.distinct_id')
+    auth.username = undefined
+    auth.distinctId = undefined
+  },
+  captureLogout(posthog: ReturnType<typeof usePostHog>, source: string) {
+    if (!auth.username) {
+      return
+    }
+
+    posthog.capture('logout_clicked', {
+      source,
+      current_path: window.location.pathname,
+    })
+    posthog.reset()
+    analytics.clearUser()
+  },
+}
+
 function RouterSpinner() {
   const isLoading = useRouterState({ select: (s) => s.status === 'pending' })
   return <Spinner show={isLoading} />
@@ -86,33 +128,38 @@ function RouterSpinner() {
 
 function RootComponent() {
   return (
-    <>
-      <div className={`min-h-screen flex flex-col`}>
-        <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
-          <div className={`flex items-center gap-2 p-3`}>
-            <div className={`w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center`}>
-              <span className={`text-white font-bold text-sm`}>CF</span>
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN!}
+      options={posthogOptions}
+    >
+      <>
+        <PostHogAuthSync />
+        <div className={`min-h-screen flex flex-col`}>
+          <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
+            <div className={`flex items-center gap-2 p-3`}>
+              <div className={`w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center`}>
+                <span className={`text-white font-bold text-sm`}>CF</span>
+              </div>
+              <h1 className={`text-xl font-semibold`}>CloudFlow</h1>
             </div>
-            <h1 className={`text-xl font-semibold`}>CloudFlow</h1>
+            <div className={`flex-1`} />
+            <div className={`text-xl pr-4`}>
+              <RouterSpinner />
+            </div>
           </div>
-          <div className={`flex-1`} />
-          <div className={`text-xl pr-4`}>
-            <RouterSpinner />
-          </div>
-        </div>
-        <div className={`flex-1 flex`}>
-          <div className={`w-56 bg-gray-50 dark:bg-gray-800/50 border-r`}>
-            <nav className={`p-2 space-y-1`}>
-              {(
-                [
-                  ['/', 'Home', '🏠'],
-                  ['/dashboard', 'Dashboard', '📊'],
-                  ['/profile', 'Account', '👤'],
-                  ...(auth.status === 'loggedOut' ? [['/login', 'Sign In', '🔐']] : []),
-                ] as const
-              ).map(([to, label, icon]) => {
-                return (
-                  <Link
+          <div className={`flex-1 flex`}>
+            <div className={`w-56 bg-gray-50 dark:bg-gray-800/50 border-r`}>
+              <nav className={`p-2 space-y-1`}>
+                {(
+                  [
+                    ['/', 'Home', '🏠'],
+                    ['/dashboard', 'Dashboard', '📊'],
+                    ['/profile', 'Account', '👤'],
+                    ...(auth.status === 'loggedOut' ? [['/login', 'Sign In', '🔐']] : []),
+                  ] as const
+                ).map(([to, label, icon]) => {
+                  return (
+                    <Link
                     key={to}
                     to={to}
                     preload="intent"
@@ -120,20 +167,40 @@ function RootComponent() {
                     activeProps={{ className: `bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium` }}
                   >
                     <span>{icon}</span>
-                    {label}
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-          <div className={`flex-1 bg-white dark:bg-gray-900`}>
-            <Outlet />
+                      {label}
+                    </Link>
+                  )
+                })}
+              </nav>
+            </div>
+            <div className={`flex-1 bg-white dark:bg-gray-900`}>
+              <Outlet />
+            </div>
           </div>
         </div>
-      </div>
-      <TanStackRouterDevtools position="bottom-right" />
-    </>
+        <TanStackRouterDevtools position="bottom-right" />
+      </>
+    </PostHogProvider>
   )
+}
+
+function PostHogAuthSync() {
+  const posthog = usePostHog()
+
+  React.useEffect(() => {
+    if (auth.status !== 'loggedIn' || !auth.username) {
+      return
+    }
+
+    const distinctId = auth.distinctId ?? analytics.identifyUser(auth.username)
+
+    posthog.identify(distinctId, {
+      username: auth.username,
+      plan: 'free',
+    })
+  }, [posthog])
+
+  return null
 }
 
 const indexRoute = createRoute({
@@ -143,6 +210,8 @@ const indexRoute = createRoute({
 })
 
 function IndexComponent() {
+  const posthog = usePostHog()
+
   return (
     <div className={`p-8`}>
       <div className={`max-w-4xl mx-auto`}>
@@ -156,12 +225,24 @@ function IndexComponent() {
           <div className={`flex gap-4`}>
             <Link
               to="/dashboard"
+              onClick={() => {
+                posthog.capture('dashboard_cta_clicked', {
+                  destination: '/dashboard',
+                  cta_location: 'hero',
+                })
+              }}
               className={`px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors`}
             >
               Go to Dashboard
             </Link>
             <Link
               to="/login"
+              onClick={() => {
+                posthog.capture('dashboard_cta_clicked', {
+                  destination: '/login',
+                  cta_location: 'hero',
+                })
+              }}
               className={`px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors`}
             >
               Sign In
@@ -212,6 +293,12 @@ function IndexComponent() {
             <Link
               to={invoiceRoute.to}
               params={{ invoiceId: 3 }}
+              onClick={() => {
+                posthog.capture('dashboard_cta_clicked', {
+                  destination: '/dashboard/invoices/3',
+                  cta_location: 'pending-items',
+                })
+              }}
               className={`px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors`}
             >
               View Invoice
@@ -433,9 +520,25 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async ({ data, variables }) => {
+      posthog.capture('invoice_created', {
+        invoice_id: data.id,
+        title_length: variables.title?.length ?? 0,
+        has_description: Boolean(variables.body),
+      })
+      await router.invalidate()
+    },
+    onError: async ({ error, variables }) => {
+      posthog.captureException(error)
+      posthog.capture('invoice_create_failed', {
+        title_length: variables.title?.length ?? 0,
+        has_description: Boolean(variables.body),
+        error_message: error instanceof Error ? error.message : 'unknown_error',
+      })
+    },
   })
 
   return (
@@ -514,12 +617,29 @@ const invoiceRoute = createRoute({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async ({ data, variables }) => {
+      posthog.capture('invoice_updated', {
+        invoice_id: data?.id ?? variables.id,
+        title_length: variables.title?.length ?? 0,
+        has_description: Boolean(variables.body),
+      })
+      await router.invalidate()
+    },
+    onError: async ({ error, variables }) => {
+      posthog.captureException(error)
+      posthog.capture('invoice_update_failed', {
+        invoice_id: variables.id,
+        title_length: variables.title?.length ?? 0,
+        has_description: Boolean(variables.body),
+        error_message: error instanceof Error ? error.message : 'unknown_error',
+      })
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -602,6 +722,12 @@ function InvoiceComponent() {
                   ...old,
                   showNotes: old.showNotes ? undefined : true,
                 })}
+                onClick={() => {
+                  posthog.capture('invoice_notes_toggled', {
+                    invoice_id: invoice.id,
+                    next_state: search.showNotes ? 'hidden' : 'visible',
+                  })
+                }}
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 from={invoiceRoute.fullPath}
                 params={true}
@@ -685,6 +811,7 @@ const usersLayoutRoute = createRoute({
 const roles = ['Admin', 'Member', 'Viewer', 'Editor', 'Manager']
 
 function UsersLayoutComponent() {
+  const posthog = usePostHog()
   const navigate = useNavigate({ from: usersLayoutRoute.fullPath })
   const { usersView } = usersLayoutRoute.useSearch()
   const users = usersLayoutRoute.useLoaderData()
@@ -781,6 +908,14 @@ function UsersLayoutComponent() {
                 key={user.id}
                 to="/dashboard/users/user"
                 search={{ userId: user.id }}
+                onClick={() => {
+                  posthog.capture('team_member_selected', {
+                    selected_user_id: user.id,
+                    role,
+                    filter_length: filterDraft.length,
+                    sort_by: sortBy,
+                  })
+                }}
                 className="flex items-center gap-3 p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 activeProps={{ className: `bg-blue-50 dark:bg-blue-900/20 border-l-2 border-l-blue-600` }}
               >
@@ -1002,6 +1137,7 @@ const profileRoute = createRoute({
 })
 
 function ProfileComponent() {
+  const posthog = usePostHog()
   const { username } = profileRoute.useRouteContext()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
@@ -1049,7 +1185,15 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => {
+                posthog.capture('subscription_upgrade_clicked', {
+                  current_plan: 'free',
+                  source: 'account-settings',
+                })
+              }}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Upgrade
             </button>
           </div>
@@ -1067,6 +1211,7 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                analytics.captureLogout(posthog, 'profile')
                 auth.logout()
                 router.invalidate()
               }}
@@ -1093,6 +1238,7 @@ const loginRoute = createRoute({
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -1102,7 +1248,24 @@ function LoginComponent() {
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    auth.login(username)
+
+    const normalizedUsername = username.trim()
+    if (!normalizedUsername) {
+      return
+    }
+
+    const distinctId = analytics.identifyUser(normalizedUsername)
+
+    posthog.identify(distinctId, {
+      username: normalizedUsername,
+      plan: 'free',
+    })
+    posthog.capture('login_submitted', {
+      login_method: 'password',
+      redirect_target: search.redirect ?? 'none',
+    })
+
+    auth.login(normalizedUsername)
     router.invalidate()
   }
 
@@ -1138,6 +1301,7 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                analytics.captureLogout(posthog, 'login')
                 auth.logout()
                 router.invalidate()
               }}
@@ -1266,15 +1430,17 @@ declare module '@tanstack/react-router' {
 }
 
 const auth: Auth = {
-  status: 'loggedOut',
-  username: undefined,
+  status: localStorage.getItem('cloudflow.username') ? 'loggedIn' : 'loggedOut',
+  username: localStorage.getItem('cloudflow.username') ?? undefined,
+  distinctId: localStorage.getItem('cloudflow.distinct_id') ?? undefined,
   login: (username: string) => {
     auth.username = username
+    auth.distinctId = analytics.identifyUser(username)
     auth.status = 'loggedIn'
   },
   logout: () => {
     auth.status = 'loggedOut'
-    auth.username = undefined
+    analytics.clearUser()
   },
 }
 
@@ -1423,6 +1589,7 @@ type Auth = {
   logout: () => void
   status: 'loggedOut' | 'loggedIn'
   username?: string
+  distinctId?: string
 }
 
 function Spinner({ show, wait }: { show?: boolean; wait?: `delay-${number}` }) {
