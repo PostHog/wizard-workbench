@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -31,10 +32,14 @@ export function TodoList() {
 
   const handleAddTodo = async (title: string, description: string) => {
     try {
+      const distinctId = posthog.get_distinct_id();
+      const sessionId = posthog.get_session_id();
       const response = await fetch('/api/todos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-POSTHOG-DISTINCT-ID': distinctId ?? '',
+          'X-POSTHOG-SESSION-ID': sessionId ?? '',
         },
         body: JSON.stringify({ title, description }),
       });
@@ -42,18 +47,26 @@ export function TodoList() {
       if (response.ok) {
         const newTodo = await response.json();
         setTodos([...todos, newTodo]);
+        posthog.capture('todo_created', {
+          has_description: description.trim().length > 0,
+        });
       }
     } catch (error) {
       console.error('Failed to add todo:', error);
+      posthog.captureException(error);
     }
   };
 
   const handleToggleTodo = async (id: number, completed: boolean) => {
     try {
+      const distinctId = posthog.get_distinct_id();
+      const sessionId = posthog.get_session_id();
       const response = await fetch(`/api/todos/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'X-POSTHOG-DISTINCT-ID': distinctId ?? '',
+          'X-POSTHOG-SESSION-ID': sessionId ?? '',
         },
         body: JSON.stringify({ completed }),
       });
@@ -61,23 +74,37 @@ export function TodoList() {
       if (response.ok) {
         const updatedTodo = await response.json();
         setTodos(todos.map((todo) => (todo.id === id ? updatedTodo : todo)));
+        posthog.capture(completed ? 'todo_completed' : 'todo_reopened', {
+          todo_id: id,
+        });
       }
     } catch (error) {
       console.error('Failed to update todo:', error);
+      posthog.captureException(error);
     }
   };
 
   const handleDeleteTodo = async (id: number) => {
     try {
+      const distinctId = posthog.get_distinct_id();
+      const sessionId = posthog.get_session_id();
       const response = await fetch(`/api/todos/${id}`, {
         method: 'DELETE',
+        headers: {
+          'X-POSTHOG-DISTINCT-ID': distinctId ?? '',
+          'X-POSTHOG-SESSION-ID': sessionId ?? '',
+        },
       });
 
       if (response.ok) {
         setTodos(todos.filter((todo) => todo.id !== id));
+        posthog.capture('todo_deleted', {
+          todo_id: id,
+        });
       }
     } catch (error) {
       console.error('Failed to delete todo:', error);
+      posthog.captureException(error);
     }
   };
 
