@@ -62,7 +62,7 @@ interface Frame {
 function readFrames(dir: string): Frame[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
-    .filter((f) => f.endsWith(".txt"))
+    .filter((f) => f.endsWith(".txt") || f.endsWith(".ans"))
     .sort()
     .map((file) => ({ file, text: readFileSync(join(dir, file), "utf8") }));
 }
