@@ -61,4 +61,13 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
   </section>
+
+<script is:inline>
+  function setupFeaturesEvents() {
+    window.posthog?.capture('features_viewed');
+  }
+
+  document.addEventListener('DOMContentLoaded', setupFeaturesEvents);
+  document.addEventListener('astro:page-load', setupFeaturesEvents);
+</script>
 </Layout>
