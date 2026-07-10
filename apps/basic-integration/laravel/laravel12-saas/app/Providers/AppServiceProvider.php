@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Subscription;
+use App\Services\PostHogService;
 use App\Support\Branding;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -15,7 +16,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Share a single PostHogService instance across the request lifecycle
+        $this->app->singleton(PostHogService::class);
     }
 
     /**
@@ -23,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Eagerly initialize PostHog so it is available in the exception handler
+        $this->app->make(PostHogService::class);
 
         Cashier::useSubscriptionModel(Subscription::class);
 
