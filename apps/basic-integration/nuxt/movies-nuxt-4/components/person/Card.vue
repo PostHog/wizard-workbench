@@ -1,13 +1,21 @@
 <script setup lang="ts">
 import type { Person } from '~/types'
 
-defineProps<{
+const posthog = usePostHog()
+const props = defineProps<{
   item: Person
 }>()
+
+const handleSelect = () => {
+  posthog?.capture('person_profile_opened', {
+    person_id: String(props.item.id),
+    known_for_department: props.item.known_for_department || 'unknown',
+  })
+}
 </script>
 
 <template>
-  <NuxtLink :to="`/person/${item.id}`" data-testid="person-link">
+  <NuxtLink :to="`/person/${item.id}`" data-testid="person-link" @click="handleSelect">
     <div block bg-gray4:10 p1 class="aspect-10/16" transition duration-400 hover="scale-105 z10" data-testid="person-container">
       <NuxtImg v-if="item.profile_path" width="500" height="800" format="webp" :src="`/tmdb${item.profile_path}`" :alt="item.name" w-full h-full object-cover data-testid="person-image" />
       <div v-else h-full op10 data-testid="person-placeholder">

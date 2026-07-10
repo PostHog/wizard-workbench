@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Image } from '~/types'
 
+const posthog = usePostHog()
 const images = ref<Image[] | null>(null)
 const index = ref(0)
 
@@ -15,12 +16,22 @@ function prev() {
   if (!images.value?.length)
     return
   index.value = (index.value - 1 + images.value.length) % images.value.length
+  posthog?.capture('photo_gallery_navigated', {
+    direction: 'previous',
+    current_index: index.value,
+    total_images: images.value.length,
+  })
 }
 
 function next() {
   if (!images.value?.length)
     return
   index.value = (index.value + 1) % images.value.length
+  posthog?.capture('photo_gallery_navigated', {
+    direction: 'next',
+    current_index: index.value,
+    total_images: images.value.length,
+  })
 }
 
 useEventListener('keydown', (e) => {

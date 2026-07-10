@@ -3,9 +3,21 @@ const props = defineProps({
   error: Object,
 })
 
+const posthog = usePostHog()
+
 const message = computed(() => String(props.error?.message || ''))
 const is404 = computed(() => props.error?.statusCode === 404 || message.value?.includes('404'))
 const isDev = process.dev
+
+onMounted(() => {
+  posthog?.capture('app_error_displayed', {
+    status_code: props.error?.statusCode || 500,
+    is_not_found: is404.value,
+  })
+
+  if (props.error)
+    posthog?.captureException(props.error)
+})
 
 function handleError() {
   return clearError({ redirect: '/' })

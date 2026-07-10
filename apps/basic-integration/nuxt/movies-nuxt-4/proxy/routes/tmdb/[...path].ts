@@ -1,6 +1,11 @@
+import { PostHog } from 'posthog-node'
+
 const TMDB_API_URL = 'https://api.themoviedb.org/3'
 
 export default defineEventHandler(async (event) => {
+  const host = process.env.NUXT_PUBLIC_POSTHOG_HOST
+  const publicKey = process.env.NUXT_PUBLIC_POSTHOG_PROJECT_TOKEN
+  const posthog = host && publicKey ? new PostHog(publicKey, { host, enableExceptionAutocapture: true }) : null
   const query = getQuery(event)
   // eslint-disable-next-line no-console
   console.log(
@@ -30,6 +35,17 @@ export default defineEventHandler(async (event) => {
   catch (e: any) {
     const status = e?.response?.status || 500
     setResponseStatus(event, status)
+    await posthog?.capture({
+      distinctId: getHeader(event, 'x-posthog-distinct-id') || 'tmdb_proxy',
+      event: 'tmdb_proxy_failed',
+      properties: {
+        proxy_path: event.context.params?.path || 'unknown',
+        status_code: status,
+        query_keys: Object.keys(query),
+        has_session_header: Boolean(getHeader(event, 'x-posthog-session-id')),
+      },
+    })
+    await posthog?.captureException(e)
     return {
       error: String(e)?.replace(config.tmdb.apiKey, '***'),
     }

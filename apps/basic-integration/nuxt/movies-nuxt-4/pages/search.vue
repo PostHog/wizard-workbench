@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Media } from '~/types'
 
+const posthog = usePostHog()
+
 definePageMeta({
   pageTransition: false,
 })
@@ -15,13 +17,22 @@ const items = ref<Media[]>([])
 const currentSearch = ref(input.value)
 
 function search() {
-  if (currentSearch.value === input.value)
+  const nextSearch = input.value.toString().trim()
+  if (currentSearch.value === nextSearch)
     return
 
-  currentSearch.value = input.value.toString()
+  currentSearch.value = nextSearch
   count.value = undefined
   items.value = []
-  router.replace({ query: { s: input.value } })
+
+  if (nextSearch) {
+    posthog?.capture('search_executed', {
+      query_length: nextSearch.length,
+      has_filters: false,
+    })
+  }
+
+  router.replace({ query: { s: nextSearch } })
 }
 
 async function fetch(page: number) {
@@ -34,6 +45,7 @@ async function fetch(page: number) {
   }
   catch (e: any) {
     error.value = e
+    posthog?.captureException(e)
   }
 }
 

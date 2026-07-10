@@ -2,6 +2,8 @@
 import type { MediaType } from '~/types'
 import { QUERY_LIST } from '~/constants/lists'
 
+const posthog = usePostHog()
+
 const route = useRoute()
 const type = computed(() => route.params.type as MediaType || 'movie')
 
@@ -26,6 +28,7 @@ const AsyncWrapper = defineComponent({
       <NuxtLink 
         :to="`/${type}/${item.id}`"
         :aria-label="`View ${item.title || item.name}`"
+        @click="posthog?.capture('hero_media_opened', { media_id: String(item.id), media_type: type, source: 'home_hero' })"
       >
         <MediaHero :item="item" />
       </NuxtLink>

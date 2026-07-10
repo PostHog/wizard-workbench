@@ -1,3 +1,5 @@
+import { hashUserId } from '~/utils/posthog-user'
+
 export const useAuth = () => {
   const cookie = useCookie<string | null>('auth-user', {
     httpOnly: false,
@@ -10,6 +12,7 @@ export const useAuth = () => {
   const isAuthenticated = computed(() => !!user.value)
 
   const login = async (username: string, password: string) => {
+    const posthog = usePostHog()
     if (!username?.trim() || !password?.trim()) {
       throw new Error('Username and password are required')
     }
@@ -23,6 +26,12 @@ export const useAuth = () => {
       if (response.success) {
         user.value = response.user
         cookie.value = response.user
+        const distinctId = await hashUserId(response.user)
+        posthog?.identify(distinctId)
+        posthog?.capture('login_submitted', {
+          auth_method: 'password',
+          login_state: 'success',
+        })
         await navigateTo('/')
       }
       
@@ -33,12 +42,17 @@ export const useAuth = () => {
   }
 
   const logout = async () => {
+    const posthog = usePostHog()
     try {
       await $fetch('/api/auth/logout', { method: 'POST' })
     } catch (error) {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error)
     } finally {
+      posthog?.capture('user_logged_out', {
+        logout_state: 'completed',
+      })
+      posthog?.reset()
       user.value = null
       cookie.value = null
       await navigateTo('/login')

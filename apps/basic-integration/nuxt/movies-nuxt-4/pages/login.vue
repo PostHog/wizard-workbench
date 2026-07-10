@@ -3,6 +3,7 @@ const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+const posthog = usePostHog()
 const { login } = useAuth()
 
 const handleLogin = async () => {
@@ -13,6 +14,7 @@ const handleLogin = async () => {
     await login(username.value, password.value)
   } catch (e: any) {
     error.value = e.message || 'Login failed'
+    posthog?.captureException(e)
   } finally {
     loading.value = false
   }

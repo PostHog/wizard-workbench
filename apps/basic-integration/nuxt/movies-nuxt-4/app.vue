@@ -1,9 +1,19 @@
 <script setup>
 import '@unocss/reset/tailwind.css'
+import { hashUserId } from '~/utils/posthog-user'
 
 const route = useRoute()
-const { isAuthenticated } = useAuth()
+const { isAuthenticated, user } = useAuth()
+const posthog = usePostHog()
 const showNavBar = computed(() => isAuthenticated.value && route.path !== '/login')
+
+watchEffect(async () => {
+  if (!user.value)
+    return
+
+  const distinctId = await hashUserId(user.value)
+  posthog?.identify(distinctId)
+})
 
 useHead({
   htmlAttrs: {
