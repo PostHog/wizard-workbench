@@ -66,10 +66,20 @@ import Layout from '../layouts/Layout.astro';
     const data = Object.fromEntries(formData.entries());
 
     try {
+      const sessionId = window.posthog?.get_session_id?.() || '';
+      const distinctId = window.posthog?.get_distinct_id?.() || '';
+
+      window.posthog?.capture('contact_form_submitted', {
+        interest: data.interest,
+        has_company: Boolean(data.company),
+      });
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-PostHog-Session-Id': sessionId,
+          'X-PostHog-Distinct-Id': distinctId,
         },
         body: JSON.stringify(data),
       });
