@@ -6,10 +6,43 @@ import {
 } from "$env/static/public"
 import { createServerClient } from "@supabase/ssr"
 import { createClient, type AMREntry } from "@supabase/supabase-js"
-import type { Handle } from "@sveltejs/kit"
+import type { Handle, HandleServerError } from "@sveltejs/kit"
 import { sequence } from "@sveltejs/kit/hooks"
+import { getDistinctId, getPostHogServer } from "$lib/server/posthog"
 
 export const supabase: Handle = async ({ event, resolve }) => {
+  const { pathname } = event.url
+
+  if (pathname.startsWith("/ingest")) {
+    const useAssetHost = pathname.startsWith("/ingest/static/") || pathname.startsWith("/ingest/array/")
+    const hostname = useAssetHost ? "us-assets.i.posthog.com" : "us.i.posthog.com"
+
+    const url = new URL(event.request.url)
+    url.protocol = "https:"
+    url.hostname = hostname
+    url.port = "443"
+    url.pathname = pathname.replace(/^\/ingest/, "")
+
+    const headers = new Headers(event.request.headers)
+    headers.set("host", hostname)
+    headers.set("accept-encoding", "")
+
+    const clientIp = event.request.headers.get("x-forwarded-for") || event.getClientAddress()
+    if (clientIp) {
+      headers.set("x-forwarded-for", clientIp)
+    }
+
+    const response = await fetch(url.toString(), {
+      method: event.request.method,
+      headers,
+      body: event.request.body,
+      // @ts-expect-error - duplex is required for streaming request bodies
+      duplex: "half",
+    })
+
+    return response
+  }
+
   event.locals.supabase = createServerClient(
     PUBLIC_SUPABASE_URL,
     PUBLIC_SUPABASE_ANON_KEY,
@@ -100,8 +133,35 @@ const authGuard: Handle = async ({ event, resolve }) => {
   const { session, user } = await event.locals.safeGetSession()
   event.locals.session = session
   event.locals.user = user
+  event.locals.posthogDistinctId = getDistinctId(user?.id)
+  event.locals.posthogSessionId = session?.access_token ?? undefined
 
-  return resolve(event)
+  return resolve(event, {
+    filterSerializedResponseHeaders(name) {
+      return (
+        name === "content-range" ||
+        name === "x-supabase-api-version" ||
+        name === "x-posthog-distinct-id" ||
+        name === "x-posthog-session-id"
+      )
+    },
+    transformPageChunk: ({ html }) => html,
+  })
 }
 
 export const handle: Handle = sequence(supabase, authGuard)
+
+export const handleError: HandleServerError = async ({ error, event, status, message }) => {
+  const posthog = getPostHogServer()
+
+  posthog.captureException(error, event.locals.posthogDistinctId || "server", {
+    path: event.url.pathname,
+    status,
+    message,
+  })
+
+  return {
+    message,
+    status,
+  }
+}

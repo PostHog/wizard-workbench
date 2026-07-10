@@ -1,4 +1,4 @@
-import { Session, SupabaseClient, type AMREntry } from "@supabase/supabase-js"
+import { Session, SupabaseClient, User, type AMREntry } from "@supabase/supabase-js"
 import { Database } from "./DatabaseDefinitions"
 
 // See https://kit.svelte.dev/docs/types#app
@@ -8,6 +8,8 @@ declare global {
     interface Locals {
       supabase: SupabaseClient<Database>
       supabaseServiceRole: SupabaseClient<Database>
+      posthogDistinctId?: string
+      posthogSessionId?: string
       safeGetSession: () => Promise<{
         session: Session | null
         user: User | null

@@ -8,6 +8,7 @@
   }
 
   let { children }: Props = $props()
+
 </script>
 
 {#if $navigating}

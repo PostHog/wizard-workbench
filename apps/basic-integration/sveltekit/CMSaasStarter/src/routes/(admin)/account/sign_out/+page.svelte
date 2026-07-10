@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation"
+  import posthog from "posthog-js"
   import { onMount } from "svelte"
 
   let { data } = $props()
@@ -9,6 +10,9 @@
 
   // on mount, sign out
   onMount(() => {
+    posthog.capture("user_signed_out")
+    posthog.reset()
+
     supabase.auth.signOut().then(({ error }) => {
       if (error) {
         message = "There was an issue signing out."

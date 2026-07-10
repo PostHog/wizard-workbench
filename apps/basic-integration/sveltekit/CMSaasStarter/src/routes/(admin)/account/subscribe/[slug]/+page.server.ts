@@ -6,6 +6,7 @@ import {
   getOrCreateCustomerId,
 } from "../../subscription_helpers.server"
 import type { PageServerLoad } from "./$types"
+import { getPostHogServer } from "$lib/server/posthog"
 const stripe = new Stripe(PRIVATE_STRIPE_API_KEY, { apiVersion: "2023-08-16" })
 
 export const load: PageServerLoad = async ({
@@ -44,6 +45,16 @@ export const load: PageServerLoad = async ({
 
   let checkoutUrl
   try {
+    const posthog = getPostHogServer()
+    posthog.capture({
+      distinctId: user.id,
+      event: "checkout_started",
+      properties: {
+        plan_slug: params.slug,
+        billing_entrypoint: url.pathname,
+      },
+    })
+
     const stripeSession = await stripe.checkout.sessions.create({
       line_items: [
         {

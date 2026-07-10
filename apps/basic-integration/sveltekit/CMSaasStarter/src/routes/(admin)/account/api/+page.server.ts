@@ -1,5 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
+import { getPostHogServer } from "$lib/server/posthog"
 import { WebsiteBaseUrl } from "../../../../config"
 
 export const actions = {
@@ -27,6 +28,15 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    const posthog = getPostHogServer()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_subscription_toggled",
+      properties: {
+        unsubscribed: newUnsubscribedStatus,
+      },
+    })
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -70,6 +80,15 @@ export const actions = {
         email,
       })
     }
+
+    const posthog = getPostHogServer()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_change_requested",
+      properties: {
+        has_pending_email_change: true,
+      },
+    })
 
     return {
       email,
@@ -172,6 +191,15 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogServer()
+    posthog.capture({
+      distinctId: user.id,
+      event: "password_changed",
+      properties: {
+        recovery_flow: Boolean(isRecoverySession),
+      },
+    })
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +248,15 @@ export const actions = {
         currentPassword,
       })
     }
+
+    const posthog = getPostHogServer()
+    posthog.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+      properties: {
+        deletion_confirmed: true,
+      },
+    })
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -303,6 +340,17 @@ export const actions = {
     // If the profile was just created, send an email to the user and admin
     const newProfile =
       priorProfile?.updated_at === null && priorProfileError === null
+
+    const posthog = getPostHogServer()
+    posthog.capture({
+      distinctId: user.id,
+      event: newProfile ? "profile_created" : "profile_updated",
+      properties: {
+        has_company_name: Boolean(companyName),
+        has_website: Boolean(website),
+      },
+    })
+
     if (newProfile) {
       await sendAdminEmail({
         subject: "Profile Created",

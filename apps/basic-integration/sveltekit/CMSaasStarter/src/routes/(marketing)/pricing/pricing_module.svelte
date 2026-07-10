@@ -1,5 +1,14 @@
 <script lang="ts">
+  import posthog from "posthog-js"
   import { pricingPlans } from "./pricing_plans"
+
+  const trackPricingClick = (planId: string, priceId?: string | null) => {
+    posthog.capture("pricing_cta_clicked", {
+      plan_id: planId,
+      has_stripe_price: Boolean(priceId),
+      cta_label: callToAction,
+    })
+  }
 
   interface Props {
     // Module context
@@ -57,6 +66,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() => trackPricingClick(plan.id, plan?.stripe_price_id)}
               >
                 {callToAction}
               </a>
