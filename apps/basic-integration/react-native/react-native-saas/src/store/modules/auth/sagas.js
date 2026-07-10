@@ -4,6 +4,13 @@ import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
+import {
+  identifySignedInUser,
+  resetPostHogUser,
+  trackEvent,
+  trackException,
+} from '../../../services/posthogTracking';
+import { sanitizeEmailDomain } from '../../../services/posthog';
 
 import {
   signInSuccess,
@@ -41,6 +48,11 @@ export function* signIn({ payload }) {
     if (email === 'demo@test.com' && password === 'demo') {
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
       yield put(signInSuccess(DEMO_TOKEN));
+      yield call(identifySignedInUser, { email, isDemoMode: true });
+      yield call(trackEvent, 'sign_in_succeeded', {
+        auth_method: 'demo_credentials',
+        email_domain: sanitizeEmailDomain(email),
+      });
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
       toast.showSuccess('Welcome to demo mode!');
@@ -53,13 +65,33 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+    yield call(identifySignedInUser, { email, isDemoMode: false });
+    yield call(trackEvent, 'sign_in_succeeded', {
+      auth_method: 'password',
+      email_domain: sanitizeEmailDomain(email),
+    });
     NavigationService.navigate('Main');
   } catch (err) {
+    yield call(trackEvent, 'sign_in_failed', {
+      auth_method: 'password',
+      email_domain: sanitizeEmailDomain(payload.email),
+    });
+    yield call(trackException, err, {
+      source: 'auth_sign_in',
+      email_domain: sanitizeEmailDomain(payload.email),
+    });
     toast.showError('Invalid credentials');
   }
 }
 
 export function* signOut() {
+  const activeTeam = yield select(state => state.teams.active);
+
+  yield call(trackEvent, 'signed_out', {
+    had_active_team: Boolean(activeTeam),
+    team_slug: activeTeam?.slug,
+  });
+  yield call(resetPostHogUser);
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }

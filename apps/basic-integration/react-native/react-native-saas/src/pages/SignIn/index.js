@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 
 import { signInRequest } from '~/store/modules/auth/actions';
+import { trackEvent } from '~/services/posthogTracking';
+import { sanitizeEmailDomain } from '~/services/posthog';
 
 import styles from './styles';
 
@@ -23,6 +25,11 @@ export default function SignIn() {
   let refPassword = useRef(null);
 
   function handleSubmit() {
+    trackEvent('sign_in_submitted', {
+      email_domain: sanitizeEmailDomain(email),
+      has_password: password.length > 0,
+    });
+
     dispatch(signInRequest(email, password));
   }
 
@@ -68,7 +75,11 @@ export default function SignIn() {
           }}
         />
 
-        <TouchableOpacity onPress={handleSubmit} style={styles.button}>
+        <TouchableOpacity
+          testID="sign-in-submit-button"
+          onPress={handleSubmit}
+          style={styles.button}
+        >
           <Text style={styles.buttonText}>Sign In</Text>
         </TouchableOpacity>
 

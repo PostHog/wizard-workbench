@@ -4,5 +4,6 @@
     "paths": {
       "~/*": ["*"]
     }
-  }
+  },
+  "include": ["src/**/*", "react-native-config.d.ts"]
 }

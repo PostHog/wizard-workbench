@@ -4,6 +4,7 @@ import { View, TouchableOpacity, Image, Text } from 'react-native';
 
 import { getTeamsRequest, selectTeam } from '~/store/modules/teams/actions';
 import { signOut } from '~/store/modules/auth/actions';
+import { trackEvent } from '~/services/posthogTracking';
 
 import NewTeam from '~/components/NewTeam';
 
@@ -25,8 +26,14 @@ export default function TeamSwitcher() {
         {teams.data.map(team => (
           <TouchableOpacity
             key={team.id}
+            testID={`team-switcher-option-${team.id}`}
             style={styles.teamContainer}
             onPress={() => {
+              trackEvent('team_selected', {
+                team_id: String(team.id),
+                team_slug: team.slug,
+                team_name_length: team.name.length,
+              });
               dispatch(selectTeam(team));
             }}
           >
@@ -40,6 +47,7 @@ export default function TeamSwitcher() {
         ))}
 
         <TouchableOpacity
+          testID="open-new-team-modal-button"
           style={styles.newTeam}
           onPress={() => setIsModalOpen(true)}
         >
@@ -54,6 +62,7 @@ export default function TeamSwitcher() {
 
       <View style={styles.signOutContainer}>
         <TouchableOpacity
+          testID="team-switcher-sign-out-button"
           style={styles.signOut}
           onPress={() => {
             dispatch(signOut());

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoTeams } from '../../../services/demoData';
+import { trackEvent, trackException } from '../../../services/posthogTracking';
 
 import { getTeamsSuccess, createTeamSuccess, closeTeamModal } from './actions';
 import { getProjectsRequest } from '../projects/actions';
@@ -24,8 +25,9 @@ export function* getTeams() {
 }
 
 export function* createTeam({ payload }) {
+  const { name } = payload;
+
   try {
-    const { name } = payload;
     const token = yield select(state => state.auth.token);
 
     // Demo mode
@@ -34,6 +36,12 @@ export function* createTeam({ payload }) {
       const newTeam = { id: Date.now(), name, slug };
       yield put(createTeamSuccess(newTeam));
       yield put(closeTeamModal());
+      yield call(trackEvent, 'team_created', {
+        creation_source: 'demo_mode',
+        team_id: String(newTeam.id),
+        team_slug: slug,
+        team_name_length: name.length,
+      });
       toast.showSuccess('Team created');
       return;
     }
@@ -42,9 +50,21 @@ export function* createTeam({ payload }) {
 
     yield put(createTeamSuccess(response.data));
     yield put(closeTeamModal());
+    yield call(trackEvent, 'team_created', {
+      creation_source: 'api',
+      team_id: String(response.data.id),
+      team_slug: response.data.slug,
+      team_name_length: name.length,
+    });
 
     toast.showSuccess('Team created');
   } catch (err) {
+    yield call(trackEvent, 'team_creation_failed', {
+      team_name_length: name.length,
+    });
+    yield call(trackException, err, {
+      source: 'team_create',
+    });
     toast.showError('Error creating team');
   }
 }

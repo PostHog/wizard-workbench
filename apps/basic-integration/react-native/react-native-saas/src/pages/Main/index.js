@@ -7,6 +7,7 @@ import TeamSwitcher from '../../components/TeamSwitcher';
 import Projects from '../../components/Projects';
 import Members from '../../components/Members';
 import { signOut } from '../../store/modules/auth/actions';
+import { trackEvent } from '../../services/posthogTracking';
 
 import styles from './styles';
 
@@ -21,8 +22,14 @@ export default function Main() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity
+            testID="open-team-switcher-button"
             hitSlop={{ top: 5, bottom: 5, left: 10, right: 10 }}
-            onPress={() => setLeftOpen(true)}
+            onPress={() => {
+              trackEvent('team_switcher_opened', {
+                has_active_team: Boolean(activeTeam),
+              });
+              setLeftOpen(true);
+            }}
           >
             <Text style={{ fontSize: 24 }}>☰</Text>
           </TouchableOpacity>
@@ -31,12 +38,19 @@ export default function Main() {
           </Text>
           <View style={{ flexDirection: 'row', gap: 16 }}>
             <TouchableOpacity
+              testID="open-members-drawer-button"
               hitSlop={{ top: 5, bottom: 5, left: 10, right: 10 }}
-              onPress={() => setRightOpen(true)}
+              onPress={() => {
+                trackEvent('members_drawer_opened', {
+                  has_active_team: Boolean(activeTeam),
+                });
+                setRightOpen(true);
+              }}
             >
               <Text style={{ fontSize: 20, color: '#fff' }}>👥</Text>
             </TouchableOpacity>
             <TouchableOpacity
+              testID="sign-out-button"
               hitSlop={{ top: 5, bottom: 5, left: 10, right: 10 }}
               onPress={() => dispatch(signOut())}
             >

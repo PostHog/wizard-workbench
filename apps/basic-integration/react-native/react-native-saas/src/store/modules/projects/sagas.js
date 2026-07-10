@@ -2,6 +2,7 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoProjects } from '../../../services/demoData';
+import { trackEvent, trackException } from '../../../services/posthogTracking';
 
 import {
   getProjectsSuccess,
@@ -28,6 +29,7 @@ export function* getProjects() {
 export function* createProject({ payload }) {
   const { title } = payload;
   const token = yield select(state => state.auth.token);
+  const team = yield select(state => state.teams.active);
 
   try {
     // Demo mode
@@ -35,6 +37,12 @@ export function* createProject({ payload }) {
       const newProject = { id: Date.now(), title };
       yield put(createProjectSuccess(newProject));
       yield put(closeProjectModal());
+      yield call(trackEvent, 'project_created', {
+        creation_source: 'demo_mode',
+        project_id: String(newProject.id),
+        project_title_length: title.length,
+        team_slug: team?.slug,
+      });
       toast.showSuccess('Project created');
       return;
     }
@@ -43,9 +51,23 @@ export function* createProject({ payload }) {
 
     yield put(createProjectSuccess(response.data));
     yield put(closeProjectModal());
+    yield call(trackEvent, 'project_created', {
+      creation_source: 'api',
+      project_id: String(response.data.id),
+      project_title_length: title.length,
+      team_slug: team?.slug,
+    });
 
     toast.showSuccess('Project created');
   } catch (err) {
+    yield call(trackEvent, 'project_creation_failed', {
+      project_title_length: title.length,
+      team_slug: team?.slug,
+    });
+    yield call(trackException, err, {
+      source: 'project_create',
+      team_slug: team?.slug,
+    });
     toast.showError('Error creating project');
   }
 }
