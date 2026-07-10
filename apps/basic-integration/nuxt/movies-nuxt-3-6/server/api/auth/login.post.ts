@@ -1,4 +1,11 @@
+import { PostHog } from 'posthog-node'
+import { getHeader } from 'h3'
+
 export default defineEventHandler(async (event) => {
+  const runtimeConfig = useRuntimeConfig()
+  const sessionId = getHeader(event, 'x-posthog-session-id')
+  const distinctId = getHeader(event, 'x-posthog-distinct-id')
+
   try {
     const body = await readBody(event)
     const { username, password } = body
@@ -13,7 +20,7 @@ export default defineEventHandler(async (event) => {
 
     // Demo auth: accepts any username and password
     const sanitizedUsername = username.trim()
-    
+
     setCookie(event, 'auth-user', sanitizedUsername, {
       httpOnly: false, // Allow client-side access for SSR
       secure: process.env.NODE_ENV === 'production',
@@ -21,14 +28,47 @@ export default defineEventHandler(async (event) => {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
+    const posthog = new PostHog(runtimeConfig.public.posthog.publicKey, {
+      host: runtimeConfig.public.posthog.host,
+      enableExceptionAutocapture: true,
+    })
+
+    await posthog.withContext(
+      { sessionId: sessionId ?? undefined, distinctId: distinctId ?? undefined },
+      async () => {
+        posthog.capture({
+          event: 'auth_login_succeeded',
+          distinctId: distinctId ?? sanitizedUsername,
+          properties: {
+            login_method: 'password',
+          },
+        })
+      },
+    )
+
+    await posthog.shutdown()
+
     return {
       success: true,
       user: sanitizedUsername,
     }
-  } catch (error: any) {
-    if (error.statusCode) {
-      throw error
+  }
+  catch (error: any) {
+    const posthog = new PostHog(runtimeConfig.public.posthog.publicKey, {
+      host: runtimeConfig.public.posthog.host,
+      enableExceptionAutocapture: true,
+    })
+
+    try {
+      await posthog.captureException(error, distinctId ?? 'anonymous')
+      await posthog.shutdown()
     }
+    catch {
+      await posthog.shutdown()
+    }
+
+    if (error.statusCode)
+      throw error
     throw createError({
       statusCode: 500,
       message: 'An error occurred during login',

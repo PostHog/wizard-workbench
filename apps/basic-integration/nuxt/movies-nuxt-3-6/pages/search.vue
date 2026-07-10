@@ -3,6 +3,7 @@ import type { Media } from '~/types'
 
 const route = useRoute()
 const router = useRouter()
+const { $posthog } = useNuxtApp()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
@@ -17,6 +18,10 @@ function search() {
   currentSearch.value = input.value.toString()
   count.value = undefined
   items.value = []
+  $posthog?.capture('search_performed', {
+    query_length: currentSearch.value.length,
+    result_type: 'mixed-media',
+  })
   router.replace({ query: { s: input.value } })
 }
 
@@ -30,6 +35,7 @@ async function fetch(page: number) {
   }
   catch (e: any) {
     error.value = e
+    $posthog?.captureException(e)
   }
 }
 
