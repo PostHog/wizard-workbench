@@ -8,6 +8,7 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import posthog from 'posthog-js';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
@@ -37,6 +38,10 @@ export default function GeneralPage() {
 
     startTransition(async () => {
       try {
+        posthog.capture('account_updated', {
+          source: 'general_settings'
+        });
+
         const response = await fetch('/api/account/update', {
           method: 'POST',
           headers: {
@@ -55,6 +60,7 @@ export default function GeneralPage() {
         setSuccess(result.success);
         setName(result.name);
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred. Please try again.');
       }
     });

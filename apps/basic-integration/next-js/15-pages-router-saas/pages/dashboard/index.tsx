@@ -11,6 +11,7 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import posthog from 'posthog-js';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -26,6 +27,10 @@ function ManageSubscription() {
 
   async function handleManageSubscription() {
     try {
+      posthog.capture('billing_portal_opened', {
+        source: 'team_settings'
+      });
+
       const response = await fetch('/api/stripe/customer-portal', {
         method: 'POST',
         headers: {
@@ -39,6 +44,7 @@ function ManageSubscription() {
         window.location.href = result.url;
       }
     } catch (err) {
+      posthog.captureException(err);
       console.error('Failed to open customer portal');
     }
   }
@@ -87,6 +93,11 @@ function TeamMembers() {
 
     startTransition(async () => {
       try {
+        posthog.capture('team_member_removed', {
+          source: 'team_settings',
+          member_id: memberId
+        });
+
         const response = await fetch('/api/team/remove-member', {
           method: 'POST',
           headers: {
@@ -105,6 +116,7 @@ function TeamMembers() {
         // Refresh team data
         mutate('/api/team');
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred');
       }
     });
@@ -192,6 +204,11 @@ function InviteTeamMember() {
 
     startTransition(async () => {
       try {
+        posthog.capture('team_member_invited', {
+          source: 'team_settings',
+          role: data.role
+        });
+
         const response = await fetch('/api/team/invite', {
           method: 'POST',
           headers: {
@@ -211,6 +228,7 @@ function InviteTeamMember() {
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred');
       }
     });

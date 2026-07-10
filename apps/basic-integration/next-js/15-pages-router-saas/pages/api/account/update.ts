@@ -9,6 +9,11 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import {
+  captureServerEvent,
+  captureServerException,
+  identifyServerUser
+} from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -41,9 +46,13 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  let distinctId: string | undefined;
+
   try {
     const sessionCookie = req.cookies.session;
     const user = await getUser(sessionCookie);
+
+    distinctId = user?.id?.toString();
 
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -61,11 +70,29 @@ export default async function handler(
 
     await Promise.all([
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
-      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
+      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT),
+      identifyServerUser({
+        distinctId: user.id.toString(),
+        properties: {
+          email,
+          name,
+          role: user.role,
+          team_id: userWithTeam?.teamId ?? null
+        }
+      }),
+      captureServerEvent({
+        distinctId: user.id.toString(),
+        event: 'account_updated',
+        properties: {
+          team_id: userWithTeam?.teamId ?? null,
+          updated_fields: ['name', 'email']
+        }
+      })
     ]);
 
     return res.status(200).json({ name, success: 'Account updated successfully.' });
   } catch (error) {
+    await captureServerException(error, distinctId);
     console.error('Update account error:', error);
     return res.status(500).json({ error: 'Failed to update account' });
   }

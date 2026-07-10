@@ -12,6 +12,11 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import {
+  captureServerEvent,
+  captureServerException,
+  identifyServerUser
+} from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -92,7 +97,25 @@ export default async function handler(
 
     await Promise.all([
       setSession(foundUser, res),
-      logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
+      logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN),
+      identifyServerUser({
+        distinctId: foundUser.id.toString(),
+        properties: {
+          email: foundUser.email,
+          name: foundUser.name,
+          role: foundUser.role,
+          team_id: foundTeam?.id ?? null
+        }
+      }),
+      captureServerEvent({
+        distinctId: foundUser.id.toString(),
+        event: 'user_signed_in',
+        properties: {
+          auth_method: 'password',
+          has_checkout_redirect: redirect === 'checkout',
+          team_id: foundTeam?.id ?? null
+        }
+      })
     ]);
 
     if (redirect === 'checkout' && foundTeam) {
@@ -101,11 +124,22 @@ export default async function handler(
         priceId,
         userId: foundUser.id
       });
-      return res.status(200).json(checkoutResult);
+      return res.status(200).json({
+        ...checkoutResult,
+        success: true,
+        distinctId: foundUser.id.toString(),
+        role: foundUser.role
+      });
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      distinctId: foundUser.id.toString(),
+      role: foundUser.role
+    });
   } catch (error) {
+    await captureServerException(error);
     console.error('Sign in error:', error);
     return res.status(500).json({ error: 'Failed to sign in. Please try again.' });
   }

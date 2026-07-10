@@ -16,6 +16,11 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import {
+  captureServerEvent,
+  captureServerException,
+  identifyServerUser
+} from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -163,7 +168,24 @@ export default async function handler(
     await Promise.all([
       db.insert(teamMembers).values(newTeamMember),
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
-      setSession(createdUser, res)
+      setSession(createdUser, res),
+      identifyServerUser({
+        distinctId: createdUser.id.toString(),
+        properties: {
+          email: createdUser.email,
+          role: createdUser.role,
+          team_id: teamId
+        }
+      }),
+      captureServerEvent({
+        distinctId: createdUser.id.toString(),
+        event: 'user_signed_up',
+        properties: {
+          auth_method: 'password',
+          team_id: teamId,
+          joined_via_invite: Boolean(inviteId)
+        }
+      })
     ]);
 
     if (redirect === 'checkout' && createdTeam) {
@@ -172,11 +194,24 @@ export default async function handler(
         priceId,
         userId: createdUser.id
       });
-      return res.status(200).json(checkoutResult);
+      return res.status(200).json({
+        ...checkoutResult,
+        success: true,
+        distinctId: createdUser.id.toString(),
+        role: createdUser.role,
+        signupSource: inviteId ? 'invite' : 'direct'
+      });
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      distinctId: createdUser.id.toString(),
+      role: createdUser.role,
+      signupSource: inviteId ? 'invite' : 'direct'
+    });
   } catch (error) {
+    await captureServerException(error);
     console.error('Sign up error:', error);
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });
   }
