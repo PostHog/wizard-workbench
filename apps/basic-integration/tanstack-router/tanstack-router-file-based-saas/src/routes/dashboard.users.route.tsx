@@ -1,6 +1,7 @@
 import { createFileRoute, Link, MatchRoute, Outlet, retainSearchParams, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
+import { usePostHog } from '@posthog/react'
 import { Spinner } from '../components/Spinner'
 import { fetchUsers } from '../utils/mockTodos'
 
@@ -33,6 +34,7 @@ const roles = ['Admin', 'Member', 'Viewer', 'Editor', 'Manager']
 
 function UsersComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
+  const posthog = usePostHog()
   const { usersView } = Route.useSearch()
   const { users } = Route.useLoaderData()
   const sortBy = usersView?.sortBy ?? 'name'
@@ -44,7 +46,8 @@ function UsersComponent() {
     setFilterDraft(filterBy ?? '')
   }, [filterBy])
 
-  const setSortBy = (sortBy: UsersViewSortBy) =>
+  const setSortBy = (sortBy: UsersViewSortBy) => {
+    posthog.capture('team_member_sort_changed', { sort_by: sortBy })
     navigate({
       search: (old) => {
         return {
@@ -57,6 +60,7 @@ function UsersComponent() {
       },
       replace: true,
     })
+  }
 
   React.useEffect(() => {
     navigate({
@@ -87,7 +91,12 @@ function UsersComponent() {
           </div>
           <input
             value={filterDraft}
-            onChange={(e) => setFilterDraft(e.target.value)}
+            onChange={(e) => {
+              setFilterDraft(e.target.value)
+              if (e.target.value) {
+                posthog.capture('team_member_searched', { query: e.target.value })
+              }
+            }}
             placeholder="Search team members..."
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
           />
