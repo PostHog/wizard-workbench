@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
+from accounts.apps import posthog_client
 from .models import Project, ActivityLog
 from .forms import ProjectForm
 
@@ -30,6 +31,13 @@ def index(request):
         days_remaining = (subscription.current_period_end - now).days
         metrics['days_remaining'] = max(0, days_remaining)
         metrics['plan_name'] = subscription.plan.name
+
+    posthog_client.capture('dashboard_viewed', properties={
+        'project_count': metrics['project_count'],
+        'active_projects': metrics['active_projects'],
+        'has_subscription': bool(subscription),
+        'activities_this_month': metrics['activities_this_month'],
+    })
 
     return render(request, 'dashboard/index.html', {
         'projects': projects,
@@ -60,6 +68,12 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            posthog_client.capture('project_created', properties={
+                'project_id': project.pk,
+                'has_description': bool(project.description),
+                'is_active': project.is_active,
+            })
+
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +97,12 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            posthog_client.capture('project_updated', properties={
+                'project_id': project.pk,
+                'has_description': bool(project.description),
+                'is_active': project.is_active,
+            })
+
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -104,6 +124,11 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+
+        posthog_client.capture('project_deleted', properties={
+            'project_id': project.pk,
+            'was_active': project.is_active,
+        })
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
