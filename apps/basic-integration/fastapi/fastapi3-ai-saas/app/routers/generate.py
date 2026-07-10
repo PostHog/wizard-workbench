@@ -1,12 +1,11 @@
 """AI generation API routes."""
 
-from typing import Annotated, Optional
-
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
+from app.posthog_utils import capture_user_event
 
 router = APIRouter(prefix="/api")
 
@@ -54,6 +53,15 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        capture_user_event(
+            current_user,
+            "generation_blocked_insufficient_credits",
+            {
+                "generation_type": request.generation_type,
+                "credits_needed": credits_needed,
+                "credits_balance": current_user.credits,
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -76,6 +84,19 @@ async def generate_content(
         credits_used=credits_needed,
     )
 
+    capture_user_event(
+        current_user,
+        "content_generated",
+        {
+            "generation_id": generation.id,
+            "generation_type": request.generation_type,
+            "credits_used": credits_needed,
+            "credits_remaining": current_user.credits,
+            "prompt_length": len(request.prompt),
+            "result_length": len(mock_content),
+        },
+    )
+
     return GenerateResponse(
         id=generation.id,
         content=mock_content,
@@ -88,6 +109,11 @@ async def generate_content(
 @router.get("/credits", response_model=CreditsResponse)
 async def get_credits(current_user: RequiredUser):
     """Get current user's credit balance."""
+    capture_user_event(
+        current_user,
+        "credits_viewed",
+        {"credits_balance": current_user.credits},
+    )
     return CreditsResponse(credits=current_user.credits)
 
 

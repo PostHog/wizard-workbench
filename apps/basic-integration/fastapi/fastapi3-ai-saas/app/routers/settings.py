@@ -2,12 +2,13 @@
 
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Form, Request, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Form, Request
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr
 
 from app.dependencies import DbSession, RequiredUser
+from app.posthog_utils import capture_user_event, identify_user
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 templates = Jinja2Templates(directory="app/templates")
@@ -32,6 +33,12 @@ async def settings_page(request: Request, current_user: RequiredUser, db: DbSess
         APIKey.user_id == current_user.id,
         APIKey.is_active == True
     ).count()
+
+    capture_user_event(
+        current_user,
+        "settings_viewed",
+        {"active_api_key_count": api_key_count, "credits_balance": current_user.credits},
+    )
 
     return templates.TemplateResponse(
         request,
@@ -64,8 +71,19 @@ async def update_settings(
         if existing:
             error = "Email already in use"
         else:
+            previous_email = current_user.email
             current_user.email = email
             db.commit()
+            identify_user(current_user)
+            capture_user_event(
+                current_user,
+                "email_updated",
+                {
+                    "email_changed": True,
+                    "previous_email_domain": previous_email.split("@")[-1] if "@" in previous_email else "unknown",
+                    "new_email_domain": email.split("@")[-1] if "@" in email else "unknown",
+                },
+            )
             success = "Settings updated successfully"
     else:
         success = "No changes made"
@@ -108,6 +126,11 @@ async def change_password(
     else:
         current_user.set_password(new_password)
         db.commit()
+        capture_user_event(
+            current_user,
+            "password_changed",
+            {"new_password_length": len(new_password)},
+        )
         success = "Password changed successfully"
 
     api_key_count = db.query(APIKey).filter(

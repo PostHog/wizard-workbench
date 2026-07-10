@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from app.config import get_settings
 from app.dependencies import CurrentUser, DbSession, RequiredUser, create_session_token
 from app.models import User
+from app.posthog_utils import capture_user_event, identify_user
 
 router = APIRouter()
 settings = get_settings()
@@ -34,6 +35,17 @@ async def login(
     user = User.authenticate(db, email, password)
 
     if user:
+        identify_user(user)
+        capture_user_event(
+            user,
+            "login_succeeded",
+            {
+                "login_method": "password",
+                "credits_balance": user.credits,
+                "is_active": user.is_active,
+            },
+        )
+
         response = RedirectResponse(url="/dashboard", status_code=302)
         response.set_cookie(
             key="session_token",
@@ -70,6 +82,16 @@ async def signup(
         )
 
     user = User.create(db, email=email, password=password, credits=settings.default_credits)
+    identify_user(user)
+    capture_user_event(
+        user,
+        "signup_completed",
+        {
+            "signup_method": "form",
+            "starting_credits": user.credits,
+            "is_active": user.is_active,
+        },
+    )
 
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(
@@ -84,6 +106,14 @@ async def signup(
 @router.get("/logout")
 async def logout(current_user: RequiredUser):
     """Logout user."""
+    capture_user_event(
+        current_user,
+        "logout_completed",
+        {
+            "credits_balance": current_user.credits,
+            "is_active": current_user.is_active,
+        },
+    )
     response = RedirectResponse(url="/", status_code=302)
     response.delete_cookie(key="session_token")
     return response

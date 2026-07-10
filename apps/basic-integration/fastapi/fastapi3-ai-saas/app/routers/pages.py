@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.dependencies import CurrentUser, DbSession, RequiredUser
 from app.models import Generation, APIKey, Activity
+from app.posthog_utils import capture_user_event
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -50,6 +51,18 @@ async def dashboard(request: Request, current_user: RequiredUser, db: DbSession)
         .order_by(Activity.created_at.desc())
         .limit(5)
         .all()
+    )
+
+    capture_user_event(
+        current_user,
+        "dashboard_viewed",
+        {
+            "credits_balance": current_user.credits,
+            "total_generations": total_generations,
+            "total_credits_used": total_credits_used,
+            "api_key_count": api_key_count,
+            "recent_activity_count": len(recent_activity),
+        },
     )
 
     return templates.TemplateResponse(

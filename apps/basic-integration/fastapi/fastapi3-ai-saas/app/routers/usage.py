@@ -1,13 +1,14 @@
 """Usage history and stats routes."""
 
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
+from app.posthog_utils import capture_user_event
 
 router = APIRouter(prefix="/api/usage", tags=["usage"])
 
@@ -76,6 +77,17 @@ async def get_usage(
         generations_today=len(today_gens),
         credits_used_today=sum(g.credits_used for g in today_gens),
         by_type=by_type,
+    )
+
+    capture_user_event(
+        current_user,
+        "usage_viewed",
+        {
+            "days_requested": days,
+            "total_generations": len(all_gens),
+            "total_credits_used": stats.total_credits_used,
+            "recent_generation_count": len(recent),
+        },
     )
 
     return UsageResponse(

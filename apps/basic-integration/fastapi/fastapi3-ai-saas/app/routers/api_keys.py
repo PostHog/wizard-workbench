@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import APIKey
+from app.posthog_utils import capture_user_event
 
 router = APIRouter(prefix="/api/keys", tags=["api-keys"])
 
@@ -66,12 +67,29 @@ async def create_api_key(
     ).count()
 
     if active_count >= 5:
+        capture_user_event(
+            current_user,
+            "api_key_creation_blocked_limit",
+            {
+                "active_key_count": active_count,
+                "max_active_keys": 5,
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Maximum of 5 active API keys allowed",
         )
 
     api_key = APIKey.create(db, user_id=current_user.id, name=request.name)
+    capture_user_event(
+        current_user,
+        "api_key_created",
+        {
+            "api_key_id": api_key.id,
+            "active_key_count": active_count + 1,
+            "name_length": len(request.name),
+        },
+    )
 
     return APIKeyCreated(
         id=api_key.id,
@@ -103,5 +121,17 @@ async def revoke_api_key(
 
     api_key.is_active = False
     db.commit()
+
+    capture_user_event(
+        current_user,
+        "api_key_revoked",
+        {
+            "api_key_id": api_key.id,
+            "active_key_count": db.query(APIKey).filter(
+                APIKey.user_id == current_user.id,
+                APIKey.is_active == True,
+            ).count(),
+        },
+    )
 
     return None
