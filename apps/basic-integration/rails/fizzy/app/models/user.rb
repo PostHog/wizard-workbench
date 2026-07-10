@@ -36,6 +36,19 @@ class User < ApplicationRecord
     update!(verified_at: Time.current) unless verified?
   end
 
+  def posthog_distinct_id
+    identity_id || id
+  end
+
+  def posthog_properties
+    {
+      account_id: account.external_account_id,
+      role: role,
+      verified: verified?,
+      signed_up_at: created_at&.iso8601
+    }
+  end
+
   private
     def close_remote_connections
       ActionCable.server.remote_connections.where(current_user: self).disconnect(reconnect: false)

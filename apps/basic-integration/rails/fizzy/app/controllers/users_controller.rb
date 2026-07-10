@@ -14,6 +14,21 @@ class UsersController < ApplicationController
 
   def update
     if @user.update(user_params)
+      PostHog.identify(
+        distinct_id: @user.posthog_distinct_id,
+        properties: @user.posthog_properties
+      )
+
+      PostHog.capture(
+        distinct_id: @user.posthog_distinct_id,
+        event: "user_profile_updated",
+        properties: {
+          account_id: Current.account.external_account_id,
+          changed_avatar: user_params[:avatar].present?,
+          changed_name: user_params[:name].present?
+        }
+      )
+
       respond_to do |format|
         format.html { redirect_to @user }
         format.json { head :no_content }

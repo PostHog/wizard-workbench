@@ -13,10 +13,23 @@ class Account::ImportsController < ApplicationController
     signup = Signup.new(identity: Current.identity, full_name: "Import", skip_account_seeding: true)
 
     if signup.complete
+      PostHog.capture(
+        distinct_id: signup.user.posthog_distinct_id,
+        event: "account_import_started",
+        properties: {
+          source: "upload",
+          account_id: signup.account.external_account_id,
+          has_file: params[:file].present?
+        }
+      )
+
       start_import(signup.account)
     else
       render :new, alert: "Couldn't create account."
     end
+  rescue => error
+    PostHog.capture_exception(error, Current.identity&.id || "account-import", action: "account_import_started")
+    raise
   end
 
   def show

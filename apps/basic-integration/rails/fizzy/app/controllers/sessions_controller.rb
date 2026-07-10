@@ -10,6 +10,14 @@ class SessionsController < ApplicationController
 
   def create
     if identity = Identity.find_by(email_address: email_address)
+      PostHog.capture(
+        distinct_id: identity.id,
+        event: "magic_link_requested",
+        properties: {
+          flow: "sign_in",
+          account_accepting_signups: Account.accepting_signups?
+        }
+      )
       sign_in identity
     elsif Account.accepting_signups?
       sign_up
@@ -52,6 +60,9 @@ class SessionsController < ApplicationController
 
     def sign_in(identity)
       redirect_to_session_magic_link identity.send_magic_link
+    rescue => error
+      PostHog.capture_exception(error, identity.id, action: "sign_in_magic_link")
+      raise
     end
 
     def sign_up
@@ -59,6 +70,16 @@ class SessionsController < ApplicationController
 
       if signup.valid?(:identity_creation)
         magic_link = signup.create_identity
+
+        PostHog.capture(
+          distinct_id: signup.identity.id,
+          event: "magic_link_requested",
+          properties: {
+            flow: "sign_up",
+            account_accepting_signups: true
+          }
+        )
+
         redirect_to_session_magic_link magic_link
       else
         respond_to do |format|
@@ -66,5 +87,8 @@ class SessionsController < ApplicationController
           format.json { render json: { message: "Something went wrong" }, status: :unprocessable_entity }
         end
       end
+    rescue => error
+      PostHog.capture_exception(error, signup.identity&.id || email_address, action: "sign_up_magic_link")
+      raise
     end
 end
