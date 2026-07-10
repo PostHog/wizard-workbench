@@ -7,6 +7,7 @@ import {
   updateTeamSubscription
 } from '@/lib/db/queries';
 import { stripeStub } from './stripe-stub';
+import { createPostHogServerClient } from '@/lib/posthog-server';
 
 // Use stub if STRIPE_MODE=stub or if STRIPE_SECRET_KEY is missing/invalid
 const useStub =
@@ -37,26 +38,50 @@ export async function createCheckoutSession({
     redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
   }
 
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1
-      }
-    ],
-    mode: 'subscription',
-    success_url: `${process.env.BASE_URL}/api/stripe/checkout?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.BASE_URL}/pricing`,
-    customer: team.stripeCustomerId || undefined,
-    client_reference_id: user.id.toString(),
-    allow_promotion_codes: true,
-    subscription_data: {
-      trial_period_days: 14
-    }
-  });
+  const posthog = createPostHogServerClient();
 
-  redirect(session.url!);
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1
+        }
+      ],
+      mode: 'subscription',
+      success_url: `${process.env.BASE_URL}/api/stripe/checkout?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.BASE_URL}/pricing`,
+      customer: team.stripeCustomerId || undefined,
+      client_reference_id: user.id.toString(),
+      allow_promotion_codes: true,
+      subscription_data: {
+        trial_period_days: 14
+      }
+    });
+
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'checkout_session_created',
+      properties: {
+        team_id: team.id,
+        price_id: priceId,
+        has_existing_customer: Boolean(team.stripeCustomerId),
+        checkout_session_id: session.id
+      }
+    });
+
+    await posthog.shutdown();
+    redirect(session.url!);
+  } catch (error) {
+    posthog.captureException(error, String(user.id), {
+      area: 'create_checkout_session',
+      team_id: team.id,
+      price_id: priceId
+    });
+    await posthog.shutdown();
+    throw error;
+  }
 }
 
 export async function createCustomerPortalSession(team: Team) {
@@ -141,21 +166,45 @@ export async function handleSubscriptionChange(
     return;
   }
 
-  if (status === 'active' || status === 'trialing') {
-    const plan = subscription.items.data[0]?.plan;
-    await updateTeamSubscription(team.id, {
-      stripeSubscriptionId: subscriptionId,
-      stripeProductId: plan?.product as string,
-      planName: (plan?.product as Stripe.Product).name,
-      subscriptionStatus: status
+  const posthog = createPostHogServerClient();
+
+  try {
+    if (status === 'active' || status === 'trialing') {
+      const plan = subscription.items.data[0]?.plan;
+      await updateTeamSubscription(team.id, {
+        stripeSubscriptionId: subscriptionId,
+        stripeProductId: plan?.product as string,
+        planName: (plan?.product as Stripe.Product).name,
+        subscriptionStatus: status
+      });
+    } else if (status === 'canceled' || status === 'unpaid') {
+      await updateTeamSubscription(team.id, {
+        stripeSubscriptionId: null,
+        stripeProductId: null,
+        planName: null,
+        subscriptionStatus: status
+      });
+    }
+
+    posthog.capture({
+      distinctId: String(team.id),
+      event: 'subscription_webhook_processed',
+      properties: {
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscriptionId,
+        subscription_status: status
+      }
     });
-  } else if (status === 'canceled' || status === 'unpaid') {
-    await updateTeamSubscription(team.id, {
-      stripeSubscriptionId: null,
-      stripeProductId: null,
-      planName: null,
-      subscriptionStatus: status
+
+    await posthog.shutdown();
+  } catch (error) {
+    posthog.captureException(error, String(team.id), {
+      area: 'handle_subscription_change',
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscriptionId
     });
+    await posthog.shutdown();
+    throw error;
   }
 }
 

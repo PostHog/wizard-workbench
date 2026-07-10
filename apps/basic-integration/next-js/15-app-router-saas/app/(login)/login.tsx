@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
 
@@ -19,6 +20,24 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get('email') || '');
+    const hasCheckoutIntent = Boolean(formData.get('redirect'));
+
+    posthog.capture(mode === 'signin' ? 'sign_in_submitted' : 'sign_up_submitted', {
+      has_checkout_intent: hasCheckoutIntent,
+      has_invitation: Boolean(formData.get('inviteId')),
+      source: 'auth_form'
+    });
+
+    if (email) {
+      posthog.setPersonPropertiesForFlags({
+        email: email.toLowerCase()
+      }, false);
+    }
+  };
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -34,7 +53,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
+        <form className="space-y-6" action={formAction} onSubmit={handleSubmit}>
           <input type="hidden" name="redirect" value={redirect || ''} />
           <input type="hidden" name="priceId" value={priceId || ''} />
           <input type="hidden" name="inviteId" value={inviteId || ''} />
