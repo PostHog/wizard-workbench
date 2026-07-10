@@ -157,7 +157,7 @@ async function main(): Promise<number> {
     const txtDest = join(dest, "frames");
     mkdirSync(txtDest, { recursive: true });
     for (const f of readdirSync(txtDir))
-      if (f.endsWith(".txt") && f !== "latest.txt")
+      if ((f.endsWith(".txt") || f.endsWith(".ans")) && f !== "latest.txt")
         cpSync(join(txtDir, f), join(txtDest, f));
   }
 
