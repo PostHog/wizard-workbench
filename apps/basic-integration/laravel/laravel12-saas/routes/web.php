@@ -3,11 +3,20 @@
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ThemeController;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'marketing.home')->name('home');
 Route::view('/features', 'marketing.features')->name('features');
-Route::view('/pricing', 'marketing.pricing')->name('pricing');
+Route::get('/pricing', function (PostHogService $posthog) {
+    $distinctId = auth()->check() ? auth()->user()->getPostHogDistinctId() : session()->getId();
+
+    $posthog->capture($distinctId, 'pricing_viewed', [
+        'is_authenticated' => auth()->check(),
+    ]);
+
+    return view('marketing.pricing');
+})->name('pricing');
 
 Route::get('/og/default.svg', function () {
     return response()
