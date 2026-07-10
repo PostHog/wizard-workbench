@@ -1,7 +1,8 @@
+import { usePostHog } from "@posthog/react";
 import { Link } from "react-router";
 import type { Route } from "./+types/products";
 import { getProducts, getCategories, type Product } from "../data/products";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext";
 
 export async function clientLoader() {
@@ -14,8 +15,16 @@ export async function clientLoader() {
 export default function Products({ loaderData }: Route.ComponentProps) {
   const { products, categories } = loaderData;
   const { addToCart } = useCart();
+  const posthog = usePostHog();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
+
+  useEffect(() => {
+    posthog?.capture("products_browsed", {
+      product_count: products.length,
+      category_count: categories.length,
+    });
+  }, [categories.length, posthog, products.length]);
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
@@ -23,10 +32,20 @@ export default function Products({ loaderData }: Route.ComponentProps) {
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
+
+    if (term.trim().length >= 2) {
+      posthog?.capture("product_search_used", {
+        search_term_length: term.trim().length,
+        selected_category: selectedCategory || "all",
+      });
+    }
   };
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
+    posthog?.capture("product_category_selected", {
+      category: category || "all",
+    });
   };
 
   const filteredProducts = products.filter((product) => {
