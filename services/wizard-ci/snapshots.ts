@@ -36,6 +36,7 @@ import {
   fmtElapsed,
   APPS_DIR,
 } from "./e2e.js";
+import { ansiToHtml } from "./ansi-html.js";
 import { findApps } from "./utils.js";
 import { commandToProgram, findCommandByAppPath } from "../wizard-commands.js";
 import { selectApp } from "../wizard-run/picker.js";
@@ -67,10 +68,6 @@ function readFrames(dir: string): Frame[] {
     .map((file) => ({ file, text: readFileSync(join(dir, file), "utf8") }));
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
 function reportHtml(
   name: string,
   frames: Frame[],
@@ -81,7 +78,7 @@ function reportHtml(
       (f) => `
     <section class="row" data-frame="${f.file}">
       <h2>${f.file} <span class="t">(${fmtElapsed(timings[f.file] ?? 0)})</span></h2>
-      <pre>${escapeHtml(f.text)}</pre>
+      <pre>${ansiToHtml(f.text)}</pre>
     </section>`,
     )
     .join("");
