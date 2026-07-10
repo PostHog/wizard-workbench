@@ -19,6 +19,7 @@ except ImportError:
     Redis = None
     rq = None
 from config import Config
+from app.posthog import init_posthog
 
 
 def get_locale():
@@ -38,6 +39,8 @@ babel = Babel()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    app.posthog_client = init_posthog(app)
 
     db.init_app(app)
     migrate.init_app(app, db)

@@ -9,6 +9,7 @@ from app.auth.forms import LoginForm, RegistrationForm, \
     ResetPasswordRequestForm, ResetPasswordForm
 from app.models import User
 from app.auth.email import send_password_reset_email
+from app.posthog import capture_event, set_user_properties
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -23,6 +24,11 @@ def login():
             flash(_('Invalid username or password'))
             return redirect(url_for('auth.login'))
         login_user(user, remember=form.remember_me.data)
+        set_user_properties(user)
+        capture_event('user_logged_in', distinct_id=user.id, properties={
+            'login_method': 'password',
+            'remember_me': form.remember_me.data,
+        })
         next_page = request.args.get('next')
         if not next_page or urlsplit(next_page).netloc != '':
             next_page = url_for('main.index')
@@ -46,6 +52,10 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
+        set_user_properties(user)
+        capture_event('user_registered', distinct_id=user.id, properties={
+            'registration_method': 'form',
+        })
         flash(_('Congratulations, you are now a registered user!'))
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html', title=_('Register'),

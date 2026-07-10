@@ -2,6 +2,7 @@ from flask import render_template, request
 from app import db
 from app.errors import bp
 from app.api.errors import error_response as api_error_response
+from app.posthog import capture_exception
 
 
 def wants_json_response():
@@ -19,6 +20,9 @@ def not_found_error(error):
 @bp.app_errorhandler(500)
 def internal_error(error):
     db.session.rollback()
+    error_id = capture_exception(error)
     if wants_json_response():
-        return api_error_response(500)
-    return render_template('errors/500.html'), 500
+        response, status_code = api_error_response(500)
+        response['error_id'] = error_id
+        return response, status_code
+    return render_template('errors/500.html', error_id=error_id), 500

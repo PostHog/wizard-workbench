@@ -5,6 +5,7 @@ from app.models import User
 from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request
+from app.posthog import capture_event, set_user_properties
 
 
 @bp.route('/users/<int:id>', methods=['GET'])
@@ -57,6 +58,10 @@ def create_user():
     user.from_dict(data, new_user=True)
     db.session.add(user)
     db.session.commit()
+    set_user_properties(user)
+    capture_event('api_user_created', distinct_id=user.id, properties={
+        'creation_source': 'api',
+    })
     return user.to_dict(), 201, {'Location': url_for('api.get_user',
                                                      id=user.id)}
 

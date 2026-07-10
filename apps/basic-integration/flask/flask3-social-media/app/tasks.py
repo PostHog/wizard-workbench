@@ -7,6 +7,7 @@ from rq import get_current_job
 from app import create_app, db
 from app.models import User, Post, Task
 from app.email import send_email
+from app.posthog import capture_event, capture_exception
 
 app = create_app()
 app.app_context().push()
@@ -26,6 +27,7 @@ def _set_task_progress(progress):
 
 
 def export_posts(user_id):
+    user = None
     try:
         user = db.session.get(User, user_id)
         _set_task_progress(0)
@@ -49,8 +51,15 @@ def export_posts(user_id):
             attachments=[('posts.json', 'application/json',
                           json.dumps({'posts': data}, indent=4))],
             sync=True)
-    except Exception:
+        capture_event('posts_export_completed', distinct_id=user.id,
+                      properties={'post_count': total_posts})
+    except Exception as e:
         _set_task_progress(100)
+        capture_exception(e, distinct_id=user.id if user else None,
+                          properties={'task_name': 'export_posts'})
+        capture_event('posts_export_failed',
+                      distinct_id=user.id if user else None,
+                      properties={'task_name': 'export_posts'})
         app.logger.error('Unhandled exception', exc_info=sys.exc_info())
     finally:
         _set_task_progress(100)

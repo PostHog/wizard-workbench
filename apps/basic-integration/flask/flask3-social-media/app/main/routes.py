@@ -11,6 +11,7 @@ from app.main.forms import EditProfileForm, EmptyForm, PostForm, SearchForm, \
 from app.models import User, Post, Message, Notification
 from app.translate import translate
 from app.main import bp
+from app.posthog import capture_event, set_user_properties
 
 
 @bp.before_app_request
@@ -36,6 +37,10 @@ def index():
                     language=language)
         db.session.add(post)
         db.session.commit()
+        capture_event('post_created', distinct_id=current_user.id, properties={
+            'language': language or 'unknown',
+            'post_length': len(form.post.data),
+        })
         flash(_('Your post is now live!'))
         return redirect(url_for('main.index'))
     page = request.args.get('page', 1, type=int)
@@ -102,6 +107,10 @@ def edit_profile():
         current_user.username = form.username.data
         current_user.about_me = form.about_me.data
         db.session.commit()
+        set_user_properties(current_user)
+        capture_event('profile_updated', distinct_id=current_user.id, properties={
+            'about_me_length': len(current_user.about_me or ''),
+        })
         flash(_('Your changes have been saved.'))
         return redirect(url_for('main.edit_profile'))
     elif request.method == 'GET':
@@ -126,6 +135,9 @@ def follow(username):
             return redirect(url_for('main.user', username=username))
         current_user.follow(user)
         db.session.commit()
+        capture_event('user_followed', distinct_id=current_user.id, properties={
+            'target_user_id': str(user.id),
+        })
         flash(_('You are following %(username)s!', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -147,6 +159,9 @@ def unfollow(username):
             return redirect(url_for('main.user', username=username))
         current_user.unfollow(user)
         db.session.commit()
+        capture_event('user_unfollowed', distinct_id=current_user.id, properties={
+            'target_user_id': str(user.id),
+        })
         flash(_('You are not following %(username)s.', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -190,6 +205,10 @@ def send_message(recipient):
         user.add_notification('unread_message_count',
                               user.unread_message_count())
         db.session.commit()
+        capture_event('message_sent', distinct_id=current_user.id, properties={
+            'recipient_user_id': str(user.id),
+            'message_length': len(form.message.data),
+        })
         flash(_('Your message has been sent.'))
         return redirect(url_for('main.user', username=recipient))
     return render_template('send_message.html', title=_('Send Message'),
@@ -224,6 +243,9 @@ def export_posts():
     else:
         current_user.launch_task('export_posts', _('Exporting posts...'))
         db.session.commit()
+        capture_event('posts_export_requested', distinct_id=current_user.id, properties={
+            'has_email': bool(current_user.email),
+        })
     return redirect(url_for('main.user', username=current_user.username))
 
 
