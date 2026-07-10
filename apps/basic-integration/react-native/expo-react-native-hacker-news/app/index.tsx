@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
+import { usePostHog } from "posthog-react-native";
 
 import { Posts } from "@/components/posts/Posts";
 import { Option, StoriesSelect } from "@/components/Select";
@@ -14,6 +15,15 @@ import { Colors } from "@/constants/Colors";
 
 export default function HomeScreen() {
   const [storyType, setStoryType] = useState<StoryType>("topstories");
+  const posthog = usePostHog();
+
+  const handleStoryTypeChange = (nextStoryType: StoryType) => {
+    posthog.capture("story_feed_changed", {
+      story_type: nextStoryType,
+      previous_story_type: storyType,
+    });
+    setStoryType(nextStoryType);
+  };
 
   const storyOptions: Option[] = useMemo(() => {
     return storyTypes.map(({ label, type }) => ({
@@ -41,7 +51,7 @@ export default function HomeScreen() {
       <Posts storyType={storyType} />
       <StoriesSelect
         value={storyType}
-        onChange={setStoryType}
+        onChange={handleStoryTypeChange}
         options={storyOptions}
       />
     </>

@@ -1,7 +1,8 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useEffect, useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { FlatList, ListRenderItem, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePostHog } from "posthog-react-native";
 
 import { Post } from "@/components/posts/Post";
 import { Spinner } from "@/components/Spinner";
@@ -17,6 +18,8 @@ type Props = Pick<User, "id" | "submitted"> & {
 
 export const Activities = ({ id, submitted, children }: Props) => {
   const { bottom } = useSafeAreaInsets();
+  const posthog = usePostHog();
+  const hasCapturedActivitiesLoaded = useRef(false);
   const { data, hasNextPage, isLoading, isFetchingNextPage, fetchNextPage } =
     useInfiniteQuery({
       queryKey: [id, "activities"],
@@ -48,6 +51,17 @@ export const Activities = ({ id, submitted, children }: Props) => {
       .flat()
       .filter(({ dead, deleted }) => dead !== true && deleted !== true);
   }, [data]);
+
+  useEffect(() => {
+    if (activities && !hasCapturedActivitiesLoaded.current) {
+      posthog.capture("user_activity_loaded", {
+        user_id: id,
+        activity_count: activities.length,
+        has_more_activities: Boolean(hasNextPage),
+      });
+      hasCapturedActivitiesLoaded.current = true;
+    }
+  }, [activities, hasNextPage, id, posthog]);
 
   return (
     <FlatList

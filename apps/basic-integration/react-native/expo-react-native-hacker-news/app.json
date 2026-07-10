@@ -31,6 +31,10 @@
     "plugins": [
       "expo-router"
     ],
+    "extra": {
+      "posthogProjectToken": "${EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN}",
+      "posthogHost": "${EXPO_PUBLIC_POSTHOG_HOST}"
+    },
     "experiments": {
       "typedRoutes": true
     }

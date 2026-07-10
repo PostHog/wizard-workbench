@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { FlatList, ListRenderItem, View } from "react-native";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { usePostHog } from "posthog-react-native";
 
 import { Post } from "@/components/posts/Post";
 import { Spinner } from "@/components/Spinner";
@@ -26,6 +27,9 @@ const ItemSeparatorComponent = () => (
 );
 
 export const Posts = ({ storyType }: { storyType: StoryType }) => {
+  const posthog = usePostHog();
+  const hasCapturedFeedLoaded = useRef(false);
+
   const storyListQuery = useQuery({
     queryKey: ["storyIds", storyType],
     queryFn: async () => {
@@ -71,6 +75,20 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
       .filter(({ dead, deleted }) => dead !== true && deleted !== true);
   }, [data]);
 
+  useEffect(() => {
+    hasCapturedFeedLoaded.current = false;
+  }, [storyType]);
+
+  useEffect(() => {
+    if (posts?.length && !hasCapturedFeedLoaded.current) {
+      posthog.capture("story_feed_loaded", {
+        story_type: storyType,
+        loaded_count: posts.length,
+      });
+      hasCapturedFeedLoaded.current = true;
+    }
+  }, [posthog, posts, storyType]);
+
   return (
     <FlatList
       indicatorStyle="black"
@@ -78,7 +96,13 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
       data={posts}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage) {
+          posthog.capture("story_feed_scrolled", {
+            story_type: storyType,
+            loaded_count: posts?.length || 0,
+          });
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}
