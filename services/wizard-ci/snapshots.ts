@@ -71,6 +71,103 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function hex2(n: number): string {
+  return Math.max(0, Math.min(255, n)).toString(16).padStart(2, "0");
+}
+
+/** xterm 256-color index → #rrggbb (16 base + 6×6×6 cube + 24 greys). */
+function xterm256(n: number): string {
+  const base = [
+    "000000", "800000", "008000", "808000", "000080", "800080", "008080", "c0c0c0",
+    "808080", "ff0000", "00ff00", "ffff00", "0000ff", "ff00ff", "00ffff", "ffffff",
+  ];
+  if (n < 16) return `#${base[n]}`;
+  if (n < 232) {
+    const i = n - 16;
+    const l = [0, 95, 135, 175, 215, 255];
+    return `#${hex2(l[Math.floor(i / 36) % 6])}${hex2(l[Math.floor(i / 6) % 6])}${hex2(l[i % 6])}`;
+  }
+  const v = 8 + (n - 232) * 10;
+  return `#${hex2(v)}${hex2(v)}${hex2(v)}`;
+}
+
+/**
+ * Render a terminal frame (with SGR escape sequences) to styled HTML.
+ *
+ * Frames captured as `.ans` carry real ANSI colour codes; escaping them as
+ * plain text prints the raw escapes. This walks the SGR subset the wizard TUI
+ * emits — reset, bold, dim, reverse, and 256-colour fg/bg — into `<span>`s, and
+ * drops any other escape sequence. Plain `.txt` frames pass through unstyled.
+ */
+function ansiToHtml(s: string): string {
+  const DEFAULT_FG = "#c9d1d9";
+  const DEFAULT_BG = "#010409";
+  let fg: string | null = null;
+  let bg: string | null = null;
+  let bold = false;
+  let dim = false;
+  let italic = false;
+  let underline = false;
+  let reverse = false;
+
+  const openSpan = (): string => {
+    let efg = fg ?? DEFAULT_FG;
+    let ebg = bg ?? DEFAULT_BG;
+    if (reverse) [efg, ebg] = [ebg, efg];
+    const styles = [`color:${efg}`];
+    if (bg !== null || reverse) styles.push(`background:${ebg}`);
+    if (bold) styles.push("font-weight:600");
+    if (dim) styles.push("opacity:.6");
+    if (italic) styles.push("font-style:italic");
+    if (underline) styles.push("text-decoration:underline");
+    return `<span style="${styles.join(";")}">`;
+  };
+
+  const apply = (params: number[]): void => {
+    for (let i = 0; i < params.length; i++) {
+      const p = params[i];
+      if (p === 0) { fg = bg = null; bold = dim = italic = underline = reverse = false; }
+      else if (p === 1) bold = true;
+      else if (p === 2) dim = true;
+      else if (p === 3) italic = true;
+      else if (p === 4) underline = true;
+      else if (p === 7) reverse = true;
+      else if (p === 22) bold = dim = false;
+      else if (p === 23) italic = false;
+      else if (p === 24) underline = false;
+      else if (p === 27) reverse = false;
+      else if (p === 39) fg = null;
+      else if (p === 49) bg = null;
+      else if (p === 38 || p === 48) {
+        const mode = params[i + 1];
+        let color: string | null = null;
+        if (mode === 5) { color = xterm256(params[i + 2]); i += 2; }
+        else if (mode === 2) { color = `#${hex2(params[i + 2])}${hex2(params[i + 3])}${hex2(params[i + 4])}`; i += 4; }
+        if (p === 38) fg = color; else bg = color;
+      }
+      else if (p >= 30 && p <= 37) fg = xterm256(p - 30);
+      else if (p >= 90 && p <= 97) fg = xterm256(p - 90 + 8);
+      else if (p >= 40 && p <= 47) bg = xterm256(p - 40);
+      else if (p >= 100 && p <= 107) bg = xterm256(p - 100 + 8);
+    }
+  };
+
+  // Match SGR (…m), OSC (…BEL), and any other escape sequence; only SGR restyles.
+  const re = /\x1b\[([0-9;?]*)([@-~])|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?|\x1b[@-Z\\-_]/g;
+  let out = openSpan();
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s)) !== null) {
+    out += escapeHtml(s.slice(last, m.index));
+    last = re.lastIndex;
+    if (m[2] === "m") {
+      apply(m[1] === "" ? [0] : m[1].split(";").map((n) => parseInt(n, 10) || 0));
+      out += `</span>${openSpan()}`;
+    }
+  }
+  return `${out}${escapeHtml(s.slice(last))}</span>`;
+}
+
 function reportHtml(
   name: string,
   frames: Frame[],
@@ -80,8 +177,8 @@ function reportHtml(
     .map(
       (f) => `
     <section class="row" data-frame="${f.file}">
-      <h2>${f.file} <span class="t">(${fmtElapsed(timings[f.file] ?? 0)})</span></h2>
-      <pre>${escapeHtml(f.text)}</pre>
+      <h2>${escapeHtml(f.file)} <span class="t">(${fmtElapsed(timings[f.file] ?? 0)})</span></h2>
+      <pre>${ansiToHtml(f.text)}</pre>
     </section>`,
     )
     .join("");
