@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
-    "hono": "^4.6.14"
+    "@posthog/mcp": "^0.9.0",
+    "hono": "^4.6.14",
+    "posthog-node": "^5.40.0"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

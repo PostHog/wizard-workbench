@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
+import { PostHogMCP } from '@posthog/mcp'
 
 // A custom MCP dispatcher: it speaks the MCP JSON-RPC protocol directly over
 // HTTP with no `@modelcontextprotocol/sdk` server object to wrap. The
@@ -45,12 +46,22 @@ function runTool(name: string, args: Record<string, unknown>): unknown {
     }
 }
 
+const posthog = new PostHogMCP(process.env.POSTHOG_PROJECT_TOKEN!, {
+    host: process.env.POSTHOG_HOST,
+})
+
 const app = new Hono()
 
 app.post('/mcp', async (c) => {
     const body = (await c.req.json()) as JsonRpcRequest
 
     if (body.method === 'initialize') {
+        const initParams = body.params ?? {}
+        const clientInfo = initParams.clientInfo as { name?: string; version?: string } | undefined
+        posthog.captureInitialize({
+            clientName: clientInfo?.name,
+            clientVersion: clientInfo?.version,
+        })
         return c.json({
             jsonrpc: '2.0',
             id: body.id,
@@ -70,9 +81,25 @@ app.post('/mcp', async (c) => {
         const params = body.params ?? {}
         const name = String(params.name)
         const args = (params.arguments as Record<string, unknown>) ?? {}
+        const start = Date.now()
         try {
-            return c.json({ jsonrpc: '2.0', id: body.id, result: runTool(name, args) })
+            const result = runTool(name, args)
+            posthog.captureToolCall({
+                toolName: name,
+                parameters: args,
+                response: result,
+                durationMs: Date.now() - start,
+                isError: false,
+            })
+            return c.json({ jsonrpc: '2.0', id: body.id, result })
         } catch (err) {
+            posthog.captureToolCall({
+                toolName: name,
+                parameters: args,
+                durationMs: Date.now() - start,
+                isError: true,
+                error: err instanceof Error ? err : new Error(String(err)),
+            })
             return c.json({
                 jsonrpc: '2.0',
                 id: body.id,
@@ -86,6 +113,11 @@ app.post('/mcp', async (c) => {
         id: body.id,
         error: { code: -32601, message: `method not found: ${body.method}` },
     })
+})
+
+process.on('SIGTERM', async () => {
+    await posthog.shutdown()
+    process.exit(0)
 })
 
 serve({ fetch: app.fetch, port: 3000 })
