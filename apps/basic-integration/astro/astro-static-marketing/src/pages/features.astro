@@ -61,4 +61,8 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
   </section>
+
+<script is:inline>
+  window.posthog?.capture('features_viewed');
+</script>
 </Layout>

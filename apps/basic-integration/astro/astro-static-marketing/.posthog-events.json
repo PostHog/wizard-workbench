@@ -1,0 +1,47 @@
+[
+  {
+    "event_name": "free_trial_started",
+    "event_description": "User clicked the 'Start Free Trial' button in the hero section on the home page.",
+    "file": "src/pages/index.astro"
+  },
+  {
+    "event_name": "docs_link_clicked",
+    "event_description": "User clicked the 'Read the Docs' CTA button in the hero section on the home page.",
+    "file": "src/pages/index.astro"
+  },
+  {
+    "event_name": "get_started_clicked",
+    "event_description": "User clicked the 'Get Started' CTA in the navigation bar.",
+    "file": "src/components/Navigation.astro"
+  },
+  {
+    "event_name": "pricing_viewed",
+    "event_description": "User landed on the pricing page, marking the top of the purchase conversion funnel.",
+    "file": "src/pages/pricing.astro"
+  },
+  {
+    "event_name": "pricing_plan_selected",
+    "event_description": "User clicked a CTA button on a pricing plan card (plan property: 'starter' or 'pro').",
+    "file": "src/pages/pricing.astro"
+  },
+  {
+    "event_name": "contact_sales_clicked",
+    "event_description": "User clicked 'Contact Sales' on the Enterprise pricing card.",
+    "file": "src/pages/pricing.astro"
+  },
+  {
+    "event_name": "docs_section_clicked",
+    "event_description": "User clicked on a documentation section card (section property identifies which section).",
+    "file": "src/pages/docs.astro"
+  },
+  {
+    "event_name": "features_viewed",
+    "event_description": "User landed on the features page, indicating product interest at the top of the funnel.",
+    "file": "src/pages/features.astro"
+  },
+  {
+    "event_name": "footer_link_clicked",
+    "event_description": "User clicked a link in the site footer (label property identifies which link).",
+    "file": "src/components/Footer.astro"
+  }
+]
