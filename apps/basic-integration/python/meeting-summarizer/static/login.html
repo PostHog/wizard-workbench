@@ -15,6 +15,7 @@
             </div>
 
             <form id="loginForm">
+                <input type="hidden" id="posthogDistinctId" name="posthog_distinct_id">
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" name="email" required autofocus placeholder="Enter your email">
@@ -40,6 +41,7 @@
         </div>
     </div>
 
+    <script src="/posthog-config.js"></script>
     <script src="/login.js"></script>
 </body>
 </html>

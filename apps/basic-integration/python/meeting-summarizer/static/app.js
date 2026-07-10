@@ -1,4 +1,26 @@
 // AI Meeting Summarizer - Dashboard JavaScript
+async function initializePostHog() {
+    if (!window.__POSTHOG_CONFIG__?.apiKey || !window.__POSTHOG_CONFIG__?.host || window.posthog?.__loaded) {
+        return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `${window.__POSTHOG_CONFIG__.host}/static/array.js`;
+    script.async = true;
+
+    await new Promise((resolve, reject) => {
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+
+    window.posthog.init(window.__POSTHOG_CONFIG__.apiKey, {
+        api_host: window.__POSTHOG_CONFIG__.host,
+        person_profiles: 'identified_only'
+    });
+    window.posthog.__loaded = true;
+}
+
 const meetingsList = document.getElementById('meetingsList');
 const uploadMeetingBtn = document.getElementById('uploadMeetingBtn');
 const uploadModal = document.getElementById('uploadModal');
@@ -13,6 +35,7 @@ let currentMeetingId = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+    await initializePostHog();
     await checkAuth();
     await loadMeetings();
     await loadStats();
@@ -50,6 +73,14 @@ async function checkAuth() {
 
         currentUser = data.user;
         document.getElementById('currentUser').textContent = currentUser.email;
+
+        if (window.posthog && currentUser?.id) {
+            window.posthog.identify(currentUser.id, {
+                email: currentUser.email,
+                username: currentUser.username,
+                full_name: currentUser.full_name || undefined
+            });
+        }
     } catch (error) {
         window.location.href = '/';
     }
@@ -73,6 +104,12 @@ async function loadMeetings() {
         const data = await response.json();
 
         allMeetings = data.meetings;
+
+        if (window.posthog && currentUser?.id) {
+            window.posthog.capture('meetings_viewed', {
+                meetings_count: allMeetings.length
+            });
+        }
 
         if (allMeetings.length === 0) {
             meetingsList.innerHTML = '<p class="empty-state">No meetings yet. Upload your first meeting transcript to get started!</p>';
@@ -179,6 +216,13 @@ async function handleUploadMeeting(e) {
     submitBtn.disabled = true;
 
     try {
+        if (window.posthog && currentUser?.id) {
+            window.posthog.capture('meeting_upload_submitted', {
+                title_length: (meetingData.title || '').length,
+                transcript_length: (meetingData.transcript || '').length
+            });
+        }
+
         const response = await fetch('/api/meetings', {
             method: 'POST',
             headers: {
@@ -220,6 +264,16 @@ async function openMeetingDetail(meetingId) {
         }
 
         currentMeetingId = meetingId;
+
+        if (window.posthog && currentUser?.id) {
+            window.posthog.capture('meeting_detail_viewed', {
+                meeting_id: meetingId,
+                action_items_count: meeting.action_items.length,
+                key_points_count: meeting.key_points.length,
+                participants_count: meeting.participants.length,
+                duration_minutes: meeting.duration_minutes
+            });
+        }
 
         // Populate modal
         document.getElementById('detailTitle').textContent = meeting.title;
