@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { environment } from '@env/environment';
 import { AuthenticationService } from '@app/auth/services/authentication.service';
+import { PostHogService } from '@shared/services';
 
 @Component({
   selector: 'app-login',
@@ -18,6 +19,7 @@ export class LoginComponent {
   private readonly authService = inject(AuthenticationService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly posthogService = inject(PostHogService);
 
   version: string | null = environment.version;
 
@@ -39,6 +41,18 @@ export class LoginComponent {
       .subscribe({
         next: (res) => {
           if (res) {
+            this.posthogService.posthog.identify(res.id, {
+              email: res.email,
+              username: res.username,
+              first_name: res.firstName,
+              last_name: res.lastName,
+              roles: res.roles,
+            });
+            this.posthogService.posthog.capture('user_logged_in', {
+              is_mobile_login: false,
+              redirect_target: this.route.snapshot.queryParams['redirect'] || '/dashboard',
+              roles_count: res.roles?.length ?? 0,
+            });
             console.log('Login successful');
             this.router.navigate([this.route.snapshot.queryParams['redirect'] || '/dashboard'], { replaceUrl: true }).then(() => {
               console.log('Navigated to dashboard');
@@ -46,7 +60,11 @@ export class LoginComponent {
           }
         },
         error: (error) => {
-          // Handle the error here
+          this.posthogService.posthog.captureException(error);
+          this.posthogService.posthog.capture('user_login_failed', {
+            is_mobile_login: false,
+            has_redirect_target: Boolean(this.route.snapshot.queryParams['redirect']),
+          });
         },
       });
   }

@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/cor
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CredentialsService } from '@app/auth/services/credentials.service';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { PostHogService } from '@shared/services';
 
 @Component({
   selector: 'app-account-settings',
@@ -191,6 +192,7 @@ export class AccountSettingsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly credentialsService = inject(CredentialsService);
   private readonly toast = inject(HotToastService);
+  private readonly posthogService = inject(PostHogService);
 
   accountForm: FormGroup = this.fb.group({
     firstName: [''],
@@ -213,6 +215,15 @@ export class AccountSettingsComponent implements OnInit {
   }
 
   onSave() {
+    const formValue = this.accountForm.getRawValue();
+    const updatedFields = Object.entries(formValue).filter(([, value]) => Boolean(value)).map(([key]) => key);
+
+    this.posthogService.posthog.capture('account_settings_saved', {
+      updated_fields: updatedFields,
+      updated_fields_count: updatedFields.length,
+      password_change_requested: Boolean(formValue.newPassword),
+    });
+
     this.toast.success('Account settings saved');
   }
 }

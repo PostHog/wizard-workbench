@@ -40,4 +40,8 @@ export class CredentialsService {
       localStorage.removeItem(credentialsKey);
     }
   }
+
+  syncCredentials(credentials: Credentials) {
+    this.credentials.set(credentials);
+  }
 }
