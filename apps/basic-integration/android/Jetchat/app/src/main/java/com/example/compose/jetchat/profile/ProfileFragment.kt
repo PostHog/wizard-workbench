@@ -19,6 +19,7 @@ package com.example.compose.jetchat.profile
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
+import com.posthog.PostHog
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.clickable
@@ -59,6 +60,10 @@ class ProfileFragment : Fragment() {
         // Consider using safe args plugin
         val userId = arguments?.getString("userId")
         viewModel.setUserId(userId)
+        PostHog.capture(
+            "profile_viewed",
+            mapOf("profile_user_id" to (userId ?: "unknown")),
+        )
     }
 
     @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)

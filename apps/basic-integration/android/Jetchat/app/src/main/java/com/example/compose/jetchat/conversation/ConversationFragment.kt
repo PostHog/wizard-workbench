@@ -31,13 +31,18 @@ import com.example.compose.jetchat.MainViewModel
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 
 class ConversationFragment : Fragment() {
 
     private val activityViewModel: MainViewModel by activityViewModels()
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
-        ComposeView(inflater.context).apply {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        PostHog.capture(
+            "chat_channel_opened",
+            mapOf("channel" to exampleUiState.channelName),
+        )
+        return ComposeView(inflater.context).apply {
             layoutParams = LayoutParams(MATCH_PARENT, MATCH_PARENT)
 
             setContent {
@@ -59,4 +64,5 @@ class ConversationFragment : Fragment() {
                 }
             }
         }
+    }
 }
