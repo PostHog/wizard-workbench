@@ -1,6 +1,12 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_PROJECT_TOKEN, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const app = new Koa();
 const router = new Router();
@@ -34,6 +40,16 @@ router.post('/api/folders', (ctx) => {
   folders.push(folder);
   ctx.status = 201;
   ctx.body = folder;
+
+  const distinctId = ctx.ip || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'folder_created',
+    properties: {
+      folder_id: folder.id,
+      folder_name: folder.name,
+    },
+  });
 });
 
 router.delete('/api/folders/:id', (ctx) => {
@@ -58,8 +74,19 @@ router.delete('/api/folders/:id', (ctx) => {
     if (note.folder_id === folderId) note.folder_id = 1;
   }
 
+  const deletedFolder = folders[index];
   folders.splice(index, 1);
   ctx.status = 204;
+
+  const distinctId = ctx.ip || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'folder_deleted',
+    properties: {
+      folder_id: folderId,
+      folder_name: deletedFolder.name,
+    },
+  });
 });
 
 // --- Notes ---
@@ -76,6 +103,16 @@ router.get('/api/notes', (ctx) => {
     result = result.filter(
       (n) => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)
     );
+
+    const distinctId = ctx.ip || 'anonymous';
+    posthog.capture({
+      distinctId,
+      event: 'note_searched',
+      properties: {
+        results_count: result.length,
+        folder_id: folder_id ? parseInt(folder_id, 10) : null,
+      },
+    });
   }
 
   ctx.body = { notes: result, total: result.length };
@@ -107,6 +144,17 @@ router.post('/api/notes', (ctx) => {
   notes.push(note);
   ctx.status = 201;
   ctx.body = note;
+
+  const distinctId = ctx.ip || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note_created',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+      has_content: note.content.length > 0,
+    },
+  });
 });
 
 router.get('/api/notes/:id', (ctx) => {
@@ -144,6 +192,17 @@ router.patch('/api/notes/:id', (ctx) => {
   note.updated_at = new Date().toISOString();
 
   ctx.body = note;
+
+  const distinctId = ctx.ip || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note_updated',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+      updated_fields: Object.keys(ctx.request.body).filter((k) => ['title', 'content', 'folder_id'].includes(k)),
+    },
+  });
 });
 
 router.delete('/api/notes/:id', (ctx) => {
@@ -155,8 +214,24 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
+  const deletedNote = notes[index];
   notes.splice(index, 1);
   ctx.status = 204;
+
+  const distinctId = ctx.ip || 'anonymous';
+  posthog.capture({
+    distinctId,
+    event: 'note_deleted',
+    properties: {
+      note_id: deletedNote.id,
+      folder_id: deletedNote.folder_id,
+    },
+  });
+});
+
+app.on('error', (err, ctx) => {
+  const distinctId = ctx?.ip || 'anonymous';
+  posthog.captureException(err, distinctId);
 });
 
 app.use(router.routes());
@@ -166,4 +241,14 @@ const PORT = process.env.PORT || 3003;
 
 app.listen(PORT, () => {
   console.log(`Koa notes API running on http://localhost:${PORT}`);
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
 });
