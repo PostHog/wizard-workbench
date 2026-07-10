@@ -45,6 +45,7 @@ class ConversationFragment : Fragment() {
                     ConversationContent(
                         uiState = exampleUiState,
                         navigateToProfile = { user ->
+                            activityViewModel.captureProfileOpened(user, "conversation")
                             // Click callback
                             val bundle = bundleOf("userId" to user)
                             findNavController().navigate(

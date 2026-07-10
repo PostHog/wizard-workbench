@@ -86,11 +86,15 @@ class NavActivity : AppCompatActivity() {
                             },
                         )
                     } else {
+                        LaunchedEffect(loggedInUsername) {
+                            loggedInUsername?.let(viewModel::identifyUser)
+                        }
                         JetchatDrawer(
                             drawerState = drawerState,
                             selectedMenu = selectedMenu,
                             username = loggedInUsername,
                             onChatClicked = {
+                                viewModel.captureChatOpened(it)
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
                                     drawerState.close()
@@ -98,6 +102,7 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onProfileClicked = {
+                                viewModel.captureProfileOpened(it, "drawer")
                                 val bundle = bundleOf("userId" to it)
                                 findNavController().navigate(R.id.nav_profile, bundle)
                                 scope.launch {

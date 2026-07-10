@@ -19,6 +19,7 @@
 package com.example.compose.jetchat.conversation
 
 import android.content.ClipDescription
+import com.example.compose.jetchat.PostHogAnalytics
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -200,6 +201,14 @@ fun ConversationContent(
             )
             UserInput(
                 onMessageSent = { content ->
+                    PostHogAnalytics.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "channel" to uiState.channelName,
+                            "message_length" to content.length,
+                            "contains_link" to content.contains("http"),
+                        ),
+                    )
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )

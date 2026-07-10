@@ -17,6 +17,7 @@
 package com.example.compose.jetchat.components
 
 import android.appwidget.AppWidgetManager
+import com.example.compose.jetchat.PostHogAnalytics
 import android.content.ComponentName
 import android.content.Context
 import android.os.Build
@@ -318,7 +319,12 @@ private fun WidgetDiscoverability() {
 private fun addWidgetToHomeScreen(context: Context) {
     val appWidgetManager = AppWidgetManager.getInstance(context)
     val myProvider = ComponentName(context, WidgetReceiver::class.java)
-    if (widgetAddingIsSupported(context)) {
+    val supported = widgetAddingIsSupported(context)
+    PostHogAnalytics.capture(
+        event = "widget_pin_requested",
+        properties = mapOf("widget_pin_supported" to supported),
+    )
+    if (supported) {
         appWidgetManager.requestPinAppWidget(myProvider, null, null)
     }
 }

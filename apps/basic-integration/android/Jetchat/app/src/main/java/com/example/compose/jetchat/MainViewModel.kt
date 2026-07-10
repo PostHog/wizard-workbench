@@ -20,6 +20,8 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+private const val DEFAULT_CHANNEL = "composers"
+
 /**
  * Used to communicate between screens.
  */
@@ -37,6 +39,27 @@ class MainViewModel : ViewModel() {
         _drawerShouldBeOpened.value = true
     }
 
+    fun identifyUser(username: String) {
+        PostHogAnalytics.identify(username)
+    }
+
+    fun captureChatOpened(channel: String) {
+        PostHogAnalytics.capture(
+            event = "chat_opened",
+            properties = mapOf("channel" to channel),
+        )
+    }
+
+    fun captureProfileOpened(userId: String, source: String) {
+        PostHogAnalytics.capture(
+            event = "profile_opened",
+            properties = mapOf(
+                "profile_user_id" to userId,
+                "source" to source,
+            ),
+        )
+    }
+
     fun resetOpenDrawerAction() {
         _drawerShouldBeOpened.value = false
     }
@@ -44,9 +67,26 @@ class MainViewModel : ViewModel() {
     fun login(username: String, password: String) {
         // Fake auth: accept anything; password intentionally unused.
         _loggedInUsername.value = username
+        PostHogAnalytics.identify(username)
+        PostHogAnalytics.capture(
+            event = "user_logged_in",
+            properties = mapOf(
+                "login_method" to "password",
+                "has_password_input" to password.isNotBlank(),
+            ),
+        )
     }
 
     fun logout() {
+        val username = _loggedInUsername.value
+        PostHogAnalytics.capture(
+            event = "user_logged_out",
+            properties = mapOf(
+                "had_active_session" to (username != null),
+                "previous_channel" to DEFAULT_CHANNEL,
+            ),
+        )
+        PostHogAnalytics.reset()
         _loggedInUsername.value = null
     }
 }

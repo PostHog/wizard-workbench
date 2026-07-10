@@ -17,6 +17,7 @@
 package com.example.compose.jetchat.profile
 
 import androidx.compose.foundation.Image
+import com.example.compose.jetchat.PostHogAnalytics
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -111,7 +112,16 @@ fun ProfileScreen(
                 .align(Alignment.BottomEnd)
                 // Offsets the FAB to compensate for CoordinatorLayout collapsing behaviour
                 .offset(y = ((-100).dp)),
-            onFabClicked = { functionalityNotAvailablePopupShown = true },
+            onFabClicked = {
+                PostHogAnalytics.capture(
+                    event = "profile_action_clicked",
+                    properties = mapOf(
+                        "user_is_me" to userData.isMe(),
+                        "profile_user_id" to userData.userId,
+                    ),
+                )
+                functionalityNotAvailablePopupShown = true
+            },
         )
     }
 }

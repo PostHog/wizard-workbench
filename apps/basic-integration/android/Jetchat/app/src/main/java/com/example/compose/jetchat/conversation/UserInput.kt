@@ -17,6 +17,7 @@
 package com.example.compose.jetchat.conversation
 
 import androidx.activity.compose.BackHandler
+import com.example.compose.jetchat.PostHogAnalytics
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -284,31 +285,61 @@ private fun UserInputSelector(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.EMOJI) },
+            onClick = {
+                PostHogAnalytics.capture(
+                    event = "composer_tool_selected",
+                    properties = mapOf("tool" to InputSelector.EMOJI.name.lowercase()),
+                )
+                onSelectorChange(InputSelector.EMOJI)
+            },
             icon = painterResource(id = R.drawable.ic_mood),
             selected = currentInputSelector == InputSelector.EMOJI,
             description = stringResource(id = R.string.emoji_selector_bt_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.DM) },
+            onClick = {
+                PostHogAnalytics.capture(
+                    event = "composer_tool_selected",
+                    properties = mapOf("tool" to InputSelector.DM.name.lowercase()),
+                )
+                onSelectorChange(InputSelector.DM)
+            },
             icon = painterResource(id = R.drawable.ic_alternate_email),
             selected = currentInputSelector == InputSelector.DM,
             description = stringResource(id = R.string.dm_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.PICTURE) },
+            onClick = {
+                PostHogAnalytics.capture(
+                    event = "composer_tool_selected",
+                    properties = mapOf("tool" to InputSelector.PICTURE.name.lowercase()),
+                )
+                onSelectorChange(InputSelector.PICTURE)
+            },
             icon = painterResource(id = R.drawable.ic_insert_photo),
             selected = currentInputSelector == InputSelector.PICTURE,
             description = stringResource(id = R.string.attach_photo_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.MAP) },
+            onClick = {
+                PostHogAnalytics.capture(
+                    event = "composer_tool_selected",
+                    properties = mapOf("tool" to InputSelector.MAP.name.lowercase()),
+                )
+                onSelectorChange(InputSelector.MAP)
+            },
             icon = painterResource(id = R.drawable.ic_place),
             selected = currentInputSelector == InputSelector.MAP,
             description = stringResource(id = R.string.map_selector_desc),
         )
         InputSelectorButton(
-            onClick = { onSelectorChange(InputSelector.PHONE) },
+            onClick = {
+                PostHogAnalytics.capture(
+                    event = "composer_tool_selected",
+                    properties = mapOf("tool" to InputSelector.PHONE.name.lowercase()),
+                )
+                onSelectorChange(InputSelector.PHONE)
+            },
             icon = painterResource(id = R.drawable.ic_duo),
             selected = currentInputSelector == InputSelector.PHONE,
             description = stringResource(id = R.string.videochat_desc),
@@ -445,14 +476,28 @@ private fun UserInputText(
             onSwipeOffsetChange = { offset -> swipeOffset.value = offset },
             onStartRecording = {
                 val consumed = !isRecordingMessage
+                if (consumed) {
+                    PostHogAnalytics.capture(
+                        event = "message_recording_started",
+                        properties = mapOf("input_mode" to "voice"),
+                    )
+                }
                 isRecordingMessage = true
                 consumed
             },
             onFinishRecording = {
                 // handle end of recording
+                PostHogAnalytics.capture(
+                    event = "message_recording_finished",
+                    properties = mapOf("input_mode" to "voice"),
+                )
                 isRecordingMessage = false
             },
             onCancelRecording = {
+                PostHogAnalytics.capture(
+                    event = "message_recording_canceled",
+                    properties = mapOf("input_mode" to "voice"),
+                )
                 isRecordingMessage = false
             },
             modifier = Modifier.fillMaxHeight(),
@@ -648,7 +693,13 @@ fun EmojiTable(onTextAdded: (String) -> Unit, modifier: Modifier = Modifier) {
                     val emoji = emojis[x * EMOJI_COLUMNS + y]
                     Text(
                         modifier = Modifier
-                            .clickable(onClick = { onTextAdded(emoji) })
+                            .clickable(onClick = {
+                                PostHogAnalytics.capture(
+                                    event = "emoji_inserted",
+                                    properties = mapOf("emoji" to emoji),
+                                )
+                                onTextAdded(emoji)
+                            })
                             .sizeIn(minWidth = 42.dp, minHeight = 42.dp)
                             .padding(8.dp),
                         text = emoji,
