@@ -15,12 +15,7 @@ export function StatCard({ metric }: StatCardProps) {
         {metric.value.toLocaleString()}
         {metric.unit && <span className="text-lg ml-1">{metric.unit}</span>}
       </div>
-      <div
-        className={cn(
-          'text-sm flex items-center gap-1',
-          isPositive ? 'text-green-500' : 'text-red-500'
-        )}
-      >
+      <div className={cn('text-sm flex items-center gap-1', isPositive ? 'text-green-500' : 'text-red-500')}>
         <span>{isPositive ? '↑' : '↓'}</span>
         <span>
           {Math.abs(metric.change).toLocaleString()}
@@ -31,4 +26,3 @@ export function StatCard({ metric }: StatCardProps) {
     </div>
   )
 }
-

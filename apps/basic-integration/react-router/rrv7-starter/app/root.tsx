@@ -9,6 +9,7 @@ import {
   type MetaFunction,
 } from 'react-router'
 import gsap from 'gsap'
+import { usePostHog } from '@posthog/react'
 
 import type { Route } from './+types/root'
 import stylesheet from './app.css?url'
@@ -17,9 +18,10 @@ import routes from './routes'
 import { promisifyGsap } from '@/lib/gsap'
 import { Header } from '@/components/header'
 import Footer from '@/components/footer'
-import { SITE_URL, WATERMARK } from '@/lib/constants'
+import { SITE_URL } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+import { posthogMiddleware } from '@/lib/posthog-middleware'
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -43,6 +45,8 @@ export const links: Route.LinksFunction = () =>
       },
     ],
   })
+
+export const middleware: Route.MiddlewareFunction[] = [posthogMiddleware]
 
 export const loader = () => {
   return {}
@@ -132,9 +136,20 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog()
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined
+
+  posthog?.captureException(error, {
+    error_boundary: 'root',
+    pathname: typeof window !== 'undefined' ? window.location.pathname : undefined,
+  })
+  posthog?.capture('app_error_captured', {
+    error_boundary: 'root',
+    error_type: error instanceof Error ? error.name : 'route_error',
+    is_route_error_response: isRouteErrorResponse(error),
+  })
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? '404' : 'Error'

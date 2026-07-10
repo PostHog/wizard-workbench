@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { usePostHog } from '@posthog/react'
 import cn from '@/lib/utils/cn'
 import { SITE_URL } from '@/lib/constants'
 import { generateMeta, mergeMeta } from '@/lib/utils/meta'
@@ -45,7 +47,15 @@ const Paragraph = ({ children, className }: { children: React.ReactNode; classNa
 }
 
 export default function About() {
+  const posthog = usePostHog()
   const { message, signature } = usePreservedLoaderData<typeof loader>()
+
+  useEffect(() => {
+    posthog?.capture('about_message_viewed', {
+      message_length: message.length,
+      signature_length: signature.length,
+    })
+  }, [message, posthog, signature])
 
   return (
     <div className="selection:bg-primary selection:text-background flex flex-col items-center h-screen pt-header">
