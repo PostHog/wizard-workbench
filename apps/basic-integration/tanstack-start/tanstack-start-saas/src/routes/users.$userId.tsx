@@ -1,4 +1,6 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { NotFound } from '~/components/NotFound'
 import { UserErrorComponent } from '~/components/UserError'
 import { fetchUser } from '../utils/users'
@@ -13,6 +15,7 @@ export const Route = createFileRoute('/users/$userId')({
 })
 
 function UserComponent() {
+  const posthog = usePostHog()
   const user = Route.useLoaderData()
   const roles = ['Admin', 'Developer', 'Designer', 'Manager', 'Analyst']
   const roleIndex = typeof user.id === 'number' ? user.id % roles.length : 0
@@ -21,6 +24,25 @@ function UserComponent() {
     .map((n) => n[0])
     .join('')
     .slice(0, 2)
+
+  useEffect(() => {
+    const distinctId = `team-member-${user.id}`
+
+    posthog.identify(distinctId, {
+      email: user.email,
+      name: user.name,
+      role: roles[roleIndex],
+      department: 'Engineering',
+      location: 'San Francisco, CA',
+    })
+
+    posthog.capture('team_member_viewed', {
+      user_id: user.id,
+      role: roles[roleIndex],
+      department: 'Engineering',
+      location: 'San Francisco, CA',
+    })
+  }, [posthog, roleIndex, roles, user.email, user.id, user.name])
 
   return (
     <div className="p-6">

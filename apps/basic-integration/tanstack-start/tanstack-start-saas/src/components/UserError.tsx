@@ -1,7 +1,15 @@
+import { usePostHog } from '@posthog/react'
 import { ErrorComponent, Link } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
+import { useEffect } from 'react'
 
 export function UserErrorComponent({ error }: ErrorComponentProps) {
+  const posthog = usePostHog()
+
+  useEffect(() => {
+    posthog.captureException(error)
+  }, [error, posthog])
+
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
       <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">

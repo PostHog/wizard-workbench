@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import {
   ErrorComponent,
   Link,
@@ -6,8 +7,10 @@ import {
   useRouter,
 } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
+import { useEffect } from 'react'
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
+  const posthog = usePostHog()
   const router = useRouter()
   const isRoot = useMatch({
     strict: false,
@@ -15,6 +18,10 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   })
 
   console.error('DefaultCatchBoundary Error:', error)
+
+  useEffect(() => {
+    posthog.captureException(error)
+  }, [error, posthog])
 
   return (
     <div className="min-w-0 flex-1 p-8 flex flex-col items-center justify-center">

@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { notFound } from '@tanstack/react-router'
+import { getPostHogClient } from '~/utils/posthog-server'
 
 export type Invoice = {
   id: number
@@ -106,7 +107,18 @@ export function deleteInvoice(id: number): boolean {
 // Server functions for route loaders
 export const fetchInvoices = createServerFn().handler(async () => {
   console.info('Fetching all invoices...')
-  return getAllInvoices()
+  const invoices = getAllInvoices()
+
+  getPostHogClient().capture({
+    distinctId: 'anonymous',
+    event: 'api_invoices_listed',
+    properties: {
+      invoice_count: invoices.length,
+      source: 'server_fn',
+    },
+  })
+
+  return invoices
 })
 
 export const fetchInvoice = createServerFn({ method: 'POST' })
@@ -121,6 +133,18 @@ export const fetchInvoice = createServerFn({ method: 'POST' })
     if (!invoice) {
       throw notFound()
     }
+
+    getPostHogClient().capture({
+      distinctId: `invoice-${invoice.id}`,
+      event: 'invoice_viewed_api',
+      properties: {
+        invoice_id: invoice.id,
+        amount: invoice.amount,
+        status: invoice.status,
+        source: 'server_fn',
+      },
+    })
+
     return invoice
   })
 
@@ -130,7 +154,30 @@ export const createInvoiceFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     console.info('Creating invoice...', data)
-    return createInvoice(data)
+
+    try {
+      const invoice = createInvoice(data)
+
+      getPostHogClient().capture({
+        distinctId: `invoice-${invoice.id}`,
+        event: 'invoice_created_api',
+        properties: {
+          invoice_id: invoice.id,
+          amount: invoice.amount,
+          has_description: Boolean(invoice.description),
+          status: invoice.status,
+          source: 'server_fn',
+        },
+      })
+
+      return invoice
+    } catch (error) {
+      getPostHogClient().captureException(error, 'anonymous', {
+        source: 'server_fn',
+        operation: 'create_invoice',
+      })
+      throw error
+    }
   })
 
 export const markInvoicePaid = createServerFn({ method: 'POST' })
@@ -145,5 +192,17 @@ export const markInvoicePaid = createServerFn({ method: 'POST' })
     if (!invoice) {
       throw new Error('Invoice not found')
     }
+
+    getPostHogClient().capture({
+      distinctId: `invoice-${invoice.id}`,
+      event: 'invoice_paid_api',
+      properties: {
+        invoice_id: invoice.id,
+        amount: invoice.amount,
+        status: invoice.status,
+        source: 'server_fn',
+      },
+    })
+
     return invoice
   })

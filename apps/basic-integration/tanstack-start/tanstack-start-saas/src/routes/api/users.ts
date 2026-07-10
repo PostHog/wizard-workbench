@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { createMiddleware } from '@tanstack/react-start'
 import type { User } from '~/utils/users'
+import { getPostHogClient } from '~/utils/posthog-server'
 
 const userLoggerMiddleware = createMiddleware().server(async ({ next }) => {
   console.info('In: /users')
@@ -53,6 +54,15 @@ export const Route = createFileRoute('/api/users')({
         const data = (await res.json()) as Array<User>
 
         const list = data.slice(0, 10)
+
+        getPostHogClient().capture({
+          distinctId: 'anonymous',
+          event: 'api_users_listed',
+          properties: {
+            member_count: list.length,
+            source: 'api',
+          },
+        })
 
         return Response.json(
           list.map((u) => ({ id: u.id, name: u.name, email: u.email })),
