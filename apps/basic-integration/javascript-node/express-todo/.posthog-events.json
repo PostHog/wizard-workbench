@@ -1,0 +1,17 @@
+[
+  {
+    "event_name": "todo created",
+    "event_description": "Fired when a user creates a new todo item via the POST /api/todos endpoint.",
+    "file": "index.js"
+  },
+  {
+    "event_name": "todo updated",
+    "event_description": "Fired when a user updates an existing todo item's title or completed status via the PATCH /api/todos/:id endpoint.",
+    "file": "index.js"
+  },
+  {
+    "event_name": "todo deleted",
+    "event_description": "Fired when a user deletes a todo item via the DELETE /api/todos/:id endpoint.",
+    "file": "index.js"
+  }
+]
