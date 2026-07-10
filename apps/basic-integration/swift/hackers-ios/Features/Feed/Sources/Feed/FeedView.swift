@@ -124,6 +124,11 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
         .onAppear {
             // Ensure the navigation store is set
             votingViewModel.navigationStore = navigationStore
+            PostHogAnalytics.capture("feed_viewed", properties: [
+                "feed_category": selectedPostType.rawValue,
+                "is_sidebar": isSidebar,
+                "has_active_search": viewModel.hasActiveSearch,
+            ])
         }
     }
 
@@ -348,7 +353,13 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
     @ViewBuilder
     private func postTypeMenuButton(for postType: Domain.PostType) -> some View {
         Button {
+            let previousType = selectedPostType
             selectedPostType = postType
+            PostHogAnalytics.capture("feed_category_changed", properties: [
+                "previous_category": previousType.rawValue,
+                "selected_category": postType.rawValue,
+                "is_sidebar": isSidebar,
+            ])
             Task {
                 await viewModel.changePostType(postType)
             }
@@ -365,6 +376,13 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
     }
 
     private func handleLinkTap(post: Domain.Post) {
+        PostHogAnalytics.capture("post_opened", properties: [
+            "post_id": post.id,
+            "post_type": post.type.rawValue,
+            "open_target": isHackerNewsItemURL(post.url) ? "comments" : "link",
+            "is_sidebar": isSidebar,
+        ])
+
         guard !isHackerNewsItemURL(post.url) else {
             navigationStore.showPost(post)
             return

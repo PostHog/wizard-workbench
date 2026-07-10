@@ -256,6 +256,12 @@ public final class FeedViewModel: @unchecked Sendable {
     @MainActor
     public func toggleBookmark(for post: Domain.Post) async -> Bool {
         let newState = await bookmarksController.toggle(post: post)
+        PostHogAnalytics.capture("bookmark_toggled", properties: [
+            "post_id": post.id,
+            "post_type": post.type.rawValue,
+            "is_bookmarked": newState,
+            "origin_feed_category": postType.rawValue,
+        ])
         await handleBookmarksUpdate(postId: post.id, isBookmarked: newState)
         return newState
     }
@@ -311,6 +317,11 @@ public final class FeedViewModel: @unchecked Sendable {
                 await MainActor.run {
                     self.searchResults = annotated
                     self.isSearchInProgress = false
+                    PostHogAnalytics.capture("search_performed", properties: [
+                        "query_length": currentQuery.count,
+                        "results_count": annotated.count,
+                        "feed_category": self.postType.rawValue,
+                    ])
                 }
             } catch {
                 if Task.isCancelled { return }

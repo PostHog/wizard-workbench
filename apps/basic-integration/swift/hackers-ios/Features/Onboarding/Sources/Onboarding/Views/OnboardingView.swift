@@ -6,6 +6,7 @@
 //
 
 import DesignSystem
+import Shared
 import SwiftUI
 
 public struct OnboardingView: View {
@@ -36,6 +37,12 @@ public struct OnboardingView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                PostHogAnalytics.capture("onboarding_viewed", properties: [
+                    "title": onboardingData.title,
+                    "items_count": onboardingData.items.count,
+                ])
+            }
             .navigationBarBackButtonHidden()
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

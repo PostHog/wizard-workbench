@@ -6,6 +6,7 @@
 //
 
 import Domain
+import Shared
 import SwiftUI
 
 @MainActor
@@ -63,6 +64,10 @@ public final class LoginViewModel {
             currentUsername = username
             return true
         } catch {
+            PostHogAnalytics.capture("login_failed", properties: [
+                "failure_reason": String(describing: error),
+                "username_provided": username.isEmpty == false,
+            ])
             showAlert = true
             password = ""
             return false

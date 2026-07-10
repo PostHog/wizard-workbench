@@ -63,6 +63,11 @@ public final class SupportViewModel: @unchecked Sendable {
             let products = try await supportUseCase.availableProducts()
             subscriptionProduct = products.first { $0.kind == .subscription }
             tipProducts = products.filter { $0.kind == .tip }
+            PostHogAnalytics.capture("support_products_loaded", properties: [
+                "products_count": products.count,
+                "tip_products_count": tipProducts.count,
+                "has_subscription": subscriptionProduct != nil,
+            ])
         } catch {
             alertInfo = AlertInfo(
                 title: "Unable to Load Products",
@@ -81,6 +86,12 @@ public final class SupportViewModel: @unchecked Sendable {
             do {
                 let result = try await self.supportUseCase.purchase(productId: product.id)
                 self.handle(result: result, for: product)
+                if result == .success {
+                    PostHogAnalytics.capture("support_purchase_completed", properties: [
+                        "product_id": product.id,
+                        "product_kind": String(describing: product.kind),
+                    ])
+                }
                 if result == .success, product.kind == .subscription {
                     self.isSubscribed = true
                 }
@@ -102,6 +113,11 @@ public final class SupportViewModel: @unchecked Sendable {
                 let result = try await self.supportUseCase.restorePurchases()
                 await self.updateSubscriptionStatus()
                 self.handleRestore(result: result)
+                if result == .success {
+                    PostHogAnalytics.capture("support_restore_completed", properties: [
+                        "is_subscribed": self.isSubscribed,
+                    ])
+                }
             } catch {
                 self.alertInfo = AlertInfo(
                     title: "Restore Failed",

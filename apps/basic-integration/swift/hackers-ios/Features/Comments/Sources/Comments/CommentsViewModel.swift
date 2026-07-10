@@ -162,6 +162,12 @@ public final class CommentsViewModel: @unchecked Sendable {
                 self.post?.commentsCount = commentCountExcludingStoryText
                 self.isPostLoading = false
                 self.onCommentsLoaded?(loadedComments)
+                PostHogAnalytics.capture("comments_viewed", properties: [
+                    "post_id": annotatedPost.id,
+                    "post_type": annotatedPost.type.rawValue,
+                    "comments_count": commentCountExcludingStoryText,
+                    "has_story_text": annotatedPost.text?.isEmpty == false,
+                ])
             }
 
             return loadedComments

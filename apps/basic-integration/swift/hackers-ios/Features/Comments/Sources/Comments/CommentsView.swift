@@ -188,6 +188,12 @@ public struct CommentsView<Store: NavigationStoreProtocol>: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             viewModel.toggleCommentVisibility(comment)
         }
+        PostHogAnalytics.capture("comment_visibility_toggled", properties: [
+            "comment_id": comment.id,
+            "comment_level": comment.level,
+            "was_visible": wasVisible,
+            "post_id": viewModel.post?.id ?? viewModel.postID,
+        ])
 
         if wasVisible, !isCommentVisibleOnScreen(comment) {
             Task { @MainActor in

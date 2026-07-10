@@ -23,7 +23,12 @@ public final class SessionService: AuthenticationServiceProtocol {
         Task { [weak self] in
             guard let self else { return }
             let user = await authenticationUseCase.getCurrentUser()
-            await MainActor.run { self.user = user }
+            await MainActor.run {
+                self.user = user
+                if let username = user?.username {
+                    PostHogAnalytics.identify(username: username)
+                }
+            }
         }
 
         logoutObserver = NotificationCenter.default.addObserver(
@@ -64,14 +69,28 @@ public final class SessionService: AuthenticationServiceProtocol {
     public func authenticate(username: String, password: String) async throws -> AuthenticationState {
         try await authenticationUseCase.authenticate(username: username, password: password)
         user = await authenticationUseCase.getCurrentUser()
+        PostHogAnalytics.identify(username: username)
+        PostHogAnalytics.capture("login_succeeded", properties: [
+            "authentication_state": "authenticated",
+        ])
         return .authenticated
     }
 
     public func unauthenticate() {
+        let wasAuthenticated = user != nil
         Task { [weak self] in
             guard let self else { return }
             try? await authenticationUseCase.logout()
-            await MainActor.run { self.user = nil }
+            await MainActor.run {
+                self.user = nil
+                if wasAuthenticated {
+                    PostHogAnalytics.capture("user_logged_out", properties: [
+                        "source": "session_service",
+                    ])
+                    PostHogAnalytics.flush()
+                    PostHogAnalytics.reset()
+                }
+            }
         }
     }
 
