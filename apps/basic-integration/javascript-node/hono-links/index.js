@@ -1,7 +1,21 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
 
 const app = new Hono();
+
+function getDistinctId(c) {
+  return c.req.header('x-posthog-distinct-id') || 'anonymous';
+}
+
+function getSessionId(c) {
+  return c.req.header('x-posthog-session-id') || undefined;
+}
 
 const links = [];
 let nextId = 1;
@@ -26,6 +40,20 @@ app.get('/api/links', (c) => {
     result = result.filter((l) => l.favorite);
   }
 
+  if (tag || search || favoritesOnly === 'true') {
+    posthog.capture({
+      distinctId: getDistinctId(c),
+      event: 'links_searched',
+      properties: {
+        $session_id: getSessionId(c),
+        search_query: search || null,
+        tag_filter: tag || null,
+        favorites_only: favoritesOnly === 'true',
+        result_count: result.length,
+      },
+    });
+  }
+
   return c.json({ links: result, total: result.length });
 });
 
@@ -47,6 +75,20 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  posthog.capture({
+    distinctId: getDistinctId(c),
+    event: 'link_saved',
+    properties: {
+      $session_id: getSessionId(c),
+      link_id: link.id,
+      link_url: link.url,
+      link_title: link.title,
+      tag_count: tags.length,
+      has_description: description.length > 0,
+    },
+  });
+
   return c.json(link, 201);
 });
 
@@ -76,6 +118,32 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  if (body.favorite !== undefined) {
+    posthog.capture({
+      distinctId: getDistinctId(c),
+      event: 'link_favorited',
+      properties: {
+        $session_id: getSessionId(c),
+        link_id: link.id,
+        link_url: link.url,
+        link_title: link.title,
+        favorited: link.favorite,
+      },
+    });
+  } else {
+    posthog.capture({
+      distinctId: getDistinctId(c),
+      event: 'link_updated',
+      properties: {
+        $session_id: getSessionId(c),
+        link_id: link.id,
+        link_url: link.url,
+        link_title: link.title,
+        updated_fields: Object.keys(body),
+      },
+    });
+  }
+
   return c.json(link);
 });
 
@@ -87,7 +155,21 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [deleted] = links.splice(index, 1);
+
+  posthog.capture({
+    distinctId: getDistinctId(c),
+    event: 'link_deleted',
+    properties: {
+      $session_id: getSessionId(c),
+      link_id: deleted.id,
+      link_url: deleted.url,
+      link_title: deleted.title,
+      was_favorite: deleted.favorite,
+      tag_count: deleted.tags.length,
+    },
+  });
+
   return c.body(null, 204);
 });
 
@@ -106,4 +188,14 @@ const PORT = process.env.PORT || 3002;
 
 serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Hono links API running on http://localhost:${PORT}`);
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
 });
