@@ -15,6 +15,7 @@
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.2.73",
     "@octokit/rest": "^21.0.0",
+    "@xterm/xterm": "^6.0.0",
     "dotenv": "^16.4.0",
     "posthog-node": "^5.28.1",
     "sanitize-html": "^2.17.1",
