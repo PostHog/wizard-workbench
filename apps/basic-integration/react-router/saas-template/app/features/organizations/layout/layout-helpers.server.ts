@@ -65,6 +65,7 @@ export function mapOnboardingUserToOrganizationLayoutProps({
       user: {
         avatar: user.imageUrl,
         email: user.email,
+        id: user.id,
         name: user.name,
       },
     },

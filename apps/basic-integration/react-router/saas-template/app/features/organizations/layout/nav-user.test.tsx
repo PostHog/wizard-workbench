@@ -13,7 +13,8 @@ const createUser: Factory<NavUserProps["user"]> = ({
   name = createPopulatedUserAccount().name,
   email = createPopulatedUserAccount().email,
   avatar = createPopulatedUserAccount().imageUrl,
-} = {}) => ({ avatar, email, name });
+  id = createPopulatedUserAccount().id,
+} = {}) => ({ avatar, email, id, name });
 
 const createProps: Factory<NavUserProps> = ({ user = createUser() } = {}) => ({
   user,
