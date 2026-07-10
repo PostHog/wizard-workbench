@@ -16,11 +16,11 @@ const renderTime = new Date().toISOString();
 
   <h2>Step 2: Install the SDK</h2>
 
-  <pre><code>npm install @neuralflow/sdk</code></pre>
+  <pre><code id="quickstart-install-command">npm install @neuralflow/sdk</code></pre>
 
   <h2>Step 3: Process a Document</h2>
 
-  <pre><code>import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
+  <pre><code id="quickstart-example-code">import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
 import fs from 'fs';
 
 const client = new NeuralFlow({'{'}
@@ -58,4 +58,21 @@ console.log('Extracted data:', document.data);</code></pre>
   <div class="render-info">
     Server-rendered at: {renderTime}
   </div>
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+      const quickstartTargets = [
+        { element: document.getElementById('quickstart-install-command'), interaction_type: 'install_command' },
+        { element: document.getElementById('quickstart-example-code'), interaction_type: 'example_code' }
+      ];
+
+      quickstartTargets.forEach(({ element, interaction_type }) => {
+        element?.addEventListener('click', () => {
+          window.posthog?.capture('quickstart_example_engaged', {
+            interaction_type,
+            page: '/docs/quickstart'
+          });
+        });
+      });
+    });
+  </script>
 </DocsLayout>

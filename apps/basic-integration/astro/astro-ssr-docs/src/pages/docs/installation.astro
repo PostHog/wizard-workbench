@@ -11,16 +11,16 @@ const renderTime = new Date().toISOString();
   <h2>Node.js / JavaScript</h2>
   <p>Install the NeuralFlow SDK using your preferred package manager:</p>
 
-  <pre><code>npm install @neuralflow/sdk</code></pre>
+  <pre><code id="installation-js-command">npm install @neuralflow/sdk</code></pre>
 
   <p>Or with yarn:</p>
 
-  <pre><code>yarn add @neuralflow/sdk</code></pre>
+  <pre><code id="installation-yarn-command">yarn add @neuralflow/sdk</code></pre>
 
   <h3>Basic Setup</h3>
   <p>Initialize the client with your API key:</p>
 
-  <pre><code>import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
+  <pre><code id="installation-js-example">import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
 
 const client = new NeuralFlow({'{'}
   apiKey: process.env.NEURALFLOW_API_KEY,
@@ -33,14 +33,14 @@ const client = new NeuralFlow({'{'}
 
   <h3>Basic Setup</h3>
 
-  <pre><code>from neuralflow import NeuralFlow
+  <pre><code id="installation-python-example">from neuralflow import NeuralFlow
 
 client = NeuralFlow(api_key=os.environ['NEURALFLOW_API_KEY'])</code></pre>
 
   <h2>Environment Variables</h2>
   <p>We recommend storing your API key in an environment variable:</p>
 
-  <pre><code># .env
+  <pre><code id="installation-env-example"># .env
 NEURALFLOW_API_KEY=your_api_key_here</code></pre>
 
   <div class="callout">
@@ -56,4 +56,24 @@ NEURALFLOW_API_KEY=your_api_key_here</code></pre>
   <div class="render-info">
     Server-rendered at: {renderTime}
   </div>
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+      const installationTargets = [
+        { id: 'installation-js-command', interaction_type: 'javascript_command' },
+        { id: 'installation-yarn-command', interaction_type: 'yarn_command' },
+        { id: 'installation-js-example', interaction_type: 'javascript_example' },
+        { id: 'installation-python-example', interaction_type: 'python_example' },
+        { id: 'installation-env-example', interaction_type: 'env_example' }
+      ];
+
+      installationTargets.forEach(({ id, interaction_type }) => {
+        document.getElementById(id)?.addEventListener('click', () => {
+          window.posthog?.capture('installation_example_engaged', {
+            interaction_type,
+            page: '/docs/installation'
+          });
+        });
+      });
+    });
+  </script>
 </DocsLayout>

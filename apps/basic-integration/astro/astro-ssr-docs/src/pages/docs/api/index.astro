@@ -2,6 +2,7 @@
 import DocsLayout from '../../../layouts/DocsLayout.astro';
 
 const renderTime = new Date().toISOString();
+const apiReferenceViewedAt = new Date().toISOString();
 ---
 
 <DocsLayout title="API Overview">
@@ -64,4 +65,17 @@ const renderTime = new Date().toISOString();
   <div class="render-info">
     Server-rendered at: {renderTime}
   </div>
+
+  <script is:inline define:vars={{ apiReferenceViewedAt }}>
+    document.addEventListener('DOMContentLoaded', () => {
+      const hasTracked = sessionStorage.getItem('docs-api-reference-viewed');
+      if (hasTracked) return;
+
+      sessionStorage.setItem('docs-api-reference-viewed', 'true');
+      window.posthog?.capture('docs_api_reference_viewed', {
+        page: '/docs/api',
+        rendered_at: apiReferenceViewedAt
+      });
+    });
+  </script>
 </DocsLayout>

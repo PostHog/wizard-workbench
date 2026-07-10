@@ -11,8 +11,8 @@ import Layout from '../layouts/Layout.astro';
         Comprehensive guides, API references, and best practices.
       </p>
       <div class="hero-buttons">
-        <a href="/docs" class="btn btn-primary">Get Started</a>
-        <a href="/docs/api" class="btn btn-secondary">API Reference</a>
+        <a href="/docs" class="btn btn-primary" data-posthog-home-cta="get-started">Get Started</a>
+        <a href="/docs/api" class="btn btn-secondary" data-posthog-home-cta="api-reference">API Reference</a>
       </div>
     </div>
   </section>
@@ -53,4 +53,45 @@ import Layout from '../layouts/Layout.astro';
       <p class="footer-copy">&copy; 2024 NeuralFlow AI. All rights reserved.</p>
     </div>
   </footer>
+  <script is:inline>
+    async function captureHomepageCtaClick(ctaName, destination) {
+      const distinctId = window.posthog?.get_distinct_id?.() || null;
+      const sessionId = window.posthog?.get_session_id?.() || null;
+
+      window.posthog?.capture('homepage_cta_clicked', {
+        cta_name: ctaName,
+        destination,
+        source: 'homepage_hero'
+      });
+
+      try {
+        await fetch('/api/events/docs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-POSTHOG-DISTINCT-ID': distinctId || '',
+            'X-PostHog-Session-Id': sessionId || ''
+          },
+          body: JSON.stringify({
+            event: 'homepage_cta_clicked',
+            ctaName,
+            destination,
+            source: 'homepage_hero'
+          })
+        });
+      } catch (error) {
+        console.error('Failed to record homepage CTA server event', error);
+        window.posthog?.captureException?.(error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('[data-posthog-home-cta]').forEach((link) => {
+        link.addEventListener('click', () => {
+          if (!(link instanceof HTMLAnchorElement)) return;
+          captureHomepageCtaClick(link.dataset.posthogHomeCta || 'unknown', link.getAttribute('href') || '');
+        });
+      });
+    });
+  </script>
 </Layout>

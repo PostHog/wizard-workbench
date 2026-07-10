@@ -43,6 +43,8 @@ const sections = [
             <a
               href={link.href}
               class:list={["sidebar-link", { active: currentPath === link.href }]}
+              data-posthog-sidebar-section={section.title}
+              data-posthog-sidebar-label={link.label}
             >
               {link.label}
             </a>
@@ -52,3 +54,19 @@ const sections = [
     </div>
   ))}
 </aside>
+
+<script is:inline>
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const link = target.closest('[data-posthog-sidebar-label]');
+    if (!(link instanceof HTMLAnchorElement)) return;
+
+    window.posthog?.capture('docs_sidebar_navigation_clicked', {
+      section: link.dataset.posthogSidebarSection || 'unknown',
+      link_label: link.dataset.posthogSidebarLabel || 'unknown',
+      destination: link.getAttribute('href') || ''
+    });
+  });
+</script>
