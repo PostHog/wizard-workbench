@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 
 const route = useRoute()
-const router = useRouter()
 const { user, logout } = useAuth()
 
 const handleLogout = async () => {
