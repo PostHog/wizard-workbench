@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogServerClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -42,6 +43,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const posthog = getPostHogServerClient();
+  const distinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') ?? 'anonymous';
+  const sessionId = request.headers.get('X-POSTHOG-SESSION-ID') ?? undefined;
+
   try {
     const { id } = await params;
     const todoId = parseInt(id);
@@ -59,14 +64,55 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    posthog.capture({
+      distinctId,
+      event: 'todo_updated',
+      properties: {
+        $session_id: sessionId,
+        todo_id: updatedTodo.id,
+        completed: updatedTodo.completed,
+        fields_updated: Object.keys(validatedData),
+        has_description: Boolean(updatedTodo.description),
+      },
+    });
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      posthog.capture({
+        distinctId,
+        event: 'todo_api_error',
+        properties: {
+          $session_id: sessionId,
+          route: '/api/todos/[id]',
+          method: 'PATCH',
+          error_type: 'validation_error',
+          issue_count: error.errors.length,
+        },
+      });
+
       return NextResponse.json(
         { error: 'Invalid todo data', details: error.errors },
         { status: 400 }
       );
     }
+
+    posthog.captureException(error, distinctId, {
+      $session_id: sessionId,
+      route: '/api/todos/[id]',
+      method: 'PATCH',
+    });
+    posthog.capture({
+      distinctId,
+      event: 'todo_api_error',
+      properties: {
+        $session_id: sessionId,
+        route: '/api/todos/[id]',
+        method: 'PATCH',
+        error_type: 'server_error',
+      },
+    });
+
     console.error('Error updating todo:', error);
     return NextResponse.json(
       { error: 'Failed to update todo' },
@@ -80,6 +126,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const posthog = getPostHogServerClient();
+  const distinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') ?? 'anonymous';
+  const sessionId = request.headers.get('X-POSTHOG-SESSION-ID') ?? undefined;
+
   try {
     const { id } = await params;
     const todoId = parseInt(id);
@@ -88,14 +138,42 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid todo ID' }, { status: 400 });
     }
 
+    const existingTodo = getTodoById(todoId);
     const deleted = deleteTodo(todoId);
 
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    posthog.capture({
+      distinctId,
+      event: 'todo_deleted',
+      properties: {
+        $session_id: sessionId,
+        todo_id: todoId,
+        was_completed: existingTodo?.completed ?? false,
+        had_description: Boolean(existingTodo?.description),
+      },
+    });
+
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
+    posthog.captureException(error, distinctId, {
+      $session_id: sessionId,
+      route: '/api/todos/[id]',
+      method: 'DELETE',
+    });
+    posthog.capture({
+      distinctId,
+      event: 'todo_api_error',
+      properties: {
+        $session_id: sessionId,
+        route: '/api/todos/[id]',
+        method: 'DELETE',
+        error_type: 'server_error',
+      },
+    });
+
     console.error('Error deleting todo:', error);
     return NextResponse.json(
       { error: 'Failed to delete todo' },

@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
+import { getPostHogRequestHeaders } from '@/lib/posthog-client';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,10 +19,16 @@ export function TodoList() {
 
   const fetchTodos = async () => {
     try {
-      const response = await fetch('/api/todos');
+      const response = await fetch('/api/todos', {
+        headers: getPostHogRequestHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
         setTodos(data);
+        posthog.capture('todo_list_loaded', {
+          todo_count: data.length,
+          completed_count: data.filter((todo: Todo) => todo.completed).length,
+        });
       }
     } catch (error) {
       console.error('Failed to fetch todos:', error);
@@ -35,6 +43,7 @@ export function TodoList() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getPostHogRequestHeaders(),
         },
         body: JSON.stringify({ title, description }),
       });
@@ -54,6 +63,7 @@ export function TodoList() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          ...getPostHogRequestHeaders(),
         },
         body: JSON.stringify({ completed }),
       });
@@ -71,6 +81,7 @@ export function TodoList() {
     try {
       const response = await fetch(`/api/todos/${id}`, {
         method: 'DELETE',
+        headers: getPostHogRequestHeaders(),
       });
 
       if (response.ok) {
