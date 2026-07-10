@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2406B38728AD083500CB396B /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 2406B38628AD083500CB396B /* SwiftSoup */; };
+		C1A2B3C4D5E6F7A8B9C00001 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = C1A2B3C4D5E6F7A8B9C00002 /* PostHog */; };
 		241E7B412E511BC20013EEA1 /* Data in Frameworks */ = {isa = PBXBuildFile; productRef = 241E7B402E511BC20013EEA1 /* Data */; };
 		241E7B492E51D1C80013EEA1 /* Settings in Frameworks */ = {isa = PBXBuildFile; productRef = 241E7B482E51D1C80013EEA1 /* Settings */; };
 		241E802E2E55B5F40013EEA1 /* Comments in Frameworks */ = {isa = PBXBuildFile; productRef = 241E802D2E55B5F40013EEA1 /* Comments */; };
@@ -100,6 +101,7 @@
 				24F39F8D18AFB1150055F8DC /* UIKit.framework in Frameworks */,
 				24F39F8918AFB1150055F8DC /* Foundation.framework in Frameworks */,
 				2406B38728AD083500CB396B /* SwiftSoup in Frameworks */,
+				C1A2B3C4D5E6F7A8B9C00001 /* PostHog in Frameworks */,
 				241E7B412E511BC20013EEA1 /* Data in Frameworks */,
 				248256FB2E59D2540068E91E /* Networking in Frameworks */,
 			);
@@ -184,6 +186,7 @@
 			name = Hackers;
 			packageProductDependencies = (
 				2406B38628AD083500CB396B /* SwiftSoup */,
+				C1A2B3C4D5E6F7A8B9C00002 /* PostHog */,
 				241E7B402E511BC20013EEA1 /* Data */,
 				241E7B482E51D1C80013EEA1 /* Settings */,
 				241E802D2E55B5F40013EEA1 /* Comments */,
@@ -228,6 +231,7 @@
 			mainGroup = 24F39F7C18AFB1150055F8DC;
 			packageReferences = (
 				2406B38528AD083500CB396B /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+				C1A2B3C4D5E6F7A8B9C00003 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				241E7B3F2E511BC20013EEA1 /* XCLocalSwiftPackageReference "Data" */,
 				241E7B422E511BE50013EEA1 /* XCLocalSwiftPackageReference "DesignSystem" */,
 				241E7B472E51D1C80013EEA1 /* XCLocalSwiftPackageReference "Features/Settings" */,
@@ -631,6 +635,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		C1A2B3C4D5E6F7A8B9C00003 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 3.64.5;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -638,6 +650,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2406B38528AD083500CB396B /* XCRemoteSwiftPackageReference "SwiftSoup" */;
 			productName = SwiftSoup;
+		};
+		C1A2B3C4D5E6F7A8B9C00002 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1A2B3C4D5E6F7A8B9C00003 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
 		};
 		241E7B402E511BC20013EEA1 /* Data */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -133,8 +134,12 @@ public final class CommentsViewModel: @unchecked Sendable {
             updatedPost.isBookmarked = bookmarksController.isBookmarked(currentPost.id)
             post = updatedPost
         }
+        let wasEmpty = commentsLoader.data.isEmpty
         await commentsLoader.loadIfNeeded()
         updateVisibleComments()
+        if wasEmpty {
+            PostHogSDK.shared.capture("comments_viewed", properties: ["post_id": postID])
+        }
     }
 
     @MainActor
@@ -199,6 +204,10 @@ public final class CommentsViewModel: @unchecked Sendable {
         var updatedPost = currentPost
         updatedPost.isBookmarked = newState
         post = updatedPost
+        PostHogSDK.shared.capture("post_bookmarked_from_comments", properties: [
+            "post_id": currentPost.id,
+            "bookmarked": newState,
+        ])
         return newState
     }
 
@@ -211,6 +220,10 @@ public final class CommentsViewModel: @unchecked Sendable {
 
         do {
             try await voteUseCase.upvote(comment: comment, for: post)
+            PostHogSDK.shared.capture("comment_upvoted", properties: [
+                "post_id": post.id,
+                "comment_id": comment.id,
+            ])
         } catch {
             comment.upvoted = false
             throw error
