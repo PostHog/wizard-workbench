@@ -24,7 +24,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Basic integrations</li>
             <li>Email support</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
+          <a href="/contact" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-posthog-event="pricing_cta_clicked" data-plan="starter" data-cta-type="get_started">Get Started</a>
         </div>
 
         <div class="pricing-card featured">
@@ -40,7 +40,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Advanced analytics</li>
             <li>Custom workflows</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
+          <a href="/contact" class="btn btn-primary" style="width: 100%; justify-content: center;" data-posthog-event="pricing_cta_clicked" data-plan="pro" data-cta-type="start_free_trial">Start Free Trial</a>
         </div>
 
         <div class="pricing-card">
@@ -57,9 +57,36 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="/contact" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="/contact" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-posthog-event="contact_sales_clicked" data-plan="enterprise">Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const pricingCta = target.closest('[data-posthog-event="pricing_cta_clicked"]');
+    if (pricingCta instanceof HTMLAnchorElement) {
+      window.posthog?.capture('pricing_cta_clicked', {
+        plan: pricingCta.dataset.plan || 'unknown',
+        cta_type: pricingCta.dataset.ctaType || 'unknown',
+        destination: pricingCta.getAttribute('href') || '',
+        current_path: window.location.pathname,
+      });
+      return;
+    }
+
+    const contactSales = target.closest('[data-posthog-event="contact_sales_clicked"]');
+    if (contactSales instanceof HTMLAnchorElement) {
+      window.posthog?.capture('contact_sales_clicked', {
+        plan: contactSales.dataset.plan || 'unknown',
+        destination: contactSales.getAttribute('href') || '',
+        current_path: window.location.pathname,
+      });
+    }
+  });
+</script>

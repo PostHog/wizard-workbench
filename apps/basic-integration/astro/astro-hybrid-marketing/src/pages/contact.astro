@@ -55,21 +55,29 @@ import Layout from '../layouts/Layout.astro';
   </section>
 </Layout>
 
-<script>
-  const form = document.getElementById('contact-form') as HTMLFormElement;
-  const messageDiv = document.getElementById('form-message') as HTMLDivElement;
+<script is:inline>
+  const form = document.getElementById('contact-form');
+  const messageDiv = document.getElementById('form-message');
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    if (!(form instanceof HTMLFormElement) || !(messageDiv instanceof HTMLDivElement)) {
+      return;
+    }
+
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
+    const distinctId = window.posthog?.get_distinct_id?.();
+    const sessionId = window.posthog?.get_session_id?.();
 
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-POSTHOG-DISTINCT-ID': distinctId || '',
+          'X-POSTHOG-SESSION-ID': sessionId || '',
         },
         body: JSON.stringify(data),
       });
@@ -77,14 +85,47 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        const email = typeof data.email === 'string' ? data.email.trim() : '';
+        const name = typeof data.name === 'string' ? data.name.trim() : '';
+        const company = typeof data.company === 'string' ? data.company.trim() : '';
+        const interest = typeof data.interest === 'string' ? data.interest : '';
+
+        if (email) {
+          window.posthog?.identify(email, {
+            email,
+            name: name || undefined,
+            company: company || undefined,
+            interest: interest || undefined,
+            lead_source: 'contact_form',
+          });
+        }
+
+        window.posthog?.capture('contact_form_submitted', {
+          interest: interest || 'unknown',
+          has_company: Boolean(company),
+          submission_location: 'contact_page',
+        });
+
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
       } else {
+        window.posthog?.capture('contact_form_submission_failed', {
+          status: response.status,
+          interest: typeof data.interest === 'string' ? data.interest : 'unknown',
+          failure_stage: 'response',
+        });
+
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
       }
     } catch (error) {
+      window.posthog?.capture('contact_form_submission_failed', {
+        failure_stage: 'network',
+        interest: typeof data.interest === 'string' ? data.interest : 'unknown',
+      });
+      window.posthog?.captureException?.(error);
+
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
     }

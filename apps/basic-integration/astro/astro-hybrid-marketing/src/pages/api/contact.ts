@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -11,11 +12,40 @@ interface ContactFormData {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  const posthog = getPostHogServer();
+  const distinctId = request.headers.get('X-POSTHOG-DISTINCT-ID') || crypto.randomUUID();
+  const sessionId = request.headers.get('X-POSTHOG-SESSION-ID') || undefined;
+
   try {
     const data: ContactFormData = await request.json();
 
+    if (data.email) {
+      posthog.identify({
+        distinctId,
+        properties: {
+          email: data.email,
+          name: data.name,
+          company: data.company,
+          interest: data.interest,
+          lead_source: 'contact_form',
+        },
+      });
+    }
+
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_validation_failed',
+        properties: {
+          $session_id: sessionId,
+          reason: 'missing_required_fields',
+          interest: data.interest || 'unknown',
+          has_company: Boolean(data.company),
+          source: 'api',
+        },
+      });
+
       return new Response(
         JSON.stringify({ error: 'Please fill in all required fields.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -25,6 +55,18 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_validation_failed',
+        properties: {
+          $session_id: sessionId,
+          reason: 'invalid_email',
+          interest: data.interest,
+          has_company: Boolean(data.company),
+          source: 'api',
+        },
+      });
+
       return new Response(
         JSON.stringify({ error: 'Please enter a valid email address.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -37,13 +79,23 @@ export const POST: APIRoute = async ({ request }) => {
     // 3. Trigger notifications
 
     console.log('Contact form submission:', {
-      name: data.name,
-      email: data.email,
-      company: data.company || 'N/A',
       interest: data.interest,
-      message: data.message,
+      hasCompany: Boolean(data.company),
       timestamp: new Date().toISOString(),
     });
+
+    posthog.capture({
+      distinctId,
+      event: 'contact_form_received',
+      properties: {
+        $session_id: sessionId,
+        interest: data.interest,
+        has_company: Boolean(data.company),
+        source: 'api',
+      },
+    });
+
+    await posthog.shutdown();
 
     return new Response(
       JSON.stringify({
@@ -53,6 +105,24 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    posthog.capture({
+      distinctId,
+      event: 'contact_form_server_error',
+      properties: {
+        $session_id: sessionId,
+        source: 'api',
+      },
+    });
+
+    if (error instanceof Error) {
+      posthog.captureException(error, distinctId, {
+        $session_id: sessionId,
+        endpoint: '/api/contact',
+      });
+    }
+
+    await posthog.shutdown();
+
     console.error('Contact form error:', error);
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
