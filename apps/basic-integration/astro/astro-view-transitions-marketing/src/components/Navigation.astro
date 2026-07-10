@@ -8,14 +8,50 @@ const currentPath = Astro.url.pathname;
       <span>NeuralFlow</span> AI
     </a>
     <ul class="nav-links">
-      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]}>Features</a></li>
-      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
-      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
-      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]} data-posthog-nav-link="features">Features</a></li>
+      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]} data-posthog-nav-link="pricing">Pricing</a></li>
+      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]} data-posthog-nav-link="about">About</a></li>
+      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]} data-posthog-nav-link="docs">Docs</a></li>
+      <li><a href="#" class="nav-cta" data-posthog-nav-cta="get_started">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  function setupNavigationTracking() {
+    const navLinks = document.querySelectorAll('[data-posthog-nav-link]');
+    const navCta = document.querySelector('[data-posthog-nav-cta]');
+
+    navLinks.forEach((link) => {
+      if (link.dataset.posthogBound === 'true') {
+        return;
+      }
+
+      link.dataset.posthogBound = 'true';
+      link.addEventListener('click', () => {
+        window.posthog?.capture('nav_link_clicked', {
+          link_name: link.dataset.posthogNavLink,
+          current_path: window.location.pathname,
+          destination_path: link.getAttribute('href') || '',
+        });
+      });
+    });
+
+    if (navCta && navCta.dataset.posthogBound !== 'true') {
+      navCta.dataset.posthogBound = 'true';
+      navCta.addEventListener('click', () => {
+        window.posthog?.capture('nav_cta_clicked', {
+          cta_name: navCta.dataset.posthogNavCta,
+          current_path: window.location.pathname,
+          destination_path: navCta.getAttribute('href') || '',
+        });
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', setupNavigationTracking);
+  document.addEventListener('astro:page-load', setupNavigationTracking);
+</script>
 
 <style>
   .nav-link.active {

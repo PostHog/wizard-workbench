@@ -5,13 +5,37 @@ const currentYear = new Date().getFullYear();
 <footer class="footer">
   <div class="container footer-inner">
     <ul class="footer-links">
-      <li><a href="/features" class="footer-link">Features</a></li>
-      <li><a href="/pricing" class="footer-link">Pricing</a></li>
-      <li><a href="/about" class="footer-link">About</a></li>
-      <li><a href="/docs" class="footer-link">Docs</a></li>
-      <li><a href="#" class="footer-link">Privacy</a></li>
-      <li><a href="#" class="footer-link">Terms</a></li>
+      <li><a href="/features" class="footer-link" data-posthog-footer-link="features">Features</a></li>
+      <li><a href="/pricing" class="footer-link" data-posthog-footer-link="pricing">Pricing</a></li>
+      <li><a href="/about" class="footer-link" data-posthog-footer-link="about">About</a></li>
+      <li><a href="/docs" class="footer-link" data-posthog-footer-link="docs">Docs</a></li>
+      <li><a href="#" class="footer-link" data-posthog-footer-link="privacy">Privacy</a></li>
+      <li><a href="#" class="footer-link" data-posthog-footer-link="terms">Terms</a></li>
     </ul>
     <p class="footer-copy">&copy; {currentYear} NeuralFlow AI. All rights reserved.</p>
   </div>
 </footer>
+
+<script is:inline>
+  function setupFooterTracking() {
+    const footerLinks = document.querySelectorAll('[data-posthog-footer-link]');
+
+    footerLinks.forEach((link) => {
+      if (link.dataset.posthogBound === 'true') {
+        return;
+      }
+
+      link.dataset.posthogBound = 'true';
+      link.addEventListener('click', () => {
+        window.posthog?.capture('footer_link_clicked', {
+          link_name: link.dataset.posthogFooterLink,
+          current_path: window.location.pathname,
+          destination_path: link.getAttribute('href') || '',
+        });
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupFooterTracking);
+  document.addEventListener('astro:page-load', setupFooterTracking);
+</script>

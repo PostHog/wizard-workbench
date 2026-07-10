@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout title="Home">
-  <section class="hero">
+  <section class="hero" data-posthog-section="hero">
     <div class="container">
       <div class="hero-badge">
         <span>New</span> Introducing NeuralFlow 2.0
@@ -14,8 +14,8 @@ import Layout from '../layouts/Layout.astro';
         and automated insights. Built for teams that move fast.
       </p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Start Free Trial</a>
-        <a href="/docs" class="btn btn-secondary">Read the Docs</a>
+        <a href="#" class="btn btn-primary" data-posthog-event="cta_clicked" data-posthog-location="home_hero" data-posthog-cta="start_free_trial">Start Free Trial</a>
+        <a href="/docs" class="btn btn-secondary" data-posthog-event="docs_cta_clicked" data-posthog-location="home_hero" data-posthog-cta="read_the_docs">Read the Docs</a>
       </div>
     </div>
   </section>
@@ -60,4 +60,28 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
   </section>
+  <script is:inline>
+    function setupHomePageTracking() {
+      const trackedLinks = document.querySelectorAll('[data-posthog-event]');
+
+      trackedLinks.forEach((link) => {
+        if (link.dataset.posthogBound === 'true') {
+          return;
+        }
+
+        link.dataset.posthogBound = 'true';
+        link.addEventListener('click', () => {
+          window.posthog?.capture(link.dataset.posthogEvent, {
+            location: link.dataset.posthogLocation,
+            cta_name: link.dataset.posthogCta,
+            href: link.getAttribute('href') || '',
+            page_path: window.location.pathname,
+          });
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', setupHomePageTracking);
+    document.addEventListener('astro:page-load', setupHomePageTracking);
+  </script>
 </Layout>

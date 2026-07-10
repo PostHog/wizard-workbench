@@ -24,7 +24,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Basic integrations</li>
             <li>Email support</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-posthog-event="pricing_plan_selected" data-posthog-plan="starter" data-posthog-billing="monthly">Get Started</a>
         </div>
 
         <div class="pricing-card featured">
@@ -40,7 +40,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Advanced analytics</li>
             <li>Custom workflows</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
+          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;" data-posthog-event="pricing_plan_selected" data-posthog-plan="pro" data-posthog-billing="monthly">Start Free Trial</a>
         </div>
 
         <div class="pricing-card">
@@ -57,9 +57,33 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-posthog-event="enterprise_contact_clicked" data-posthog-plan="enterprise" data-posthog-contact-surface="pricing_card">Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
+  <script is:inline>
+    function setupPricingTracking() {
+      const pricingCtas = document.querySelectorAll('[data-posthog-event]');
+
+      pricingCtas.forEach((cta) => {
+        if (cta.dataset.posthogBound === 'true') {
+          return;
+        }
+
+        cta.dataset.posthogBound = 'true';
+        cta.addEventListener('click', () => {
+          window.posthog?.capture(cta.dataset.posthogEvent, {
+            plan_name: cta.dataset.posthogPlan,
+            billing_period: cta.dataset.posthogBilling,
+            contact_surface: cta.dataset.posthogContactSurface,
+            page_path: window.location.pathname,
+          });
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', setupPricingTracking);
+    document.addEventListener('astro:page-load', setupPricingTracking);
+  </script>
 </Layout>

@@ -39,7 +39,7 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 
-  <section class="team-section" style="background: var(--color-bg-secondary); padding: 4rem 0;">
+  <section class="team-section" style="background: var(--color-bg-secondary); padding: 4rem 0;" data-posthog-team-section>
     <div class="container">
       <div class="section-header">
         <h2>Meet the Team</h2>
@@ -69,4 +69,32 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
   </section>
+  <script is:inline>
+    function setupAboutTracking() {
+      const teamSection = document.querySelector('[data-posthog-team-section]');
+
+      if (!teamSection || teamSection.dataset.posthogObserved === 'true') {
+        return;
+      }
+
+      teamSection.dataset.posthogObserved = 'true';
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            window.posthog?.capture('about_team_section_viewed', {
+              page_path: window.location.pathname,
+              section_name: 'team',
+            });
+            observer.disconnect();
+          }
+        });
+      }, { threshold: 0.5 });
+
+      observer.observe(teamSection);
+    }
+
+    document.addEventListener('DOMContentLoaded', setupAboutTracking);
+    document.addEventListener('astro:page-load', setupAboutTracking);
+  </script>
 </Layout>
