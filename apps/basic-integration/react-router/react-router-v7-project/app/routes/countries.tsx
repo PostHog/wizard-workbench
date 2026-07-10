@@ -1,8 +1,10 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
+import { usePostHog } from '@posthog/react'
 import { useAuth } from "~/context/AuthContext";
-import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
+import { claimCountry, likeCountry, visitCountry, getCurrentUser } from "~/lib/utils/auth";
+import { getCountryActionProperties } from '~/lib/posthog-utils'
 
 export async function clientLoader() {
   try {
@@ -35,6 +37,7 @@ export async function clientLoader() {
 
 export default function Countries({ loaderData }: Route.ComponentProps) {
   const { user } = useAuth();
+  const posthog = usePostHog()
   const [search, setSearch] = useState<string>("");
   const [region, setRegion] = useState<string>("");
 
@@ -42,12 +45,22 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSearch = e.target.value;
     setSearch(newSearch);
+
+    posthog?.capture('countries_search_updated', {
+      search_length: newSearch.length,
+      has_region_filter: Boolean(region),
+    })
   };
 
   // Handler for region filter
   const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRegion = e.target.value;
     setRegion(newRegion);
+
+    posthog?.capture('countries_region_filter_selected', {
+      region: newRegion || 'all',
+      has_search_term: Boolean(search),
+    })
   };
 
   // Ensure loaderData is an array, fallback to empty array
@@ -138,6 +151,13 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         claimCountry(countryName);
+                        const updatedUser = getCurrentUser();
+                        if (updatedUser) {
+                          posthog?.capture('country_claimed', {
+                            ...getCountryActionProperties(updatedUser, countryName),
+                            achievement_count: updatedUser.achievements.length,
+                          })
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -151,6 +171,10 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         likeCountry(countryName);
+                        const updatedUser = getCurrentUser();
+                        if (updatedUser) {
+                          posthog?.capture('country_liked', getCountryActionProperties(updatedUser, countryName))
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -164,6 +188,10 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         visitCountry(countryName);
+                        const updatedUser = getCurrentUser();
+                        if (updatedUser) {
+                          posthog?.capture('country_visited', getCountryActionProperties(updatedUser, countryName))
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"

@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
-import { getCurrentUser } from '~/lib/utils/auth'
 import type { Route } from './+types/login'
 
 export default function Login() {
   const navigate = useNavigate()
+  const posthog = usePostHog()
   const { login } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -19,12 +20,24 @@ export default function Login() {
 
     // Fake loading delay for realism
     setTimeout(() => {
-      const success = login(username, password)
+      const loggedInUser = login(username, password)
       setIsLoading(false)
 
-      if (success) {
+      if (loggedInUser) {
+        posthog?.capture('login_completed', {
+          login_method: 'fake_auth',
+          has_claimed_countries: loggedInUser.claimedCountries.length > 0,
+          claimed_countries_count: loggedInUser.claimedCountries.length,
+          liked_countries_count: loggedInUser.likedCountries.length,
+          visited_countries_count: loggedInUser.visitedCountries.length,
+          total_points: loggedInUser.totalPoints,
+        })
         navigate('/profile')
       } else {
+        posthog?.capture('login_failed', {
+          login_method: 'fake_auth',
+          username_length: username.length,
+        })
         setError('Invalid credentials! (But this is fake, so any password works if the username exists)')
       }
     }, 500)

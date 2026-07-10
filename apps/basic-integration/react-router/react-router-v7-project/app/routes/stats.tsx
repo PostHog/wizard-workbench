@@ -1,10 +1,13 @@
+import { useEffect } from 'react'
 import { Navigate } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { useAuth } from '~/context/AuthContext'
 import { getAllUsers, getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
 import type { Route } from './+types/stats'
 
 export default function Stats() {
   const { user } = useAuth()
+  const posthog = usePostHog()
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -19,6 +22,15 @@ export default function Stats() {
     .slice(0, 10)
 
   const userRank = leaderboard.findIndex((u) => u.id === currentUser.id) + 1
+
+  useEffect(() => {
+    posthog?.capture('stats_viewed', {
+      user_rank: userRank || null,
+      leaderboard_size: leaderboard.length,
+      claimed_countries_count: currentUser.claimedCountries.length,
+      total_points: currentUser.totalPoints,
+    })
+  }, [currentUser.claimedCountries.length, currentUser.totalPoints, leaderboard.length, posthog, userRank])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-6">
