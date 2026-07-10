@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { Spinner } from '../components/Spinner'
 import { useMutation } from '../hooks/useMutation'
@@ -11,10 +12,18 @@ export const Route = createFileRoute('/dashboard/invoices/')({
 
 function InvoicesIndexComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
 
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async ({ data }) => {
+      posthog.capture('invoice_created', {
+        invoice_id: data.id,
+        title_length: data.title.length,
+        has_description: Boolean(data.body),
+      })
+      await router.invalidate()
+    },
   })
 
   return (
