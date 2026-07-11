@@ -1,4 +1,11 @@
+import process from 'node:process'
+import { useServerPostHog } from '../../utils/posthog'
+
 export default defineEventHandler(async (event) => {
+  const posthog = useServerPostHog()
+  const sessionId = getHeader(event, 'x-posthog-session-id')
+  const distinctId = getHeader(event, 'x-posthog-distinct-id') || crypto.randomUUID()
+
   try {
     const body = await readBody(event)
     const { username, password } = body
@@ -13,7 +20,7 @@ export default defineEventHandler(async (event) => {
 
     // Demo auth: accepts any username and password
     const sanitizedUsername = username.trim()
-    
+
     setCookie(event, 'auth-user', sanitizedUsername, {
       httpOnly: false, // Allow client-side access for SSR
       secure: process.env.NODE_ENV === 'production',
@@ -21,11 +28,29 @@ export default defineEventHandler(async (event) => {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
+    posthog.capture({
+      distinctId,
+      event: 'auth_login_api_succeeded',
+      properties: {
+        $session_id: sessionId,
+        auth_method: 'password',
+        username_length: sanitizedUsername.length,
+      },
+    })
+    await posthog.flush()
+
     return {
       success: true,
       user: sanitizedUsername,
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
+    posthog.captureException(error, distinctId, {
+      $session_id: sessionId,
+      endpoint: '/api/auth/login',
+    })
+    await posthog.flush()
+
     if (error.statusCode) {
       throw error
     }

@@ -1,16 +1,28 @@
 <script setup lang="ts">
 import type { Media, MediaType, QueryItem } from '~/types'
 
-defineProps<{
+const props = defineProps<{
   type: MediaType
   item: Media
   query?: QueryItem
 }>()
+
+const posthog = usePostHog()
+
+function captureMediaOpened() {
+  posthog?.capture('media_opened', {
+    media_id: props.item.id,
+    media_type: props.item.media_type || props.type,
+    source_query: props.query?.query || 'direct',
+    has_poster: Boolean(props.item.poster_path),
+  })
+}
 </script>
 
 <template>
   <NuxtLink
     :to="`/${item.media_type || type}/${item.id}`" pb2
+    @click="captureMediaOpened"
   >
     <div
       block bg-gray4:10 p1 class="aspect-10/16"

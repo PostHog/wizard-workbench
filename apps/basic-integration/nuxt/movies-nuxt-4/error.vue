@@ -3,9 +3,18 @@ const props = defineProps({
   error: Object,
 })
 
+const posthog = usePostHog()
 const message = computed(() => String(props.error?.message || ''))
 const is404 = computed(() => props.error?.statusCode === 404 || message.value?.includes('404'))
 const isDev = process.dev
+
+watchEffect(() => {
+  if (props.error) {
+    posthog?.captureException(props.error, {
+      route_type: is404.value ? 'not_found' : 'application_error',
+    })
+  }
+})
 
 function handleError() {
   return clearError({ redirect: '/' })
