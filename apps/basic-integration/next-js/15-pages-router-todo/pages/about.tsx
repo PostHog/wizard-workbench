@@ -1,8 +1,16 @@
 import Head from 'next/head';
 import Link from 'next/link';
+import { useEffect } from 'react';
+import posthog from 'posthog-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function AboutPage() {
+  useEffect(() => {
+    posthog.capture('about_page_viewed', {
+      page_name: 'about',
+    });
+  }, []);
+
   return (
     <>
       <Head>

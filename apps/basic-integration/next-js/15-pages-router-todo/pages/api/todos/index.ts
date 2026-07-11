@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -10,13 +11,34 @@ const todoSchema = z.object({
 
 // GET /api/todos - Get all todos
 // POST /api/todos - Create a new todo
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const posthog = getPostHogClient();
+  const distinctId = req.headers['x-posthog-distinct-id'];
+  const resolvedDistinctId = typeof distinctId === 'string' && distinctId.length > 0
+    ? distinctId
+    : 'anonymous_todos_api';
+
   if (req.method === 'GET') {
     try {
       const allTodos = getTodos();
+      posthog.capture({
+        distinctId: resolvedDistinctId,
+        event: 'todos_listed_api',
+        properties: {
+          todo_count: allTodos.length,
+          active_todo_count: allTodos.filter((todo) => !todo.completed).length,
+          completed_todo_count: allTodos.filter((todo) => todo.completed).length,
+        },
+      });
+      await posthog.flush();
       return res.status(200).json(allTodos);
     } catch (error) {
       console.error('Error fetching todos:', error);
+      posthog.captureException(error, resolvedDistinctId, {
+        endpoint: '/api/todos',
+        method: 'GET',
+      });
+      await posthog.flush();
       return res.status(500).json({ error: 'Failed to fetch todos' });
     }
   }
@@ -31,6 +53,16 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         completed: validatedData.completed,
       });
 
+      posthog.capture({
+        distinctId: resolvedDistinctId,
+        event: 'todo_created_api',
+        properties: {
+          todo_id: newTodo.id,
+          has_description: Boolean(newTodo.description),
+          completed: newTodo.completed,
+        },
+      });
+      await posthog.flush();
       return res.status(201).json(newTodo);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -40,6 +72,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         });
       }
       console.error('Error creating todo:', error);
+      posthog.captureException(error, resolvedDistinctId, {
+        endpoint: '/api/todos',
+        method: 'POST',
+      });
+      await posthog.flush();
       return res.status(500).json({ error: 'Failed to create todo' });
     }
   }
