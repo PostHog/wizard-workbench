@@ -4,6 +4,15 @@ import { QUERY_LIST } from '~/constants/lists'
 
 const route = useRoute()
 const type = computed(() => route.params.type as MediaType || 'movie')
+const { $posthog } = useNuxtApp()
+
+function handleHeroClick(itemId: number) {
+  $posthog?.capture('home_hero_opened', {
+    media_type: type.value,
+    media_id: itemId,
+    source: 'hero',
+  })
+}
 
 const queries = computed(() => [
   QUERY_LIST.movie[0],
@@ -21,7 +30,7 @@ const AsyncWrapper = defineComponent(async (_, ctx) => {
   <div>
     <AsyncWrapper>
       <template #default="{ item }">
-        <NuxtLink :to="`/${type}/${item.id}`">
+        <NuxtLink :to="`/${type}/${item.id}`" @click="handleHeroClick(item.id)">
           <MediaHero :item="item" />
         </NuxtLink>
       </template>

@@ -3,6 +3,7 @@ import type { Media } from '~/types'
 
 const route = useRoute()
 const router = useRouter()
+const { $posthog } = useNuxtApp()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
@@ -17,6 +18,10 @@ function search() {
   currentSearch.value = input.value.toString()
   count.value = undefined
   items.value = []
+  $posthog?.capture('search_performed', {
+    query_length: input.value.trim().length,
+    had_previous_query: Boolean(currentSearch.value),
+  })
   router.replace({ query: { s: input.value } })
 }
 
@@ -29,6 +34,7 @@ async function fetch(page: number) {
     items.value.push(...data.results)
   }
   catch (e: any) {
+    $posthog?.captureException(e as Error)
     error.value = e
   }
 }
