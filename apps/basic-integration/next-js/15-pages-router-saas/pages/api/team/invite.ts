@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
+import { flushPostHogServerClient, getPostHogServerClient } from '@/lib/posthog-server';
 import {
   users,
   teamMembers,
@@ -108,8 +109,22 @@ export default async function handler(
       ActivityType.INVITE_TEAM_MEMBER
     );
 
+    const posthog = getPostHogServerClient();
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'team_member_invited',
+      properties: {
+        role,
+        team_id: userWithTeam.teamId
+      }
+    });
+    await flushPostHogServerClient();
+
     return res.status(200).json({ success: 'Invitation sent successfully' });
   } catch (error) {
+    const posthog = getPostHogServerClient();
+    posthog.captureException(error, 'invite-team-member-handler');
+    await flushPostHogServerClient();
     console.error('Invite team member error:', error);
     return res.status(500).json({ error: 'Failed to invite team member' });
   }

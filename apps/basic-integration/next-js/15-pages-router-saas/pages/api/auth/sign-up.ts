@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
+import { flushPostHogServerClient, getPostHogServerClient } from '@/lib/posthog-server';
 import {
   users,
   teams,
@@ -160,10 +161,32 @@ export default async function handler(
       role: userRole
     };
 
+    const posthog = getPostHogServerClient();
+
+    posthog.identify({
+      distinctId: String(createdUser.id),
+      properties: {
+        email: createdUser.email,
+        role: userRole
+      }
+    });
+    posthog.capture({
+      distinctId: String(createdUser.id),
+      event: 'user_signed_up',
+      properties: {
+        role: userRole,
+        invited: Boolean(inviteId),
+        redirect_target: redirect || 'dashboard',
+        has_price_id: Boolean(priceId),
+        team_id: teamId
+      }
+    });
+
     await Promise.all([
       db.insert(teamMembers).values(newTeamMember),
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
-      setSession(createdUser, res)
+      setSession(createdUser, res),
+      flushPostHogServerClient()
     ]);
 
     if (redirect === 'checkout' && createdTeam) {
@@ -175,8 +198,11 @@ export default async function handler(
       return res.status(200).json(checkoutResult);
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({ success: true, redirectTo: '/dashboard', distinctId: String(createdUser.id) });
   } catch (error) {
+    const posthog = getPostHogServerClient();
+    posthog.captureException(error, 'sign-up-handler');
+    await flushPostHogServerClient();
     console.error('Sign up error:', error);
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });
   }

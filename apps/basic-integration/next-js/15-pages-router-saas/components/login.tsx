@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -57,6 +58,20 @@ export function Login({
           return;
         }
 
+        if (result.success) {
+          const distinctId = result.distinctId || data.email;
+
+          posthog.identify(distinctId, {
+            email: data.email
+          });
+          posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up', {
+            entrypoint: mode,
+            redirect_target: data.redirect || 'dashboard',
+            has_price_id: Boolean(data.priceId),
+            has_invite_id: Boolean(data.inviteId)
+          });
+        }
+
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
@@ -64,6 +79,7 @@ export function Login({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred. Please try again.');
       }
     });

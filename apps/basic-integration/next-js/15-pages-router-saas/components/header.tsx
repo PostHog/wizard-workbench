@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
 import {
@@ -26,8 +27,16 @@ function UserMenu() {
     try {
       // Call sign-out API to delete HttpOnly session cookie
       await fetch('/api/auth/sign-out', {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id()
+        }
       });
+
+      posthog.capture('user_signed_out', {
+        source: 'user_menu'
+      });
+      posthog.reset();
 
       // Clear SWR cache
       mutate('/api/user', null, false);
@@ -36,6 +45,7 @@ function UserMenu() {
       // Redirect to home
       router.push('/');
     } catch (error) {
+      posthog.captureException(error);
       console.error('Sign out error:', error);
     }
   }

@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, PlusCircle } from 'lucide-react';
 import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -36,9 +37,14 @@ function ManageSubscription() {
       const result = await response.json();
 
       if (response.ok && result.url) {
+        posthog.capture('billing_portal_opened', {
+          current_plan: teamData?.planName || 'free',
+          subscription_status: teamData?.subscriptionStatus || 'none'
+        });
         window.location.href = result.url;
       }
     } catch (err) {
+      posthog.captureException(err);
       console.error('Failed to open customer portal');
     }
   }
@@ -102,9 +108,15 @@ function TeamMembers() {
           return;
         }
 
+        posthog.capture('team_member_removed', {
+          member_id: memberId,
+          remaining_members: Math.max((teamData?.teamMembers?.length || 1) - 1, 0)
+        });
+
         // Refresh team data
         mutate('/api/team');
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred');
       }
     });
@@ -174,6 +186,7 @@ function TeamMembers() {
 
 function InviteTeamMember() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
   const isOwner = user?.role === 'owner';
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
@@ -207,10 +220,16 @@ function InviteTeamMember() {
           return;
         }
 
+        posthog.capture('team_member_invited', {
+          role: data.role,
+          team_size: teamData?.teamMembers?.length || 0
+        });
+
         setSuccess(result.success);
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred');
       }
     });

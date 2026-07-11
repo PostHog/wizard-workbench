@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import useSWR from 'swr';
+import posthog from 'posthog-js';
 import { User } from '@/lib/db/schema';
 import { useState, useTransition } from 'react';
 
@@ -52,9 +53,19 @@ export default function GeneralPage() {
           return;
         }
 
+        posthog.capture('account_updated', {
+          has_name: Boolean(data.name),
+          email_domain: data.email.split('@')[1] || 'unknown'
+        });
+        posthog.identify(result.distinctId || data.email, {
+          email: data.email,
+          name: data.name
+        });
+
         setSuccess(result.success);
         setName(result.name);
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred. Please try again.');
       }
     });

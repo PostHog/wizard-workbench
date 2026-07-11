@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
+import { flushPostHogServerClient, getPostHogServerClient } from '@/lib/posthog-server';
 import {
   users,
   activityLogs,
@@ -59,13 +60,35 @@ export default async function handler(
     const { name, email } = validation.data;
     const userWithTeam = await getUserWithTeam(user.id);
 
+    const posthog = getPostHogServerClient();
+    posthog.identify({
+      distinctId: String(user.id),
+      properties: {
+        email,
+        name,
+        role: user.role
+      }
+    });
+    posthog.capture({
+      distinctId: String(user.id),
+      event: 'account_updated',
+      properties: {
+        team_id: userWithTeam?.teamId || null,
+        has_name: Boolean(name)
+      }
+    });
+
     await Promise.all([
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
-      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
+      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT),
+      flushPostHogServerClient()
     ]);
 
-    return res.status(200).json({ name, success: 'Account updated successfully.' });
+    return res.status(200).json({ name, success: 'Account updated successfully.', distinctId: String(user.id) });
   } catch (error) {
+    const posthog = getPostHogServerClient();
+    posthog.captureException(error, 'update-account-handler');
+    await flushPostHogServerClient();
     console.error('Update account error:', error);
     return res.status(500).json({ error: 'Failed to update account' });
   }
