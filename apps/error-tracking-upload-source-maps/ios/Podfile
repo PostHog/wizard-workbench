@@ -1,9 +1,7 @@
-# Minimal iOS marker so source-maps platform detection picks "ios".
-# Intentionally just this one file — no .xcodeproj, no real project — to
-# exercise the wizard's "unsupported-platform" intro screen. See the wizard's
-# detect.ts (hasPodfile -> variant "ios").
+# Minimal CocoaPods baseline for the source-map upload fixture.
+# PostHog and dSYM upload are intentionally not configured.
 platform :ios, "13.0"
 
-target "App" do
+target "SourceMapExample" do
   use_frameworks!
 end
