@@ -1,7 +1,7 @@
-# Minimal CocoaPods baseline for the source-map upload fixture.
-# PostHog and dSYM upload are intentionally not configured.
-platform :ios, "13.0"
+# PostHog is installed, but dSYM upload is intentionally not configured.
+platform :ios, "16.0"
 
 target "SourceMapExample" do
   use_frameworks!
+  pod "PostHog"
 end
