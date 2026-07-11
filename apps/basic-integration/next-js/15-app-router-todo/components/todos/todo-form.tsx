@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -14,8 +15,15 @@ export function TodoForm({ onAdd }: TodoFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (title.trim()) {
-      onAdd(title, description);
+    const trimmedTitle = title.trim();
+
+    if (trimmedTitle) {
+      posthog.capture('todo_create_submitted', {
+        has_description: Boolean(description.trim()),
+        title_length: trimmedTitle.length,
+      });
+
+      onAdd(trimmedTitle, description);
       setTitle('');
       setDescription('');
     }

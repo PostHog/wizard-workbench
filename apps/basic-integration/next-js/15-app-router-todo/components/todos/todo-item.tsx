@@ -1,5 +1,6 @@
 'use client';
 
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,14 @@ export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
           <div className="flex items-start gap-3 flex-1">
             <Checkbox
               checked={todo.completed}
-              onChange={(e) => onToggle(todo.id, e.target.checked)}
+              onChange={(e) => {
+                posthog.capture('todo_completion_toggled', {
+                  completed: e.target.checked,
+                  had_description: Boolean(todo.description),
+                  todo_id: todo.id,
+                });
+                onToggle(todo.id, e.target.checked);
+              }}
               className="mt-1"
             />
             <div className="flex-1">
@@ -37,7 +45,14 @@ export function TodoItem({ todo, onToggle, onDelete }: TodoItemProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onDelete(todo.id)}
+            onClick={() => {
+              posthog.capture('todo_delete_clicked', {
+                completed: todo.completed,
+                has_description: Boolean(todo.description),
+                todo_id: todo.id,
+              });
+              onDelete(todo.id);
+            }}
             className="text-destructive hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />
