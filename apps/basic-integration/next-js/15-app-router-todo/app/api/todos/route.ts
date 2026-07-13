@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodos, createTodo } from '@/lib/data';
+import { getPostHogServerClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -14,6 +15,9 @@ export async function GET() {
     const allTodos = getTodos();
     return NextResponse.json(allTodos);
   } catch (error) {
+    const posthog = getPostHogServerClient();
+    posthog.captureException(error, 'anonymous');
+    await posthog.flush();
     console.error('Error fetching todos:', error);
     return NextResponse.json(
       { error: 'Failed to fetch todos' },
@@ -34,6 +38,20 @@ export async function POST(request: NextRequest) {
       completed: validatedData.completed,
     });
 
+    const posthog = getPostHogServerClient();
+    posthog.capture({
+      distinctId: 'anonymous',
+      event: 'todo_created',
+      properties: {
+        todo_id: newTodo.id,
+        has_description: Boolean(newTodo.description),
+        completed: newTodo.completed,
+        title_length: newTodo.title.length,
+        source: 'api',
+      },
+    });
+    await posthog.flush();
+
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -42,6 +60,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    const posthog = getPostHogServerClient();
+    posthog.captureException(error, 'anonymous');
+    await posthog.flush();
     console.error('Error creating todo:', error);
     return NextResponse.json(
       { error: 'Failed to create todo' },

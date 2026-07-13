@@ -1,10 +1,8 @@
-import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+'use client';
 
-export const metadata = {
-  title: 'About - Todo App',
-  description: 'Learn more about this Next.js 15 todo application',
-};
+import Link from 'next/link';
+import posthog from 'posthog-js';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function AboutPage() {
   return (
@@ -91,6 +89,12 @@ export default function AboutPage() {
       <div className="flex justify-center">
         <Link
           href="/"
+          onClick={() =>
+            posthog.capture('about_page_cta_clicked', {
+              destination: 'home',
+              location: 'about_page',
+            })
+          }
           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
         >
           Back to Todos
