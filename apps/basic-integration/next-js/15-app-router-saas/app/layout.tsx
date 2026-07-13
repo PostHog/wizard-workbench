@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   title: 'Next.js SaaS Starter',
@@ -36,7 +37,7 @@ export default function RootLayout({
             }
           }}
         >
-          {children}
+          <Suspense>{children}</Suspense>
         </SWRConfig>
       </body>
     </html>
