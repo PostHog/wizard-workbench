@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 import { useFormStatus } from 'react-dom';
 
 export function SubmitButton() {
@@ -13,6 +14,11 @@ export function SubmitButton() {
       disabled={pending}
       variant="outline"
       className="w-full rounded-full"
+      onClick={() => {
+        posthog.capture('pricing_cta_clicked', {
+          location: 'pricing_page'
+        });
+      }}
     >
       {pending ? (
         <>
