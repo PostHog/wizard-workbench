@@ -9,6 +9,8 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { getDistinctId } from '@/lib/posthog-shared';
+import { flushPostHogServerClient, getPostHogServerClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -64,9 +66,22 @@ export default async function handler(
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
 
+    getPostHogServerClient().capture({
+      distinctId: getDistinctId(user.id),
+      event: 'account_updated',
+      properties: {
+        has_name: Boolean(name),
+        team_id: userWithTeam?.teamId ?? null
+      }
+    });
+
+    await flushPostHogServerClient();
+
     return res.status(200).json({ name, success: 'Account updated successfully.' });
   } catch (error) {
     console.error('Update account error:', error);
+    getPostHogServerClient().captureException(error, getDistinctId('update-account-handler'));
+    await flushPostHogServerClient();
     return res.status(500).json({ error: 'Failed to update account' });
   }
 }

@@ -3,8 +3,9 @@ import { Check, ArrowRight, Loader2 } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
 
@@ -86,6 +87,13 @@ function PricingCard({
 
         const result = await response.json();
 
+        posthog.capture('checkout_started', {
+          plan_name: name,
+          billing_interval: interval,
+          trial_days: trialDays,
+          has_price_id: Boolean(priceId)
+        });
+
         if (result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
@@ -130,6 +138,13 @@ export default function PricingPage({
   products,
   fallback
 }: PricingPageProps) {
+  useEffect(() => {
+    posthog.capture('pricing_viewed', {
+      available_plans: products.map((product) => product.name),
+      price_count: prices.length
+    });
+  }, [prices.length, products]);
+
   const basePlan = products.find((product) => product.name === 'Base');
   const plusPlan = products.find((product) => product.name === 'Plus');
 

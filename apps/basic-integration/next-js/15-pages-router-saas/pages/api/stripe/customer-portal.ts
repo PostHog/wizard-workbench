@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCustomerPortalSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { getDistinctId } from '@/lib/posthog-shared';
+import { flushPostHogServerClient, getPostHogServerClient } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,9 +27,24 @@ export default async function handler(
     }
 
     const portalSession = await createCustomerPortalSession(team);
+
+    getPostHogServerClient().capture({
+      distinctId: getDistinctId(user.id),
+      event: 'subscription_portal_opened',
+      properties: {
+        team_id: team.id,
+        current_plan: team.planName || 'Free',
+        subscription_status: team.subscriptionStatus || 'none'
+      }
+    });
+
+    await flushPostHogServerClient();
+
     return res.status(200).json({ url: portalSession.url });
   } catch (error) {
     console.error('Customer portal error:', error);
+    getPostHogServerClient().captureException(error, getDistinctId('customer-portal-handler'));
+    await flushPostHogServerClient();
     return res.status(500).json({ error: 'Failed to create customer portal session' });
   }
 }

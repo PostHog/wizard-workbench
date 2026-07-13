@@ -12,6 +12,8 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getDistinctId, getRequestIp } from '@/lib/posthog-shared';
+import { flushPostHogServerClient, getPostHogServerClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -90,10 +92,36 @@ export default async function handler(
       });
     }
 
+    const distinctId = getDistinctId(foundUser.id);
+    const requestIp = getRequestIp(req.headers);
+    const posthog = getPostHogServerClient();
+
     await Promise.all([
       setSession(foundUser, res),
-      logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
+      logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN),
+      posthog.identify({
+        distinctId,
+        properties: {
+          email: foundUser.email,
+          name: foundUser.name,
+          role: foundUser.role
+        }
+      })
     ]);
+
+    posthog.capture({
+      distinctId,
+      event: 'user_signed_in',
+      properties: {
+        redirect: redirect || null,
+        has_price_id: Boolean(priceId),
+        team_id: foundTeam?.id ?? null,
+        team_name: foundTeam?.name ?? null,
+        $ip: requestIp
+      }
+    });
+
+    await flushPostHogServerClient();
 
     if (redirect === 'checkout' && foundTeam) {
       const checkoutResult = await createCheckoutSession({
@@ -104,9 +132,20 @@ export default async function handler(
       return res.status(200).json(checkoutResult);
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      user: {
+        id: foundUser.id,
+        email: foundUser.email,
+        name: foundUser.name,
+        role: foundUser.role
+      }
+    });
   } catch (error) {
     console.error('Sign in error:', error);
+    getPostHogServerClient().captureException(error, getDistinctId('sign-in-handler'));
+    await flushPostHogServerClient();
     return res.status(500).json({ error: 'Failed to sign in. Please try again.' });
   }
 }

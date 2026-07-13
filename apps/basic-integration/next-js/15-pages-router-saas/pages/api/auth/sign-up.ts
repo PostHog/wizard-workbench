@@ -16,6 +16,8 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getDistinctId, getRequestIp } from '@/lib/posthog-shared';
+import { flushPostHogServerClient, getPostHogServerClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -160,11 +162,38 @@ export default async function handler(
       role: userRole
     };
 
+    const distinctId = getDistinctId(createdUser.id);
+    const requestIp = getRequestIp(req.headers);
+    const posthog = getPostHogServerClient();
+
     await Promise.all([
       db.insert(teamMembers).values(newTeamMember),
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
-      setSession(createdUser, res)
+      setSession(createdUser, res),
+      posthog.identify({
+        distinctId,
+        properties: {
+          email: createdUser.email,
+          name: createdUser.name,
+          role: createdUser.role
+        }
+      })
     ]);
+
+    posthog.capture({
+      distinctId,
+      event: 'user_signed_up',
+      properties: {
+        redirect: redirect || null,
+        has_price_id: Boolean(priceId),
+        has_invite_id: Boolean(inviteId),
+        team_id: teamId,
+        team_name: createdTeam?.name ?? null,
+        $ip: requestIp
+      }
+    });
+
+    await flushPostHogServerClient();
 
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({
@@ -175,9 +204,20 @@ export default async function handler(
       return res.status(200).json(checkoutResult);
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      user: {
+        id: createdUser.id,
+        email: createdUser.email,
+        name: createdUser.name,
+        role: createdUser.role
+      }
+    });
   } catch (error) {
     console.error('Sign up error:', error);
+    getPostHogServerClient().captureException(error, getDistinctId('sign-up-handler'));
+    await flushPostHogServerClient();
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });
   }
 }

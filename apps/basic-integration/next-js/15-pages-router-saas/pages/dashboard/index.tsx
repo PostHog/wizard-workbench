@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, PlusCircle } from 'lucide-react';
 import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -36,6 +37,10 @@ function ManageSubscription() {
       const result = await response.json();
 
       if (response.ok && result.url) {
+        posthog.capture('subscription_portal_opened', {
+          current_plan: teamData?.planName || 'Free',
+          subscription_status: teamData?.subscriptionStatus || 'none'
+        });
         window.location.href = result.url;
       }
     } catch (err) {
