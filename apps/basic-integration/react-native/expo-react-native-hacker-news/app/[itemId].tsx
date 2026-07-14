@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
 
 import { parseTitle } from "@/lib/text";
@@ -20,6 +21,7 @@ import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export default function ItemDetails() {
+  const posthog = usePostHog();
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
 
@@ -72,7 +74,15 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable onPress={() => {
+              posthog.capture("author_profile_opened", {
+                item_id: item.id,
+                author_id: item.by,
+                item_type: item.type,
+                source: "item_detail_header",
+              });
+              router.push(`/users/${item.by}`);
+            }}>
               <Text
                 style={{
                   fontSize: 16,
@@ -120,6 +130,12 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog.capture("story_upvote_pressed", {
+                  item_id: item.id,
+                  story_title: item.title,
+                  story_score: item.score || 0,
+                  source: "item_detail",
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -141,6 +157,13 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog.capture("story_comments_opened", {
+                  item_id: item.id,
+                  story_title: item.title,
+                  item_type: item.type,
+                  comment_count: item.kids?.length || 0,
+                  source: "item_detail_comments_button",
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Warning
                 );
@@ -163,6 +186,13 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture("story_outbound_link_opened", {
+                    item_id: item.id,
+                    story_title: item.title,
+                    destination_host: new URL(item.url).host,
+                    item_type: item.type,
+                    source: "item_detail",
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +224,15 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog.capture("parent_story_opened", {
+                  item_id: item.id,
+                  parent_item_id: parentItem.id,
+                  parent_item_type: parentItem.type,
+                  source: "item_detail_parent_card",
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
