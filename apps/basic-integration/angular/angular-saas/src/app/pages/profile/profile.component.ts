@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } 
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CredentialsService } from '@app/auth/services/credentials.service';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { PostHogService } from '@core/services';
 
 @Component({
   selector: 'app-profile',
@@ -13,6 +14,7 @@ import { HotToastService } from '@ngxpert/hot-toast';
 export class ProfileComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(HotToastService);
+  private readonly posthogService = inject(PostHogService);
   readonly credentialsService = inject(CredentialsService);
 
   readonly isEditing = signal(false);
@@ -61,6 +63,19 @@ export class ProfileComponent implements OnInit {
 
   onSave() {
     if (this.profileForm.valid) {
+      const formValue = this.profileForm.getRawValue();
+
+      this.posthogService.instance.capture('profile_updated', {
+        updated_email: formValue.email !== this.credentialsService.credentials()?.email,
+        updated_name: formValue.firstName !== this.credentialsService.credentials()?.firstName || formValue.lastName !== this.credentialsService.credentials()?.lastName,
+      });
+
+      this.posthogService.instance.identify(this.credentialsService.credentials()?.id || formValue.username, {
+        username: formValue.username,
+        email: formValue.email,
+        name: `${formValue.firstName} ${formValue.lastName}`.trim(),
+      });
+
       this.toast.success('Profile updated successfully');
       this.isEditing.set(false);
     } else {
