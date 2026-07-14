@@ -9,8 +9,11 @@
     "wizard-ci-snapshots-review": "tsx services/wizard-ci/snapshots-review.ts",
     "benchmark": "tsx services/wizard-benchmark/index.ts",
     "framework-detect": "tsx services/framework-detect/index.ts",
+    "project-detection-eval": "tsx services/project-detection-eval/index.ts",
     "yara-scan": "tsx services/yara-scan/index.ts",
-    "test:evaluator": "tsx --test services/pr-evaluator/evaluator.test.ts"
+    "test:evaluator": "tsx --test services/pr-evaluator/evaluator.test.ts",
+    "test:project-detection-eval": "tsx --test services/project-detection-eval/**/*.test.ts",
+    "typecheck:project-detection-eval": "tsc --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2022 --skipLibCheck services/project-detection-eval/**/*.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.2.73",

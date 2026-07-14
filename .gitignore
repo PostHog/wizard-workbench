@@ -62,6 +62,7 @@ postgres-data/
 coverage/
 test-results/
 test-evaluations/
+artifacts/project-detection-eval/
 playwright-report/
 playwright/.cache/
 

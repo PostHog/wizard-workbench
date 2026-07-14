@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "issue-113-pnpm-next-api",
+  "description": "pnpm workspace with a Next.js client and Node API",
+  "provenance": { "reason": "Mirrors Wizard issue #113 multi-project topology", "issueUrls": ["https://github.com/PostHog/wizard/issues/113"] },
+  "fixture": { "kind": "synthetic", "path": "services/project-detection-eval/fixtures/issue-113-pnpm-next-api", "copyBeforeRun": true },
+  "tiers": ["pr", "nightly"],
+  "consumers": [{ "profile": "registry-crosscheck", "expectedOutcome": "success", "repoType": "monorepo", "projects": [
+    { "path": ".", "presence": "optional", "role": "workspace-root", "hasPostHog": false },
+    { "path": "apps/web", "presence": "required", "role": "client", "targetId": "nextjs", "hasPostHog": false },
+    { "path": "services/api", "presence": "required", "role": "server", "targetId": "javascript_node", "hasPostHog": false }
+  ] }],
+  "tags": ["issue-113", "pnpm", "nextjs", "node", "monorepo"]
+}

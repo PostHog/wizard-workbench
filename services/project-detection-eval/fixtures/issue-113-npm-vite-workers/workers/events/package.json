@@ -1,0 +1,1 @@
+{ "name": "events-worker", "private": true, "dependencies": { "fastify": "5.0.0" } }

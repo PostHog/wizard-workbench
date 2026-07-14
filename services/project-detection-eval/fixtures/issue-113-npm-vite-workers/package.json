@@ -1,0 +1,1 @@
+{ "name": "issue-113-npm", "private": true, "workspaces": ["apps/*", "workers/*"] }

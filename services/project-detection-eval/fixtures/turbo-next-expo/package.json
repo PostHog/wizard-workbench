@@ -1,0 +1,1 @@
+{ "name": "turbo-next-expo", "private": true, "workspaces": ["apps/*"] }

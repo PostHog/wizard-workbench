@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "turbo-next-expo",
+  "description": "Turborepo with equally credible Next.js and Expo clients",
+  "provenance": { "reason": "Models the ambiguous multi-client topology from issue discussion", "customerPattern": "pnpm Turborepo with web and mobile clients" },
+  "fixture": { "kind": "synthetic", "path": "services/project-detection-eval/fixtures/turbo-next-expo", "copyBeforeRun": true },
+  "tiers": ["pr", "nightly", "experimental"],
+  "consumers": [
+    { "profile": "registry-crosscheck", "expectedOutcome": "success", "repoType": "monorepo", "projects": [
+      { "path": ".", "presence": "optional", "role": "workspace-root", "hasPostHog": false },
+      { "path": "apps/mobile", "presence": "required", "role": "client", "targetId": "react-native", "hasPostHog": false },
+      { "path": "apps/web", "presence": "required", "role": "client", "targetId": "nextjs", "hasPostHog": false }
+    ] },
+    { "profile": "headless-integration", "expectedOutcome": "success", "repoType": "monorepo", "projects": [
+      { "path": ".", "presence": "optional", "role": "workspace-root", "hasPostHog": false },
+      { "path": "apps/mobile", "presence": "required", "role": "client", "targetId": "react-native", "hasPostHog": false },
+      { "path": "apps/web", "presence": "required", "role": "client", "targetId": "nextjs", "hasPostHog": false }
+    ], "recommendation": { "required": false, "acceptablePaths": ["apps/web", "apps/mobile"], "forbiddenPaths": ["."], "rationale": "Both client applications are credible; workspace root is not" }, "selectedPath": { "acceptablePaths": ["apps/web", "apps/mobile"], "expectedStrategy": "recommended" } }
+  ],
+  "tags": ["pnpm", "turbo", "nextjs", "expo", "react-native", "ambiguous"]
+}
