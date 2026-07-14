@@ -1,4 +1,14 @@
+import 'dotenv/config';
+import { createHash } from 'node:crypto';
 import Fastify from 'fastify';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+  flushAt: 1,
+  flushInterval: 0,
+});
 
 const fastify = Fastify({ logger: true });
 
@@ -6,6 +16,36 @@ const posts = [];
 const comments = [];
 let nextPostId = 1;
 let nextCommentId = 1;
+
+function getDistinctId(value) {
+  return createHash('sha256').update(String(value)).digest('hex');
+}
+
+async function captureEvent(distinctId, event, properties = {}) {
+  posthog.capture({
+    distinctId,
+    event,
+    properties,
+  });
+
+  await posthog.flush();
+}
+
+fastify.setErrorHandler(async (err, request, reply) => {
+  const distinctId = request.body?.author ? getDistinctId(request.body.author) : 'anonymous';
+
+  posthog.captureException(err, distinctId, {
+    path: request.routerPath || request.url,
+    method: request.method,
+  });
+  await posthog.flush();
+
+  request.log.error(err);
+
+  if (!reply.sent) {
+    reply.status(err.statusCode || 500).send({ error: 'Internal Server Error' });
+  }
+});
 
 // List posts (with optional author filter and pagination)
 fastify.get('/api/posts', async (request) => {
@@ -39,6 +79,14 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+
+  await captureEvent(getDistinctId(author), 'post_created', {
+    post_id: post.id,
+    title_length: title.length,
+    body_length: body.length,
+    published: post.published,
+  });
+
   return reply.status(201).send(post);
 });
 
@@ -51,6 +99,13 @@ fastify.get('/api/posts/:id', async (request, reply) => {
   }
 
   const postComments = comments.filter((c) => c.post_id === post.id);
+
+  await captureEvent(getDistinctId(post.author), 'post_viewed', {
+    post_id: post.id,
+    comment_count: postComments.length,
+    published: post.published,
+  });
+
   return { ...post, comments: postComments };
 });
 
@@ -67,6 +122,14 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  await captureEvent(getDistinctId(post.author), 'post_updated', {
+    post_id: post.id,
+    title_updated: title !== undefined,
+    body_updated: body !== undefined,
+    published_updated: published !== undefined,
+    published: post.published,
+  });
+
   return post;
 });
 
@@ -78,13 +141,25 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
     return reply.status(404).send({ error: 'Post not found' });
   }
 
-  const postId = posts[index].id;
+  const deletedPost = posts[index];
+  const postId = deletedPost.id;
   posts.splice(index, 1);
+
+  let deletedCommentCount = 0;
 
   // Remove associated comments
   for (let i = comments.length - 1; i >= 0; i--) {
-    if (comments[i].post_id === postId) comments.splice(i, 1);
+    if (comments[i].post_id === postId) {
+      comments.splice(i, 1);
+      deletedCommentCount++;
+    }
   }
+
+  await captureEvent(getDistinctId(deletedPost.author), 'post_deleted', {
+    post_id: postId,
+    deleted_comment_count: deletedCommentCount,
+    published: deletedPost.published,
+  });
 
   return reply.status(204).send();
 });
@@ -111,7 +186,19 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+
+  await captureEvent(getDistinctId(author), 'comment_created', {
+    comment_id: comment.id,
+    post_id: post.id,
+    body_length: body.length,
+    post_author_matches_comment_author: post.author === author,
+  });
+
   return reply.status(201).send(comment);
+});
+
+fastify.addHook('onClose', async () => {
+  await posthog.shutdown();
 });
 
 const PORT = process.env.PORT || 3001;
