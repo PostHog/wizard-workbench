@@ -1,9 +1,11 @@
+import { usePostHog } from '@posthog/react'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
 import { fakeUser } from '@/lib/data/fake-data'
 import { getFollowers } from '@/lib/utils/localStorage'
 
 export const Header = () => {
+  const posthog = usePostHog()
   const [followers, setFollowers] = useState(fakeUser.followers)
 
   useEffect(() => {
@@ -58,7 +60,15 @@ export const Header = () => {
         >
           Buy Followers
         </Link>
-        <Link to="/profile" className="flex items-center gap-2">
+        <Link
+          to="/profile"
+          className="flex items-center gap-2"
+          onClick={() => {
+            posthog?.capture('profile_avatar_opened', {
+              source: 'header_avatar',
+            })
+          }}
+        >
           <img
             src={fakeUser.avatar}
             alt={fakeUser.username}

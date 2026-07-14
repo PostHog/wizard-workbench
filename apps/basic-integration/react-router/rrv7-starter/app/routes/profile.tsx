@@ -1,19 +1,26 @@
+import { usePostHog } from '@posthog/react'
 import { useState, useEffect } from 'react'
 import { fakeUser } from '@/lib/data/fake-data'
 import { fakeFollowers } from '@/lib/data/fake-data'
 import type { Route } from './+types/profile'
 import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
-import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
+import { getFollowers, getFollowing, getPosts, setFollowing as persistFollowing } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
+  const posthog = usePostHog()
   const [isFollowing, setIsFollowing] = useState(false)
 
   const handleClick = () => {
-    setIsFollowing(!isFollowing)
-    if (!isFollowing) {
+    const nextIsFollowing = !isFollowing
+    setIsFollowing(nextIsFollowing)
+
+    if (nextIsFollowing) {
       onFollow()
+      posthog?.capture('bot_follower_followed_back', {
+        follower_username: username,
+      })
     }
   }
 
@@ -145,6 +152,7 @@ export default function Profile() {
                   username={follower.username}
                   onFollow={() => {
                     const newFollowing = getFollowing() + 1
+                    persistFollowing(newFollowing)
                     setFollowing(newFollowing)
                   }}
                 />

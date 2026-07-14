@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { followerPackages } from '@/lib/data/fake-data'
@@ -19,26 +20,36 @@ export const meta: Route.MetaFunction = () => {
 }
 
 export default function BuyFollowers() {
+  const posthog = usePostHog()
   const navigate = useNavigate()
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
 
   const handlePurchase = () => {
     if (selectedPackage === null) return
+
+    const pkg = followerPackages[selectedPackage]
+    const totalFollowers = pkg.amount + pkg.bonus
+
     setPurchased(true)
-    
+
     setTimeout(() => {
-      const pkg = followerPackages[selectedPackage]
-      const totalFollowers = pkg.amount + pkg.bonus
-      
-      // Save to localStorage
-      addFollowers(totalFollowers)
-      addPurchasedFollowers(totalFollowers)
-      
+      const updatedFollowers = addFollowers(totalFollowers)
+      const updatedPurchasedFollowers = addPurchasedFollowers(totalFollowers)
+
+      posthog?.capture('followers_purchase_completed', {
+        package_amount: pkg.amount,
+        package_bonus: pkg.bonus,
+        package_price: pkg.price,
+        total_followers_added: totalFollowers,
+        updated_followers_total: updatedFollowers,
+        updated_purchased_followers_total: updatedPurchasedFollowers,
+      })
+
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
       setSelectedPackage(null)
-      
+
       // Navigate to profile to see the updated count
       navigate('/profile')
     }, 1500)
@@ -75,7 +86,16 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => {
+                  setSelectedPackage(index)
+                  posthog?.capture('followers_package_selected', {
+                    package_index: index,
+                    package_amount: pkg.amount,
+                    package_bonus: pkg.bonus,
+                    package_price: pkg.price,
+                    total_followers: totalFollowers,
+                  })
+                }}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected

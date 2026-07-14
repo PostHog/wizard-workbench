@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
 import type { Route } from './+types/home'
@@ -17,6 +18,7 @@ export const meta: Route.MetaFunction = () => {
 }
 
 export default function Home() {
+  const posthog = usePostHog()
   const [followers, setFollowers] = useState(124789)
   const [posts, setPosts] = useState(1337)
   const [following, setFollowing] = useState(42)
@@ -48,12 +50,24 @@ export default function Home() {
             <Link
               to="/feed"
               className="bg-accent text-primary font-bold px-8 py-4 rounded-lg text-lg hover:opacity-80 transition"
+              onClick={() => {
+                posthog?.capture('home_cta_clicked', {
+                  destination: 'feed',
+                  cta_variant: 'primary',
+                })
+              }}
             >
               View Feed
             </Link>
             <Link
               to="/buy-followers"
               className="bg-primary/10 text-primary border-2 border-primary font-bold px-8 py-4 rounded-lg text-lg hover:bg-primary/20 transition"
+              onClick={() => {
+                posthog?.capture('home_cta_clicked', {
+                  destination: 'buy_followers',
+                  cta_variant: 'secondary',
+                })
+              }}
             >
               Buy Fake Followers
             </Link>

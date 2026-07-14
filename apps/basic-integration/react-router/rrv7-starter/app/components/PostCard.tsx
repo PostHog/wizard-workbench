@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { useState, useEffect } from 'react'
 import type { FakePost } from '@/lib/data/fake-data'
 import cn from '@/lib/utils/cn'
@@ -8,6 +9,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post }: PostCardProps) {
+  const posthog = usePostHog()
   const [liked, setLiked] = useState(false)
   const [likes, setLikes] = useState(post.likes)
 
@@ -20,6 +22,15 @@ export function PostCard({ post }: PostCardProps) {
     const newLikedState = toggleLikedPost(post.id)
     setLiked(newLikedState)
     setLikes((prev) => (prev + (newLikedState ? 1 : -1)))
+
+    if (newLikedState) {
+      posthog?.capture('feed_post_liked', {
+        post_id: post.id,
+        author_username: post.username,
+        has_image: Boolean(post.image),
+        verified_author: post.verified,
+      })
+    }
   }
 
   return (
