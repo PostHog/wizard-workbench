@@ -676,6 +676,9 @@ jobs:
             "${CMD_ARGS[@]}" 2>&1 | tee wizard-output.log
           fi
         env:
+          # SCRATCH BRANCH — force the orchestrator + pi-harness path so this run
+          # exercises the gpt-5.6 orchestrator regardless of server-side flags.
+          WIZARD_CI_FLAG_OVERRIDES: '{"wizard-orchestrator":"true","wizard-use-pi-harness":"true"}'
           # workflow_dispatch sets inputs.snapshots; a /wizard-ci-snapshots comment
           # arrives as a repository_dispatch carrying client_payload.snapshots.
           SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
