@@ -1,3 +1,4 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
@@ -18,6 +19,7 @@ try:
 except ImportError:
     Redis = None
     rq = None
+from posthog import Posthog
 from config import Config
 
 
@@ -53,6 +55,17 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    if app.config['POSTHOG_PROJECT_TOKEN'] and app.config['POSTHOG_HOST']:
+        posthog_client = Posthog(
+            app.config['POSTHOG_PROJECT_TOKEN'],
+            host=app.config['POSTHOG_HOST'],
+            enable_exception_autocapture=True,
+        )
+        app.extensions['posthog'] = posthog_client
+        atexit.register(posthog_client.shutdown)
+    else:
+        app.extensions['posthog'] = None
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)

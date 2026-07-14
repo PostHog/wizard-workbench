@@ -7,6 +7,7 @@ from rq import get_current_job
 from app import create_app, db
 from app.models import User, Post, Task
 from app.email import send_email
+from app.posthog import capture_for_user, get_posthog_client
 
 app = create_app()
 app.app_context().push()
@@ -49,6 +50,10 @@ def export_posts(user_id):
             attachments=[('posts.json', 'application/json',
                           json.dumps({'posts': data}, indent=4))],
             sync=True)
+        capture_for_user(get_posthog_client(), user, 'posts_export_completed', {
+            'export_type': 'posts_json',
+            'post_count': len(data),
+        })
     except Exception:
         _set_task_progress(100)
         app.logger.error('Unhandled exception', exc_info=sys.exc_info())
