@@ -3,6 +3,14 @@ const id = useRouteParam<string>('id')
 const person = await getPerson(id.value)
 
 const $img = useImage()
+const { $posthog: posthog } = useNuxtApp()
+
+onMounted(() => {
+  posthog?.capture('person_detail_viewed', {
+    person_id: person.id,
+    person_name: person.name,
+  })
+})
 
 useHead({
   title: person.name,
