@@ -71,6 +71,22 @@ test("writes parseable JSON and Markdown artifacts", () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+test("returns the same sanitized artifact written to disk", () => {
+  const dir = mkdtempSync(join(tmpdir(), "detection-report-redacted-"));
+  try {
+    const copy = structuredClone(artifact);
+    copy.results[0].mismatches[0].message =
+      "failed in /workspace/wizard/node_modules/.bin/tsx";
+    const written = writeArtifacts(dir, copy, ["/workspace/wizard"]);
+    const persisted = JSON.parse(
+      readFileSync(join(dir, "results.json"), "utf8")
+    );
+    assert.deepEqual(written, persisted);
+    assert.doesNotMatch(JSON.stringify(written), /\/workspace\/wizard/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 test("deliberate target mutation produces the intended field-level failure", () =>
   assert.equal(artifact.results[0].mismatches[0].field, "targetId"));
 test("deliberate mutation drives the CI command to a nonzero exit", () =>
@@ -98,5 +114,12 @@ test("model-controlled project paths cannot inject Markdown or new lines", () =>
   copy.results[0].mismatches[0].projectPath = "apps/`**injected**`\n# heading";
   const markdown = markdownSummary(copy);
   assert.match(markdown, /\(`` apps\/`\*\*injected\*\*` # heading ``\)/);
+  assert.doesNotMatch(markdown, /\n# heading/);
+});
+test("detector error messages cannot inject Markdown or new lines", () => {
+  const copy = structuredClone(artifact);
+  copy.results[0].mismatches[0].message = "failed `breakout`\n# heading";
+  const markdown = markdownSummary(copy);
+  assert.match(markdown, /`` failed `breakout` # heading ``/);
   assert.doesNotMatch(markdown, /\n# heading/);
 });

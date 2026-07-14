@@ -34,7 +34,8 @@ const outputDir = resolve(
       new Date().toISOString().replaceAll(/[:.]/g, "-")
     )
 );
-const wizardSource = sourceState(wizardPath());
+const wizardRoot = wizardPath();
+const wizardSource = sourceState(wizardRoot);
 const workbenchSource = sourceState(root);
 const cases = loadCases(join(import.meta.dirname, "cases")).filter(
   (item) => !caseId || item.id === caseId
@@ -60,10 +61,10 @@ const artifact: EvaluationArtifact = {
   results: runRegistryCases(cases, root),
 };
 
-writeArtifacts(outputDir, artifact);
+const sanitizedArtifact = writeArtifacts(outputDir, artifact, [wizardRoot]);
 console.log(
   json
-    ? JSON.stringify(artifact, null, 2)
+    ? JSON.stringify(sanitizedArtifact, null, 2)
     : `${artifact.results.filter((result) => result.status === "passed").length}/${artifact.results.length} checks passed\nArtifacts: ${outputDir}`
 );
 process.exitCode = evaluationExitCode(artifact);

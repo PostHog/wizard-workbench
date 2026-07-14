@@ -22,6 +22,16 @@ import { compareReport } from "./compare/compare.js";
 import { normalizeReport } from "./compare/normalize.js";
 import { detectIntegrations, productionTargets } from "./wizard-runner.js";
 
+export type RegistryDependencies = {
+  detectIntegrations(paths: string[]): Array<string | null>;
+  productionTargets(profile: "integration" | "source-maps"): string[];
+};
+
+const productionDependencies: RegistryDependencies = {
+  detectIntegrations,
+  productionTargets,
+};
+
 const MANIFESTS = new Set([
   "package.json",
   "pyproject.toml",
@@ -146,9 +156,12 @@ export function materialize(
   };
 }
 
-export function validateTargets(testCase: DetectionCase): string[] {
-  const integration = new Set(productionTargets("integration"));
-  const sourceMaps = new Set(productionTargets("source-maps"));
+export function validateTargets(
+  testCase: DetectionCase,
+  targets: RegistryDependencies["productionTargets"] = productionTargets
+): string[] {
+  const integration = new Set(targets("integration"));
+  const sourceMaps = new Set(targets("source-maps"));
   const errors: string[] = [];
   for (const consumer of testCase.consumers)
     for (const project of consumer.projects ?? []) {
@@ -163,40 +176,75 @@ export function validateTargets(testCase: DetectionCase): string[] {
   return errors;
 }
 
+function infrastructureFailure(
+  testCase: DetectionCase,
+  consumer: ConsumerExpectation,
+  started: number,
+  error: unknown
+): EvaluationResult {
+  const message = error instanceof Error ? error.message : String(error);
+  return {
+    caseId: testCase.id,
+    profile: consumer.profile,
+    mode: "registry-crosscheck",
+    status: "failed",
+    evidenceClass: "Deterministic integration-proven",
+    checks: { infrastructure: "failed" },
+    mismatches: [
+      {
+        field: "outcome",
+        severity: "critical",
+        expected: consumer.expectedOutcome,
+        actual: "infrastructure-error",
+        message,
+      },
+    ],
+    durationMs: Date.now() - started,
+  };
+}
+
 export function runRegistryCase(
   testCase: DetectionCase,
-  workbenchRoot: string
+  workbenchRoot: string,
+  dependencies: RegistryDependencies = productionDependencies
 ): EvaluationResult[] {
   const consumer = testCase.consumers.find(
     (item) => item.profile === "registry-crosscheck"
   );
   if (!consumer) return [];
   const started = Date.now();
-  const targetErrors = validateTargets(testCase);
-  if (targetErrors.length)
-    return [
-      {
-        caseId: testCase.id,
-        profile: consumer.profile,
-        mode: "registry-crosscheck",
-        status: "failed",
-        evidenceClass: "Deterministic integration-proven",
-        checks: { schema: "failed" },
-        mismatches: targetErrors.map((message) => ({
-          field: "schema",
-          severity: "critical",
-          expected: "production target",
-          actual: message,
-          message,
-        })),
-        durationMs: Date.now() - started,
-      },
-    ];
   let materialized: ReturnType<typeof materialize> | undefined;
   try {
+    const targetErrors = validateTargets(
+      testCase,
+      dependencies.productionTargets
+    );
+    if (targetErrors.length)
+      return [
+        {
+          caseId: testCase.id,
+          profile: consumer.profile,
+          mode: "registry-crosscheck",
+          status: "failed",
+          evidenceClass: "Deterministic integration-proven",
+          checks: { schema: "failed" },
+          mismatches: targetErrors.map((message) => ({
+            field: "schema",
+            severity: "critical",
+            expected: "production target",
+            actual: message,
+            message,
+          })),
+          durationMs: Date.now() - started,
+        },
+      ];
     materialized = materialize(testCase, workbenchRoot);
     const roots = [...walk(materialized.root)];
-    const targets = detectIntegrations(roots);
+    const targets = dependencies.detectIntegrations(roots);
+    if (targets.length !== roots.length)
+      throw new Error(
+        `detector returned ${targets.length} results for ${roots.length} projects`
+      );
     const projects: DetectedProject[] = roots.map((path, index) => ({
       path: fixtureRelative(materialized!.root, path),
       targetId: targets[index],
@@ -252,27 +300,7 @@ export function runRegistryCase(
       },
     ];
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return [
-      {
-        caseId: testCase.id,
-        profile: consumer.profile,
-        mode: "registry-crosscheck",
-        status: "failed",
-        evidenceClass: "Deterministic integration-proven",
-        checks: { infrastructure: "failed" },
-        mismatches: [
-          {
-            field: "outcome",
-            severity: "critical",
-            expected: consumer.expectedOutcome,
-            actual: "infrastructure-error",
-            message,
-          },
-        ],
-        durationMs: Date.now() - started,
-      },
-    ];
+    return [infrastructureFailure(testCase, consumer, started, error)];
   } finally {
     materialized?.cleanup();
   }
@@ -281,7 +309,8 @@ export function runRegistryCase(
 /** Evaluate a corpus through one Wizard subprocess so detector timeout timers overlap. */
 export function runRegistryCases(
   cases: DetectionCase[],
-  workbenchRoot: string
+  workbenchRoot: string,
+  dependencies: RegistryDependencies = productionDependencies
 ): EvaluationResult[] {
   const prepared: Array<{
     testCase: DetectionCase;
@@ -297,7 +326,14 @@ export function runRegistryCases(
         (item) => item.profile === "registry-crosscheck"
       );
       if (!consumer) continue;
-      const errors = validateTargets(testCase);
+      const started = Date.now();
+      let errors: string[];
+      try {
+        errors = validateTargets(testCase, dependencies.productionTargets);
+      } catch (error) {
+        early.push(infrastructureFailure(testCase, consumer, started, error));
+        continue;
+      }
       if (errors.length) {
         early.push({
           caseId: testCase.id,
@@ -313,7 +349,7 @@ export function runRegistryCases(
             actual: message,
             message,
           })),
-          durationMs: 0,
+          durationMs: Date.now() - started,
         });
         continue;
       }
@@ -324,32 +360,28 @@ export function runRegistryCases(
           consumer,
           materialized,
           roots: [...walk(materialized.root)],
-          started: Date.now(),
+          started,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        early.push({
-          caseId: testCase.id,
-          profile: consumer.profile,
-          mode: "registry-crosscheck",
-          status: "failed",
-          evidenceClass: "Deterministic integration-proven",
-          checks: { infrastructure: "failed" },
-          mismatches: [
-            {
-              field: "outcome",
-              severity: "critical",
-              expected: consumer.expectedOutcome,
-              actual: "infrastructure-error",
-              message,
-            },
-          ],
-          durationMs: 0,
-        });
+        early.push(infrastructureFailure(testCase, consumer, started, error));
       }
     }
     const allRoots = prepared.flatMap((item) => item.roots);
-    const allTargets = detectIntegrations(allRoots);
+    let allTargets: Array<string | null>;
+    try {
+      allTargets = dependencies.detectIntegrations(allRoots);
+      if (allTargets.length !== allRoots.length)
+        throw new Error(
+          `detector returned ${allTargets.length} results for ${allRoots.length} projects`
+        );
+    } catch (error) {
+      return [
+        ...early,
+        ...prepared.map(({ testCase, consumer, started }) =>
+          infrastructureFailure(testCase, consumer, started, error)
+        ),
+      ];
+    }
     let offset = 0;
     const results = prepared.map(
       ({ testCase, consumer, materialized, roots, started }) => {

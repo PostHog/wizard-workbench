@@ -27,6 +27,14 @@ test("redacts embedded home and temporary paths", () => {
   assert.equal(JSON.stringify(value).includes(homedir()), false);
   assert.equal(JSON.stringify(value).includes(tmpdir()), false);
 });
+test("redacts explicitly supplied repository roots", () => {
+  const value = redactValue(
+    "failed in /workspace/wizard/node_modules/.bin/tsx",
+    "/workspace/workbench",
+    ["/workspace/wizard"]
+  );
+  assert.equal(value, "failed in [LOCAL]/node_modules/.bin/tsx");
+});
 test("retains numeric token aggregates while redacting token strings", () =>
   assert.deepEqual(
     redactValue({ inputTokens: 12, accessToken: "pha_secret" }, "/tmp/fixture"),

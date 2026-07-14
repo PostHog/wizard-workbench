@@ -80,7 +80,7 @@ export function markdownSummary(artifact: EvaluationArtifact): string {
       lines.push(
         `- **${mismatch.severity} ${mismatch.field}${
           mismatch.projectPath ? ` (${inlineCode(mismatch.projectPath)})` : ""
-        }:** ${mismatch.message}; expected ${renderValue(
+        }:** ${inlineCode(mismatch.message)}; expected ${renderValue(
           mismatch.expected
         )}, received ${renderValue(mismatch.actual)}.`
       );
@@ -106,10 +106,15 @@ function renderValue(value: unknown): string {
 
 export function writeArtifacts(
   outputDir: string,
-  artifact: EvaluationArtifact
-): void {
+  artifact: EvaluationArtifact,
+  additionalRedactionRoots: string[] = []
+): EvaluationArtifact {
   mkdirSync(outputDir, { recursive: true });
-  const sanitized = redactValue(artifact, process.cwd()) as EvaluationArtifact;
+  const sanitized = redactValue(
+    artifact,
+    process.cwd(),
+    additionalRedactionRoots
+  ) as EvaluationArtifact;
   writeFileSync(
     join(outputDir, "results.json"),
     `${JSON.stringify(sanitized, null, 2)}\n`
@@ -118,6 +123,7 @@ export function writeArtifacts(
     join(outputDir, "summary.md"),
     `${markdownSummary(sanitized)}\n`
   );
+  return sanitized;
 }
 
 export function evaluationExitCode(artifact: EvaluationArtifact): 0 | 1 {
