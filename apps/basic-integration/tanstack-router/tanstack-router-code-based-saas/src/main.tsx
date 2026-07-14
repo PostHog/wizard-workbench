@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -85,54 +86,69 @@ function RouterSpinner() {
 }
 
 function RootComponent() {
+  if (!import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN || !import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+    throw new Error('Missing PostHog environment variables')
+  }
+
   return (
-    <>
-      <div className={`min-h-screen flex flex-col`}>
-        <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
-          <div className={`flex items-center gap-2 p-3`}>
-            <div className={`w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center`}>
-              <span className={`text-white font-bold text-sm`}>CF</span>
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN}
+      options={{
+        api_host: '/ingest',
+        ui_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+        defaults: '2026-01-30',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
+      <>
+        <div className={`min-h-screen flex flex-col`}>
+          <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
+            <div className={`flex items-center gap-2 p-3`}>
+              <div className={`w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center`}>
+                <span className={`text-white font-bold text-sm`}>CF</span>
+              </div>
+              <h1 className={`text-xl font-semibold`}>CloudFlow</h1>
             </div>
-            <h1 className={`text-xl font-semibold`}>CloudFlow</h1>
+            <div className={`flex-1`} />
+            <div className={`text-xl pr-4`}>
+              <RouterSpinner />
+            </div>
           </div>
-          <div className={`flex-1`} />
-          <div className={`text-xl pr-4`}>
-            <RouterSpinner />
+          <div className={`flex-1 flex`}>
+            <div className={`w-56 bg-gray-50 dark:bg-gray-800/50 border-r`}>
+              <nav className={`p-2 space-y-1`}>
+                {(
+                  [
+                    ['/', 'Home', '🏠'],
+                    ['/dashboard', 'Dashboard', '📊'],
+                    ['/profile', 'Account', '👤'],
+                    ...(auth.status === 'loggedOut' ? [['/login', 'Sign In', '🔐']] : []),
+                  ] as const
+                ).map(([to, label, icon]) => {
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      preload="intent"
+                      className={`flex items-center gap-2 py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors`}
+                      activeProps={{ className: `bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium` }}
+                    >
+                      <span>{icon}</span>
+                      {label}
+                    </Link>
+                  )
+                })}
+              </nav>
+            </div>
+            <div className={`flex-1 bg-white dark:bg-gray-900`}>
+              <Outlet />
+            </div>
           </div>
         </div>
-        <div className={`flex-1 flex`}>
-          <div className={`w-56 bg-gray-50 dark:bg-gray-800/50 border-r`}>
-            <nav className={`p-2 space-y-1`}>
-              {(
-                [
-                  ['/', 'Home', '🏠'],
-                  ['/dashboard', 'Dashboard', '📊'],
-                  ['/profile', 'Account', '👤'],
-                  ...(auth.status === 'loggedOut' ? [['/login', 'Sign In', '🔐']] : []),
-                ] as const
-              ).map(([to, label, icon]) => {
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    preload="intent"
-                    className={`flex items-center gap-2 py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors`}
-                    activeProps={{ className: `bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium` }}
-                  >
-                    <span>{icon}</span>
-                    {label}
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-          <div className={`flex-1 bg-white dark:bg-gray-900`}>
-            <Outlet />
-          </div>
-        </div>
-      </div>
-      <TanStackRouterDevtools position="bottom-right" />
-    </>
+        <TanStackRouterDevtools position="bottom-right" />
+      </>
+    </PostHogProvider>
   )
 }
 
@@ -433,9 +449,25 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async ({ data }) => {
+      posthog.capture('invoice_created', {
+        invoice_id: data.id,
+        title_length: data.title.length,
+        has_description: Boolean(data.body),
+      })
+      await router.invalidate()
+    },
+    onError: (error, variables) => {
+      posthog.capture('invoice_creation_failed', {
+        title_length: variables.title?.length ?? 0,
+        has_description: Boolean(variables.body),
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      })
+      posthog.captureException(error)
+    },
   })
 
   return (
@@ -514,12 +546,29 @@ const invoiceRoute = createRoute({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async ({ data }) => {
+      posthog.capture('invoice_updated', {
+        invoice_id: data?.id ?? invoice.id,
+        title_length: data?.title.length ?? invoice.title.length,
+        has_description: Boolean(data?.body),
+      })
+      await router.invalidate()
+    },
+    onError: (error, variables) => {
+      posthog.capture('invoice_update_failed', {
+        invoice_id: variables.id,
+        title_length: variables.title?.length ?? 0,
+        has_description: Boolean(variables.body),
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+      })
+      posthog.captureException(error)
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -860,7 +909,15 @@ const userRoute = createRoute({
 })
 
 function UserComponent() {
+  const posthog = usePostHog()
   const user = userRoute.useLoaderData()
+
+  React.useEffect(() => {
+    posthog.capture('team_member_viewed', {
+      team_member_id: user.id,
+      company_name: user.company.name,
+    })
+  }, [posthog, user.company.name, user.id])
 
   if (!user) {
     return <div className="p-6">User not found</div>
@@ -1002,9 +1059,21 @@ const profileRoute = createRoute({
 })
 
 function ProfileComponent() {
+  const posthog = usePostHog()
   const { username } = profileRoute.useRouteContext()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
+
+  const triggerTestError = () => {
+    try {
+      throw new Error('CloudFlow profile test error')
+    } catch (error) {
+      posthog.capture('test_error_triggered', {
+        source: 'profile_settings',
+      })
+      posthog.captureException(error)
+    }
+  }
 
   return (
     <div className="p-8">
@@ -1049,10 +1118,28 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={() => {
+                posthog.capture('subscription_upgrade_clicked', {
+                  current_plan: 'free',
+                  entrypoint: 'account_subscription',
+                })
+              }}
+            >
               Upgrade
             </button>
           </div>
+        </div>
+
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 mb-6">
+          <h3 className="font-semibold mb-4">Diagnostics</h3>
+          <button
+            onClick={triggerTestError}
+            className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Trigger Test Error
+          </button>
         </div>
 
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6">
@@ -1067,7 +1154,11 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                posthog.capture('user_logged_out', {
+                  source: 'profile_settings',
+                })
                 auth.logout()
+                posthog.reset()
                 router.invalidate()
               }}
               className="w-full flex items-center justify-between p-3 bg-white dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
@@ -1093,6 +1184,7 @@ const loginRoute = createRoute({
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -1102,7 +1194,17 @@ function LoginComponent() {
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    auth.login(username)
+    const normalizedUsername = username.trim()
+    if (!normalizedUsername) {
+      return
+    }
+
+    auth.login(normalizedUsername)
+    identifyAuthenticatedUser(posthog, normalizedUsername)
+    posthog.capture('user_logged_in', {
+      login_method: 'demo_password',
+      had_redirect_destination: Boolean(search.redirect),
+    })
     router.invalidate()
   }
 
@@ -1138,7 +1240,11 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('user_logged_out', {
+                  source: 'login_screen',
+                })
                 auth.logout()
+                posthog.reset()
                 router.invalidate()
               }}
               className="w-full px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
@@ -1278,6 +1384,28 @@ const auth: Auth = {
   },
 }
 
+function identifyAuthenticatedUser(posthog: ReturnType<typeof usePostHog>, username: string) {
+  posthog.identify(`cloudflow:${username.toLowerCase()}`, {
+    username,
+    account_tier: 'free',
+  })
+}
+
+function AuthSync() {
+  const posthog = usePostHog()
+
+  React.useEffect(() => {
+    if (auth.status === 'loggedIn' && auth.username) {
+      identifyAuthenticatedUser(posthog, auth.username)
+      return
+    }
+
+    posthog.reset()
+  }, [posthog, auth.status, auth.username])
+
+  return null
+}
+
 function App() {
   // This stuff is just to tweak our sandbox setup in real-time
   const [loaderDelay, setLoaderDelay] = useSessionStorage('loaderDelay', 500)
@@ -1365,6 +1493,7 @@ function App() {
           </div>
         </div>
       </div>
+      <AuthSync />
       <RouterProvider
         router={router}
         defaultPreload="intent"
