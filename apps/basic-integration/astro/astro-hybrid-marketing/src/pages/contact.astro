@@ -55,21 +55,34 @@ import Layout from '../layouts/Layout.astro';
   </section>
 </Layout>
 
-<script>
-  const form = document.getElementById('contact-form') as HTMLFormElement;
-  const messageDiv = document.getElementById('form-message') as HTMLDivElement;
+<script is:inline>
+  const form = document.getElementById('contact-form');
+  const messageDiv = document.getElementById('form-message');
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
+    const sessionId = window.posthog?.get_session_id?.() || null;
+    const distinctId = window.posthog?.get_distinct_id?.() || null;
+
+    if (data.email) {
+      window.posthog?.identify(String(data.email), {
+        email: String(data.email),
+        name: data.name ? String(data.name) : undefined,
+        company: data.company ? String(data.company) : undefined,
+        lead_interest: data.interest ? String(data.interest) : undefined,
+      });
+    }
 
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-PostHog-Session-Id': sessionId || '',
+          'X-PostHog-Distinct-Id': distinctId || '',
         },
         body: JSON.stringify(data),
       });
@@ -77,6 +90,11 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        window.posthog?.capture('contact_form_submitted', {
+          interest: data.interest ? String(data.interest) : 'unknown',
+          has_company: Boolean(data.company),
+          cta_location: 'contact_page',
+        });
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
@@ -85,6 +103,7 @@ import Layout from '../layouts/Layout.astro';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
       }
     } catch (error) {
+      window.posthog?.captureException?.(error);
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
     }
