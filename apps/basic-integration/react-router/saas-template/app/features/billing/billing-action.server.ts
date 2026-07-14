@@ -44,6 +44,7 @@ import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
 import { badRequest, conflict, forbidden } from "~/utils/http-responses.server";
+import { posthogContext } from "~/utils/posthog-middleware.server";
 import { createToastHeaders } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -81,6 +82,8 @@ export async function billingAction({
     }
 
     const baseUrl = extractBaseUrl(requestToUrl(request));
+    const posthog = context.get(posthogContext);
+    const distinctId = posthog?.distinctId ?? user.id;
 
     switch (body.intent) {
       case CANCEL_SUBSCRIPTION_INTENT: {
@@ -159,6 +162,18 @@ export async function billingAction({
           seatsUsed: organization._count.memberships,
         });
 
+        if (posthog) {
+          posthog.posthog.capture({
+            distinctId,
+            event: "billing_checkout_started",
+            properties: {
+              organization_id: organization.id,
+              plan_lookup_key: body.lookupKey,
+              seats_used: organization._count.memberships,
+            },
+          });
+        }
+
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
         return redirect(checkoutSession.url!);
       }
@@ -233,6 +248,18 @@ export async function billingAction({
             organization.stripeSubscriptions[0].items[0].stripeId,
         });
 
+        if (posthog) {
+          posthog.posthog.capture({
+            distinctId,
+            event: "billing_portal_opened",
+            properties: {
+              organization_id: organization.id,
+              purpose: "switch_subscription",
+              target_lookup_key: body.lookupKey,
+            },
+          });
+        }
+
         return redirect(portalSession.url);
       }
 
@@ -277,6 +304,17 @@ export async function billingAction({
           customerId: organization.stripeCustomerId,
           organizationSlug: params.organizationSlug,
         });
+
+        if (posthog) {
+          posthog.posthog.capture({
+            distinctId,
+            event: "billing_portal_opened",
+            properties: {
+              organization_id: organization.id,
+              purpose: "view_invoices",
+            },
+          });
+        }
 
         return redirect(portalSession.url);
       }

@@ -1,3 +1,4 @@
+import { PostHog } from "posthog-node";
 import type { Route } from "./+types/stripe.webhooks";
 import { stripeAdmin } from "~/features/billing/stripe-admin.server";
 import {
@@ -54,24 +55,57 @@ export async function action({ request }: Route.ActionArgs) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET,
     );
+    const posthog = new PostHog(process.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN, {
+      enableExceptionAutocapture: true,
+      flushAt: 1,
+      flushInterval: 0,
+      host: process.env.VITE_PUBLIC_POSTHOG_HOST,
+    });
 
     switch (event.type) {
       case "charge.dispute.closed": {
         return handleStripeChargeDisputeClosedEvent(event);
       }
       case "checkout.session.completed": {
+        await posthog.capture({
+          distinctId: `stripe-${event.id}`,
+          event: "stripe_webhook_processed",
+          properties: {
+            stripe_event_id: event.id,
+            stripe_event_type: event.type,
+          },
+        });
+        await posthog.shutdown();
         return handleStripeCheckoutSessionCompletedEvent(event);
       }
       case "customer.deleted": {
         return handleStripeCustomerDeletedEvent(event);
       }
       case "customer.subscription.created": {
+        await posthog.capture({
+          distinctId: `stripe-${event.id}`,
+          event: "stripe_webhook_processed",
+          properties: {
+            stripe_event_id: event.id,
+            stripe_event_type: event.type,
+          },
+        });
+        await posthog.shutdown();
         return handleStripeCustomerSubscriptionCreatedEvent(event);
       }
       case "customer.subscription.deleted": {
         return handleStripeCustomerSubscriptionDeletedEvent(event);
       }
       case "customer.subscription.updated": {
+        await posthog.capture({
+          distinctId: `stripe-${event.id}`,
+          event: "stripe_webhook_processed",
+          properties: {
+            stripe_event_id: event.id,
+            stripe_event_type: event.type,
+          },
+        });
+        await posthog.shutdown();
         return handleStripeCustomerSubscriptionUpdatedEvent(event);
       }
       case "price.created": {

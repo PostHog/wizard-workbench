@@ -13,6 +13,7 @@ import { uploadUserAvatar } from "~/features/user-accounts/settings/account/acco
 import { updateUserAccountInDatabaseById } from "~/features/user-accounts/user-accounts-model.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
+import { posthogContext } from "~/utils/posthog-middleware.server";
 import { redirectWithToast } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -49,6 +50,19 @@ export async function onboardingUserAccountAction({
     id: user.id,
     user: { imageUrl, name: result.data.name },
   });
+
+  const posthog = context.get(posthogContext);
+  const distinctId = posthog?.distinctId ?? user.id;
+  if (posthog) {
+    posthog.posthog.capture({
+      distinctId,
+      event: "onboarding_user_account_completed",
+      properties: {
+        has_avatar: Boolean(result.data.image),
+        has_existing_membership: user.memberships.length > 0,
+      },
+    });
+  }
 
   const { inviteLinkInfo, headers: inviteLinkHeaders } =
     await getInviteInfoForAuthRoutes(request);

@@ -4,6 +4,7 @@ import { createContext, href, redirect } from "react-router";
 import { safeRedirect } from "remix-utils/safe-redirect";
 
 import { createSupabaseServerClient } from "./supabase.server";
+import { posthogContext } from "~/utils/posthog-middleware.server";
 
 export const authContext = createContext<{
   supabase: SupabaseClient;
@@ -36,6 +37,17 @@ export const authMiddleware: MiddlewareFunction = async (
 
     if (isSessionFresh(session)) {
       context.set(authContext, { headers, supabase, user: session.user });
+
+      const posthog = context.get(posthogContext);
+      if (posthog && session.user.email) {
+        posthog.posthog.identify({
+          distinctId: session.user.id,
+          properties: {
+            email: session.user.email,
+          },
+        });
+      }
+
       return await next();
     }
   }
@@ -54,6 +66,16 @@ export const authMiddleware: MiddlewareFunction = async (
   }
 
   context.set(authContext, { headers, supabase, user });
+
+  const posthog = context.get(posthogContext);
+  if (posthog && user.email) {
+    posthog.posthog.identify({
+      distinctId: user.id,
+      properties: {
+        email: user.email,
+      },
+    });
+  }
 
   return await next();
 };

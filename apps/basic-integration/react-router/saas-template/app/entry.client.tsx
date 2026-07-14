@@ -1,6 +1,8 @@
+import { PostHogProvider } from "@posthog/react";
 import i18next from "i18next";
 import I18nextBrowserLanguageDetector from "i18next-browser-languagedetector";
 import Fetch from "i18next-fetch-backend";
+import posthog from "posthog-js";
 import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { I18nextProvider, initReactI18next } from "react-i18next";
@@ -18,14 +20,23 @@ async function hydrate() {
       interpolation: { escapeValue: false },
     });
 
+  posthog.init(window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN, {
+    api_host: window.ENV.VITE_PUBLIC_POSTHOG_HOST,
+    defaults: "2026-05-30",
+    enable_exception_autocapture: true,
+    __add_tracing_headers: [window.location.host, "localhost"],
+  });
+
   startTransition(() => {
     hydrateRoot(
       document,
-      <I18nextProvider i18n={i18next}>
-        <StrictMode>
-          <HydratedRouter />
-        </StrictMode>
-      </I18nextProvider>,
+      <PostHogProvider client={posthog}>
+        <I18nextProvider i18n={i18next}>
+          <StrictMode>
+            <HydratedRouter />
+          </StrictMode>
+        </I18nextProvider>
+      </PostHogProvider>,
     );
   });
 }

@@ -1,5 +1,6 @@
 import "./app.css";
 
+import { usePostHog } from "@posthog/react";
 import { FormOptionsProvider } from "@conform-to/react/future";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -42,6 +43,7 @@ import { honeypot } from "./utils/honeypot.server";
 import { useNonce } from "./utils/nonce-provider";
 import { securityMiddleware } from "./utils/security-middleware.server";
 import { getToast } from "./utils/toast.server";
+import { posthogMiddleware } from "./utils/posthog-middleware.server";
 
 export const links: Route.LinksFunction = () => [
   { href: sonnerStyles, rel: "stylesheet" },
@@ -63,7 +65,11 @@ export const shouldRevalidate = ({
   return defaultShouldRevalidate;
 };
 
-export const middleware = [securityMiddleware, i18nextMiddleware];
+export const middleware = [
+  securityMiddleware,
+  i18nextMiddleware,
+  posthogMiddleware,
+];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { colorScheme, honeypotInputProps, toastData } = await promiseHash({
@@ -190,9 +196,12 @@ export default function App({ loaderData: { locale } }: Route.ComponentProps) {
 }
 
 function BaseErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog();
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
+
+  posthog?.captureException(error);
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "404" : "Error";
