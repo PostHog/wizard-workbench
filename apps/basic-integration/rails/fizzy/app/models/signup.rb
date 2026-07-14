@@ -26,6 +26,22 @@ class Signup
       begin
         @tenant = create_tenant
         create_account
+
+        PostHog.identify({
+          distinct_id: user.posthog_distinct_id,
+          properties: user.posthog_properties
+        })
+
+        PostHog.capture({
+          distinct_id: user.posthog_distinct_id,
+          event: "signup_completed",
+          properties: {
+            account_id: account.id,
+            account_name_length: account.name.length,
+            source: skip_account_seeding ? "import" : "standard"
+          }
+        })
+
         true
       rescue => error
         destroy_account

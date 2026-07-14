@@ -20,6 +20,13 @@
   <%= stylesheet_link_tag "fizzy/saas", "data-turbo-track": "reload" if Fizzy.saas? %>
   <%= javascript_importmap_tags %>
 
+  <%= tag.meta name: "posthog-project-token", content: ENV["POSTHOG_PROJECT_TOKEN"] if ENV["POSTHOG_PROJECT_TOKEN"].present? %>
+  <%= tag.meta name: "posthog-host", content: ENV.fetch("POSTHOG_HOST", "https://us.i.posthog.com") %>
+  <% if Current.user&.respond_to?(:posthog_distinct_id) %>
+    <%= tag.meta name: "posthog-distinct-id", content: Current.user.posthog_distinct_id %>
+    <%= tag.meta name: "posthog-person-properties", content: Current.user.posthog_properties.to_json %>
+  <% end %>
+
   <%= tenanted_action_cable_meta_tag %>
   <%= render "layouts/shared/user_css" %>
 

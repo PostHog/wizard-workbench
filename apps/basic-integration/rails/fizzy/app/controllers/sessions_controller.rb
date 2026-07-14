@@ -51,6 +51,16 @@ class SessionsController < ApplicationController
     end
 
     def sign_in(identity)
+      PostHog.capture({
+        distinct_id: identity.id,
+        event: "magic_link_requested",
+        properties: {
+          entry_point: "session",
+          flow: "sign_in",
+          account_accepting_signups: Account.accepting_signups?
+        }
+      })
+
       redirect_to_session_magic_link identity.send_magic_link
     end
 
@@ -59,6 +69,15 @@ class SessionsController < ApplicationController
 
       if signup.valid?(:identity_creation)
         magic_link = signup.create_identity
+        PostHog.capture({
+          distinct_id: signup.identity.id,
+          event: "magic_link_requested",
+          properties: {
+            entry_point: "session",
+            flow: "sign_up",
+            account_accepting_signups: true
+          }
+        })
         redirect_to_session_magic_link magic_link
       else
         respond_to do |format|
@@ -67,4 +86,5 @@ class SessionsController < ApplicationController
         end
       end
     end
+
 end

@@ -36,6 +36,8 @@ gem "net-http-persistent"
 gem "zip_kit"
 gem "mittens"
 gem "useragent", bc: "useragent"
+gem "posthog-ruby"
+gem "posthog-rails"
 
 # Operations
 gem "autotuner"

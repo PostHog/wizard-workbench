@@ -14,6 +14,20 @@ class UsersController < ApplicationController
 
   def update
     if @user.update(user_params)
+      PostHog.identify({
+        distinct_id: @user.posthog_distinct_id,
+        properties: @user.posthog_properties
+      })
+
+      PostHog.capture({
+        distinct_id: @user.posthog_distinct_id,
+        event: "profile_updated",
+        properties: {
+          changed_fields: user_params.keys,
+          source: request.format.json? ? "api" : "web"
+        }
+      })
+
       respond_to do |format|
         format.html { redirect_to @user }
         format.json { head :no_content }
