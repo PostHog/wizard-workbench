@@ -26,6 +26,9 @@ android {
     compileSdk = libs.versions.compileSdk.get().toInt()
     namespace = "com.example.compose.jetchat"
 
+    val posthogApiKey = providers.environmentVariable("POSTHOG_API_KEY").orElse("")
+    val posthogHost = providers.environmentVariable("POSTHOG_HOST").orElse("https://us.i.posthog.com")
+
     defaultConfig {
         applicationId = "com.example.compose.jetchat"
         minSdk = libs.versions.minSdk.get().toInt()
@@ -33,6 +36,8 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "POSTHOG_API_KEY", "\"${posthogApiKey.get()}\"")
+        buildConfigField("String", "POSTHOG_HOST", "\"${posthogHost.get()}\"")
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -114,6 +119,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.util)
     implementation(libs.androidx.compose.ui.viewbinding)
     implementation(libs.androidx.compose.ui.googlefonts)
+    implementation("com.posthog:posthog-android:3.+")
 
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
