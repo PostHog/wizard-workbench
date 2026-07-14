@@ -1,39 +1,54 @@
 import { ref, computed } from 'vue'
+import posthog from 'posthog-js'
 import { useRouter } from 'vue-router'
+import { identifyAuthenticatedUser } from './posthog'
 
 const AUTH_KEY = 'auth-user'
 
+const storedUser = ref<string | null>(localStorage.getItem(AUTH_KEY))
+
 export function useAuth() {
   const router = useRouter()
-  const user = ref<string | null>(localStorage.getItem(AUTH_KEY))
-  const isAuthenticated = computed(() => !!user.value)
+  const user = computed(() => storedUser.value)
+  const isAuthenticated = computed(() => !!storedUser.value)
 
   const login = async (username: string, password: string) => {
     if (!username?.trim() || !password?.trim()) {
       throw new Error('Username and password are required')
     }
 
-    // Fake auth - accepts any username and password
     const sanitizedUsername = username.trim()
-    user.value = sanitizedUsername
+    storedUser.value = sanitizedUsername
     localStorage.setItem(AUTH_KEY, sanitizedUsername)
-    
+
+    const distinctId = await identifyAuthenticatedUser(sanitizedUsername)
+    posthog.capture('login_submitted', {
+      login_method: 'demo_password',
+      auth_state: 'authenticated',
+      distinct_id_source: 'hashed_username',
+    })
+
     await router.push('/')
-    
+
     return {
       success: true,
       user: sanitizedUsername,
+      distinctId,
     }
   }
 
   const logout = async () => {
-    user.value = null
+    posthog.capture('logout_clicked', {
+      auth_state: 'logged_out',
+    })
+    posthog.reset()
+    storedUser.value = null
     localStorage.removeItem(AUTH_KEY)
     await router.push('/login')
   }
 
   return {
-    user: computed(() => user.value),
+    user,
     isAuthenticated,
     login,
     logout,

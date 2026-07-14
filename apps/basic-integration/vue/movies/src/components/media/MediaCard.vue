@@ -1,18 +1,29 @@
 <script setup lang="ts">
+import posthog from 'posthog-js'
 import type { Media, MediaType, QueryItem } from '../../types'
 import { formatVote } from '../../composables/utils'
 
-defineProps<{
+const props = defineProps<{
   type: MediaType
   item: Media
   query?: QueryItem
 }>()
+
+const handleSelect = () => {
+  posthog.capture('search_result_selected', {
+    media_type: props.item.media_type || props.type,
+    media_id: String(props.item.id),
+    source_query: props.query?.query || 'direct_grid',
+    source_title: props.query?.title || 'search_results',
+  })
+}
 </script>
 
 <template>
   <router-link
     :to="`/${item.media_type || type}/${item.id}`"
     class="pb-2 block"
+    @click="handleSelect"
   >
     <div
       class="block bg-gray-400/10 p-1 aspect-[10/16] transition duration-400 hover:scale-105 z-10"

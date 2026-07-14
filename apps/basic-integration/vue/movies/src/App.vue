@@ -1,12 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute } from 'vue-router'
 import { useAuth } from './composables/useAuth'
+import { identifyAuthenticatedUser } from './composables/posthog'
 import NavBar from './components/NavBar.vue'
 
 const route = useRoute()
-const { isAuthenticated } = useAuth()
+const { isAuthenticated, user } = useAuth()
 const showNavBar = computed(() => isAuthenticated.value && route.path !== '/login')
+
+onMounted(async () => {
+  if (user.value) {
+    await identifyAuthenticatedUser(user.value)
+    posthog.capture('session_restored', {
+      auth_state: 'authenticated',
+    })
+  }
+})
 </script>
 
 <template>
