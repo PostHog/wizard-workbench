@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -11,9 +12,11 @@ const updateTodoSchema = z.object({
 // GET /api/todos/[id] - Get a specific todo
 // PATCH /api/todos/[id] - Update a todo
 // DELETE /api/todos/[id] - Delete a todo
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
   const todoId = parseInt(id as string);
+  const posthog = getPostHogClient();
+  const distinctId = req.headers['x-posthog-distinct-id']?.toString() || 'anonymous';
 
   if (isNaN(todoId)) {
     return res.status(400).json({ error: 'Invalid todo ID' });
@@ -29,6 +32,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
       return res.status(200).json(todo);
     } catch (error) {
+      posthog.captureException(error, distinctId);
+      await posthog.flush();
       console.error('Error fetching todo:', error);
       return res.status(500).json({ error: 'Failed to fetch todo' });
     }
@@ -44,6 +49,18 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(404).json({ error: 'Todo not found' });
       }
 
+      posthog.capture({
+        distinctId,
+        event: 'todo_updated_api',
+        properties: {
+          todo_id: updatedTodo.id,
+          completed: updatedTodo.completed,
+          has_description: Boolean(updatedTodo.description),
+          updated_fields: Object.keys(validatedData),
+        },
+      });
+      await posthog.flush();
+
       return res.status(200).json(updatedTodo);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -52,6 +69,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
           details: error.errors,
         });
       }
+      posthog.captureException(error, distinctId);
+      await posthog.flush();
       console.error('Error updating todo:', error);
       return res.status(500).json({ error: 'Failed to update todo' });
     }
@@ -59,14 +78,28 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
   if (req.method === 'DELETE') {
     try {
+      const existingTodo = getTodoById(todoId);
       const deleted = deleteTodo(todoId);
 
       if (!deleted) {
         return res.status(404).json({ error: 'Todo not found' });
       }
 
+      posthog.capture({
+        distinctId,
+        event: 'todo_deleted_api',
+        properties: {
+          todo_id: todoId,
+          was_completed: Boolean(existingTodo?.completed),
+          had_description: Boolean(existingTodo?.description),
+        },
+      });
+      await posthog.flush();
+
       return res.status(200).json({ message: 'Todo deleted successfully' });
     } catch (error) {
+      posthog.captureException(error, distinctId);
+      await posthog.flush();
       console.error('Error deleting todo:', error);
       return res.status(500).json({ error: 'Failed to delete todo' });
     }
