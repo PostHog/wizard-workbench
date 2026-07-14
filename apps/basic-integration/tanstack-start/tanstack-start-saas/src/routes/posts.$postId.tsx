@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { NotFound } from '~/components/NotFound'
 import { PostErrorComponent } from '~/components/PostError'
@@ -13,11 +14,17 @@ export const Route = createFileRoute('/posts/$postId')({
 })
 
 function PostComponent() {
+  const posthog = usePostHog()
   const invoice = Route.useLoaderData()
   const router = useRouter()
 
   const handleMarkAsPaid = async () => {
     await markInvoicePaid({ data: String(invoice.id) })
+    posthog.capture('invoice_paid', {
+      invoice_id: String(invoice.id),
+      amount: invoice.amount,
+      previous_status: invoice.status,
+    })
     router.invalidate()
   }
 
@@ -80,6 +87,12 @@ function PostComponent() {
           to="/posts/$postId/deep"
           params={{
             postId: String(invoice.id),
+          }}
+          onClick={() => {
+            posthog.capture('invoice_details_viewed', {
+              invoice_id: String(invoice.id),
+              status: invoice.status,
+            })
           }}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
