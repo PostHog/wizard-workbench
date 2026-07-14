@@ -1,6 +1,7 @@
 import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
+import posthog, { captureException } from '../../../services/posthog';
 import { isDemoMode, demoMembers } from '../../../services/demoData';
 
 import { getMembersSuccess, inviteMemberSuccess } from './actions';
@@ -12,11 +13,22 @@ export function* getMembers() {
   // Demo mode
   if (isDemoMode(token)) {
     const members = team ? (demoMembers[team.slug] || []) : [];
+    posthog.capture('members_loaded', {
+      source: 'demo',
+      member_count: members.length,
+      active_team_slug: team?.slug,
+    });
     yield put(getMembersSuccess(members));
     return;
   }
 
   const response = yield call(api.get, 'members');
+
+  posthog.capture('members_loaded', {
+    source: 'api',
+    member_count: response.data.length,
+    active_team_slug: team?.slug,
+  });
 
   yield put(getMembersSuccess(response.data));
 }
@@ -28,14 +40,29 @@ export function* updateMember({ payload }) {
   try {
     // Demo mode
     if (isDemoMode(token)) {
+      posthog.capture('member_role_updated', {
+        source: 'demo',
+        member_id: id,
+        role_count: roles.length,
+      });
       toast.showSuccess('Member updated');
       return;
     }
 
     yield call(api.put, `members/${id}`, { roles: roles.map(role => role.id) });
 
+    posthog.capture('member_role_updated', {
+      source: 'api',
+      member_id: id,
+      role_count: roles.length,
+    });
+
     toast.showSuccess('Member updated');
   } catch (err) {
+    captureException(err, {
+      area: 'members',
+      action: 'update_member_roles',
+    });
     toast.showError('Error updating member');
   }
 }
@@ -53,6 +80,10 @@ export function* inviteMember({ payload }) {
         user: { name, email },
         roles: [{ id: 3, name: 'Viewer' }],
       };
+      posthog.capture('member_invited', {
+        source: 'demo',
+        invitee_domain: email.split('@')[1],
+      });
       yield put(inviteMemberSuccess(newMember));
       toast.showSuccess('Member added');
       return;
@@ -60,8 +91,17 @@ export function* inviteMember({ payload }) {
 
     yield call(api.post, 'invites', { invites: [email] });
 
+    posthog.capture('member_invited', {
+      source: 'api',
+      invitee_domain: email.split('@')[1],
+    });
+
     toast.showSuccess('Invite sent');
   } catch (err) {
+    captureException(err, {
+      area: 'members',
+      action: 'invite_member',
+    });
     toast.showError('Error sending invite');
   }
 }

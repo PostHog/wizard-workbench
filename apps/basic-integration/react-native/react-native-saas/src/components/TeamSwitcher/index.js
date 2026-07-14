@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { View, TouchableOpacity, Image, Text } from 'react-native';
+import { usePostHog } from 'posthog-react-native';
 
 import { getTeamsRequest, selectTeam } from '~/store/modules/teams/actions';
 import { signOut } from '~/store/modules/auth/actions';
@@ -11,6 +12,7 @@ import styles from './styles';
 
 export default function TeamSwitcher() {
   const dispatch = useDispatch();
+  const posthog = usePostHog();
   const teams = useSelector(state => state.teams);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -27,6 +29,10 @@ export default function TeamSwitcher() {
             key={team.id}
             style={styles.teamContainer}
             onPress={() => {
+              posthog.capture('team_switcher_item_selected', {
+                team_id: team.id,
+                team_slug: team.slug,
+              });
               dispatch(selectTeam(team));
             }}
           >
@@ -41,7 +47,12 @@ export default function TeamSwitcher() {
 
         <TouchableOpacity
           style={styles.newTeam}
-          onPress={() => setIsModalOpen(true)}
+          onPress={() => {
+            posthog.capture('team_creation_modal_opened', {
+              source: 'team_switcher',
+            });
+            setIsModalOpen(true);
+          }}
         >
           <Text style={{ fontSize: 24, color: '#999' }}>+</Text>
         </TouchableOpacity>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
+import { usePostHog } from 'posthog-react-native';
 
 import { getMembersRequest } from '~/store/modules/members/actions';
 
@@ -12,6 +13,7 @@ import styles from './styles';
 
 export default function Members() {
   const dispatch = useDispatch();
+  const posthog = usePostHog();
   const members = useSelector(state => state.members);
   const activeTeam = useSelector(state => state.teams.active);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -41,6 +43,10 @@ export default function Members() {
               <TouchableOpacity
                 hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                 onPress={() => {
+                  posthog.capture('member_role_editor_opened', {
+                    member_id: item.id,
+                    role_count: item.roles.length,
+                  });
                   setIsRoleModalOpen(true);
                   setMemberEdit(item);
                 }}
@@ -54,7 +60,12 @@ export default function Members() {
           <Can checkPermission="invites_create">
             <TouchableOpacity
               style={styles.button}
-              onPress={() => setIsInviteModalOpen(true)}
+              onPress={() => {
+                posthog.capture('member_invite_modal_opened', {
+                  active_team_slug: activeTeam?.slug,
+                });
+                setIsInviteModalOpen(true);
+              }}
             >
               <Text style={styles.buttonText}>+ Add Member</Text>
             </TouchableOpacity>

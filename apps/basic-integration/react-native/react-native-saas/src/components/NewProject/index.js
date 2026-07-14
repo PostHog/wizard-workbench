@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
+import { usePostHog } from 'posthog-react-native';
 
 import { Text, TextInput, TouchableOpacity } from 'react-native';
 
@@ -12,9 +13,13 @@ import styles from './styles';
 
 export default function NewProject({ visible, onRequestClose }) {
   const dispatch = useDispatch();
+  const posthog = usePostHog();
   const [newProject, setNewProject] = useState('');
 
   function handleSubmit() {
+    posthog.capture('project_creation_submitted', {
+      project_title_length: newProject.length,
+    });
     dispatch(createProjectRequest(newProject));
     setNewProject('');
     onRequestClose();

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
+import { usePostHog } from 'posthog-react-native';
 
 import { View, Text, TouchableOpacity, Switch } from 'react-native';
 import api from '~/services/api';
+import { captureException } from '~/services/posthog';
 
 import { updateMemberRequest } from '~/store/modules/members/actions';
 
@@ -13,13 +15,21 @@ import styles from './styles';
 
 export default function RoleUpdater({ visible, onRequestClose, member }) {
   const dispatch = useDispatch();
+  const posthog = usePostHog();
   const [roles, setRoles] = useState([]);
 
   useEffect(() => {
     async function loadRoles() {
-      const response = await api.get('roles');
+      try {
+        const response = await api.get('roles');
 
-      setRoles(response.data);
+        setRoles(response.data);
+      } catch (error) {
+        captureException(error, {
+          area: 'members',
+          action: 'load_roles',
+        });
+      }
     }
 
     loadRoles();
@@ -28,11 +38,17 @@ export default function RoleUpdater({ visible, onRequestClose, member }) {
   function handleRoleChange(value, role) {
     if (role.name === 'Administrador' && value === false) return;
 
-    const roles = value
+    const nextRoles = value
       ? [...member.roles, role]
       : member.roles.filter(memberRole => memberRole.id !== role.id);
 
-    dispatch(updateMemberRequest(member.id, roles));
+    posthog.capture('member_role_update_submitted', {
+      member_id: member.id,
+      role_count: nextRoles.length,
+      changed_role_id: role.id,
+      enabled: value,
+    });
+    dispatch(updateMemberRequest(member.id, nextRoles));
     onRequestClose();
   }
 

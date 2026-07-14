@@ -16,3 +16,5 @@ export default function Root() {
     </Provider>
   );
 }
+
+export const AppWithPostHog = Root;

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
+import { usePostHog } from 'posthog-react-native';
 
 import { Text, TextInput, TouchableOpacity } from 'react-native';
 
@@ -12,9 +13,13 @@ import styles from './styles';
 
 export default function NewTeam({ visible, onRequestClose }) {
   const dispatch = useDispatch();
+  const posthog = usePostHog();
   const [newTeam, setNewTeam] = useState('');
 
   function handleSubmit() {
+    posthog.capture('team_creation_submitted', {
+      team_name_length: newTeam.length,
+    });
     dispatch(createTeamRequest(newTeam));
     setNewTeam('');
     onRequestClose();

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useDispatch } from 'react-redux';
+import { usePostHog } from 'posthog-react-native';
 
 import {
   View,
@@ -16,6 +17,7 @@ import styles from './styles';
 
 export default function SignIn() {
   const dispatch = useDispatch();
+  const posthog = usePostHog();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,6 +25,12 @@ export default function SignIn() {
   let refPassword = useRef(null);
 
   function handleSubmit() {
+    posthog.capture('sign_in_submitted', {
+      login_method: 'email',
+      has_password: Boolean(password),
+      is_demo_login: email === 'demo@test.com' && password === 'demo',
+    });
+
     dispatch(signInRequest(email, password));
   }
 
@@ -68,7 +76,11 @@ export default function SignIn() {
           }}
         />
 
-        <TouchableOpacity onPress={handleSubmit} style={styles.button}>
+        <TouchableOpacity
+          testID="sign-in-button"
+          onPress={handleSubmit}
+          style={styles.button}
+        >
           <Text style={styles.buttonText}>Sign In</Text>
         </TouchableOpacity>
 

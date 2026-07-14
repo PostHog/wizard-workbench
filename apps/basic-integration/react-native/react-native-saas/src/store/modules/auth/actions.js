@@ -7,7 +7,11 @@ export function initCheckSuccess() {
 export function signInRequest(email, password) {
   return {
     type: '@auth/SIGN_IN_REQUEST',
-    payload: { email, password },
+    payload: {
+      email,
+      password,
+      isDemoLogin: email === 'demo@test.com' && password === 'demo',
+    },
   };
 }
 

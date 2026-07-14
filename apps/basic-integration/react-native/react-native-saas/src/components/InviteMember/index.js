@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
+import { usePostHog } from 'posthog-react-native';
 
 import { Text, TextInput, TouchableOpacity } from 'react-native';
 
@@ -12,9 +13,13 @@ import styles from './styles';
 
 export default function InviteMember({ visible, onRequestClose }) {
   const dispatch = useDispatch();
+  const posthog = usePostHog();
   const [email, setEmail] = useState('');
 
   function handleSubmit() {
+    posthog.capture('member_invite_submitted', {
+      invitee_domain: email.split('@')[1],
+    });
     dispatch(inviteMemberRequest(email));
     setEmail('');
     onRequestClose();

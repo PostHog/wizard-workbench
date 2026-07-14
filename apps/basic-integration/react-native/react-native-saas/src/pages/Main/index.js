@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, TouchableOpacity, Text, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
+import { usePostHog } from 'posthog-react-native';
 
 import TeamSwitcher from '../../components/TeamSwitcher';
 import Projects from '../../components/Projects';
@@ -12,6 +13,7 @@ import styles from './styles';
 
 export default function Main() {
   const dispatch = useDispatch();
+  const posthog = usePostHog();
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
   const activeTeam = useSelector(state => state.teams.active);
@@ -22,7 +24,13 @@ export default function Main() {
         <View style={styles.header}>
           <TouchableOpacity
             hitSlop={{ top: 5, bottom: 5, left: 10, right: 10 }}
-            onPress={() => setLeftOpen(true)}
+            onPress={() => {
+              posthog.capture('team_drawer_opened', {
+                source: 'main_header',
+                has_active_team: Boolean(activeTeam),
+              });
+              setLeftOpen(true);
+            }}
           >
             <Text style={{ fontSize: 24 }}>☰</Text>
           </TouchableOpacity>
@@ -32,13 +40,24 @@ export default function Main() {
           <View style={{ flexDirection: 'row', gap: 16 }}>
             <TouchableOpacity
               hitSlop={{ top: 5, bottom: 5, left: 10, right: 10 }}
-              onPress={() => setRightOpen(true)}
+              onPress={() => {
+                posthog.capture('members_drawer_opened', {
+                  source: 'main_header',
+                  active_team_slug: activeTeam?.slug,
+                });
+                setRightOpen(true);
+              }}
             >
               <Text style={{ fontSize: 20, color: '#fff' }}>👥</Text>
             </TouchableOpacity>
             <TouchableOpacity
               hitSlop={{ top: 5, bottom: 5, left: 10, right: 10 }}
-              onPress={() => dispatch(signOut())}
+              onPress={() => {
+                posthog.capture('sign_out_clicked', {
+                  active_team_slug: activeTeam?.slug,
+                });
+                dispatch(signOut());
+              }}
             >
               <Text style={{ fontSize: 20, color: '#fff' }}>⎋</Text>
             </TouchableOpacity>
