@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { router } from '../router.js';
+import { captureEvent, captureException } from '../posthog.js';
 import { renderShell } from '../components/shell.js';
 import { showModal } from '../components/modal.js';
 
@@ -75,8 +76,17 @@ export async function renderProjects() {
 
           try {
             const project = await api.createProject(name, desc);
+            captureEvent('project_created', {
+              project_id: project.id,
+              task_count: project.tasks.length,
+              has_description: Boolean(project.description),
+            });
             router.navigate(`/projects/${project.id}`);
           } catch (err) {
+            captureException(err, {
+              area: 'projects',
+              action: 'create',
+            });
             alert(err.message);
           }
         });
@@ -89,12 +99,22 @@ export async function renderProjects() {
         e.stopPropagation();
         const id = btn.dataset.id;
         if (confirm('Delete this project and all its tasks?')) {
+          const project = projects.find((item) => item.id === id);
           await api.deleteProject(id);
+          captureEvent('project_deleted', {
+            project_id: id,
+            task_count: project?.tasks.length ?? 0,
+            status: project?.status ?? 'unknown',
+          });
           renderProjects();
         }
       });
     });
   } catch (err) {
+    captureException(err, {
+      area: 'projects',
+      action: 'render',
+    });
     content.innerHTML = `<div class="error-message">Failed to load projects: ${err.message}</div>`;
   }
 }

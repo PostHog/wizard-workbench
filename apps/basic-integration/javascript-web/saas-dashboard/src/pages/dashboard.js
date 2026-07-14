@@ -1,6 +1,7 @@
 import { Chart, DoughnutController, ArcElement, Tooltip, Legend, BarController, BarElement, CategoryScale, LinearScale } from 'chart.js';
 import { api } from '../api.js';
 import { store } from '../store.js';
+import { captureEvent, captureException } from '../posthog.js';
 import { renderShell } from '../components/shell.js';
 
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend, BarController, BarElement, CategoryScale, LinearScale);
@@ -54,6 +55,12 @@ export async function renderDashboard() {
     ]);
     const activeProjects = projects.filter((p) => p.status === 'active');
     const recentActivities = activities.slice(0, 5);
+
+    captureEvent('dashboard_viewed', {
+      active_projects_count: stats.activeProjects,
+      total_tasks_count: stats.totalTasks,
+      completion_rate: stats.completionRate,
+    });
 
     content.innerHTML = `
       <div class="page-header">
@@ -214,6 +221,10 @@ export async function renderDashboard() {
       },
     });
   } catch (err) {
+    captureException(err, {
+      area: 'dashboard',
+      action: 'render',
+    });
     content.innerHTML = `<div class="error-message">Failed to load dashboard: ${err.message}</div>`;
   }
 }

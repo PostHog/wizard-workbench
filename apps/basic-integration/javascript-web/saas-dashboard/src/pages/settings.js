@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { store } from '../store.js';
+import { captureEvent, captureException, identifyCurrentUser } from '../posthog.js';
 import { renderShell } from '../components/shell.js';
 
 export async function renderSettings() {
@@ -83,16 +84,28 @@ export async function renderSettings() {
     // Theme
     document.getElementById('theme-select').addEventListener('change', async (e) => {
       await api.updateSettings({ theme: e.target.value });
+      captureEvent('settings_updated', {
+        setting_name: 'theme',
+        setting_value: e.target.value,
+      });
       document.body.dataset.theme = e.target.value;
     });
 
     // Notifications
     document.getElementById('email-notif').addEventListener('change', async (e) => {
       await api.updateSettings({ emailNotifications: e.target.checked });
+      captureEvent('settings_updated', {
+        setting_name: 'email_notifications',
+        setting_value: e.target.checked,
+      });
     });
 
     document.getElementById('weekly-digest').addEventListener('change', async (e) => {
       await api.updateSettings({ weeklyDigest: e.target.checked });
+      captureEvent('settings_updated', {
+        setting_name: 'weekly_digest',
+        setting_value: e.target.checked,
+      });
     });
 
     // Reset
@@ -100,10 +113,19 @@ export async function renderSettings() {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
         store.reset();
         store.login(user.email);
+        identifyCurrentUser(store.state.currentUser);
+        captureEvent('app_data_reset', {
+          project_count: store.state.projects.length,
+          team_member_count: store.state.teamMembers.length,
+        });
         renderSettings();
       }
     });
   } catch (err) {
+    captureException(err, {
+      area: 'settings',
+      action: 'render',
+    });
     content.innerHTML = `<div class="error-message">Failed to load settings: ${err.message}</div>`;
   }
 }

@@ -6,6 +6,7 @@
  * fetch() calls to a backend.
  */
 import { store } from './store.js';
+import { captureException } from './posthog.js';
 
 const DELAY_MS = 150;
 
@@ -19,7 +20,12 @@ export const api = {
 
     const success = store.login(email);
     if (!success) {
-      throw new Error('Invalid credentials. Use a team member email.');
+      const error = new Error('Invalid credentials. Use a team member email.');
+      captureException(error, {
+        area: 'auth',
+        action: 'login',
+      });
+      throw error;
     }
     return store.state.currentUser;
   },
@@ -37,14 +43,29 @@ export const api = {
   async getProject(id) {
     await delay();
     const project = store.getProject(id);
-    if (!project) throw new Error(`Project ${id} not found`);
+    if (!project) {
+      const error = new Error(`Project ${id} not found`);
+      captureException(error, {
+        area: 'projects',
+        action: 'get_project',
+        project_id: id,
+      });
+      throw error;
+    }
     return project;
   },
 
   async createProject(name, description) {
     await delay();
 
-    if (!name.trim()) throw new Error('Project name is required');
+    if (!name.trim()) {
+      const error = new Error('Project name is required');
+      captureException(error, {
+        area: 'projects',
+        action: 'create_project',
+      });
+      throw error;
+    }
     return store.createProject(name.trim(), description.trim());
   },
 
@@ -56,7 +77,15 @@ export const api = {
   async addTask(projectId, title, priority) {
     await delay();
 
-    if (!title.trim()) throw new Error('Task title is required');
+    if (!title.trim()) {
+      const error = new Error('Task title is required');
+      captureException(error, {
+        area: 'tasks',
+        action: 'add_task',
+        project_id: projectId,
+      });
+      throw error;
+    }
     return store.addTask(projectId, title.trim(), priority);
   },
 
