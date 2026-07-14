@@ -5,6 +5,8 @@ import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { getDistinctIdForUser } from '@/lib/posthog-shared';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -87,6 +89,20 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date(),
       })
       .where(eq(teams.id, userTeam[0].teamId));
+
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: getDistinctIdForUser(user[0]),
+      event: 'checkout_completed',
+      properties: {
+        team_id: userTeam[0].teamId,
+        price_id: plan.id,
+        product_id: productId,
+        plan_name: (plan.product as Stripe.Product).name,
+        subscription_status: subscription.status,
+      }
+    });
+    await posthog.flush();
 
     await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
