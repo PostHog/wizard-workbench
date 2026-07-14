@@ -14,8 +14,8 @@ import Layout from '../layouts/Layout.astro';
         and automated insights. Built for teams that move fast.
       </p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Start Free Trial</a>
-        <a href="/docs" class="btn btn-secondary">Read the Docs</a>
+        <a href="#" class="btn btn-primary" data-cta-label="start_free_trial" data-cta-position="hero-primary">Start Free Trial</a>
+        <a href="/docs" class="btn btn-secondary" data-cta-label="read_the_docs" data-cta-position="hero-secondary">Read the Docs</a>
       </div>
     </div>
   </section>
@@ -27,37 +27,65 @@ import Layout from '../layouts/Layout.astro';
         <p>Powerful features that help your team work smarter, not harder.</p>
       </div>
       <div class="features-grid">
-        <div class="feature-card">
+        <button class="feature-card" type="button" data-feature-name="smart_documents" data-feature-position="1" style="text-align: left;">
           <div class="feature-icon">📄</div>
           <h3>Smart Documents</h3>
           <p>Automatically extract, categorize, and summarize documents with AI-powered analysis.</p>
-        </div>
-        <div class="feature-card">
+        </button>
+        <button class="feature-card" type="button" data-feature-name="workflow_automation" data-feature-position="2" style="text-align: left;">
           <div class="feature-icon">🔄</div>
           <h3>Workflow Automation</h3>
           <p>Create intelligent workflows that adapt to your team's needs and scale with your business.</p>
-        </div>
-        <div class="feature-card">
+        </button>
+        <button class="feature-card" type="button" data-feature-name="analytics_dashboard" data-feature-position="3" style="text-align: left;">
           <div class="feature-icon">📊</div>
           <h3>Analytics Dashboard</h3>
           <p>Real-time insights and predictions to help you make data-driven decisions.</p>
-        </div>
-        <div class="feature-card">
+        </button>
+        <button class="feature-card" type="button" data-feature-name="enterprise_security" data-feature-position="4" style="text-align: left;">
           <div class="feature-icon">🔒</div>
           <h3>Enterprise Security</h3>
           <p>SOC 2 compliant with end-to-end encryption and advanced access controls.</p>
-        </div>
-        <div class="feature-card">
+        </button>
+        <button class="feature-card" type="button" data-feature-name="integrations" data-feature-position="5" style="text-align: left;">
           <div class="feature-icon">🔌</div>
           <h3>Integrations</h3>
           <p>Connect with 100+ tools including Slack, Notion, Google Workspace, and more.</p>
-        </div>
-        <div class="feature-card">
+        </button>
+        <button class="feature-card" type="button" data-feature-name="real_time_sync" data-feature-position="6" style="text-align: left;">
           <div class="feature-icon">⚡</div>
           <h3>Real-time Sync</h3>
           <p>Changes sync instantly across all devices and team members.</p>
-        </div>
+        </button>
       </div>
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const heroButtons = document.querySelectorAll('[data-cta-label]');
+    const featureCards = document.querySelectorAll('[data-feature-name]');
+
+    heroButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        window.posthog?.capture('hero_cta_clicked', {
+          cta_label: button.getAttribute('data-cta-label') || 'unknown',
+          cta_position: button.getAttribute('data-cta-position') || 'unknown',
+          destination: button.getAttribute('href') || '#',
+          page_path: window.location.pathname,
+        });
+      });
+    });
+
+    featureCards.forEach((card) => {
+      card.addEventListener('click', () => {
+        window.posthog?.capture('feature_card_selected', {
+          feature_name: card.getAttribute('data-feature-name') || 'unknown',
+          feature_position: Number(card.getAttribute('data-feature-position') || '0'),
+          page_path: window.location.pathname,
+        });
+      });
+    });
+  });
+</script>

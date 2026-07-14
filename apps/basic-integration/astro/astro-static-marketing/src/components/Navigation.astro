@@ -2,7 +2,7 @@
 const currentPath = Astro.url.pathname;
 ---
 
-<nav class="nav">
+<nav class="nav" data-page-path={currentPath}>
   <div class="container nav-inner">
     <a href="/" class="nav-logo">
       <span>NeuralFlow</span> AI
@@ -12,10 +12,25 @@ const currentPath = Astro.url.pathname;
       <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
       <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
       <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="#" class="nav-cta" data-posthog-event="nav_cta_clicked">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const nav = document.querySelector('.nav');
+    const navCta = document.querySelector('.nav-cta');
+
+    navCta?.addEventListener('click', () => {
+      window.posthog?.capture('nav_cta_clicked', {
+        location: 'navigation',
+        page_path: nav?.getAttribute('data-page-path') || window.location.pathname,
+        cta_label: navCta.textContent?.trim() || 'Get Started',
+      });
+    });
+  });
+</script>
 
 <style>
   .nav-link.active {

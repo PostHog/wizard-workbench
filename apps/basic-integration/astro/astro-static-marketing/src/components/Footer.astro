@@ -2,7 +2,7 @@
 const currentYear = new Date().getFullYear();
 ---
 
-<footer class="footer">
+<footer class="footer" data-page-path={Astro.url.pathname}>
   <div class="container footer-inner">
     <ul class="footer-links">
       <li><a href="/features" class="footer-link">Features</a></li>
@@ -15,3 +15,21 @@ const currentYear = new Date().getFullYear();
     <p class="footer-copy">&copy; {currentYear} NeuralFlow AI. All rights reserved.</p>
   </div>
 </footer>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const footer = document.querySelector('.footer');
+    const footerLinks = document.querySelectorAll('.footer-link');
+
+    footerLinks.forEach((link) => {
+      link.addEventListener('click', () => {
+        window.posthog?.capture('footer_link_clicked', {
+          location: 'footer',
+          page_path: footer?.getAttribute('data-page-path') || window.location.pathname,
+          link_text: link.textContent?.trim() || 'unknown',
+          destination: link.getAttribute('href') || '#',
+        });
+      });
+    });
+  });
+</script>

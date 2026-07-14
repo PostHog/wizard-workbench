@@ -46,27 +46,43 @@ import Layout from '../layouts/Layout.astro';
         <p>The people building the future of work</p>
       </div>
       <div class="team-grid">
-        <div class="team-member">
+        <button class="team-member" type="button" data-team-member-role="ceo_cofounder" data-team-member-position="1" style="text-align: left;">
           <div class="team-avatar">👩‍💻</div>
           <h4>Sarah Chen</h4>
           <p>CEO & Co-founder</p>
-        </div>
-        <div class="team-member">
+        </button>
+        <button class="team-member" type="button" data-team-member-role="cto_cofounder" data-team-member-position="2" style="text-align: left;">
           <div class="team-avatar">👨‍💻</div>
           <h4>Marcus Johnson</h4>
           <p>CTO & Co-founder</p>
-        </div>
-        <div class="team-member">
+        </button>
+        <button class="team-member" type="button" data-team-member-role="head_of_ai_research" data-team-member-position="3" style="text-align: left;">
           <div class="team-avatar">👩‍🔬</div>
           <h4>Dr. Emily Park</h4>
           <p>Head of AI Research</p>
-        </div>
-        <div class="team-member">
+        </button>
+        <button class="team-member" type="button" data-team-member-role="head_of_design" data-team-member-position="4" style="text-align: left;">
           <div class="team-avatar">👨‍🎨</div>
           <h4>Alex Rivera</h4>
           <p>Head of Design</p>
-        </div>
+        </button>
       </div>
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const teamMembers = document.querySelectorAll('[data-team-member-role]');
+
+    teamMembers.forEach((member) => {
+      member.addEventListener('click', () => {
+        window.posthog?.capture('team_member_selected', {
+          team_member_role: member.getAttribute('data-team-member-role') || 'unknown',
+          member_position: Number(member.getAttribute('data-team-member-position') || '0'),
+          page_path: window.location.pathname,
+        });
+      });
+    });
+  });
+</script>

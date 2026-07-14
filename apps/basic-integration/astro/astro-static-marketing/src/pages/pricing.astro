@@ -13,7 +13,7 @@ import Layout from '../layouts/Layout.astro';
   <section class="pricing">
     <div class="container">
       <div class="pricing-grid">
-        <div class="pricing-card">
+        <div class="pricing-card" data-plan-name="starter" data-plan-price="29" data-plan-cta="get_started">
           <h3>Starter</h3>
           <div class="price">$29<span>/month</span></div>
           <p class="description">Perfect for individuals and small teams getting started.</p>
@@ -24,10 +24,10 @@ import Layout from '../layouts/Layout.astro';
             <li>Basic integrations</li>
             <li>Email support</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-plan-action>Get Started</a>
         </div>
 
-        <div class="pricing-card featured">
+        <div class="pricing-card featured" data-plan-name="pro" data-plan-price="99" data-plan-cta="start_free_trial" data-featured-plan="true">
           <h3>Pro</h3>
           <div class="price">$99<span>/month</span></div>
           <p class="description">For growing teams that need more power and flexibility.</p>
@@ -40,10 +40,10 @@ import Layout from '../layouts/Layout.astro';
             <li>Advanced analytics</li>
             <li>Custom workflows</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
+          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;" data-plan-action>Start Free Trial</a>
         </div>
 
-        <div class="pricing-card">
+        <div class="pricing-card" data-plan-name="enterprise" data-plan-price="custom" data-plan-cta="contact_sales">
           <h3>Enterprise</h3>
           <div class="price">Custom</div>
           <p class="description">For large organizations with custom requirements.</p>
@@ -57,9 +57,46 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-plan-action>Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const pricingCards = document.querySelectorAll('.pricing-card');
+    const featuredPlan = document.querySelector('[data-featured-plan="true"]');
+
+    pricingCards.forEach((card) => {
+      const action = card.querySelector('[data-plan-action]');
+
+      action?.addEventListener('click', () => {
+        window.posthog?.capture('pricing_plan_selected', {
+          plan_name: card.getAttribute('data-plan-name') || 'unknown',
+          plan_price: card.getAttribute('data-plan-price') || 'unknown',
+          cta_label: card.getAttribute('data-plan-cta') || 'unknown',
+          page_path: window.location.pathname,
+        });
+      });
+    });
+
+    if (featuredPlan && 'IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            window.posthog?.capture('featured_plan_viewed', {
+              plan_name: featuredPlan.getAttribute('data-plan-name') || 'unknown',
+              plan_price: featuredPlan.getAttribute('data-plan-price') || 'unknown',
+              page_path: window.location.pathname,
+            });
+            observer.disconnect();
+          }
+        });
+      }, { threshold: 0.75 });
+
+      observer.observe(featuredPlan);
+    }
+  });
+</script>
