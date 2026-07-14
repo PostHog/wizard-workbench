@@ -11,11 +11,47 @@ let currentUser = null;
 let allMeetings = [];
 let currentMeetingId = null;
 
+function getDistinctId() {
+    return localStorage.getItem('ph_distinct_id') || `web_${crypto.randomUUID()}`;
+}
+
+function getSessionId() {
+    let sessionId = sessionStorage.getItem('ph_session_id');
+    if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        sessionStorage.setItem('ph_session_id', sessionId);
+    }
+    return sessionId;
+}
+
+function captureEvent(eventName, properties = {}) {
+    const payload = {
+        api_key: window.POSTHOG_CONFIG.projectApiKey,
+        event: eventName,
+        distinct_id: getDistinctId(),
+        properties: {
+            ...properties,
+            $current_url: window.location.href,
+            $host: window.location.host,
+            session_id: getSessionId(),
+        },
+    };
+
+    navigator.sendBeacon(
+        `${window.POSTHOG_CONFIG.host}/capture/`,
+        JSON.stringify(payload)
+    );
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     await checkAuth();
     await loadMeetings();
     await loadStats();
+
+    captureEvent('dashboard_loaded', {
+        meeting_count: allMeetings.length,
+    });
 
     // Event listeners
     uploadMeetingBtn.addEventListener('click', () => openUploadModal());
@@ -57,6 +93,11 @@ async function checkAuth() {
 
 async function handleLogout() {
     try {
+        captureEvent('logout_clicked', {
+            meeting_count: allMeetings.length,
+        });
+        localStorage.removeItem('ph_distinct_id');
+        sessionStorage.removeItem('ph_session_id');
         await fetch('/api/auth/logout', { method: 'POST' });
         window.location.href = '/';
     } catch (error) {
@@ -172,6 +213,11 @@ async function handleUploadMeeting(e) {
         transcript: formData.get('transcript'),
     };
 
+    captureEvent('meeting_upload_started', {
+        transcript_length: meetingData.transcript.length,
+        title_length: meetingData.title.length,
+    });
+
     // Show loading state
     const submitBtn = uploadMeetingForm.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
@@ -183,6 +229,8 @@ async function handleUploadMeeting(e) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-POSTHOG-DISTINCT-ID': getDistinctId(),
+                'X-POSTHOG-SESSION-ID': getSessionId(),
             },
             body: JSON.stringify(meetingData),
         });
@@ -211,6 +259,9 @@ async function handleUploadMeeting(e) {
 // Meeting detail
 async function openMeetingDetail(meetingId) {
     try {
+        captureEvent('meeting_detail_viewed', {
+            meeting_id: meetingId,
+        });
         const response = await fetch(`/api/meetings/${meetingId}`);
         const meeting = await response.json();
 
