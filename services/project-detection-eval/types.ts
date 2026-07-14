@@ -137,13 +137,14 @@ export type EvaluationResult = {
   status: "passed" | "failed" | "blocked";
   evidenceClass:
     | "Unit-proven"
-    | "Deterministic integration-proven"
+    | "Mixed deterministic evidence"
     | "Recorded/replay-proven"
     | "Live agentic-proven"
     | "Human-reviewed"
     | "Inferred"
     | "Blocked"
     | "Unknown";
+  fieldEvidence?: Record<string, string>;
   checks: Record<string, CheckState>;
   mismatches: Mismatch[];
   durationMs: number;

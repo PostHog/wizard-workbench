@@ -13,7 +13,6 @@ export type EvaluationArtifact = {
   workbenchSha: string;
   wizardSource?: SourceState;
   workbenchSource?: SourceState;
-  runtime?: { model: string; agentSdk: string; harness: string };
   reproductionCommand: string;
   rawArtifactPath: "results.json";
   liveClaims: "blocked-until-credentialed-isolated-run";
@@ -46,11 +45,7 @@ export function markdownSummary(artifact: EvaluationArtifact): string {
       ""
     );
   }
-  if (artifact.runtime)
-    lines.push(
-      `Runtime: \`${artifact.runtime.model}\` via \`${artifact.runtime.harness}\` and Agent SDK \`${artifact.runtime.agentSdk}\`.`,
-      ""
-    );
+  lines.push("Executed runtime: deterministic Wizard framework registry.", "");
   lines.push(
     "> Live model accuracy, recommendation quality, observed tool discipline, latency/cost/stability, and production-path isolation remain blocked.",
     ""
@@ -75,6 +70,12 @@ export function markdownSummary(artifact: EvaluationArtifact): string {
       ""
     );
     lines.push(`Evidence: ${result.evidenceClass}.`, "");
+    if (result.fieldEvidence) {
+      lines.push("| Field | Evidence |", "| --- | --- |");
+      for (const [field, evidence] of Object.entries(result.fieldEvidence))
+        lines.push(`| ${field} | ${evidence} |`);
+      lines.push("");
+    }
     if (!result.mismatches.length) lines.push("No mismatches.", "");
     for (const mismatch of result.mismatches)
       lines.push(

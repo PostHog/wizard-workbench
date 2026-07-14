@@ -70,31 +70,6 @@ export function productionTargets(profile: TargetProfile): string[] {
   return targets;
 }
 
-export function productionRuntime(): {
-  model: string;
-  agentSdk: string;
-  harness: string;
-} {
-  const cwd = wizardPath();
-  const tsx = join(cwd, "node_modules", ".bin", "tsx");
-  const script = String.raw`
-const { HAIKU_MODEL } = require('./src/lib/constants');
-const packageJson = require('./package.json');
-console.log(JSON.stringify({ model: HAIKU_MODEL, agentSdk: packageJson.dependencies['@anthropic-ai/claude-agent-sdk'], harness: 'wizard-detectProjectsWithAgent' }));
-`;
-  const output = execFileSync(tsx, ["-e", script], {
-    cwd,
-    encoding: "utf8",
-    timeout: 30_000,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  return JSON.parse(output.trim().split("\n").at(-1) ?? "null") as {
-    model: string;
-    agentSdk: string;
-    harness: string;
-  };
-}
-
 export function detectIntegration(path: string): string | null {
   return invoke("integration", "detect", path) as string | null;
 }

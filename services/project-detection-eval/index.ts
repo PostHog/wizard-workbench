@@ -6,7 +6,7 @@ import {
   writeArtifacts,
   type EvaluationArtifact,
 } from "./reporting/reporter.js";
-import { productionRuntime, wizardPath } from "./wizard-runner.js";
+import { wizardPath } from "./wizard-runner.js";
 import { sourceState } from "./source-state.js";
 
 function valueAfter(args: string[], name: string): string | undefined {
@@ -52,7 +52,6 @@ const artifact: EvaluationArtifact = {
   workbenchSha: workbenchSource.sha,
   wizardSource,
   workbenchSource,
-  runtime: productionRuntime(),
   reproductionCommand: `WIZARD_PATH="$WIZARD_REPO" pnpm project-detection-eval${
     caseId ? ` --case ${caseId}` : ""
   } --output-dir "$OUTPUT_DIR"`,

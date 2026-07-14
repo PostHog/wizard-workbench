@@ -27,7 +27,7 @@ Run one case:
 WIZARD_PATH=/absolute/path/to/wizard pnpm project-detection-eval --case issue-113-pnpm-next-api --output-dir artifacts/project-detection-eval
 ```
 
-The command writes `results.json` and `summary.md`. Each artifact records committed SHAs, non-secret working-tree digests when dirty, the selected Wizard runtime, and a reproduction command.
+The command writes `results.json` and `summary.md`. Each artifact records committed SHAs, non-secret working-tree digests when dirty, the executed deterministic registry runtime, field-level evidence ownership, and a reproduction command. Haiku, the Agent SDK, and `detectProjectsWithAgent` are future production targets, not executed runtime in registry-crosscheck mode.
 
 Validate the harness before trusting a report:
 

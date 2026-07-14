@@ -188,7 +188,7 @@ function infrastructureFailure(
     profile: consumer.profile,
     mode: "registry-crosscheck",
     status: "failed",
-    evidenceClass: "Deterministic integration-proven",
+    evidenceClass: "Mixed deterministic evidence",
     checks: { infrastructure: "failed" },
     mismatches: [
       {
@@ -226,7 +226,7 @@ export function runRegistryCase(
           profile: consumer.profile,
           mode: "registry-crosscheck",
           status: "failed",
-          evidenceClass: "Deterministic integration-proven",
+          evidenceClass: "Mixed deterministic evidence",
           checks: { schema: "failed" },
           mismatches: targetErrors.map((message) => ({
             field: "schema",
@@ -280,7 +280,15 @@ export function runRegistryCase(
         status: mismatches.some((item) => item.severity !== "warning")
           ? "failed"
           : "passed",
-        evidenceClass: "Deterministic integration-proven",
+        evidenceClass: "Mixed deterministic evidence",
+        fieldEvidence: {
+          projectRoots: "Evaluator-owned deterministic fixture oracle",
+          frameworkTarget: "Wizard deterministic registry integration",
+          hasPostHog: "Evaluator heuristic",
+          agenticDiscovery: "Blocked",
+          recommendation: "Blocked",
+          liveToolDiscipline: "Blocked",
+        },
         checks: {
           schema: "passed",
           discovery: mismatches.some((item) => item.field === "projectPresence")
@@ -340,7 +348,7 @@ export function runRegistryCases(
           profile: consumer.profile,
           mode: "registry-crosscheck",
           status: "failed",
-          evidenceClass: "Deterministic integration-proven",
+          evidenceClass: "Mixed deterministic evidence",
           checks: { schema: "failed" },
           mismatches: errors.map((message) => ({
             field: "schema",
@@ -421,7 +429,15 @@ export function runRegistryCases(
           status: mismatches.some((item) => item.severity !== "warning")
             ? ("failed" as const)
             : ("passed" as const),
-          evidenceClass: "Deterministic integration-proven" as const,
+          evidenceClass: "Mixed deterministic evidence" as const,
+          fieldEvidence: {
+            projectRoots: "Evaluator-owned deterministic fixture oracle",
+            frameworkTarget: "Wizard deterministic registry integration",
+            hasPostHog: "Evaluator heuristic",
+            agenticDiscovery: "Blocked",
+            recommendation: "Blocked",
+            liveToolDiscipline: "Blocked",
+          },
           checks: {
             schema: "passed" as const,
             discovery: mismatches.some(
