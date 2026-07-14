@@ -1,10 +1,14 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.utils import timezone
 from datetime import timedelta
-from .models import Project, ActivityLog
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from posthog import new_context
+
+from config.posthog import posthog_client
 from .forms import ProjectForm
+from .models import ActivityLog, Project
 
 
 @login_required
@@ -60,6 +64,18 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            with new_context():
+                posthog_client.identify_context(str(request.user.pk))
+                posthog_client.capture(
+                    'project_created',
+                    properties={
+                        'project_id': project.pk,
+                        'name_length': len(project.name),
+                        'has_description': bool(project.description),
+                        'is_active': project.is_active,
+                    },
+                )
+
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -75,13 +91,25 @@ def edit_project(request, pk):
     if request.method == 'POST':
         form = ProjectForm(request.POST, instance=project)
         if form.is_valid():
-            form.save()
+            project = form.save()
 
             ActivityLog.objects.create(
                 user=request.user,
                 action='project_updated',
                 description=f'Updated project: {project.name}'
             )
+
+            with new_context():
+                posthog_client.identify_context(str(request.user.pk))
+                posthog_client.capture(
+                    'project_updated',
+                    properties={
+                        'project_id': project.pk,
+                        'name_length': len(project.name),
+                        'has_description': bool(project.description),
+                        'is_active': project.is_active,
+                    },
+                )
 
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
@@ -96,7 +124,10 @@ def delete_project(request, pk):
     project = get_object_or_404(Project, pk=pk, owner=request.user)
 
     if request.method == 'POST':
+        project_id = project.pk
         name = project.name
+        had_description = bool(project.description)
+        was_active = project.is_active
         project.delete()
 
         ActivityLog.objects.create(
@@ -104,6 +135,18 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+
+        with new_context():
+            posthog_client.identify_context(str(request.user.pk))
+            posthog_client.capture(
+                'project_deleted',
+                properties={
+                    'project_id': project_id,
+                    'name_length': len(name),
+                    'had_description': had_description,
+                    'was_active': was_active,
+                },
+            )
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')

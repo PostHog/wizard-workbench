@@ -1,13 +1,17 @@
 import uuid
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
+from datetime import timedelta
+
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.utils import timezone
-from datetime import timedelta
+from posthog import new_context
+
+from config.posthog import posthog_client
 from .models import Plan, Subscription
 
 # Check if Stripe is configured
@@ -24,6 +28,12 @@ def pricing(request):
     return render(request, 'billing/pricing.html', {'plans': plans})
 
 
+def _capture_for_user(user, event_name, properties=None):
+    with new_context():
+        posthog_client.identify_context(str(user.pk))
+        posthog_client.capture(event_name, properties=properties or {})
+
+
 @login_required
 def subscribe(request, plan_slug):
     """Subscribe to a plan - redirects to Stripe Checkout or creates demo subscription."""
@@ -36,6 +46,18 @@ def subscribe(request, plan_slug):
         return redirect('billing:manage')
 
     if request.method == 'POST':
+        _capture_for_user(
+            request.user,
+            'subscription_checkout_started',
+            {
+                'plan_slug': plan.slug,
+                'billing_interval': plan.interval,
+                'price': float(plan.price),
+                'currency': plan.currency,
+                'uses_stripe_checkout': bool(STRIPE_CONFIGURED and plan.stripe_price_id),
+            },
+        )
+
         if STRIPE_CONFIGURED and plan.stripe_price_id:
             # Create Stripe Checkout Session
             try:
@@ -62,13 +84,25 @@ def subscribe(request, plan_slug):
         else:
             # Demo mode - create subscription directly
             now = timezone.now()
-            Subscription.objects.create(
+            subscription = Subscription.objects.create(
                 user=request.user,
                 plan=plan,
                 status='active',
                 current_period_start=now,
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
+            )
+            _capture_for_user(
+                request.user,
+                'subscription_activated',
+                {
+                    'plan_slug': plan.slug,
+                    'billing_interval': plan.interval,
+                    'price': float(plan.price),
+                    'currency': plan.currency,
+                    'activation_source': 'demo_mode',
+                    'subscription_status': subscription.status,
+                },
             )
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
@@ -128,15 +162,39 @@ def change_plan(request, plan_slug):
                     }],
                     proration_behavior='create_prorations',
                 )
+                previous_plan = subscription.plan
                 subscription.plan = plan
                 subscription.save()
+                _capture_for_user(
+                    request.user,
+                    'subscription_plan_changed',
+                    {
+                        'from_plan_slug': previous_plan.slug,
+                        'to_plan_slug': plan.slug,
+                        'billing_interval': plan.interval,
+                        'price': float(plan.price),
+                        'change_source': 'stripe',
+                    },
+                )
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
                 messages.error(request, f'Error changing plan: {str(e)}')
         else:
             # Demo mode
+            previous_plan = subscription.plan
             subscription.plan = plan
             subscription.save()
+            _capture_for_user(
+                request.user,
+                'subscription_plan_changed',
+                {
+                    'from_plan_slug': previous_plan.slug,
+                    'to_plan_slug': plan.slug,
+                    'billing_interval': plan.interval,
+                    'price': float(plan.price),
+                    'change_source': 'demo_mode',
+                },
+            )
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -171,6 +229,16 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        _capture_for_user(
+            request.user,
+            'subscription_canceled',
+            {
+                'plan_slug': subscription.plan.slug,
+                'billing_interval': subscription.plan.interval,
+                'cancel_source': 'billing_page',
+                'was_demo_subscription': subscription.stripe_subscription_id.startswith('sub_demo_'),
+            },
+        )
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -193,6 +261,14 @@ def billing_portal(request):
         portal_session = stripe.billing_portal.Session.create(
             customer=subscription.stripe_customer_id,
             return_url=request.build_absolute_uri('/billing/manage/'),
+        )
+        _capture_for_user(
+            request.user,
+            'billing_portal_opened',
+            {
+                'plan_slug': subscription.plan.slug,
+                'subscription_status': subscription.status,
+            },
         )
         return redirect(portal_session.url)
     except Exception as e:
@@ -234,6 +310,15 @@ def webhook(request):
         invoice = event['data']['object']
         _handle_payment_failed(invoice)
 
+    posthog_client.capture(
+        'billing_webhook_processed',
+        distinct_id=f"stripe_webhook_{event['type']}",
+        properties={
+            'event_type': event['type'],
+            'livemode': bool(event.get('livemode', False)),
+        },
+    )
+
     return HttpResponse(status=200)
 
 
@@ -256,7 +341,7 @@ def _handle_checkout_completed(session):
     # Get subscription details from Stripe
     stripe_sub = stripe.Subscription.retrieve(session['subscription'])
 
-    Subscription.objects.create(
+    subscription = Subscription.objects.create(
         user=user,
         plan=plan,
         status='active',
@@ -268,6 +353,19 @@ def _handle_checkout_completed(session):
         ),
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
+    )
+
+    _capture_for_user(
+        user,
+        'subscription_activated',
+        {
+            'plan_slug': plan.slug,
+            'billing_interval': plan.interval,
+            'price': float(plan.price),
+            'currency': plan.currency,
+            'activation_source': 'stripe_webhook',
+            'subscription_status': subscription.status,
+        },
     )
 
 
@@ -323,5 +421,14 @@ def _handle_payment_failed(invoice):
         )
         subscription.status = 'past_due'
         subscription.save()
+        _capture_for_user(
+            subscription.user,
+            'payment_failed',
+            {
+                'plan_slug': subscription.plan.slug,
+                'billing_interval': subscription.plan.interval,
+                'subscription_status': subscription.status,
+            },
+        )
     except Subscription.DoesNotExist:
         pass
