@@ -5,13 +5,28 @@ const currentYear = new Date().getFullYear();
 <footer class="footer">
   <div class="container footer-inner">
     <ul class="footer-links">
-      <li><a href="/features" class="footer-link">Features</a></li>
-      <li><a href="/pricing" class="footer-link">Pricing</a></li>
-      <li><a href="/about" class="footer-link">About</a></li>
-      <li><a href="/docs" class="footer-link">Docs</a></li>
-      <li><a href="#" class="footer-link">Privacy</a></li>
-      <li><a href="#" class="footer-link">Terms</a></li>
+      <li><a href="/features" class="footer-link" data-posthog-footer="features">Features</a></li>
+      <li><a href="/pricing" class="footer-link" data-posthog-footer="pricing">Pricing</a></li>
+      <li><a href="/about" class="footer-link" data-posthog-footer="about">About</a></li>
+      <li><a href="/docs" class="footer-link" data-posthog-footer="docs">Docs</a></li>
+      <li><a href="#" class="footer-link" data-posthog-footer="privacy">Privacy</a></li>
+      <li><a href="#" class="footer-link" data-posthog-footer="terms">Terms</a></li>
     </ul>
     <p class="footer-copy">&copy; {currentYear} NeuralFlow AI. All rights reserved.</p>
   </div>
 </footer>
+
+<script is:inline>
+  function setupFooterTracking() {
+    window.NeuralFlowAnalytics?.attachClickTracking('[data-posthog-footer]', (element) => ({
+      event: 'footer_link_clicked',
+      properties: {
+        link_name: element.getAttribute('data-posthog-footer') || 'unknown',
+        href: element.getAttribute('href') || ''
+      }
+    }));
+  }
+
+  document.addEventListener('DOMContentLoaded', setupFooterTracking);
+  document.addEventListener('astro:page-load', setupFooterTracking);
+</script>

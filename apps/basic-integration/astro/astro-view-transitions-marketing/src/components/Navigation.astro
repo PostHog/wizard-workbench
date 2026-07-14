@@ -4,18 +4,34 @@ const currentPath = Astro.url.pathname;
 
 <nav class="nav">
   <div class="container nav-inner">
-    <a href="/" class="nav-logo">
+    <a href="/" class="nav-logo" data-posthog-nav="logo">
       <span>NeuralFlow</span> AI
     </a>
     <ul class="nav-links">
-      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]}>Features</a></li>
-      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
-      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
-      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]} data-posthog-nav="features">Features</a></li>
+      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]} data-posthog-nav="pricing">Pricing</a></li>
+      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]} data-posthog-nav="about">About</a></li>
+      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]} data-posthog-nav="docs">Docs</a></li>
+      <li><a href="/pricing" class="nav-cta" data-posthog-nav="get-started">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  function setupNavigationTracking() {
+    window.NeuralFlowAnalytics?.attachClickTracking('[data-posthog-nav]', (element) => ({
+      event: 'cta_clicked',
+      properties: {
+        location: 'navigation',
+        cta_name: element.getAttribute('data-posthog-nav') || 'unknown',
+        href: element.getAttribute('href') || ''
+      }
+    }));
+  }
+
+  document.addEventListener('DOMContentLoaded', setupNavigationTracking);
+  document.addEventListener('astro:page-load', setupNavigationTracking);
+</script>
 
 <style>
   .nav-link.active {

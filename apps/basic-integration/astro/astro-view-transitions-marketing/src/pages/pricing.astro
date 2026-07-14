@@ -24,7 +24,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Basic integrations</li>
             <li>Email support</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-posthog-plan="starter">Get Started</a>
         </div>
 
         <div class="pricing-card featured">
@@ -40,7 +40,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Advanced analytics</li>
             <li>Custom workflows</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
+          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;" data-posthog-plan="pro">Start Free Trial</a>
         </div>
 
         <div class="pricing-card">
@@ -57,9 +57,24 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-posthog-plan="enterprise">Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupPricingTracking() {
+    window.NeuralFlowAnalytics?.attachClickTracking('[data-posthog-plan]', (element) => ({
+      event: 'pricing_plan_selected',
+      properties: {
+        plan: element.getAttribute('data-posthog-plan') || 'unknown',
+        cta_text: element.textContent?.trim() || ''
+      }
+    }));
+  }
+
+  document.addEventListener('DOMContentLoaded', setupPricingTracking);
+  document.addEventListener('astro:page-load', setupPricingTracking);
+</script>

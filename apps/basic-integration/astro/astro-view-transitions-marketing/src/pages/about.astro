@@ -19,22 +19,22 @@ import Layout from '../layouts/Layout.astro';
       </p>
 
       <div class="about-grid">
-        <div class="about-card">
+        <button type="button" class="about-card about-card-button" data-posthog-stat="active-users">
           <h3>10K+</h3>
           <p>Active Users</p>
-        </div>
-        <div class="about-card">
+        </button>
+        <button type="button" class="about-card about-card-button" data-posthog-stat="documents-processed">
           <h3>500M+</h3>
           <p>Documents Processed</p>
-        </div>
-        <div class="about-card">
+        </button>
+        <button type="button" class="about-card about-card-button" data-posthog-stat="uptime-sla">
           <h3>99.9%</h3>
           <p>Uptime SLA</p>
-        </div>
-        <div class="about-card">
+        </button>
+        <button type="button" class="about-card about-card-button" data-posthog-stat="countries">
           <h3>50+</h3>
           <p>Countries</p>
-        </div>
+        </button>
       </div>
     </div>
   </section>
@@ -70,3 +70,30 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupAboutTracking() {
+    window.NeuralFlowAnalytics?.attachClickTracking('[data-posthog-stat]', (element) => ({
+      event: 'about_stat_highlight_clicked',
+      properties: {
+        stat_name: element.getAttribute('data-posthog-stat') || 'unknown'
+      }
+    }));
+  }
+
+  document.addEventListener('DOMContentLoaded', setupAboutTracking);
+  document.addEventListener('astro:page-load', setupAboutTracking);
+</script>
+
+<style>
+  .about-card-button {
+    width: 100%;
+    border: 0;
+    background: none;
+    padding: 0;
+    text-align: inherit;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+</style>

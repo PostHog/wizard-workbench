@@ -1,0 +1,31 @@
+---
+---
+
+<script is:inline>
+  window.NeuralFlowAnalytics = window.NeuralFlowAnalytics || {
+    attachClickTracking(selector, builder) {
+      const elements = document.querySelectorAll(selector);
+
+      elements.forEach((element) => {
+        if (!(element instanceof HTMLElement)) {
+          return;
+        }
+
+        const trackedKey = `posthogBound${selector.replace(/[^a-zA-Z0-9]/g, '')}`;
+        if (element.dataset[trackedKey] === 'true') {
+          return;
+        }
+
+        element.dataset[trackedKey] = 'true';
+        element.addEventListener('click', () => {
+          const payload = typeof builder === 'function' ? builder(element) : null;
+          if (!payload?.event) {
+            return;
+          }
+
+          window.posthog?.capture(payload.event, payload.properties || {});
+        });
+      });
+    }
+  };
+</script>

@@ -14,8 +14,8 @@ import Layout from '../layouts/Layout.astro';
         and automated insights. Built for teams that move fast.
       </p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Start Free Trial</a>
-        <a href="/docs" class="btn btn-secondary">Read the Docs</a>
+        <a href="/pricing" class="btn btn-primary" data-posthog-hero="start-free-trial">Start Free Trial</a>
+        <a href="/docs" class="btn btn-secondary" data-posthog-hero="read-the-docs">Read the Docs</a>
       </div>
     </div>
   </section>
@@ -61,3 +61,19 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupHomeTracking() {
+    window.NeuralFlowAnalytics?.attachClickTracking('[data-posthog-hero]', (element) => ({
+      event: 'cta_clicked',
+      properties: {
+        location: 'hero',
+        cta_name: element.getAttribute('data-posthog-hero') || 'unknown',
+        href: element.getAttribute('href') || ''
+      }
+    }));
+  }
+
+  document.addEventListener('DOMContentLoaded', setupHomeTracking);
+  document.addEventListener('astro:page-load', setupHomeTracking);
+</script>
