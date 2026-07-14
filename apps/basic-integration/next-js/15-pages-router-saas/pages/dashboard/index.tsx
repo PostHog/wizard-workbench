@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
 
@@ -36,6 +37,10 @@ function ManageSubscription() {
       const result = await response.json();
 
       if (response.ok && result.url) {
+        posthog.capture('billing_portal_opened', {
+          current_plan: teamData?.planName || 'Free',
+          subscription_status: teamData?.subscriptionStatus || 'none'
+        });
         window.location.href = result.url;
       }
     } catch (err) {
@@ -101,6 +106,10 @@ function TeamMembers() {
           setError(result.error || 'Failed to remove member');
           return;
         }
+
+        posthog.capture('team_member_removed', {
+          team_size_after_removal: Math.max((teamData?.teamMembers.length || 1) - 1, 0)
+        });
 
         // Refresh team data
         mutate('/api/team');
@@ -206,6 +215,11 @@ function InviteTeamMember() {
           setError(result.error || 'Failed to send invitation');
           return;
         }
+
+        posthog.capture('team_member_invited', {
+          role: data.role,
+          invite_source: 'dashboard_team_settings'
+        });
 
         setSuccess(result.success);
         // Reset form

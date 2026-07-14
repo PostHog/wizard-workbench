@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 import useSWR from 'swr';
 import { User } from '@/lib/db/schema';
 import { useState, useTransition } from 'react';
@@ -51,6 +52,11 @@ export default function GeneralPage() {
           setError(result.error || 'An error occurred');
           return;
         }
+
+        posthog.capture('account_updated', {
+          updated_name: data.name !== (user?.name || ''),
+          updated_email: data.email !== (user?.email || '')
+        });
 
         setSuccess(result.success);
         setName(result.name);
