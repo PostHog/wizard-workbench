@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { Link } from "react-router";
 import type { Route } from "./+types/home";
 
@@ -9,6 +10,8 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+  const posthog = usePostHog();
+
   return (
     <div className="px-2 py-32 bg-white md:px-0">
       <div className="container items-center max-w-6xl mx-auto xl:px-5">
@@ -29,6 +32,11 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row sm:space-x-4">
                 <Link
                   to="/countries"
+                  onClick={() =>
+                    posthog?.capture('countries_explored', {
+                      source: 'home_hero',
+                    })
+                  }
                   className="flex items-center justify-center px-6 py-3 text-lg text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
                 >
                   Explore Now
