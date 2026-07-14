@@ -3,6 +3,7 @@ import type { Route } from "./+types/products.$productId";
 import { getProductById } from "../data/products";
 import { useCart } from "../context/CartContext";
 import { useState } from "react";
+import { PostHogCaptureOnViewed } from "@posthog/react";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const productId = parseInt(params.productId);
@@ -27,12 +28,22 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Link
-        to="/products"
-        className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6"
-      >
-        <svg
+    <PostHogCaptureOnViewed
+      name="product_viewed"
+      properties={{
+        product_id: product.id,
+        product_name: product.name,
+        category: product.category,
+        price: product.price,
+        stock: product.stock,
+      }}
+    >
+      <div className="container mx-auto px-4 py-8">
+        <Link
+          to="/products"
+          className="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6"
+        >
+          <svg
           className="w-5 h-5 mr-2"
           fill="none"
           stroke="currentColor"
@@ -44,12 +55,12 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
             strokeWidth={2}
             d="M15 19l-7-7 7-7"
           />
-        </svg>
-        Back to Products
-      </Link>
+          </svg>
+          Back to Products
+        </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        <div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div>
           <img
             src={product.image}
             alt={product.name}
@@ -57,8 +68,8 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
           />
         </div>
 
-        <div>
-          <span className="inline-block bg-indigo-100 text-indigo-800 text-sm px-3 py-1 rounded-full mb-4">
+          <div>
+            <span className="inline-block bg-indigo-100 text-indigo-800 text-sm px-3 py-1 rounded-full mb-4">
             {product.category}
           </span>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -120,15 +131,16 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
             </div>
           </div>
 
-          <button
-            onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            className="w-full bg-indigo-600 text-white py-4 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
-          </button>
+            <button
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+              className="w-full bg-indigo-600 text-white py-4 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </PostHogCaptureOnViewed>
   );
 }
