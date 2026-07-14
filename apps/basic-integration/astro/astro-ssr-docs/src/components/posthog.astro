@@ -1,0 +1,71 @@
+---
+const projectToken = import.meta.env.PUBLIC_POSTHOG_PROJECT_TOKEN;
+const apiHost = import.meta.env.PUBLIC_POSTHOG_HOST;
+---
+
+<script
+  is:inline
+  define:vars={{ projectToken, apiHost }}
+>
+  !(function(t, e) {
+    var o, n, p, r;
+    if (!e.__SV) {
+      window.posthog = e;
+      e._i = [];
+      e.init = function(i, s, a) {
+        function g(t, e) {
+          var o = e.split('.');
+          if (o.length === 2) {
+            t = t[o[0]];
+            e = o[1];
+          }
+          t[e] = function() {
+            t.push([e].concat(Array.prototype.slice.call(arguments, 0)));
+          };
+        }
+        (p = t.createElement('script')).type = 'text/javascript';
+        p.crossOrigin = 'anonymous';
+        p.async = true;
+        p.src = s.api_host + '/static/array.js';
+        (r = t.getElementsByTagName('script')[0]).parentNode.insertBefore(p, r);
+        var u = e;
+        if (a !== undefined) {
+          u = e[a] = [];
+        } else {
+          a = 'posthog';
+        }
+        u.people = u.people || [];
+        u.toString = function(t) {
+          var e = 'posthog';
+          if (a !== 'posthog') {
+            e += '.' + a;
+          }
+          if (!t) {
+            e += ' (stub)';
+          }
+          return e;
+        };
+        u.people.toString = function() {
+          return u.toString(1) + '.people (stub)';
+        };
+        o = 'capture identify alias people.set people.set_once set_config register register_once unregister reset getFeatureFlag getFeatureFlagPayload isFeatureEnabled onFeatureFlags reloadFeatureFlags group setPersonProperties setPersonPropertiesForFlags resetGroupPropertiesForFlags captureException onSessionId get_session_id get_distinct_id'.split(' ');
+        for (n = 0; n < o.length; n++) {
+          g(u, o[n]);
+        }
+        e._i.push([i, s, a]);
+      };
+      e.__SV = 1;
+    }
+  })(document, window.posthog || []);
+
+  if (projectToken) {
+    window.posthog.init(projectToken, {
+      api_host: apiHost,
+      defaults: '2026-01-30',
+      capture_pageview: 'history_change',
+      capture_pageleave: true,
+      autocapture: true,
+      person_profiles: 'identified_only'
+    });
+  }
+</script>

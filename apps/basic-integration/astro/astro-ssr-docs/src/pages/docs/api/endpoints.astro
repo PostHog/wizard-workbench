@@ -2,6 +2,7 @@
 import DocsLayout from '../../../layouts/DocsLayout.astro';
 
 const renderTime = new Date().toISOString();
+const endpointCount = 8;
 ---
 
 <DocsLayout title="API Endpoints">
@@ -58,3 +59,13 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline define:vars={{ endpointCount }}>
+  document.addEventListener('DOMContentLoaded', () => {
+    window.posthog?.capture('api_endpoints_reference_viewed', {
+      current_path: window.location.pathname,
+      endpoint_count: endpointCount,
+      content_group: 'api_reference',
+    });
+  });
+</script>

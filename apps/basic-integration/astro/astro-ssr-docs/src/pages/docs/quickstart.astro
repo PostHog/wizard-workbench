@@ -16,11 +16,12 @@ const renderTime = new Date().toISOString();
 
   <h2>Step 2: Install the SDK</h2>
 
-  <pre><code>npm install @neuralflow/sdk</code></pre>
+  <pre><code id="quickstart-install-command">npm install @neuralflow/sdk</code></pre>
+  <button type="button" class="copy-button" data-event="quickstart_code_copied" data-source="install_command" data-target="quickstart-install-command">Copy install command</button>
 
   <h2>Step 3: Process a Document</h2>
 
-  <pre><code>import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
+  <pre><code id="quickstart-code-example">import {'{'} NeuralFlow {'}'} from '@neuralflow/sdk';
 import fs from 'fs';
 
 const client = new NeuralFlow({'{'}
@@ -34,6 +35,7 @@ const document = await client.documents.create({'{'}
 {'}'});
 
 console.log('Extracted data:', document.data);</code></pre>
+  <button type="button" class="copy-button" data-event="quickstart_code_copied" data-source="code_example" data-target="quickstart-code-example">Copy code example</button>
 
   <h2>Step 4: View Results</h2>
   <p>The extracted data will be returned as structured JSON:</p>
@@ -59,3 +61,35 @@ console.log('Extracted data:', document.data);</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  async function copySnippet(targetId, eventName, source) {
+    const target = document.getElementById(targetId);
+    if (!target?.textContent) {
+      return;
+    }
+
+    await navigator.clipboard.writeText(target.textContent);
+    window.posthog?.capture(eventName, {
+      current_path: window.location.pathname,
+      source,
+    });
+  }
+
+  document.addEventListener('click', async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement) || !target.dataset.target || !target.dataset.event) {
+      return;
+    }
+
+    try {
+      await copySnippet(target.dataset.target, target.dataset.event, target.dataset.source || 'unknown');
+      target.textContent = 'Copied';
+      setTimeout(() => {
+        target.textContent = target.dataset.source === 'install_command' ? 'Copy install command' : 'Copy code example';
+      }, 1500);
+    } catch (error) {
+      window.posthog?.captureException(error);
+    }
+  });
+</script>

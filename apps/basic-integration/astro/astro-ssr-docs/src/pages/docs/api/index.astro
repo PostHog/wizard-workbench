@@ -61,7 +61,80 @@ const renderTime = new Date().toISOString();
     <li><code>X-RateLimit-Reset</code> - Unix timestamp when limit resets</li>
   </ul>
 
+  <section class="callout">
+    <h3>Was this page helpful?</h3>
+    <form id="docs-feedback-form">
+      <label for="feedback-rating">Rating</label>
+      <select id="feedback-rating" name="rating" required>
+        <option value="">Choose one</option>
+        <option value="helpful">Helpful</option>
+        <option value="neutral">Neutral</option>
+        <option value="confusing">Confusing</option>
+      </select>
+
+      <label for="feedback-message">Feedback</label>
+      <textarea id="feedback-message" name="message" rows="4" placeholder="Share what worked well or what needs improvement"></textarea>
+
+      <button type="submit">Send feedback</button>
+      <p id="feedback-status" aria-live="polite"></p>
+    </form>
+  </section>
+
   <div class="render-info">
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.getElementById('docs-feedback-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+
+    const ratingInput = document.getElementById('feedback-rating');
+    const messageInput = document.getElementById('feedback-message');
+    const status = document.getElementById('feedback-status');
+
+    if (!(ratingInput instanceof HTMLSelectElement) || !(messageInput instanceof HTMLTextAreaElement) || !(status instanceof HTMLParagraphElement)) {
+      return;
+    }
+
+    try {
+      const sessionId = window.posthog?.get_session_id?.() || '';
+      const distinctId = window.posthog?.get_distinct_id?.() || '';
+
+      const response = await fetch('/api/docs-feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-PostHog-Session-Id': sessionId,
+          'X-PostHog-Distinct-Id': distinctId,
+        },
+        body: JSON.stringify({
+          page: window.location.pathname,
+          rating: ratingInput.value,
+          has_message: messageInput.value.trim().length > 0,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Feedback request failed');
+      }
+
+      window.posthog?.capture('docs_feedback_submitted', {
+        current_path: window.location.pathname,
+        rating: ratingInput.value,
+        has_message: messageInput.value.trim().length > 0,
+      });
+
+      status.textContent = 'Thanks for the feedback.';
+      form.reset();
+    } catch (error) {
+      window.posthog?.captureException(error);
+      status.textContent = 'Unable to send feedback right now.';
+    }
+  });
+</script>

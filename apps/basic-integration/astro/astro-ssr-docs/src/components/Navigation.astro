@@ -3,6 +3,31 @@ const currentPath = Astro.url.pathname;
 const isDocs = currentPath.startsWith('/docs');
 ---
 
+<script is:inline>
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const link = target.closest('a');
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    if (!link.classList.contains('nav-cta')) {
+      return;
+    }
+
+    window.posthog?.capture('docs_nav_cta_clicked', {
+      current_path: window.location.pathname,
+      target_href: link.getAttribute('href') || '',
+      link_text: link.textContent?.trim() || '',
+      location: 'primary_navigation',
+    });
+  });
+</script>
+
 <nav class="nav">
   <div class="nav-inner">
     <a href="/" class="nav-logo">

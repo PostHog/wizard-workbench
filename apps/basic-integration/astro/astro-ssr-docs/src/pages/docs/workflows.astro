@@ -14,7 +14,7 @@ const renderTime = new Date().toISOString();
     via the API.
   </p>
 
-  <pre><code>const workflow = await client.workflows.create({'{'}
+  <pre><code id="workflow-example">const workflow = await client.workflows.create({'{'}
   name: 'Invoice Processing',
   trigger: {'{'}
     type: 'document.uploaded',
@@ -35,6 +35,7 @@ const renderTime = new Date().toISOString();
     {'}'},
   ],
 {'}'});</code></pre>
+  <button type="button" class="copy-button" id="copy-workflow-example">Copy workflow example</button>
 
   <h2>Triggers</h2>
   <p>Workflows can be triggered by:</p>
@@ -60,3 +61,22 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.getElementById('copy-workflow-example')?.addEventListener('click', async () => {
+    const codeBlock = document.getElementById('workflow-example');
+    if (!codeBlock?.textContent) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(codeBlock.textContent);
+      window.posthog?.capture('workflow_example_copied', {
+        current_path: window.location.pathname,
+        trigger_type: 'document.uploaded',
+      });
+    } catch (error) {
+      window.posthog?.captureException(error);
+    }
+  });
+</script>

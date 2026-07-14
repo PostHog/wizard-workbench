@@ -11,7 +11,8 @@ const renderTime = new Date().toISOString();
   <h2>Node.js / JavaScript</h2>
   <p>Install the NeuralFlow SDK using your preferred package manager:</p>
 
-  <pre><code>npm install @neuralflow/sdk</code></pre>
+  <pre><code id="installation-npm-command">npm install @neuralflow/sdk</code></pre>
+  <button type="button" class="copy-button" data-target="installation-npm-command">Copy npm command</button>
 
   <p>Or with yarn:</p>
 
@@ -57,3 +58,31 @@ NEURALFLOW_API_KEY=your_api_key_here</code></pre>
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.addEventListener('click', async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement) || target.dataset.target !== 'installation-npm-command') {
+      return;
+    }
+
+    const codeBlock = document.getElementById('installation-npm-command');
+    if (!codeBlock?.textContent) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(codeBlock.textContent);
+      window.posthog?.capture('installation_command_copied', {
+        current_path: window.location.pathname,
+        package_manager: 'npm',
+      });
+      target.textContent = 'Copied';
+      setTimeout(() => {
+        target.textContent = 'Copy npm command';
+      }, 1500);
+    } catch (error) {
+      window.posthog?.captureException(error);
+    }
+  });
+</script>

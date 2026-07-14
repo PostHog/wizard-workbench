@@ -52,3 +52,24 @@ const sections = [
     </div>
   ))}
 </aside>
+
+<script is:inline>
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const link = target.closest('.sidebar-link');
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    window.posthog?.capture('docs_sidebar_navigation_clicked', {
+      current_path: window.location.pathname,
+      target_href: link.getAttribute('href') || '',
+      link_text: link.textContent?.trim() || '',
+      section: link.closest('.sidebar-section')?.querySelector('.sidebar-title')?.textContent?.trim() || '',
+    });
+  });
+</script>

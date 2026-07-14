@@ -15,7 +15,7 @@ const renderTime = new Date().toISOString();
   </p>
 
   <h3>Setting Up Email Monitoring</h3>
-  <pre><code>const emailSource = await client.sources.create({'{'}
+  <pre><code id="automation-example">const emailSource = await client.sources.create({'{'}
   type: 'email',
   config: {'{'}
     provider: 'gmail',
@@ -23,6 +23,7 @@ const renderTime = new Date().toISOString();
     autoProcess: true,
   {'}'},
 {'}'});</code></pre>
+  <button type="button" class="copy-button" id="copy-automation-example">Copy automation example</button>
 
   <h2>Scheduled Tasks</h2>
   <p>
@@ -49,3 +50,22 @@ const renderTime = new Date().toISOString();
     Server-rendered at: {renderTime}
   </div>
 </DocsLayout>
+
+<script is:inline>
+  document.getElementById('copy-automation-example')?.addEventListener('click', async () => {
+    const codeBlock = document.getElementById('automation-example');
+    if (!codeBlock?.textContent) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(codeBlock.textContent);
+      window.posthog?.capture('automation_example_copied', {
+        current_path: window.location.pathname,
+        automation_type: 'email',
+      });
+    } catch (error) {
+      window.posthog?.captureException(error);
+    }
+  });
+</script>

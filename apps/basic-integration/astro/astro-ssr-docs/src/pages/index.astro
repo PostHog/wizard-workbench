@@ -54,3 +54,29 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </footer>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const link = target.closest('a');
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    const isHeroCta = link.classList.contains('btn-primary') || link.classList.contains('btn-secondary');
+    if (!isHeroCta) {
+      return;
+    }
+
+    window.posthog?.capture('homepage_cta_clicked', {
+      current_path: window.location.pathname,
+      target_href: link.getAttribute('href') || '',
+      cta_variant: link.classList.contains('btn-primary') ? 'primary' : 'secondary',
+      cta_text: link.textContent?.trim() || '',
+    });
+  });
+</script>
