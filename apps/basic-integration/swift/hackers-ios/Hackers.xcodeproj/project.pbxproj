@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1A2B3C4D5E6F700100000001 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 1A2B3C4D5E6F700100000002 /* PostHog */; };
 		2406B38728AD083500CB396B /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 2406B38628AD083500CB396B /* SwiftSoup */; };
 		241E7B412E511BC20013EEA1 /* Data in Frameworks */ = {isa = PBXBuildFile; productRef = 241E7B402E511BC20013EEA1 /* Data */; };
 		241E7B492E51D1C80013EEA1 /* Settings in Frameworks */ = {isa = PBXBuildFile; productRef = 241E7B482E51D1C80013EEA1 /* Settings */; };
@@ -90,6 +91,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A2B3C4D5E6F700100000001 /* PostHog in Frameworks */,
 				248256FE2E59D2660068E91E /* Feed in Frameworks */,
 				248256F82E59D2460068E91E /* Domain in Frameworks */,
 				241E802E2E55B5F40013EEA1 /* Comments in Frameworks */,
@@ -183,6 +185,7 @@
 			);
 			name = Hackers;
 			packageProductDependencies = (
+				1A2B3C4D5E6F700100000002 /* PostHog */,
 				2406B38628AD083500CB396B /* SwiftSoup */,
 				241E7B402E511BC20013EEA1 /* Data */,
 				241E7B482E51D1C80013EEA1 /* Settings */,
@@ -227,6 +230,7 @@
 			);
 			mainGroup = 24F39F7C18AFB1150055F8DC;
 			packageReferences = (
+				1A2B3C4D5E6F700100000003 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				2406B38528AD083500CB396B /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 				241E7B3F2E511BC20013EEA1 /* XCLocalSwiftPackageReference "Data" */,
 				241E7B422E511BE50013EEA1 /* XCLocalSwiftPackageReference "DesignSystem" */,
@@ -494,6 +498,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon";
+				POSTHOG_API_KEY = "$(POSTHOG_API_KEY)";
+				POSTHOG_HOST = "$(POSTHOG_HOST)";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "App/Supporting Files/Hackers.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -525,6 +531,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon";
+				POSTHOG_API_KEY = "$(POSTHOG_API_KEY)";
+				POSTHOG_HOST = "$(POSTHOG_HOST)";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "App/Supporting Files/Hackers.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -623,6 +631,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		1A2B3C4D5E6F700100000003 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.59.3;
+			};
+		};
 		2406B38528AD083500CB396B /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/scinfu/SwiftSoup.git";
@@ -634,6 +650,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		1A2B3C4D5E6F700100000002 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A2B3C4D5E6F700100000003 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
 		2406B38628AD083500CB396B /* SwiftSoup */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 2406B38528AD083500CB396B /* XCRemoteSwiftPackageReference "SwiftSoup" */;

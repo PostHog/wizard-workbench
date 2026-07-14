@@ -8,6 +8,7 @@
 import Combine
 import Domain
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 import UIKit
@@ -51,6 +52,13 @@ class NavigationStore: NavigationStoreProtocol {
         detailPath.removeAll()
         selectedPost = post
         selectedPostId = post.id
+        PostHogSDK.shared.capture("post_opened", properties: [
+            "post_id": post.id,
+            "post_type": post.postType.rawValue,
+            "comment_count": post.commentsCount,
+            "score": post.score,
+            "opened_from": UIDevice.current.userInterfaceIdiom == .pad || isRunningOnMac ? "split_view" : "stack"
+        ])
 
         // For iPhone navigation, use NavigationPath
         if UIDevice.current.userInterfaceIdiom != .pad && !isRunningOnMac {
@@ -82,6 +90,7 @@ class NavigationStore: NavigationStoreProtocol {
 
     func showSettings() {
         showingSettings = true
+        PostHogSDK.shared.capture("settings_opened")
     }
 
     func selectPostType(_ type: Domain.PostType) {

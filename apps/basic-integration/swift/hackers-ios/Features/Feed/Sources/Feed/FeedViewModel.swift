@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -219,6 +220,9 @@ public final class FeedViewModel: @unchecked Sendable {
         guard postType != newType else { return }
 
         postType = newType
+        PostHogSDK.shared.capture("feed_category_selected", properties: [
+            "post_type": newType.rawValue
+        ])
         persistLastFeedCategoryIfNeeded()
         reset(clearPosts: true)  // Clear posts immediately to prevent flash of old data
         await feedLoader.refresh()
@@ -256,6 +260,11 @@ public final class FeedViewModel: @unchecked Sendable {
     @MainActor
     public func toggleBookmark(for post: Domain.Post) async -> Bool {
         let newState = await bookmarksController.toggle(post: post)
+        PostHogSDK.shared.capture("bookmark_toggled", properties: [
+            "post_id": post.id,
+            "post_type": post.postType.rawValue,
+            "bookmarked": newState
+        ])
         await handleBookmarksUpdate(postId: post.id, isBookmarked: newState)
         return newState
     }

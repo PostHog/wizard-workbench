@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 
 @MainActor
 @Observable
@@ -23,7 +24,10 @@ public final class SessionService: AuthenticationServiceProtocol {
         Task { [weak self] in
             guard let self else { return }
             let user = await authenticationUseCase.getCurrentUser()
-            await MainActor.run { self.user = user }
+            await MainActor.run {
+                self.user = user
+                self.identifyIfNeeded(for: user)
+            }
         }
 
         logoutObserver = NotificationCenter.default.addObserver(
@@ -64,15 +68,30 @@ public final class SessionService: AuthenticationServiceProtocol {
     public func authenticate(username: String, password: String) async throws -> AuthenticationState {
         try await authenticationUseCase.authenticate(username: username, password: password)
         user = await authenticationUseCase.getCurrentUser()
+        identifyIfNeeded(for: user)
+        PostHogSDK.shared.capture("login_succeeded", properties: [
+            "authentication_method": "password"
+        ])
         return .authenticated
     }
 
     public func unauthenticate() {
+        PostHogSDK.shared.capture("logout_completed")
+        PostHogSDK.shared.reset()
         Task { [weak self] in
             guard let self else { return }
             try? await authenticationUseCase.logout()
             await MainActor.run { self.user = nil }
         }
+    }
+
+    private func identifyIfNeeded(for user: Domain.User?) {
+        guard let user else { return }
+        PostHogSDK.shared.identify(user.username, userProperties: [
+            "username": user.username,
+            "karma": user.karma,
+            "joined_at": ISO8601DateFormatter().string(from: user.joined)
+        ])
     }
 
     public enum AuthenticationState {
