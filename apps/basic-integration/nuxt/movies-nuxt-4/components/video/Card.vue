@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import type { Video } from '~/types'
 
+const posthog = usePostHog()
+
 const props = defineProps<{
   item: Video
 }>()
 
 const showModal = useIframeModal()
 function play() {
+  posthog?.capture('video_play_started', {
+    video_id: props.item.id,
+    video_type: props.item.type,
+    site: props.item.site,
+  })
   return showModal(getVideoLink(props.item)!)
 }
 </script>

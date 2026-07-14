@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const posthog = usePostHog()
 const username = ref('')
 const password = ref('')
 const error = ref('')
@@ -9,9 +10,16 @@ const handleLogin = async () => {
   error.value = ''
   loading.value = true
 
+  const normalizedUsername = username.value.trim()
+
   try {
-    await login(username.value, password.value)
+    await login(normalizedUsername, password.value)
+    posthog?.identify(normalizedUsername)
+    posthog?.capture('login_submitted', {
+      method: 'password',
+    })
   } catch (e: any) {
+    posthog?.captureException(e)
     error.value = e.message || 'Login failed'
   } finally {
     loading.value = false

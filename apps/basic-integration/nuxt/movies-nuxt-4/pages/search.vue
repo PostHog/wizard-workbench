@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Media } from '~/types'
 
+const posthog = usePostHog()
+
 definePageMeta({
   pageTransition: false,
 })
@@ -21,6 +23,10 @@ function search() {
   currentSearch.value = input.value.toString()
   count.value = undefined
   items.value = []
+  posthog?.capture('search_performed', {
+    query_length: currentSearch.value.length,
+    source: 'search_page',
+  })
   router.replace({ query: { s: input.value } })
 }
 
@@ -33,6 +39,7 @@ async function fetch(page: number) {
     items.value.push(...data.results)
   }
   catch (e: any) {
+    posthog?.captureException(e)
     error.value = e
   }
 }

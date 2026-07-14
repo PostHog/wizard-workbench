@@ -1,23 +1,34 @@
 <script setup lang="ts">
 import type { Media, MediaType } from '~/types'
 
-defineProps<{
+const posthog = usePostHog()
+
+const props = defineProps<{
   item: Media
   type: MediaType
 }>()
 
 const tab = ref<'overview' | 'videos' | 'photos'>('overview')
+
+const selectTab = (nextTab: 'overview' | 'videos' | 'photos') => {
+  tab.value = nextTab
+  posthog?.capture('media_tab_selected', {
+    media_id: props.item.id,
+    media_type: props.type,
+    tab: nextTab,
+  })
+}
 </script>
 
 <template>
   <div flex items-center justify-center gap8 py6>
-    <button n-tab :class="{ 'n-tab-active': tab === 'overview' }" @click="tab = 'overview'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'overview' }" @click="selectTab('overview')">
       {{ $t('Overview') }}
     </button>
-    <button n-tab :class="{ 'n-tab-active': tab === 'videos' }" @click="tab = 'videos'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'videos' }" @click="selectTab('videos')">
       {{ $t('Videos') }}
     </button>
-    <button n-tab :class="{ 'n-tab-active': tab === 'photos' }" @click="tab = 'photos'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'photos' }" @click="selectTab('photos')">
       {{ $t('Media Photos') }}
     </button>
   </div>

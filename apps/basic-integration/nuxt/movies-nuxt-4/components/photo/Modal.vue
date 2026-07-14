@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Image } from '~/types'
 
+const posthog = usePostHog()
 const images = ref<Image[] | null>(null)
 const index = ref(0)
 
@@ -9,6 +10,10 @@ const current = computed(() => images.value?.[index.value])
 provideImageModal((img, idx) => {
   images.value = img
   index.value = idx
+  posthog?.capture('photo_gallery_opened', {
+    gallery_size: img.length,
+    starting_index: idx,
+  })
 })
 
 function prev() {

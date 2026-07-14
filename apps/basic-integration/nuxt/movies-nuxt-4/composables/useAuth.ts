@@ -15,6 +15,7 @@ export const useAuth = () => {
     }
 
     try {
+      const posthog = usePostHog()
       const response = await $fetch<{ success: boolean; user: string }>('/api/auth/login', {
         method: 'POST',
         body: { username: username.trim(), password },
@@ -23,11 +24,14 @@ export const useAuth = () => {
       if (response.success) {
         user.value = response.user
         cookie.value = response.user
+        posthog?.identify(response.user)
         await navigateTo('/')
       }
       
       return response
     } catch (error: any) {
+      const posthog = usePostHog()
+      posthog?.captureException(error)
       throw new Error(error.data?.message || error.message || 'Login failed')
     }
   }

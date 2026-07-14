@@ -1,5 +1,14 @@
 <script setup lang="ts">
+const posthog = usePostHog()
 const { user, logout } = useAuth()
+
+const handleLogout = async () => {
+  posthog?.capture('logout_completed', {
+    source: 'navigation',
+  })
+  posthog?.reset()
+  await logout()
+}
 </script>
 
 <template>
@@ -55,7 +64,7 @@ const { user, logout } = useAuth()
       <span class="text-sm text-gray-400">{{ user }}</span>
       <button
         type="button"
-        @click="logout"
+        @click="handleLogout"
         class="text-2xl hover:text-primary cursor-pointer transition-colors flex items-center justify-center"
         :title="$t('Logout')"
         :aria-label="$t('Logout')"
