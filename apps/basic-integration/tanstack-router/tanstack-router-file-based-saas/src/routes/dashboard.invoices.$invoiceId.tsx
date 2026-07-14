@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
@@ -24,13 +25,30 @@ export const Route = createFileRoute('/dashboard/invoices/$invoiceId')({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async ({ data, variables }) => {
+      posthog.capture('invoice_updated', {
+        invoice_id: data?.id ?? variables.id,
+        has_notes: Boolean(notes),
+        title_length: variables.title?.length ?? 0,
+      })
+      await router.invalidate()
+    },
+    onError: (error, variables) => {
+      posthog.capture('invoice_update_failed', {
+        invoice_id: variables.id,
+        error_message: error.message,
+        has_notes: Boolean(notes),
+        title_length: variables.title?.length ?? 0,
+      })
+      posthog.captureException(error)
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
 
@@ -90,10 +108,19 @@ function InvoiceComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            const title = (formData.get('title') as string) ?? ''
+            const body = (formData.get('body') as string) ?? ''
+
+            posthog.capture('invoice_update_submitted', {
+              invoice_id: invoice.id,
+              has_notes: Boolean(notes),
+              title_length: title.length,
+            })
+
             updateInvoiceMutation.mutate({
               id: invoice.id,
-              title: formData.get('title') as string,
-              body: formData.get('body') as string,
+              title,
+              body,
             })
           }}
           className="space-y-4"
@@ -115,6 +142,12 @@ function InvoiceComponent() {
                   ...old,
                   showNotes: old.showNotes ? undefined : true,
                 })}
+                onClick={() => {
+                  posthog.capture('invoice_notes_toggled', {
+                    invoice_id: invoice.id,
+                    show_notes: !search.showNotes,
+                  })
+                }}
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 params={true}
               >

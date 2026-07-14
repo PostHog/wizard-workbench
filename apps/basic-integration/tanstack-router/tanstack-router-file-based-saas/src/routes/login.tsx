@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
@@ -6,11 +7,11 @@ export const Route = createFileRoute('/login')({
   validateSearch: z.object({
     redirect: z.string().optional(),
   }),
-}).update({
   component: LoginComponent,
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
   const { auth, status } = Route.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -20,7 +21,20 @@ function LoginComponent() {
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    auth.login(username)
+    const trimmedUsername = username.trim()
+
+    posthog.capture('login_submitted', {
+      has_redirect: Boolean(search.redirect),
+      username_length: trimmedUsername.length,
+    })
+
+    auth.login(trimmedUsername)
+    posthog.identify(trimmedUsername, {
+      username: trimmedUsername,
+    })
+    posthog.capture('user_logged_in', {
+      has_redirect: Boolean(search.redirect),
+    })
     router.invalidate()
   }
 
@@ -56,6 +70,10 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('user_logged_out', {
+                  source: 'login_screen',
+                })
+                posthog.reset()
                 auth.logout()
                 router.invalidate()
               }}
@@ -74,6 +92,7 @@ function LoginComponent() {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
                 placeholder="Enter your username"
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               />
@@ -86,6 +105,7 @@ function LoginComponent() {
                 id="password"
                 type="password"
                 placeholder="Enter your password"
+                autoComplete="current-password"
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               />
             </div>

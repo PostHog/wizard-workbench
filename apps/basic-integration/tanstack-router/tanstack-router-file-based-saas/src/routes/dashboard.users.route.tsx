@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute, Link, MatchRoute, Outlet, retainSearchParams, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
@@ -32,6 +33,7 @@ export const Route = createFileRoute('/dashboard/users')({
 const roles = ['Admin', 'Member', 'Viewer', 'Editor', 'Manager']
 
 function UsersComponent() {
+  const posthog = usePostHog()
   const navigate = useNavigate({ from: Route.fullPath })
   const { usersView } = Route.useSearch()
   const { users } = Route.useLoaderData()
@@ -44,8 +46,12 @@ function UsersComponent() {
     setFilterDraft(filterBy ?? '')
   }, [filterBy])
 
-  const setSortBy = (sortBy: UsersViewSortBy) =>
-    navigate({
+  const setSortBy = (sortBy: UsersViewSortBy) => {
+    posthog.capture('team_sort_changed', {
+      sort_by: sortBy,
+    })
+
+    return navigate({
       search: (old) => {
         return {
           ...old,
@@ -57,6 +63,7 @@ function UsersComponent() {
       },
       replace: true,
     })
+  }
 
   React.useEffect(() => {
     navigate({
@@ -87,7 +94,14 @@ function UsersComponent() {
           </div>
           <input
             value={filterDraft}
-            onChange={(e) => setFilterDraft(e.target.value)}
+            onChange={(e) => {
+              const nextValue = e.target.value
+              setFilterDraft(nextValue)
+              posthog.capture('team_filter_updated', {
+                filter_length: nextValue.length,
+                has_filter: Boolean(nextValue),
+              })
+            }}
             placeholder="Search team members..."
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
           />
@@ -110,6 +124,12 @@ function UsersComponent() {
                 key={user.id}
                 to="/dashboard/users/user"
                 search={{ userId: user.id }}
+                onClick={() => {
+                  posthog.capture('team_member_selected', {
+                    user_id: user.id,
+                    role,
+                  })
+                }}
                 className="flex items-center gap-3 p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 activeProps={{ className: `bg-blue-50 dark:bg-blue-900/20 border-l-2 border-l-blue-600` }}
               >
