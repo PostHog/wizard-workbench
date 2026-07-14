@@ -13,6 +13,7 @@
         "filament/filament": "^4.0",
         "larabug/larabug": "^3.1",
         "laravel/cashier": "^15.3",
+        "posthog/posthog-php": "*",
         "laravel/framework": "^12.0",
         "laravel/socialite": "^5.15",
         "laravel/tinker": "^2.9",

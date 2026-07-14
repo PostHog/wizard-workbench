@@ -95,10 +95,10 @@
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-4">
-                    <a href="{{ route('register') }}" class="rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink-900">
+                    <a href="{{ route('register') }}" class="rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink-900" data-ph-event="marketing_cta_clicked" data-ph-location="features_footer" data-ph-destination="register">
                         Get started
                     </a>
-                    <a href="{{ route('pricing') }}" class="rounded-full border border-white/40 px-6 py-3 text-sm font-semibold text-white">
+                    <a href="{{ route('pricing') }}" class="rounded-full border border-white/40 px-6 py-3 text-sm font-semibold text-white" data-ph-event="marketing_cta_clicked" data-ph-location="features_footer" data-ph-destination="pricing">
                         View pricing
                     </a>
                 </div>

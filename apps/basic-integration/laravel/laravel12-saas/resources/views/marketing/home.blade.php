@@ -69,10 +69,10 @@
                     billing flows, and a config-driven brand + SEO system.
                 </p>
                 <div class="flex flex-wrap items-center gap-4 animate-fade-up" style="animation-delay: 0.16s;">
-                    <a href="{{ route('register') }}" class="rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-ink-900/15 transition hover:bg-ink-700">
+                    <a href="{{ route('register') }}" class="rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-ink-900/15 transition hover:bg-ink-700" data-ph-event="marketing_cta_clicked" data-ph-location="hero" data-ph-destination="register">
                         Start building
                     </a>
-                    <a href="{{ route('features') }}" class="rounded-full border border-ink-900/15 bg-white/80 px-6 py-3 text-sm font-semibold text-ink-900 transition hover:border-ink-900/30">
+                    <a href="{{ route('features') }}" class="rounded-full border border-ink-900/15 bg-white/80 px-6 py-3 text-sm font-semibold text-ink-900 transition hover:border-ink-900/30" data-ph-event="marketing_cta_clicked" data-ph-location="hero" data-ph-destination="features">
                         Explore features
                     </a>
                 </div>
@@ -201,7 +201,7 @@
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-4">
-                    <a href="{{ route('register') }}" class="rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink-900">
+                    <a href="{{ route('register') }}" class="rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink-900" data-ph-event="marketing_cta_clicked" data-ph-location="footer" data-ph-destination="register">
                         Start building
                     </a>
                     <a href="{{ route('login') }}" class="rounded-full border border-white/40 px-6 py-3 text-sm font-semibold text-white">

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PostHogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -24,7 +25,7 @@ class ThemeController extends Controller
     /**
      * Update the user's theme preference in the session.
      */
-    public function update(Request $request): JsonResponse
+    public function update(Request $request, PostHogService $posthog): JsonResponse
     {
         $theme = $request->input('theme', 'light');
 
@@ -35,6 +36,13 @@ class ThemeController extends Controller
 
         // Store theme in session for SSR rendering
         session(['theme' => $theme]);
+
+        $distinctId = $request->user()?->posthogDistinctId() ?? $request->session()->getId();
+
+        $posthog->capture($distinctId, 'theme_updated', [
+            'theme' => $theme,
+            'is_authenticated' => $request->user() !== null,
+        ]);
 
         return response()->json(['success' => true, 'theme' => $theme]);
     }

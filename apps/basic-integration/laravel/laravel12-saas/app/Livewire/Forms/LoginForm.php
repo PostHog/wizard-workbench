@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Forms;
 
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -26,7 +27,7 @@ class LoginForm extends Form
      *
      * @throws ValidationException
      */
-    public function authenticate(): void
+    public function authenticate(PostHogService $posthog): void
     {
         $this->ensureIsNotRateLimited();
 
@@ -39,6 +40,16 @@ class LoginForm extends Form
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        $user = Auth::user();
+
+        if ($user) {
+            $posthog->identify($user->posthogDistinctId(), $user->posthogPersonProperties());
+            $posthog->capture($user->posthogDistinctId(), 'user_logged_in', [
+                'login_method' => 'password',
+                'remember_me' => $this->remember,
+            ]);
+        }
     }
 
     /**

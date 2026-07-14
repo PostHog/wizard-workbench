@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\PostHogService;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -64,5 +65,21 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function canAccessPanel(Panel $panel): bool
     {
         return str_ends_with($this->email, '@mvpable.com');
+    }
+
+    public function posthogDistinctId(): string
+    {
+        return (string) $this->getKey();
+    }
+
+    public function posthogPersonProperties(): array
+    {
+        return PostHogService::cleanProperties([
+            'email' => $this->email,
+            'name' => $this->name,
+            'auth_provider' => $this->provider,
+            'email_verified' => $this->hasVerifiedEmail(),
+            'created_at' => $this->created_at?->toIso8601String(),
+        ]);
     }
 }

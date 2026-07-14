@@ -78,7 +78,7 @@
                         <span class="text-sm text-ink-600">{{ $tier['period'] }}</span>
                     </div>
                     <p class="mt-3 text-sm text-ink-700">{{ $tier['description'] }}</p>
-                    <a href="{{ $tier['href'] }}" class="mt-6 inline-flex w-full justify-center rounded-full bg-ink-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink-700">
+                    <a href="{{ $tier['href'] }}" class="mt-6 inline-flex w-full justify-center rounded-full bg-ink-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink-700" data-ph-event="pricing_cta_clicked" data-ph-plan="{{ $tier['name'] }}" data-ph-destination="{{ str_contains($tier['href'], route('register', absolute: false)) ? 'register' : 'login' }}">
                         {{ $tier['cta'] }}
                     </a>
                     <ul class="mt-6 space-y-2 text-sm text-ink-700">
@@ -104,10 +104,10 @@
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-4">
-                    <a href="{{ route('register') }}" class="rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink-900">
+                    <a href="{{ route('register') }}" class="rounded-full bg-white px-6 py-3 text-sm font-semibold text-ink-900" data-ph-event="marketing_cta_clicked" data-ph-location="pricing_footer" data-ph-destination="register">
                         Get started
                     </a>
-                    <a href="{{ route('login') }}" class="rounded-full border border-white/40 px-6 py-3 text-sm font-semibold text-white">
+                    <a href="{{ route('login') }}" class="rounded-full border border-white/40 px-6 py-3 text-sm font-semibold text-white" data-ph-event="marketing_cta_clicked" data-ph-location="pricing_footer" data-ph-destination="login">
                         Contact sales
                     </a>
                 </div>
