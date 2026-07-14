@@ -6,8 +6,9 @@ import {
 } from "$env/static/public"
 import { createServerClient } from "@supabase/ssr"
 import { createClient, type AMREntry } from "@supabase/supabase-js"
-import type { Handle } from "@sveltejs/kit"
+import type { Handle, HandleServerError } from "@sveltejs/kit"
 import { sequence } from "@sveltejs/kit/hooks"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const supabase: Handle = async ({ event, resolve }) => {
   event.locals.supabase = createServerClient(
@@ -97,6 +98,36 @@ export const supabase: Handle = async ({ event, resolve }) => {
 // Not called for prerendered marketing pages so generally okay to call on ever server request
 // Next-page CSR will mean relatively minimal calls to this hook
 const authGuard: Handle = async ({ event, resolve }) => {
+  const { pathname } = event.url
+
+  if (pathname.startsWith("/ingest")) {
+    const useAssetHost = pathname.startsWith("/ingest/static/") || pathname.startsWith("/ingest/array/")
+    const hostname = useAssetHost ? "us-assets.i.posthog.com" : "us.i.posthog.com"
+
+    const url = new URL(event.request.url)
+    url.protocol = "https:"
+    url.hostname = hostname
+    url.port = "443"
+    url.pathname = pathname.replace(/^\/ingest/, "")
+
+    const headers = new Headers(event.request.headers)
+    headers.set("host", hostname)
+    headers.set("accept-encoding", "")
+
+    const clientIp = event.request.headers.get("x-forwarded-for") || event.getClientAddress()
+    if (clientIp) {
+      headers.set("x-forwarded-for", clientIp)
+    }
+
+    return fetch(url.toString(), {
+      method: event.request.method,
+      headers,
+      body: event.request.body,
+      // @ts-expect-error - duplex is required for streaming request bodies
+      duplex: "half",
+    })
+  }
+
   const { session, user } = await event.locals.safeGetSession()
   event.locals.session = session
   event.locals.user = user
@@ -105,3 +136,20 @@ const authGuard: Handle = async ({ event, resolve }) => {
 }
 
 export const handle: Handle = sequence(supabase, authGuard)
+
+export const handleError: HandleServerError = async ({ error, event, status, message }) => {
+  const posthog = getPostHogClient()
+
+  posthog.captureException(error, "server", {
+    route_id: event.route.id ?? "unknown",
+    path: event.url.pathname,
+    status,
+  })
+
+  await posthog.flush()
+
+  return {
+    message,
+    status,
+  }
+}

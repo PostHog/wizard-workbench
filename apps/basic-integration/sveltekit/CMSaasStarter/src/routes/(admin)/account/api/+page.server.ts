@@ -1,6 +1,8 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
+import { getDistinctId, getPersonProperties } from "$lib/server/posthog-utils"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -27,6 +29,16 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_subscription_toggled",
+      properties: {
+        unsubscribed: newUnsubscribedStatus,
+      },
+    })
+    await posthog.flush()
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -70,6 +82,16 @@ export const actions = {
         email,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "account_email_update_requested",
+      properties: {
+        email_domain: email.split("@")[1] ?? "unknown",
+      },
+    })
+    await posthog.flush()
 
     return {
       email,
@@ -172,6 +194,16 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user?.id ?? session.user.id,
+      event: "account_password_updated",
+      properties: {
+        recovery_session: Boolean(isRecoverySession),
+      },
+    })
+    await posthog.flush()
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +252,16 @@ export const actions = {
         currentPassword,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+      properties: {
+        had_email: Boolean(user.email),
+      },
+    })
+    await posthog.flush()
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -303,6 +345,22 @@ export const actions = {
     // If the profile was just created, send an email to the user and admin
     const newProfile =
       priorProfile?.updated_at === null && priorProfileError === null
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: getDistinctId(user),
+      event: newProfile ? "profile_created" : "profile_updated",
+      properties: {
+        has_company_name: Boolean(companyName),
+        has_website: Boolean(website),
+      },
+      personProperties: getPersonProperties(user, {
+        full_name: fullName,
+        company_name: companyName,
+      }),
+    })
+    await posthog.flush()
+
     if (newProfile) {
       await sendAdminEmail({
         subject: "Profile Created",
@@ -329,8 +387,15 @@ export const actions = {
     }
   },
   signout: async ({ locals: { supabase, safeGetSession } }) => {
-    const { session } = await safeGetSession()
+    const { session, user } = await safeGetSession()
     if (session) {
+      const posthog = getPostHogClient()
+      posthog.capture({
+        distinctId: user?.id ?? session.user.id,
+        event: "user_signed_out",
+      })
+      await posthog.flush()
+
       await supabase.auth.signOut()
       redirect(303, "/")
     } else {

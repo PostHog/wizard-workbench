@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto"
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { getPostHogClient } from "$lib/server/posthog"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -68,6 +70,25 @@ export const actions = {
       console.error("Error saving contact request", insertError)
       return fail(500, { errors: { _: "Error saving" } })
     }
+
+    const posthog = getPostHogClient()
+    const distinctId = `contact_request:${createHash("sha256").update(email.trim().toLowerCase()).digest("hex")}`
+
+    posthog.capture({
+      distinctId,
+      event: "contact_request_submitted",
+      properties: {
+        company_provided: Boolean(company),
+        phone_provided: Boolean(phone),
+        message_length: message.length,
+      },
+      personProperties: {
+        email,
+        name: `${firstName} ${lastName}`.trim(),
+        company_name: company || undefined,
+      },
+    })
+    await posthog.flush()
 
     // Send email to admin
     await sendAdminEmail({
