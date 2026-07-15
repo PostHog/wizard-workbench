@@ -1,3 +1,5 @@
+import { PostHog } from 'posthog-node'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -13,6 +15,17 @@ export default defineEventHandler(async (event) => {
 
     // Demo auth: accepts any username and password
     const sanitizedUsername = username.trim()
+    const runtimeConfig = useRuntimeConfig()
+    const posthog = new PostHog(runtimeConfig.public.posthog.publicKey, {
+      host: runtimeConfig.public.posthog.host,
+      flushAt: 1,
+      flushInterval: 0,
+    })
+    posthog.capture({
+      event: 'server_login_succeeded',
+      distinctId: sanitizedUsername,
+    })
+    await posthog.shutdown()
     
     setCookie(event, 'auth-user', sanitizedUsername, {
       httpOnly: false, // Allow client-side access for SSR

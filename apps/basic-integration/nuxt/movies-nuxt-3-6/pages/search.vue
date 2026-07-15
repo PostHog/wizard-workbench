@@ -16,6 +16,9 @@ function search() {
 
   currentSearch.value = input.value.toString()
   count.value = undefined
+  useNuxtApp().$posthog?.capture('search_submitted', {
+    query_length: currentSearch.value.length,
+  })
   items.value = []
   router.replace({ query: { s: input.value } })
 }

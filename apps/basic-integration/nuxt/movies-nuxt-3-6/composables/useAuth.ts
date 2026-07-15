@@ -8,6 +8,13 @@ export const useAuth = () => {
   
   const user = useState<string | null>('auth-user', () => cookie.value)
   const isAuthenticated = computed(() => !!user.value)
+  const { $posthog: posthog } = useNuxtApp()
+
+  watch(user, (currentUser) => {
+    if (currentUser) {
+      posthog?.identify(currentUser)
+    }
+  }, { immediate: true })
 
   const login = async (username: string, password: string) => {
     if (!username?.trim() || !password?.trim()) {
@@ -39,6 +46,8 @@ export const useAuth = () => {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error)
     } finally {
+      posthog?.capture('user_logged_out')
+      posthog?.reset()
       user.value = null
       cookie.value = null
       await navigateTo('/login')
