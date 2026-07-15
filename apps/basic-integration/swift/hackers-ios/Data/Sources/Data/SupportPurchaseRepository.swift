@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import os
+import PostHog
 import StoreKit
 public final class SupportPurchaseRepository: SupportUseCase, @unchecked Sendable {
     private let productsLock = OSAllocatedUnfairLock<[String: Product]>(initialState: [:])
@@ -56,6 +57,7 @@ public final class SupportPurchaseRepository: SupportUseCase, @unchecked Sendabl
             case .success(let verificationResult):
                 let transaction = try verifiedTransaction(from: verificationResult)
                 await transaction.finish()
+                PostHogSDK.shared.capture("support_purchase_completed", properties: ["product_id": productId])
                 return .success
             case .userCancelled:
                 return .userCancelled
