@@ -40,6 +40,7 @@ import { deleteStripeSubscriptionScheduleFromDatabaseById } from "./stripe-subsc
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/organizations_+/$organizationSlug+/settings+/+types/billing";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { OrganizationMembershipRole } from "~/generated/client";
+import { posthogContext } from "~/lib/posthog.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
@@ -67,6 +68,7 @@ export async function billingAction({
       organizationMembershipContext,
     );
     const i18n = getInstance(context);
+    const posthog = context.get(posthogContext);
 
     const result = await validateFormData(request, schema);
 
@@ -97,6 +99,12 @@ export async function billingAction({
           customerId: organization.stripeCustomerId,
           organizationSlug: params.organizationSlug,
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
+        });
+
+        posthog?.capture({
+          distinctId: user.id,
+          event: "subscription_cancelled",
+          properties: { organization_id: organization.id },
         });
 
         return redirect(cancelSession.url);
@@ -159,6 +167,15 @@ export async function billingAction({
           seatsUsed: organization._count.memberships,
         });
 
+        posthog?.capture({
+          distinctId: user.id,
+          event: "checkout_started",
+          properties: {
+            organization_id: organization.id,
+            seat_count: organization._count.memberships,
+          },
+        });
+
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
         return redirect(checkoutSession.url!);
       }
@@ -193,6 +210,12 @@ export async function billingAction({
             "billing:billingPage.cancelAtPeriodEndBanner.resumeSuccessTitle",
           ),
           type: "success",
+        });
+
+        posthog?.capture({
+          distinctId: user.id,
+          event: "subscription_resumed",
+          properties: { organization_id: organization.id },
         });
 
         return data(
@@ -231,6 +254,12 @@ export async function billingAction({
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
           subscriptionItemId:
             organization.stripeSubscriptions[0].items[0].stripeId,
+        });
+
+        posthog?.capture({
+          distinctId: user.id,
+          event: "subscription_plan_change_started",
+          properties: { organization_id: organization.id },
         });
 
         return redirect(portalSession.url);
