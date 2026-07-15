@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -166,6 +167,24 @@ export default async function handler(
       setSession(createdUser, res)
     ]);
 
+    const posthog = getPostHogClient();
+    posthog.identify({
+      distinctId: String(createdUser.id),
+      properties: {
+        role: userRole,
+      },
+    });
+    posthog.capture({
+      distinctId: String(createdUser.id),
+      event: 'user_signed_up',
+      properties: {
+        via_invitation: !!inviteId,
+        role: userRole,
+        team_id: teamId,
+      },
+    });
+    await posthog.flush();
+
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({
         team: createdTeam,
@@ -175,7 +194,7 @@ export default async function handler(
       return res.status(200).json(checkoutResult);
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({ success: true, redirectTo: '/dashboard', userId: createdUser.id });
   } catch (error) {
     console.error('Sign up error:', error);
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });
