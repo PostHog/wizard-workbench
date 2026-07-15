@@ -47,3 +47,15 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.features-grid .feature-card').forEach((topic) => {
+      topic.addEventListener('click', () => {
+        window.posthog?.capture('documentation_topic_selected', {
+          topic: topic.querySelector('h3')?.textContent || 'unknown'
+        });
+      });
+    });
+  });
+</script>
