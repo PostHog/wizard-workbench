@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr
 
+from app.analytics import capture_event, identify_user
 from app.dependencies import DbSession, RequiredUser
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -66,6 +67,8 @@ async def update_settings(
         else:
             current_user.email = email
             db.commit()
+            identify_user(current_user.id, current_user.email)
+            capture_event(current_user.id, "settings_updated", {"email_changed": True})
             success = "Settings updated successfully"
     else:
         success = "No changes made"
@@ -108,6 +111,7 @@ async def change_password(
     else:
         current_user.set_password(new_password)
         db.commit()
+        capture_event(current_user.id, "password_changed")
         success = "Password changed successfully"
 
     api_key_count = db.query(APIKey).filter(

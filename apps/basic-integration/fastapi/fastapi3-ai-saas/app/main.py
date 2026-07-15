@@ -6,6 +6,9 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
+from posthog import Posthog
+
+from app.analytics import configure
 from app.config import get_settings
 from app.database import init_db
 from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
@@ -17,10 +20,20 @@ templates = Jinja2Templates(directory="app/templates")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events for startup/shutdown."""
+    posthog_client = Posthog(
+        project_api_key=settings.posthog_project_token,
+        host=settings.posthog_host,
+        enable_exception_autocapture=True,
+    )
+    app.state.posthog = posthog_client
+    configure(posthog_client)
+
     # Initialize database
     init_db()
 
     yield
+
+    posthog_client.shutdown()
 
 
 app = FastAPI(

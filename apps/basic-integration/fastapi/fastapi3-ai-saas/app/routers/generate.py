@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+from app.analytics import capture_event
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
 
@@ -54,6 +55,11 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        capture_event(
+            current_user.id,
+            "generation_failed_insufficient_credits",
+            {"generation_type": request.generation_type, "credits_needed": credits_needed},
+        )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -74,6 +80,15 @@ async def generate_content(
         prompt=request.prompt,
         result=mock_content,
         credits_used=credits_needed,
+    )
+    capture_event(
+        current_user.id,
+        "content_generated",
+        {
+            "generation_type": request.generation_type,
+            "credits_used": credits_needed,
+            "prompt_length": len(request.prompt),
+        },
     )
 
     return GenerateResponse(
