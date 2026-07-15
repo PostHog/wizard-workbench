@@ -79,14 +79,17 @@ import Layout from '../layouts/Layout.astro';
       if (response.ok) {
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
+        window.posthog?.capture('contact_form_submitted', { interest: data.interest });
         form.reset();
       } else {
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
+        window.posthog?.capture('contact_form_error', { reason: 'server_rejected' });
       }
     } catch (error) {
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
+      window.posthog?.capture('contact_form_error', { reason: 'network_error' });
     }
   });
 </script>
