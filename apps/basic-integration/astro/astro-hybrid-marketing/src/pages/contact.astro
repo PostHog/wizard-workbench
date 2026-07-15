@@ -64,12 +64,16 @@ import Layout from '../layouts/Layout.astro';
 
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
+    const distinctId = window.posthog?.get_distinct_id?.();
+    const sessionId = window.posthog?.get_session_id?.();
 
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-PostHog-Distinct-Id': distinctId || '',
+          'X-PostHog-Session-Id': sessionId || '',
         },
         body: JSON.stringify(data),
       });
@@ -77,6 +81,9 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        window.posthog?.capture('contact_form_submitted', {
+          interest: String(data.interest || ''),
+        });
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
