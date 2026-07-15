@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { notFound } from '@tanstack/react-router'
+import { getPostHogClient } from './posthog-server'
 
 export type Invoice = {
   id: number
@@ -126,18 +127,38 @@ export const fetchInvoice = createServerFn({ method: 'POST' })
 
 export const createInvoiceFn = createServerFn({ method: 'POST' })
   .inputValidator(
-    (d: { title: string; description: string; amount: number; dueDate: string }) => d
+    (d: {
+      title: string
+      description: string
+      amount: number
+      dueDate: string
+      distinctId: string
+      sessionId?: string
+    }) => d
   )
   .handler(async ({ data }) => {
     console.info('Creating invoice...', data)
-    return createInvoice(data)
+    const invoice = createInvoice(data)
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: data.distinctId,
+      event: 'invoice_created',
+      properties: {
+        $session_id: data.sessionId,
+        invoice_id: invoice.id,
+        amount: invoice.amount,
+        source: 'server',
+      },
+    })
+    await posthog.flush()
+    return invoice
   })
 
 export const markInvoicePaid = createServerFn({ method: 'POST' })
-  .inputValidator((d: string) => d)
-  .handler(async ({ data: invoiceId }) => {
-    console.info(`Marking invoice ${invoiceId} as paid...`)
-    const id = Number(invoiceId)
+  .inputValidator((d: { invoiceId: string; distinctId: string; sessionId?: string }) => d)
+  .handler(async ({ data }) => {
+    console.info(`Marking invoice ${data.invoiceId} as paid...`)
+    const id = Number(data.invoiceId)
     if (isNaN(id)) {
       throw new Error('Invalid invoice ID')
     }
@@ -145,5 +166,17 @@ export const markInvoicePaid = createServerFn({ method: 'POST' })
     if (!invoice) {
       throw new Error('Invoice not found')
     }
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: data.distinctId,
+      event: 'invoice_paid',
+      properties: {
+        $session_id: data.sessionId,
+        invoice_id: invoice.id,
+        amount: invoice.amount,
+        source: 'server',
+      },
+    })
+    await posthog.flush()
     return invoice
   })

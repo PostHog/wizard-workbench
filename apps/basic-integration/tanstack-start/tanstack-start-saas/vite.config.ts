@@ -7,6 +7,23 @@ import { nitro } from 'nitro/vite'
 export default defineConfig({
   server: {
     port: 3000,
+    proxy: {
+      '/ingest/static': {
+        target: process.env.VITE_PUBLIC_POSTHOG_HOST,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ''),
+      },
+      '/ingest/array': {
+        target: process.env.VITE_PUBLIC_POSTHOG_HOST,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ''),
+      },
+      '/ingest': {
+        target: process.env.VITE_PUBLIC_POSTHOG_HOST,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ''),
+      },
+    },
   },
   plugins: [
     tailwindcss(),
