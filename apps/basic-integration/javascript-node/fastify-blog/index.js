@@ -1,6 +1,19 @@
 import Fastify from 'fastify';
+import { PostHog } from 'posthog-node';
 
 const fastify = Fastify({ logger: true });
+const posthog = new PostHog(process.env.POSTHOG_TOKEN, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+  flushAt: 1,
+  flushInterval: 0,
+});
+
+const distinctIdFor = (request) => request.headers['x-posthog-distinct-id'] || 'anonymous';
+const capture = async (request, event, properties) => {
+  posthog.capture({ distinctId: distinctIdFor(request), event, properties });
+  await posthog.flush();
+};
 
 const posts = [];
 const comments = [];
@@ -39,6 +52,7 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+  await capture(request, 'post_created', { post_id: post.id, published: post.published });
   return reply.status(201).send(post);
 });
 
@@ -67,6 +81,7 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  await capture(request, 'post_updated', { post_id: post.id, published: post.published });
   return post;
 });
 
@@ -86,6 +101,7 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
     if (comments[i].post_id === postId) comments.splice(i, 1);
   }
 
+  await capture(request, 'post_deleted', { post_id: postId });
   return reply.status(204).send();
 });
 
@@ -111,7 +127,14 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+  await capture(request, 'comment_created', { post_id: post.id, comment_id: comment.id });
   return reply.status(201).send(comment);
+});
+
+fastify.setErrorHandler(async (error, request, reply) => {
+  posthog.captureException(error, distinctIdFor(request));
+  await posthog.flush();
+  reply.status(500).send({ error: 'Internal server error' });
 });
 
 const PORT = process.env.PORT || 3001;
