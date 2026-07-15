@@ -1,3 +1,5 @@
+import { PostHogProvider, usePostHog } from '@posthog/react'
+import posthog from 'posthog-js'
 import {
   isRouteErrorResponse,
   Links,
@@ -20,6 +22,13 @@ import Footer from '@/components/footer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+
+if (typeof window !== 'undefined') {
+  posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN, {
+    api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+    defaults: '2026-05-30',
+  })
+}
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -73,11 +82,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body suppressHydrationWarning>
-        <Header />
-        {children}
-        <Footer />
-        <ScrollRestoration />
-        <Scripts />
+        <PostHogProvider client={posthog}>
+          <Header />
+          {children}
+          <Footer />
+          <ScrollRestoration />
+          <Scripts />
+        </PostHogProvider>
       </body>
     </html>
   )
@@ -132,6 +143,9 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog()
+  posthog?.captureException(error)
+
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined
