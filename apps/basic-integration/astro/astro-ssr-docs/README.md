@@ -52,7 +52,7 @@ const renderTime = new Date().toISOString();
 - Astro 5.x (Server output)
 - @astrojs/node adapter
 - Pure CSS (no frameworks)
-- No JavaScript dependencies
+- PostHog client and server-side analytics
 
 ## Development
 
@@ -75,12 +75,8 @@ The build produces a Node.js server in `dist/server/`.
 node dist/server/entry.mjs
 ```
 
-## PostHog Testing
+## PostHog Analytics
 
-This app intentionally has **no PostHog installed**. It's designed to test the PostHog Wizard's ability to:
+PostHog is initialized in the shared layout for client-side analytics using the public environment variables in `.env`. The server-side singleton is available through `src/lib/posthog-server.ts` for API routes, with immediate flushing configured for SSR request lifecycles.
 
-1. Detect Astro framework
-2. Identify SSR mode (output: 'server')
-3. Guide users through PostHog installation
-4. Suggest posthog-node for server-side tracking
-5. Handle dynamic page rendering scenarios
+Tracked actions include primary documentation calls to action, Quick Start starts, and API Reference opens. Event definitions are documented in `.posthog-events.json`.

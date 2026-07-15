@@ -1,5 +1,7 @@
 ---
 import Navigation from '../components/Navigation.astro';
+import PostHog from '../components/posthog.astro';
+import AnalyticsEvents from '../components/AnalyticsEvents.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -18,9 +20,11 @@ const { title, description = 'NeuralFlow Documentation - Learn how to build with
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title} | NeuralFlow Docs</title>
+    <PostHog />
   </head>
   <body>
     <Navigation />
+    <AnalyticsEvents />
     <slot />
   </body>
 </html>

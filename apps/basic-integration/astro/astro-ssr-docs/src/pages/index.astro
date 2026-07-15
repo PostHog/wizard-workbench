@@ -11,8 +11,8 @@ import Layout from '../layouts/Layout.astro';
         Comprehensive guides, API references, and best practices.
       </p>
       <div class="hero-buttons">
-        <a href="/docs" class="btn btn-primary">Get Started</a>
-        <a href="/docs/api" class="btn btn-secondary">API Reference</a>
+        <a href="/docs" class="btn btn-primary" data-ph-event="documentation_quickstart_started">Get Started</a>
+        <a href="/docs/api" class="btn btn-secondary" data-ph-event="documentation_api_reference_opened">API Reference</a>
       </div>
     </div>
   </section>
@@ -20,7 +20,7 @@ import Layout from '../layouts/Layout.astro';
   <section class="features">
     <div class="container">
       <div class="features-grid">
-        <a href="/docs" class="feature-card">
+        <a href="/docs" class="feature-card" data-ph-event="documentation_quickstart_started">
           <h3>Quick Start Guide</h3>
           <p>Get up and running with NeuralFlow in under 5 minutes.</p>
         </a>
@@ -32,7 +32,7 @@ import Layout from '../layouts/Layout.astro';
           <h3>Workflow Builder</h3>
           <p>Create complex automation sequences visually.</p>
         </a>
-        <a href="/docs/api" class="feature-card">
+        <a href="/docs/api" class="feature-card" data-ph-event="documentation_api_reference_opened">
           <h3>API Reference</h3>
           <p>Complete documentation for all API endpoints.</p>
         </a>

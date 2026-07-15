@@ -1,0 +1,7 @@
+<script is:inline>
+  document.addEventListener('click', (event) => {
+    const target = event.target.closest('[data-ph-event]');
+    const eventName = target?.getAttribute('data-ph-event');
+    if (eventName) window.posthog?.capture(eventName);
+  });
+</script>
