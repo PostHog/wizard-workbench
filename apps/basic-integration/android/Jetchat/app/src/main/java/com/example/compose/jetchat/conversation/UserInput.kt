@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.posthog.PostHog
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -164,6 +165,13 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                     textFieldFocusState = focused
                 },
                 onMessageSent = {
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "message_length" to textState.text.length,
+                            "input_method" to "keyboard",
+                        ),
+                    )
                     onMessageSent(textState.text)
                     // Reset text field and close keyboard
                     textState = TextFieldValue()
@@ -176,6 +184,13 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                 onSelectorChange = { currentInputSelector = it },
                 sendMessageEnabled = textState.text.isNotBlank(),
                 onMessageSent = {
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "message_length" to textState.text.length,
+                            "input_method" to "send_button",
+                        ),
+                    )
                     onMessageSent(textState.text)
                     // Reset text field and close keyboard
                     textState = TextFieldValue()
