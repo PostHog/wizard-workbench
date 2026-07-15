@@ -12,5 +12,8 @@ export default defineConfig(() => {
       },
     },
     plugins: [reactRouter(), tsconfigPaths()],
+    ssr: {
+      noExternal: ["posthog-js", "@posthog/react"],
+    },
   };
 });
