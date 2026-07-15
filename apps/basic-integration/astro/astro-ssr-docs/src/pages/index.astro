@@ -54,3 +54,14 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </footer>
 </Layout>
+
+<script is:inline>
+  document.querySelectorAll('.hero-buttons a').forEach((link) => {
+    link.addEventListener('click', () => {
+      window.posthog?.capture('documentation_cta_clicked', {
+        destination: link.getAttribute('href') || 'unknown',
+        cta_label: link.textContent?.trim() || 'unknown',
+      });
+    });
+  });
+</script>

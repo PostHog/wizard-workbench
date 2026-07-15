@@ -16,3 +16,14 @@ const isDocs = currentPath.startsWith('/docs');
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.querySelectorAll('.nav a').forEach((link) => {
+    link.addEventListener('click', () => {
+      window.posthog?.capture('documentation_navigation_clicked', {
+        destination: link.getAttribute('href') || 'unknown',
+        navigation_area: link.classList.contains('nav-cta') ? 'primary_cta' : 'header',
+      });
+    });
+  });
+</script>

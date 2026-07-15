@@ -52,3 +52,14 @@ const sections = [
     </div>
   ))}
 </aside>
+
+<script is:inline>
+  document.querySelectorAll('.sidebar-link').forEach((link) => {
+    link.addEventListener('click', () => {
+      window.posthog?.capture('documentation_sidebar_link_clicked', {
+        destination: link.getAttribute('href') || 'unknown',
+        section: link.closest('.sidebar-section')?.querySelector('.sidebar-title')?.textContent || 'unknown',
+      });
+    });
+  });
+</script>
