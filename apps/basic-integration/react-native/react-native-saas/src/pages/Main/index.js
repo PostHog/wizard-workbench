@@ -7,6 +7,7 @@ import TeamSwitcher from '../../components/TeamSwitcher';
 import Projects from '../../components/Projects';
 import Members from '../../components/Members';
 import { signOut } from '../../store/modules/auth/actions';
+import { posthog } from '../../config/posthog';
 
 import styles from './styles';
 
@@ -22,7 +23,10 @@ export default function Main() {
         <View style={styles.header}>
           <TouchableOpacity
             hitSlop={{ top: 5, bottom: 5, left: 10, right: 10 }}
-            onPress={() => setLeftOpen(true)}
+            onPress={() => {
+              posthog.capture('team_switcher_opened');
+              setLeftOpen(true);
+            }}
           >
             <Text style={{ fontSize: 24 }}>☰</Text>
           </TouchableOpacity>
@@ -32,7 +36,10 @@ export default function Main() {
           <View style={{ flexDirection: 'row', gap: 16 }}>
             <TouchableOpacity
               hitSlop={{ top: 5, bottom: 5, left: 10, right: 10 }}
-              onPress={() => setRightOpen(true)}
+              onPress={() => {
+                posthog.capture('member_panel_opened');
+                setRightOpen(true);
+              }}
             >
               <Text style={{ fontSize: 20, color: '#fff' }}>👥</Text>
             </TouchableOpacity>

@@ -4,6 +4,7 @@ import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   signInSuccess,
@@ -43,6 +44,8 @@ export function* signIn({ payload }) {
       yield put(signInSuccess(DEMO_TOKEN));
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
+      posthog.identify('demo_user', { $set: { auth_type: 'demo' } });
+      posthog.capture('user_logged_in', { auth_type: 'demo' });
       toast.showSuccess('Welcome to demo mode!');
       NavigationService.navigate('Main');
       return;
@@ -53,13 +56,21 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+    posthog.identify(`authenticated_${response.data.token.slice(-8)}`, {
+      $set: { auth_type: 'password' },
+    });
+    posthog.capture('user_logged_in', { auth_type: 'password' });
     NavigationService.navigate('Main');
   } catch (err) {
+    posthog.capture('user_login_failed');
+    posthog.captureException(err);
     toast.showError('Invalid credentials');
   }
 }
 
 export function* signOut() {
+  posthog.capture('user_logged_out');
+  posthog.reset();
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
