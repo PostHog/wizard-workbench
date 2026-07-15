@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { fetchUserById } from '../utils/mockTodos'
+import { posthog } from '../lib/posthog'
 
 const roles = ['Admin', 'Member', 'Viewer', 'Editor', 'Manager']
 
@@ -11,6 +12,12 @@ export const Route = createFileRoute('/dashboard/users/user')({
   loaderDeps: ({ search: { userId } }) => ({ userId }),
   loader: async ({ deps: { userId } }) => {
     const user = await fetchUserById(userId)
+    if (user) {
+      posthog.capture('team_member_selected', {
+        team_member_id: user.id,
+        role: roles[user.id % roles.length],
+      })
+    }
     return {
       user,
       crumb: user?.name,

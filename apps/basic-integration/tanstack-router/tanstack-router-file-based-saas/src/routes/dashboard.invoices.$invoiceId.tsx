@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
 import { fetchInvoiceById, patchInvoice } from '../utils/mockTodos'
+import { posthog } from '../lib/posthog'
 
 export const Route = createFileRoute('/dashboard/invoices/$invoiceId')({
   params: {
@@ -95,6 +96,7 @@ function InvoiceComponent() {
               title: formData.get('title') as string,
               body: formData.get('body') as string,
             })
+            posthog.capture('invoice_updated', { invoice_id: invoice.id })
           }}
           className="space-y-4"
         >
@@ -118,7 +120,16 @@ function InvoiceComponent() {
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 params={true}
               >
-                {search.showNotes ? 'Hide Notes' : 'Add Notes'}
+                <span
+                  onClick={() =>
+                    posthog.capture('invoice_notes_toggled', {
+                      invoice_id: invoice.id,
+                      shown: !search.showNotes,
+                    })
+                  }
+                >
+                  {search.showNotes ? 'Hide Notes' : 'Add Notes'}
+                </span>
               </Link>
             </div>
             {search.showNotes ? (

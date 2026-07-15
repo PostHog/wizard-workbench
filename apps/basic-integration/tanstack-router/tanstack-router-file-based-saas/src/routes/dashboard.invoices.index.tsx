@@ -4,6 +4,7 @@ import { Spinner } from '../components/Spinner'
 import { useMutation } from '../hooks/useMutation'
 import { postInvoice } from '../utils/mockTodos'
 import type { Invoice } from '../utils/mockTodos'
+import { posthog } from '../lib/posthog'
 
 export const Route = createFileRoute('/dashboard/invoices/')({
   component: InvoicesIndexComponent,
@@ -36,6 +37,7 @@ function InvoicesIndexComponent() {
               title: formData.get('title') as string,
               body: formData.get('body') as string,
             })
+            posthog.capture('invoice_created')
           }}
           className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-4"
         >
