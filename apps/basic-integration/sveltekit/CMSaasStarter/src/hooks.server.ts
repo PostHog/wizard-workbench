@@ -1,6 +1,8 @@
 // src/hooks.server.ts
 import { PRIVATE_SUPABASE_SERVICE_ROLE } from "$env/static/private"
+import { getPostHogClient } from "$lib/server/posthog"
 import {
+  PUBLIC_POSTHOG_HOST,
   PUBLIC_SUPABASE_ANON_KEY,
   PUBLIC_SUPABASE_URL,
 } from "$env/static/public"
@@ -104,4 +106,45 @@ const authGuard: Handle = async ({ event, resolve }) => {
   return resolve(event)
 }
 
-export const handle: Handle = sequence(supabase, authGuard)
+const posthogProxy: Handle = async ({ event, resolve }) => {
+  const { pathname } = event.url
+  if (!pathname.startsWith("/ingest")) {
+    return resolve(event)
+  }
+
+  const useAssetHost =
+    pathname.startsWith("/ingest/static/") ||
+    pathname.startsWith("/ingest/array/")
+  const host = useAssetHost
+    ? "us-assets.i.posthog.com"
+    : new URL(PUBLIC_POSTHOG_HOST).host
+  const url = new URL(event.request.url)
+  url.protocol = "https:"
+  url.host = host
+  url.pathname = pathname.replace(/^\/ingest/, "")
+
+  const headers = new Headers(event.request.headers)
+  headers.set("host", host)
+  headers.set("accept-encoding", "")
+
+  return fetch(url, {
+    method: event.request.method,
+    headers,
+    body: event.request.body,
+    // @ts-expect-error - duplex is required for streaming request bodies
+    duplex: "half",
+  })
+}
+
+export const handle: Handle = sequence(posthogProxy, supabase, authGuard)
+
+export const handleError = async ({ error, status, message }) => {
+  const posthog = getPostHogClient()
+  posthog.captureException(error, "server", {
+    status,
+    message,
+  })
+  await posthog.flush()
+
+  return { message }
+}
