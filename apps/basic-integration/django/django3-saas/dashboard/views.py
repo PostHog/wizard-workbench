@@ -5,6 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Project, ActivityLog
 from .forms import ProjectForm
+from posthog import capture, identify_context, new_context
 
 
 @login_required
@@ -60,6 +61,10 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            with new_context():
+                identify_context(str(request.user.pk))
+                capture('project_created', properties={'has_description': bool(project.description)})
+
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -104,6 +109,10 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+
+        with new_context():
+            identify_context(str(request.user.pk))
+            capture('project_deleted')
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')

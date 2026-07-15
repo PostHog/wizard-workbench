@@ -33,6 +33,8 @@ SECRET_KEY=your-secret-key
 STRIPE_PUBLIC_KEY=pk_test_...    # Optional, enables Stripe
 STRIPE_SECRET_KEY=sk_test_...    # Optional, enables Stripe
 STRIPE_WEBHOOK_SECRET=whsec_...  # Optional, for webhooks
+POSTHOG_PROJECT_TOKEN=your_posthog_project_token
+POSTHOG_HOST=https://us.i.posthog.com
 ```
 
 > **Note:** By default, the app uses SQLite (`db.sqlite3`) and runs in demo mode without Stripe. No additional setup is required for local development.

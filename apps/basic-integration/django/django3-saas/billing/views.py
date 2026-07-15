@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import timedelta
 from .models import Plan, Subscription
+from posthog import capture, identify_context, new_context
 
 # Check if Stripe is configured
 STRIPE_CONFIGURED = bool(getattr(settings, 'STRIPE_SECRET_KEY', ''))
@@ -70,6 +71,13 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            with new_context():
+                identify_context(str(request.user.pk))
+                capture('subscription_started', properties={
+                    'plan_slug': plan.slug,
+                    'billing_interval': plan.interval,
+                    'checkout_mode': 'demo',
+                })
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -171,6 +179,12 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        with new_context():
+            identify_context(str(request.user.pk))
+            capture('subscription_canceled', properties={
+                'plan_slug': subscription.plan.slug,
+                'cancellation_source': 'account',
+            })
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -269,6 +283,14 @@ def _handle_checkout_completed(session):
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
     )
+
+    with new_context():
+        identify_context(str(user.pk))
+        capture('subscription_started', properties={
+            'plan_slug': plan.slug,
+            'billing_interval': plan.interval,
+            'checkout_mode': 'stripe',
+        })
 
 
 def _handle_subscription_updated(subscription_data):

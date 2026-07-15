@@ -9,11 +9,20 @@ from django.contrib.auth.views import (
 from django.contrib import messages
 from django.urls import reverse_lazy
 from .forms import RegisterForm, LoginForm, ProfileForm
+from posthog import capture, identify_context, new_context, tag
 
 
 class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        with new_context():
+            identify_context(str(self.request.user.pk))
+            tag('is_staff', self.request.user.is_staff)
+            capture('user_logged_in', properties={'login_method': 'password'})
+        return response
 
 
 class CustomLogoutView(LogoutView):
@@ -49,6 +58,10 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            with new_context():
+                identify_context(str(user.pk))
+                tag('is_staff', user.is_staff)
+                capture('user_signed_up', properties={'signup_method': 'password'})
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
