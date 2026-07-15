@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Forms;
 
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -39,6 +40,13 @@ class LoginForm extends Form
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        $user = Auth::user();
+        $posthog = app(PostHogService::class);
+        $posthog->identify($user->getPostHogDistinctId(), $user->getPostHogProperties());
+        $posthog->capture($user->getPostHogDistinctId(), 'user_logged_in', [
+            'login_method' => 'password',
+        ]);
     }
 
     /**
