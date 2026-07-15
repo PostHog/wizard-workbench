@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { Link } from "react-router";
 import type { Route } from "./+types/products";
 import { getProducts, getCategories, type Product } from "../data/products";
@@ -14,6 +15,7 @@ export async function clientLoader() {
 export default function Products({ loaderData }: Route.ComponentProps) {
   const { products, categories } = loaderData;
   const { addToCart } = useCart();
+  const posthog = usePostHog();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
@@ -23,10 +25,16 @@ export default function Products({ loaderData }: Route.ComponentProps) {
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
+    if (term.trim()) {
+      posthog?.capture("product_search_performed");
+    }
   };
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
+    posthog?.capture("product_category_selected", {
+      category: category || "all",
+    });
   };
 
   const filteredProducts = products.filter((product) => {
