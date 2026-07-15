@@ -15,6 +15,7 @@ if linkage != nil
 end
 
 target 'ReactNativeSaas' do
+  pod 'react-native-config', :path => '../node_modules/react-native-config'
   config = use_native_modules!
 
   use_react_native!(
