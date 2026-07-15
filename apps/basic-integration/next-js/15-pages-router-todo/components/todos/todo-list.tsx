@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -35,6 +36,7 @@ export function TodoList() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id(),
         },
         body: JSON.stringify({ title, description }),
       });
@@ -45,6 +47,7 @@ export function TodoList() {
       }
     } catch (error) {
       console.error('Failed to add todo:', error);
+      posthog.captureException(error);
     }
   };
 
@@ -54,6 +57,7 @@ export function TodoList() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id(),
         },
         body: JSON.stringify({ completed }),
       });
@@ -64,6 +68,7 @@ export function TodoList() {
       }
     } catch (error) {
       console.error('Failed to update todo:', error);
+      posthog.captureException(error);
     }
   };
 
@@ -71,6 +76,9 @@ export function TodoList() {
     try {
       const response = await fetch(`/api/todos/${id}`, {
         method: 'DELETE',
+        headers: {
+          'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id(),
+        },
       });
 
       if (response.ok) {
@@ -78,6 +86,7 @@ export function TodoList() {
       }
     } catch (error) {
       console.error('Failed to delete todo:', error);
+      posthog.captureException(error);
     }
   };
 
