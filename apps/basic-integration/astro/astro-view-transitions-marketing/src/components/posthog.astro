@@ -1,0 +1,18 @@
+---
+// Browser-only PostHog initialization for Astro view transitions.
+---
+<script>
+  import posthog from 'posthog-js';
+
+  const posthogWindow = window as typeof window & {
+    __posthog_initialized?: boolean;
+  };
+
+  if (!posthogWindow.__posthog_initialized) {
+    posthogWindow.__posthog_initialized = true;
+    posthog.init(import.meta.env.PUBLIC_POSTHOG_PROJECT_TOKEN, {
+      api_host: import.meta.env.PUBLIC_POSTHOG_HOST,
+      capture_pageview: 'history_change',
+    });
+  }
+</script>
