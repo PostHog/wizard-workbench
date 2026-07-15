@@ -6,6 +6,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from app.analytics import get_posthog_client
 from app.config import get_settings
 from app.dependencies import CurrentUser, DbSession, RequiredUser, create_session_token
 from app.models import User
@@ -34,6 +35,17 @@ async def login(
     user = User.authenticate(db, email, password)
 
     if user:
+        posthog_client = get_posthog_client()
+        posthog_client.set(
+            distinct_id=str(user.id),
+            properties={"email": user.email},
+        )
+        posthog_client.capture(
+            "user_logged_in",
+            distinct_id=str(user.id),
+            properties={"login_method": "password"},
+        )
+
         response = RedirectResponse(url="/dashboard", status_code=302)
         response.set_cookie(
             key="session_token",
@@ -70,6 +82,17 @@ async def signup(
         )
 
     user = User.create(db, email=email, password=password, credits=settings.default_credits)
+
+    posthog_client = get_posthog_client()
+    posthog_client.set(
+        distinct_id=str(user.id),
+        properties={"email": user.email},
+    )
+    posthog_client.capture(
+        "user_signed_up",
+        distinct_id=str(user.id),
+        properties={"signup_method": "form", "initial_credits": user.credits},
+    )
 
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(
