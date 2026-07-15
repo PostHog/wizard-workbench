@@ -19,6 +19,11 @@ function search() {
     return
 
   currentSearch.value = input.value.toString()
+  if (currentSearch.value.trim()) {
+    usePostHog()?.capture('movie_search_performed', {
+      query_length: currentSearch.value.trim().length,
+    })
+  }
   count.value = undefined
   items.value = []
   router.replace({ query: { s: input.value } })
