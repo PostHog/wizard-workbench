@@ -43,6 +43,8 @@ class Sessions::MagicLinksController < ApplicationController
     def sign_in(magic_link)
       clear_pending_authentication_token
       start_new_session_for magic_link.identity
+      user = magic_link.identity.users.first
+      PostHog.identify(distinct_id: user.posthog_distinct_id, properties: user.posthog_properties) if user
 
       respond_to do |format|
         format.html { redirect_to after_sign_in_url(magic_link) }

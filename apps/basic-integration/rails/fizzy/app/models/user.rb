@@ -24,6 +24,19 @@ class User < ApplicationRecord
     end
   end
 
+  def posthog_distinct_id
+    "user_#{id}"
+  end
+
+  def posthog_properties
+    {
+      email: identity&.email_address,
+      account_id: account_id,
+      role: role,
+      created_at: created_at&.iso8601
+    }.compact
+  end
+
   def setup?
     name != identity.email_address
   end
