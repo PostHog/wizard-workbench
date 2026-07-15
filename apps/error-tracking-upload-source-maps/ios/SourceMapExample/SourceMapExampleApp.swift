@@ -7,8 +7,8 @@ struct SourceMapExampleApp: App {
     init() {
         let environment = ProcessInfo.processInfo.environment
         let config = PostHogConfig(
-            projectToken: environment["POSTHOG_PROJECT_TOKEN"] ?? "test_project_token",
-            host: environment["POSTHOG_HOST"] ?? "https://us.i.posthog.com"
+            projectToken: "phc_raG2H9V246hkNZk6K89DZGG98qQyPrKKlicifGlpOXA",
+            host: "https://internal-c.posthog.com"
         )
         PostHogSDK.shared.setup(config)
     }
