@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import timedelta
 from .models import Plan, Subscription
+from config.posthog import capture_for_user
 
 # Check if Stripe is configured
 STRIPE_CONFIGURED = bool(getattr(settings, 'STRIPE_SECRET_KEY', ''))
@@ -69,6 +70,11 @@ def subscribe(request, plan_slug):
                 current_period_start=now,
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
+            )
+            capture_for_user(
+                request.user,
+                'subscription_activated',
+                {'plan_slug': plan.slug, 'billing_mode': 'demo', 'interval': plan.interval},
             )
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
@@ -171,6 +177,11 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        capture_for_user(
+            request.user,
+            'subscription_canceled',
+            {'billing_mode': 'stripe' if STRIPE_CONFIGURED else 'demo'},
+        )
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -268,6 +279,11 @@ def _handle_checkout_completed(session):
         ),
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
+    )
+    capture_for_user(
+        user,
+        'subscription_activated',
+        {'plan_slug': plan.slug, 'billing_mode': 'stripe', 'interval': plan.interval},
     )
 
 

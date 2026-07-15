@@ -5,6 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Project, ActivityLog
 from .forms import ProjectForm
+from config.posthog import capture_for_user
 
 
 @login_required
@@ -60,6 +61,11 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            capture_for_user(
+                request.user,
+                'project_created',
+                {'has_description': bool(project.description)},
+            )
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:

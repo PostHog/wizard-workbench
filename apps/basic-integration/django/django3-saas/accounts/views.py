@@ -9,11 +9,19 @@ from django.contrib.auth.views import (
 from django.contrib import messages
 from django.urls import reverse_lazy
 from .forms import RegisterForm, LoginForm, ProfileForm
+from config.posthog import capture_for_user, set_person_properties
 
 
 class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = form.get_user()
+        set_person_properties(user)
+        capture_for_user(user, 'user_logged_in', {'login_method': 'password'})
+        return response
 
 
 class CustomLogoutView(LogoutView):
@@ -49,6 +57,8 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            set_person_properties(user)
+            capture_for_user(user, 'user_registered', {'has_company_name': bool(user.company_name)})
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
