@@ -1,3 +1,10 @@
+async function getPostHogDistinctId(userId: string) {
+  const data = new TextEncoder().encode(userId)
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
+  return `user_${hash}`
+}
+
 export const useAuth = () => {
   const cookie = useCookie<string | null>('auth-user', {
     httpOnly: false,
@@ -8,6 +15,11 @@ export const useAuth = () => {
   
   const user = useState<string | null>('auth-user', () => cookie.value)
   const isAuthenticated = computed(() => !!user.value)
+  const { $posthog: posthog } = useNuxtApp()
+
+  if (import.meta.client && user.value) {
+    getPostHogDistinctId(user.value).then(distinctId => posthog.identify(distinctId))
+  }
 
   const login = async (username: string, password: string) => {
     if (!username?.trim() || !password?.trim()) {
@@ -23,6 +35,9 @@ export const useAuth = () => {
       if (response.success) {
         user.value = response.user
         cookie.value = response.user
+        const distinctId = await getPostHogDistinctId(response.user)
+        posthog.identify(distinctId)
+        posthog.capture('user_logged_in')
         await navigateTo('/')
       }
       
@@ -39,6 +54,8 @@ export const useAuth = () => {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error)
     } finally {
+      posthog.capture('user_logged_out')
+      posthog.reset()
       user.value = null
       cookie.value = null
       await navigateTo('/login')
