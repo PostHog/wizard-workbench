@@ -7,15 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A10000000000000000000001 /* SourceMapExampleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* SourceMapExampleApp.swift */; };
+		523D7D85F351573516C1F228 /* Pods_SourceMapExamplePods.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DC373EB00D54F593AB5DF885 /* Pods_SourceMapExamplePods.framework */; };
+		A10000000000000000000001 /* SourceMapExamplePodsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* SourceMapExamplePodsApp.swift */; };
 		A10000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* ContentView.swift */; };
-		A10000000000000000000003 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = AC0000000000000000000001 /* PostHog */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		A20000000000000000000001 /* SourceMapExampleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceMapExampleApp.swift; sourceTree = "<group>"; };
+		4C0FDE480CB083A556953A00 /* Pods-SourceMapExamplePods.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SourceMapExamplePods.debug.xcconfig"; path = "Target Support Files/Pods-SourceMapExamplePods/Pods-SourceMapExamplePods.debug.xcconfig"; sourceTree = "<group>"; };
+		A20000000000000000000001 /* SourceMapExamplePodsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceMapExamplePodsApp.swift; sourceTree = "<group>"; };
 		A20000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A20000000000000000000003 /* SourceMapExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SourceMapExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000003 /* SourceMapExamplePods.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SourceMapExamplePods.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D954B00F3F23335D3CB4F0EC /* Pods-SourceMapExamplePods.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SourceMapExamplePods.release.xcconfig"; path = "Target Support Files/Pods-SourceMapExamplePods/Pods-SourceMapExamplePods.release.xcconfig"; sourceTree = "<group>"; };
+		DC373EB00D54F593AB5DF885 /* Pods_SourceMapExamplePods.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_SourceMapExamplePods.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -23,59 +26,78 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000000000000000000003 /* PostHog in Frameworks */,
+				523D7D85F351573516C1F228 /* Pods_SourceMapExamplePods.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0783C4395E284CD27EB93084 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				4C0FDE480CB083A556953A00 /* Pods-SourceMapExamplePods.debug.xcconfig */,
+				D954B00F3F23335D3CB4F0EC /* Pods-SourceMapExamplePods.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		A40000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				A40000000000000000000002 /* SourceMapExample */,
+				A40000000000000000000002 /* SourceMapExamplePods */,
 				A40000000000000000000003 /* Products */,
+				0783C4395E284CD27EB93084 /* Pods */,
+				C8D9DEA56EA0409B1738E2FF /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
-		A40000000000000000000002 /* SourceMapExample */ = {
+		A40000000000000000000002 /* SourceMapExamplePods */ = {
 			isa = PBXGroup;
 			children = (
-				A20000000000000000000001 /* SourceMapExampleApp.swift */,
+				A20000000000000000000001 /* SourceMapExamplePodsApp.swift */,
 				A20000000000000000000002 /* ContentView.swift */,
 			);
-			path = SourceMapExample;
+			path = SourceMapExamplePods;
 			sourceTree = "<group>";
 		};
 		A40000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A20000000000000000000003 /* SourceMapExample.app */,
+				A20000000000000000000003 /* SourceMapExamplePods.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		C8D9DEA56EA0409B1738E2FF /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DC373EB00D54F593AB5DF885 /* Pods_SourceMapExamplePods.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A50000000000000000000001 /* SourceMapExample */ = {
+		A50000000000000000000001 /* SourceMapExamplePods */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A90000000000000000000002 /* Build configuration list for PBXNativeTarget "SourceMapExample" */;
+			buildConfigurationList = A90000000000000000000002 /* Build configuration list for PBXNativeTarget "SourceMapExamplePods" */;
 			buildPhases = (
+				4DFD5C3A5A9437195ACD45A1 /* [CP] Check Pods Manifest.lock */,
 				A60000000000000000000001 /* Sources */,
 				A30000000000000000000001 /* Frameworks */,
 				A70000000000000000000001 /* Resources */,
+				A57C3CB939A3305626F3364F /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = SourceMapExample;
-			packageProductDependencies = (
-				AC0000000000000000000001 /* PostHog */,
-			);
-			productName = SourceMapExample;
-			productReference = A20000000000000000000003 /* SourceMapExample.app */;
+			name = SourceMapExamplePods;
+			productName = SourceMapExamplePods;
+			productReference = A20000000000000000000003 /* SourceMapExamplePods.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -93,7 +115,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A90000000000000000000001 /* Build configuration list for PBXProject "SourceMapExample" */;
+			buildConfigurationList = A90000000000000000000001 /* Build configuration list for PBXProject "SourceMapExamplePods" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -102,14 +124,11 @@
 				Base,
 			);
 			mainGroup = A40000000000000000000001;
-			packageReferences = (
-				AB0000000000000000000001 /* XCRemoteSwiftPackageReference "posthog-ios" */,
-			);
 			productRefGroup = A40000000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A50000000000000000000001 /* SourceMapExample */,
+				A50000000000000000000001 /* SourceMapExamplePods */,
 			);
 		};
 /* End PBXProject section */
@@ -124,12 +143,54 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		4DFD5C3A5A9437195ACD45A1 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-SourceMapExamplePods-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		A57C3CB939A3305626F3364F /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-SourceMapExamplePods/Pods-SourceMapExamplePods-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-SourceMapExamplePods/Pods-SourceMapExamplePods-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-SourceMapExamplePods/Pods-SourceMapExamplePods-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		A60000000000000000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000000000000000000001 /* SourceMapExampleApp.swift in Sources */,
+				A10000000000000000000001 /* SourceMapExamplePodsApp.swift in Sources */,
 				A10000000000000000000002 /* ContentView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -178,6 +239,7 @@
 		};
 		AA0000000000000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4C0FDE480CB083A556953A00 /* Pods-SourceMapExamplePods.debug.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 5;
@@ -190,7 +252,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.SourceMapExampleSPM;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.SourceMapExamplePods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -201,6 +263,7 @@
 		};
 		AA0000000000000000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D954B00F3F23335D3CB4F0EC /* Pods-SourceMapExamplePods.release.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 5;
@@ -215,7 +278,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.SourceMapExampleSPM;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.SourceMapExamplePods;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -227,7 +290,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A90000000000000000000001 /* Build configuration list for PBXProject "SourceMapExample" */ = {
+		A90000000000000000000001 /* Build configuration list for PBXProject "SourceMapExamplePods" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AA0000000000000000000001 /* Debug */,
@@ -236,7 +299,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A90000000000000000000002 /* Build configuration list for PBXNativeTarget "SourceMapExample" */ = {
+		A90000000000000000000002 /* Build configuration list for PBXNativeTarget "SourceMapExamplePods" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AA0000000000000000000003 /* Debug */,
@@ -246,25 +309,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		AB0000000000000000000001 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		AC0000000000000000000001 /* PostHog */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AB0000000000000000000001 /* XCRemoteSwiftPackageReference "posthog-ios" */;
-			productName = PostHog;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A80000000000000000000001 /* Project object */;
 }

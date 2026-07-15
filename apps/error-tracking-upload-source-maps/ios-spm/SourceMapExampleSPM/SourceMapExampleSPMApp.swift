@@ -3,7 +3,7 @@ import PostHog
 import SwiftUI
 
 @main
-struct SourceMapExampleApp: App {
+struct SourceMapExampleSPMApp: App {
     init() {
         let environment = ProcessInfo.processInfo.environment
         let config = PostHogConfig(

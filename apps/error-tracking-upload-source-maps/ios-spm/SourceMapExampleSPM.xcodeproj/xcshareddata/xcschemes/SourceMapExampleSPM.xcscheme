@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A50000000000000000000001"
-               BuildableName = "SourceMapExample.app"
-               BlueprintName = "SourceMapExample"
-               ReferencedContainer = "container:SourceMapExample.xcodeproj">
+               BuildableName = "SourceMapExampleSPM.app"
+               BlueprintName = "SourceMapExampleSPM"
+               ReferencedContainer = "container:SourceMapExampleSPM.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A50000000000000000000001"
-            BuildableName = "SourceMapExample.app"
-            BlueprintName = "SourceMapExample"
-            ReferencedContainer = "container:SourceMapExample.xcodeproj">
+            BuildableName = "SourceMapExampleSPM.app"
+            BlueprintName = "SourceMapExampleSPM"
+            ReferencedContainer = "container:SourceMapExampleSPM.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A50000000000000000000001"
-            BuildableName = "SourceMapExample.app"
-            BlueprintName = "SourceMapExample"
-            ReferencedContainer = "container:SourceMapExample.xcodeproj">
+            BuildableName = "SourceMapExampleSPM.app"
+            BlueprintName = "SourceMapExampleSPM"
+            ReferencedContainer = "container:SourceMapExampleSPM.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
