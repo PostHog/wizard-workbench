@@ -4,6 +4,7 @@ AI Meeting Summarizer - Python Web Application
 Automatically summarize meetings with AI-powered analysis.
 """
 
+import atexit
 import json
 import logging
 import signal
@@ -20,9 +21,21 @@ from threading import Lock
 import traceback
 import mimetypes
 
+from dotenv import load_dotenv
+from posthog import Posthog
+
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+
+
+load_dotenv()
+posthog_client = Posthog(
+    os.environ["POSTHOG_PROJECT_TOKEN"],
+    host=os.environ["POSTHOG_HOST"],
+    enable_exception_autocapture=True,
+)
+atexit.register(posthog_client.shutdown)
 
 
 # Session management
@@ -273,6 +286,18 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     logging.info(f"Login successful for: {email}")
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
+                    posthog_client.set(
+                        distinct_id=user.user_id,
+                        properties={
+                            "email": user.email,
+                            "username": user.username,
+                        },
+                    )
+                    posthog_client.capture(
+                        "user_logged_in",
+                        distinct_id=user.user_id,
+                        properties={"login_method": "email"},
+                    )
 
                     # Send response with session cookie
                     self.send_response(200)
@@ -370,6 +395,17 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    posthog_client.capture(
+                        "meeting_created",
+                        distinct_id=current_user.user_id,
+                        properties={
+                            "transcript_word_count": len(transcript.split()),
+                            "action_item_count": len(action_items),
+                            "key_point_count": len(key_points),
+                            "participant_count": len(participants),
+                            "duration_minutes": duration,
+                        },
+                    )
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -380,6 +416,11 @@ class SaaSHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_json({'error': 'Invalid JSON'}, 400)
         except Exception as e:
+            current_user = self._get_current_user()
+            posthog_client.capture_exception(
+                e,
+                distinct_id=current_user.user_id if current_user else None,
+            )
             logging.error(f"Error in POST request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
@@ -449,6 +490,14 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    posthog_client.capture(
+                        "meeting_deleted",
+                        distinct_id=current_user.user_id,
+                        properties={
+                            "duration_minutes": meeting.duration_minutes,
+                            "action_item_count": len(meeting.action_items),
+                        },
+                    )
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
@@ -457,6 +506,11 @@ class SaaSHandler(BaseHTTPRequestHandler):
             self._send_json({'error': 'Not found'}, 404)
 
         except Exception as e:
+            current_user = self._get_current_user()
+            posthog_client.capture_exception(
+                e,
+                distinct_id=current_user.user_id if current_user else None,
+            )
             logging.error(f"Error in DELETE request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
