@@ -63,3 +63,19 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupPricingTracking() {
+    document.querySelectorAll('.pricing-card .btn').forEach((element) => {
+      element.addEventListener('click', () => {
+        const plan = element.closest('.pricing-card')?.querySelector('h3')?.textContent?.trim();
+        window.posthog?.capture(plan === 'Enterprise' ? 'sales_contact_requested' : 'pricing_plan_selected', {
+          plan,
+        });
+      }, { once: true });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupPricingTracking);
+  document.addEventListener('astro:page-load', setupPricingTracking);
+</script>

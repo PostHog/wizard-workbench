@@ -61,3 +61,16 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  function setupHomeTracking() {
+    document.querySelectorAll('.hero-buttons .btn-primary').forEach((element) => {
+      element.addEventListener('click', () => {
+        window.posthog?.capture('trial_started', { location: 'homepage' });
+      }, { once: true });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', setupHomeTracking);
+  document.addEventListener('astro:page-load', setupHomeTracking);
+</script>
