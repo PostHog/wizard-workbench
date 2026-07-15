@@ -1,7 +1,12 @@
 import { ErrorComponent, Link } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 
 export function PostErrorComponent({ error }: ErrorComponentProps) {
+  const posthog = usePostHog()
+  posthog.capture('invoice_error', { error_type: error.name })
+  posthog.captureException(error)
+
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
       <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
