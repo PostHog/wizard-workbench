@@ -1,4 +1,22 @@
 import { createServer } from 'node:http';
+import { PostHog } from 'posthog-node';
+
+const posthog = new PostHog(process.env.POSTHOG_TOKEN, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+});
+
+function getDistinctId(req) {
+  return req.headers['x-posthog-distinct-id'] || 'anonymous';
+}
+
+function captureEvent(req, event, properties = {}) {
+  posthog.capture({
+    distinctId: getDistinctId(req),
+    event,
+    properties,
+  });
+}
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -47,6 +65,7 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      captureEvent(req, 'group_created', { group_id: group.id });
       return json(res, 201, group);
     }
 
@@ -90,6 +109,7 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      captureEvent(req, 'contact_created', { contact_id: contact.id, group_id: contact.group_id });
       return json(res, 201, contact);
     }
 
@@ -114,6 +134,7 @@ const server = createServer(async (req, res) => {
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      captureEvent(req, 'contact_updated', { contact_id: contact.id });
       return json(res, 200, contact);
     }
 
@@ -124,14 +145,30 @@ const server = createServer(async (req, res) => {
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
       contacts.splice(index, 1);
+      captureEvent(req, 'contact_deleted', { contact_id: parseInt(deleteMatch[1], 10) });
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    posthog.captureException(err, getDistinctId(req), {
+      endpoint: path,
+      method,
+    });
+    captureEvent(req, 'api_error', { endpoint: path, method });
     json(res, 500, { error: 'Internal server error' });
   }
+});
+
+process.on('SIGINT', async () => {
+  await posthog.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await posthog.shutdown();
+  process.exit(0);
 });
 
 const PORT = process.env.PORT || 3004;
