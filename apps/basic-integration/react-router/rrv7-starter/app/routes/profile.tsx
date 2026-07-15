@@ -6,6 +6,7 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import { usePostHog } from '@posthog/react'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
   const [isFollowing, setIsFollowing] = useState(false)
@@ -47,6 +48,7 @@ export default function Profile() {
   const [followers, setFollowers] = useState(fakeUser.followers)
   const [following, setFollowing] = useState(fakeUser.following)
   const [posts, setPosts] = useState(fakeUser.posts)
+  const posthog = usePostHog()
 
   useEffect(() => {
     setFollowers(getFollowers())
@@ -146,6 +148,9 @@ export default function Profile() {
                   onFollow={() => {
                     const newFollowing = getFollowing() + 1
                     setFollowing(newFollowing)
+                    posthog?.capture('follower_back_followed', {
+                      follower_type: 'fake_account',
+                    })
                   }}
                 />
               </div>

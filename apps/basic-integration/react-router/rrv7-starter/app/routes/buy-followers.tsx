@@ -6,6 +6,7 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { addFollowers, addPurchasedFollowers } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import { usePostHog } from '@posthog/react'
 
 export const meta: Route.MetaFunction = () => {
   const siteUrl = SITE_URL || 'https://clouthub.fake'
@@ -22,6 +23,7 @@ export default function BuyFollowers() {
   const navigate = useNavigate()
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
+  const posthog = usePostHog()
 
   const handlePurchase = () => {
     if (selectedPackage === null) return
@@ -34,6 +36,11 @@ export default function BuyFollowers() {
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+      posthog?.capture('fake_followers_purchase_completed', {
+        package_index: selectedPackage,
+        follower_amount: totalFollowers,
+        price: pkg.price,
+      })
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
