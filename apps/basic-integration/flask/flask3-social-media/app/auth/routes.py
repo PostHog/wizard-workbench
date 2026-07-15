@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request
+from flask import current_app, render_template, redirect, url_for, flash, request
 from urllib.parse import urlsplit
 from flask_login import login_user, logout_user, current_user
 from flask_babel import _
@@ -23,6 +23,15 @@ def login():
             flash(_('Invalid username or password'))
             return redirect(url_for('auth.login'))
         login_user(user, remember=form.remember_me.data)
+        current_app.posthog_client.set(
+            distinct_id=str(user.id),
+            properties={'username': user.username, 'email': user.email},
+        )
+        current_app.posthog_client.capture(
+            'user_logged_in',
+            distinct_id=str(user.id),
+            properties={'login_method': 'password'},
+        )
         next_page = request.args.get('next')
         if not next_page or urlsplit(next_page).netloc != '':
             next_page = url_for('main.index')
@@ -46,6 +55,15 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
+        current_app.posthog_client.set(
+            distinct_id=str(user.id),
+            properties={'username': user.username, 'email': user.email},
+        )
+        current_app.posthog_client.capture(
+            'user_registered',
+            distinct_id=str(user.id),
+            properties={'registration_method': 'web_form'},
+        )
         flash(_('Congratulations, you are now a registered user!'))
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html', title=_('Register'),

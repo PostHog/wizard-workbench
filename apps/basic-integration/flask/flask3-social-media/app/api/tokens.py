@@ -1,3 +1,4 @@
+from flask import current_app
 from app import db
 from app.api import bp
 from app.api.auth import basic_auth, token_auth
@@ -8,6 +9,11 @@ from app.api.auth import basic_auth, token_auth
 def get_token():
     token = basic_auth.current_user().get_token()
     db.session.commit()
+    current_app.posthog_client.capture(
+        'api_token_created',
+        distinct_id=str(basic_auth.current_user().id),
+        properties={'authentication_method': 'basic_auth'},
+    )
     return {'token': token}
 
 
