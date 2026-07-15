@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -86,7 +87,14 @@ function RouterSpinner() {
 
 function RootComponent() {
   return (
-    <>
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN}
+      options={{
+        api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
@@ -132,7 +140,7 @@ function RootComponent() {
         </div>
       </div>
       <TanStackRouterDevtools position="bottom-right" />
-    </>
+    </PostHogProvider>
   )
 }
 
@@ -433,9 +441,16 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async ({ data }) => {
+      posthog.capture('invoice_created', {
+        invoice_id: data.id,
+      })
+      await router.invalidate()
+    },
+    onError: (error) => posthog.captureException(error),
   })
 
   return (
@@ -517,9 +532,18 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async ({ data }) => {
+      if (data) {
+        posthog.capture('invoice_updated', {
+          invoice_id: data.id,
+        })
+      }
+      await router.invalidate()
+    },
+    onError: (error) => posthog.captureException(error),
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -1003,6 +1027,7 @@ const profileRoute = createRoute({
 
 function ProfileComponent() {
   const { username } = profileRoute.useRouteContext()
+  const posthog = usePostHog()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
 
@@ -1049,7 +1074,10 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => posthog.capture('subscription_upgrade_clicked', { plan: 'free' })}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Upgrade
             </button>
           </div>
@@ -1067,6 +1095,8 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                posthog.capture('user_signed_out')
+                posthog.reset()
                 auth.logout()
                 router.invalidate()
               }}
@@ -1098,10 +1128,14 @@ function LoginComponent() {
     select: ({ auth }) => ({ auth, status: auth.status }),
   })
   const search = useSearch({ from: loginRoute.fullPath })
+  const posthog = usePostHog()
   const [username, setUsername] = React.useState('')
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const distinctId = posthog.get_distinct_id()
+    posthog.identify(distinctId, { username })
+    posthog.capture('user_signed_in')
     auth.login(username)
     router.invalidate()
   }
@@ -1138,6 +1172,8 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('user_signed_out')
+                posthog.reset()
                 auth.logout()
                 router.invalidate()
               }}
