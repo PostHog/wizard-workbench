@@ -4,6 +4,7 @@ import time
 import sqlalchemy as sa
 from flask import render_template
 from rq import get_current_job
+import app as app_module
 from app import create_app, db
 from app.models import User, Post, Task
 from app.email import send_email
@@ -49,8 +50,10 @@ def export_posts(user_id):
             attachments=[('posts.json', 'application/json',
                           json.dumps({'posts': data}, indent=4))],
             sync=True)
-    except Exception:
+    except Exception as error:
         _set_task_progress(100)
+        app_module.posthog_client.capture_exception(error)
+        app_module.posthog_client.capture(str(user_id), 'post_export_failed')
         app.logger.error('Unhandled exception', exc_info=sys.exc_info())
     finally:
         _set_task_progress(100)

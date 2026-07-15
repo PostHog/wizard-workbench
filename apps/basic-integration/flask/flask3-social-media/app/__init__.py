@@ -1,7 +1,9 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from flask import Flask, request, current_app
+from posthog import Posthog
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -33,11 +35,20 @@ login.login_message = _l('Please log in to access this page.')
 mail = Mail()
 moment = Moment()
 babel = Babel()
+posthog_client = None
 
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    global posthog_client
+    posthog_client = Posthog(
+        project_api_key=os.environ.get('POSTHOG_PROJECT_TOKEN'),
+        host=os.environ.get('POSTHOG_HOST'),
+        enable_exception_autocapture=True,
+    )
+    atexit.register(posthog_client.shutdown)
 
     db.init_app(app)
     migrate.init_app(app, db)
