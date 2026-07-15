@@ -1,4 +1,10 @@
+import { useServerPostHog } from '../../utils/posthog'
+
 export default defineEventHandler(async (event) => {
+  const posthog = useServerPostHog()
+  const sessionId = getHeader(event, 'x-posthog-session-id')
+  const distinctId = getHeader(event, 'x-posthog-distinct-id')
+
   try {
     const body = await readBody(event)
     const { username, password } = body
@@ -21,11 +27,23 @@ export default defineEventHandler(async (event) => {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
+    posthog.capture({
+      distinctId: distinctId || `demo_user_${sanitizedUsername}`,
+      event: 'server_login_completed',
+      properties: {
+        $session_id: sessionId,
+        source: 'api',
+      },
+    })
+    await posthog.flush()
+
     return {
       success: true,
       user: sanitizedUsername,
     }
   } catch (error: any) {
+    posthog.captureException(error, distinctId || undefined)
+    await posthog.flush()
     if (error.statusCode) {
       throw error
     }

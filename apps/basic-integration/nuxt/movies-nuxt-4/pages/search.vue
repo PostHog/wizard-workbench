@@ -7,6 +7,7 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
+const posthog = usePostHog()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
@@ -22,6 +23,9 @@ function search() {
   count.value = undefined
   items.value = []
   router.replace({ query: { s: input.value } })
+  posthog?.capture('search_submitted', {
+    query_length: currentSearch.value.length,
+  })
 }
 
 async function fetch(page: number) {
