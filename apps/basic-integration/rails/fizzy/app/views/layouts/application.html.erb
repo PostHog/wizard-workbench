@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
   <%= render "layouts/shared/head" %>
+  <script>
+    window.posthogConfig = {
+      apiHost: <%= ENV.fetch("POSTHOG_HOST", nil).to_json.html_safe %>
+    };
+  </script>
 
   <body class="<%= @body_class %>"
     data-controller="local-time timezone-cookie turbo-navigation theme bridge--title bridge--text-size bridge--insets"

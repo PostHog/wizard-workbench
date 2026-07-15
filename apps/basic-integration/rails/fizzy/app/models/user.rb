@@ -32,6 +32,14 @@ class User < ApplicationRecord
     verified_at.present?
   end
 
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  def posthog_properties
+    { account_id: account_id.to_s, verified: verified? }
+  end
+
   def verify
     update!(verified_at: Time.current) unless verified?
   end

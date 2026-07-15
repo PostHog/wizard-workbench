@@ -11,6 +11,9 @@ class Signups::CompletionsController < ApplicationController
     @signup = Signup.new(signup_params)
 
     if @signup.complete
+      user = Current.user
+      PostHog.identify(distinct_id: user.posthog_distinct_id, properties: user.posthog_properties)
+      PostHog.capture(distinct_id: user.posthog_distinct_id, event: "user_signed_up", properties: { signup_method: "magic_link" })
       welcome_to_account
     else
       invalid_signup
