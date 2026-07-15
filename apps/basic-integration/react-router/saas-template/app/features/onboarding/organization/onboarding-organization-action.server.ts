@@ -10,6 +10,7 @@ import { saveOrganizationWithOwnerToDatabase } from "~/features/organizations/or
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
 import { slugify } from "~/utils/slugify.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 
 export async function onboardingOrganizationAction({
   request,
@@ -50,6 +51,9 @@ export async function onboardingOrganizationAction({
     },
     userId: user.id,
   });
+
+  const posthog = (context as PostHogContext).posthog;
+  posthog?.capture({ event: "organization_created" });
 
   return redirect(`/organizations/${organization.slug}`, { headers });
 }

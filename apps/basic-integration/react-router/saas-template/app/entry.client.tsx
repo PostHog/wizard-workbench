@@ -5,6 +5,14 @@ import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { I18nextProvider, initReactI18next } from "react-i18next";
 import { HydratedRouter } from "react-router/dom";
+import posthog from "posthog-js";
+import { PostHogProvider } from "@posthog/react";
+
+posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN, {
+  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+  defaults: "2026-01-30",
+  __add_tracing_headers: [window.location.host, "localhost"],
+});
 
 async function hydrate() {
   await i18next
@@ -21,11 +29,13 @@ async function hydrate() {
   startTransition(() => {
     hydrateRoot(
       document,
-      <I18nextProvider i18n={i18next}>
-        <StrictMode>
-          <HydratedRouter />
-        </StrictMode>
-      </I18nextProvider>,
+      <PostHogProvider client={posthog}>
+        <I18nextProvider i18n={i18next}>
+          <StrictMode>
+            <HydratedRouter />
+          </StrictMode>
+        </I18nextProvider>
+      </PostHogProvider>,
     );
   });
 }

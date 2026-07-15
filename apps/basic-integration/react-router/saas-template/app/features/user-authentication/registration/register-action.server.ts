@@ -13,6 +13,7 @@ import { retrieveUserAccountFromDatabaseByEmail } from "~/features/user-accounts
 import { getErrorMessage } from "~/utils/get-error-message";
 import { badRequest } from "~/utils/http-responses.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 
 const registerSchema = z.discriminatedUnion("intent", [
   registerWithEmailSchema,
@@ -29,6 +30,8 @@ export async function registerAction({ request, context }: Route.ActionArgs) {
   }
 
   const body = result.data;
+  const posthog = (context as PostHogContext).posthog;
+  posthog?.capture({ event: "registration_requested", properties: { method: body.intent } });
 
   switch (body.intent) {
     case "registerWithEmail": {

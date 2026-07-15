@@ -46,6 +46,7 @@ import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
 import { badRequest, conflict, forbidden } from "~/utils/http-responses.server";
 import { createToastHeaders } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
+import type { PostHogContext } from "~/lib/posthog-middleware";
 
 const schema = z.discriminatedUnion("intent", [
   cancelSubscriptionSchema,
@@ -75,6 +76,8 @@ export async function billingAction({
     }
 
     const body = result.data;
+    const posthog = (context as PostHogContext).posthog;
+    posthog?.capture({ event: "billing_action_requested", properties: { intent: body.intent } });
 
     if (role === OrganizationMembershipRole.member) {
       return forbidden();
@@ -159,6 +162,7 @@ export async function billingAction({
           seatsUsed: organization._count.memberships,
         });
 
+        posthog?.capture({ event: "subscription_checkout_started" });
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
         return redirect(checkoutSession.url!);
       }
