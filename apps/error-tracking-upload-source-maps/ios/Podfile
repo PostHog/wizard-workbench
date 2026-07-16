@@ -1,9 +1,0 @@
-# Minimal iOS marker so source-maps platform detection picks "ios".
-# Intentionally just this one file — no .xcodeproj, no real project — to
-# exercise the wizard's "unsupported-platform" intro screen. See the wizard's
-# detect.ts (hasPodfile -> variant "ios").
-platform :ios, "13.0"
-
-target "App" do
-  use_frameworks!
-end
