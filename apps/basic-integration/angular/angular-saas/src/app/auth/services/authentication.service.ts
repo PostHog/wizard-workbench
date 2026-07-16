@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PosthogService } from '@core/services';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,8 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PosthogService);
 
   /**
    * Authenticates the user.
@@ -41,7 +43,16 @@ export class AuthenticationService {
       firstName,
       lastName,
     });
-    this._credentialsService.setCredentials(credentials, context.remember);
+    this.credentialsService.setCredentials(credentials, context.remember);
+    this.posthogService.identify(credentials.id, {
+      email: credentials.email,
+      name: `${credentials.firstName} ${credentials.lastName}`.trim(),
+      role: credentials.roles[0],
+    });
+    this.posthogService.capture('user_logged_in', {
+      authentication_method: 'password',
+      remember_session: Boolean(context.remember),
+    });
 
     return of(credentials);
   }
@@ -86,6 +97,9 @@ export class AuthenticationService {
    * @return True if the user was logged out successfully.
    */
   logout(): Observable<any> {
+    this.posthogService.capture('user_logged_out');
+    this.posthogService.reset();
+
     return of(true);
   }
 }
