@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -11,11 +12,21 @@ interface ContactFormData {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  const posthog = getPostHogServer();
+  const distinctId = request.headers.get('X-PostHog-Distinct-ID') || crypto.randomUUID();
+  const sessionId = request.headers.get('X-PostHog-Session-ID');
+
   try {
     const data: ContactFormData = await request.json();
 
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_rejected',
+        properties: { $session_id: sessionId || undefined, rejection_reason: 'missing_required_fields' },
+      });
+      await posthog.flush();
       return new Response(
         JSON.stringify({ error: 'Please fill in all required fields.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -25,6 +36,12 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_rejected',
+        properties: { $session_id: sessionId || undefined, rejection_reason: 'invalid_email' },
+      });
+      await posthog.flush();
       return new Response(
         JSON.stringify({ error: 'Please enter a valid email address.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -35,6 +52,22 @@ export const POST: APIRoute = async ({ request }) => {
     // 1. Send to a CRM or email service
     // 2. Store in a database
     // 3. Trigger notifications
+
+    posthog.identify({
+      distinctId,
+      properties: { email: data.email, name: data.name, company: data.company },
+    });
+    posthog.capture({
+      distinctId,
+      event: 'contact_form_received',
+      properties: {
+        $session_id: sessionId || undefined,
+        interest: data.interest,
+        has_company: Boolean(data.company),
+        submission_source: 'contact_page',
+      },
+    });
+    await posthog.flush();
 
     console.log('Contact form submission:', {
       name: data.name,
@@ -53,6 +86,8 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    posthog.captureException(error, distinctId);
+    await posthog.flush();
     console.error('Contact form error:', error);
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),

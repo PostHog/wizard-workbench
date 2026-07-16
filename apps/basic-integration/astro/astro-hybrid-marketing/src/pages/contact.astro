@@ -70,6 +70,8 @@ import Layout from '../layouts/Layout.astro';
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-PostHog-Distinct-ID': window.posthog?.get_distinct_id?.() || '',
+          'X-PostHog-Session-ID': window.posthog?.get_session_id?.() || '',
         },
         body: JSON.stringify(data),
       });
@@ -77,14 +79,26 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        window.posthog?.capture('contact_form_submitted', {
+          interest: formData.get('interest'),
+          submission_source: 'contact_page',
+        });
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
       } else {
+        window.posthog?.capture('contact_form_submission_failed', {
+          error_category: 'server_response',
+          response_status: response.status,
+        });
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
       }
     } catch (error) {
+      window.posthog?.captureException?.(error);
+      window.posthog?.capture('contact_form_submission_failed', {
+        error_category: 'network_error',
+      });
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
     }
