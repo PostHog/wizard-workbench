@@ -1,5 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
+import { getPostHogClient } from "$lib/server/posthog"
 import { WebsiteBaseUrl } from "../../../../config"
 
 export const actions = {
@@ -221,6 +222,13 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "account_deletion_requested",
+    })
+    await posthog.flush()
+
     await supabase.auth.signOut()
     redirect(303, "/")
   },
@@ -299,6 +307,14 @@ export const actions = {
         website,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "profile_updated",
+      properties: { profile_created: !priorProfile },
+    })
+    await posthog.flush()
 
     // If the profile was just created, send an email to the user and admin
     const newProfile =
