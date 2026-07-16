@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import {
   isRouteErrorResponse,
   Links,
@@ -11,6 +12,9 @@ import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
 import Navbar from "./components/navbar";
 import { AuthProvider } from "./context/AuthContext";
+import { posthogMiddleware } from "./lib/posthog-middleware";
+
+export const middleware: Route.MiddlewareFunction[] = [posthogMiddleware];
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -56,6 +60,9 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog();
+  posthog?.captureException(error);
+
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
