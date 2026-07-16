@@ -8,5 +8,8 @@
     "start": "node index.js",
     "dev": "node --watch index.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "posthog-node": "^5.44.0"
+  }
 }
