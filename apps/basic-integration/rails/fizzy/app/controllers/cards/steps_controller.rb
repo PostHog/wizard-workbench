@@ -6,6 +6,12 @@ class Cards::StepsController < ApplicationController
   def create
     @step = @card.steps.create!(step_params)
 
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "step_created",
+      properties: { card_id: @card.id, step_id: @step.id }
+    )
+
     respond_to do |format|
       format.turbo_stream
       format.json { head :created, location: card_step_path(@card, @step, format: :json) }

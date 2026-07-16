@@ -9,7 +9,15 @@ class Account::ExportsController < ApplicationController
   end
 
   def create
-    Current.account.exports.create!(user: Current.user).build_later
+    export = Current.account.exports.create!(user: Current.user)
+    export.build_later
+
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "account_export_started",
+      properties: { account_id: Current.account.id, export_id: export.id }
+    )
+
     redirect_to account_settings_path, notice: "Export started. You'll receive an email when it's ready."
   end
 

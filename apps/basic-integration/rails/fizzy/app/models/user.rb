@@ -28,6 +28,20 @@ class User < ApplicationRecord
     name != identity.email_address
   end
 
+  # Used for PostHog analytics and automatic error association.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  def posthog_properties
+    {
+      account_id: account_id,
+      role: role,
+      active: active,
+      created_at: created_at.iso8601
+    }
+  end
+
   def verified?
     verified_at.present?
   end

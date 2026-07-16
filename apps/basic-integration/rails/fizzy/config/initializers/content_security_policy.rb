@@ -49,9 +49,14 @@ Rails.application.configure do
   config.content_security_policy_nonce_directives = %w[ script-src ]
 
   config.content_security_policy do |policy|
+    posthog_host = ENV["POSTHOG_HOST"]
+    posthog_asset_host = posthog_host&.sub(".i.posthog.com", "-assets.i.posthog.com")
+    posthog_script_sources = [ posthog_asset_host ].compact
+    posthog_connect_sources = [ posthog_host ].compact
+
     policy.default_src :self, *sources.(:default_src)
-    policy.script_src :self, *sources.(:script_src)
-    policy.connect_src :self, *sources.(:connect_src)
+    policy.script_src :self, *posthog_script_sources, *sources.(:script_src)
+    policy.connect_src :self, *posthog_connect_sources, *sources.(:connect_src)
     policy.frame_src :self, *sources.(:frame_src)
 
     # Don't fight user tools: permit inline styles, data:/https: sources, and
