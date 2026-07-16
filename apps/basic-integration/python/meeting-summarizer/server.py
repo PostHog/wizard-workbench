@@ -4,6 +4,7 @@ AI Meeting Summarizer - Python Web Application
 Automatically summarize meetings with AI-powered analysis.
 """
 
+import atexit
 import json
 import logging
 import signal
@@ -20,9 +21,21 @@ from threading import Lock
 import traceback
 import mimetypes
 
+from dotenv import load_dotenv
+from posthog import Posthog
+
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+
+
+load_dotenv()
+posthog_client = Posthog(
+    os.environ['POSTHOG_PROJECT_TOKEN'],
+    host=os.environ['POSTHOG_HOST'],
+    enable_exception_autocapture=True
+)
+atexit.register(posthog_client.shutdown)
 
 
 # Session management
@@ -274,6 +287,20 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
 
+                    posthog_client.set(
+                        distinct_id=user.user_id,
+                        properties={
+                            'email': user.email,
+                            'username': user.username,
+                            'full_name': user.full_name
+                        }
+                    )
+                    posthog_client.capture(
+                        'user_logged_in',
+                        distinct_id=user.user_id,
+                        properties={'login_method': 'email'}
+                    )
+
                     # Send response with session cookie
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
@@ -370,6 +397,17 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    posthog_client.capture(
+                        'meeting_created',
+                        distinct_id=current_user.user_id,
+                        properties={
+                            'transcript_word_count': len(transcript.split()),
+                            'duration_minutes': duration,
+                            'action_item_count': len(action_items),
+                            'key_point_count': len(key_points),
+                            'participant_count': len(participants)
+                        }
+                    )
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -449,6 +487,15 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    posthog_client.capture(
+                        'meeting_deleted',
+                        distinct_id=current_user.user_id,
+                        properties={
+                            'duration_minutes': meeting.duration_minutes,
+                            'action_item_count': len(meeting.action_items),
+                            'key_point_count': len(meeting.key_points)
+                        }
+                    )
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
@@ -586,6 +633,7 @@ def main():
         logging.info("Server stopped by user")
     finally:
         server.server_close()
+        posthog_client.shutdown()
         logging.info("Server shut down")
 
 
