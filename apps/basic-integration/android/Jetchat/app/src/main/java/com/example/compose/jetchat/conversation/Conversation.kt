@@ -91,6 +91,7 @@ import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -200,6 +201,13 @@ fun ConversationContent(
             )
             UserInput(
                 onMessageSent = { content ->
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf(
+                            "channel_member_count" to uiState.channelMembers,
+                            "message_type" to "text",
+                        ),
+                    )
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )
