@@ -1,3 +1,9 @@
+interface LoginResponse {
+  success: boolean
+  user: string
+  analyticsId: string
+}
+
 export const useAuth = () => {
   const cookie = useCookie<string | null>('auth-user', {
     httpOnly: false,
@@ -15,12 +21,15 @@ export const useAuth = () => {
     }
 
     try {
-      const response = await $fetch<{ success: boolean; user: string }>('/api/auth/login', {
+      const response = await $fetch<LoginResponse>('/api/auth/login', {
         method: 'POST',
         body: { username: username.trim(), password },
       })
       
       if (response.success) {
+        const { $posthog: posthog } = useNuxtApp()
+        posthog.identify(response.analyticsId)
+        posthog.capture('login_succeeded')
         user.value = response.user
         cookie.value = response.user
         await navigateTo('/')
@@ -33,12 +42,16 @@ export const useAuth = () => {
   }
 
   const logout = async () => {
+    const { $posthog: posthog } = useNuxtApp()
+
     try {
       await $fetch('/api/auth/logout', { method: 'POST' })
     } catch (error) {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error)
     } finally {
+      posthog.capture('logout_completed')
+      posthog.reset()
       user.value = null
       cookie.value = null
       await navigateTo('/login')
