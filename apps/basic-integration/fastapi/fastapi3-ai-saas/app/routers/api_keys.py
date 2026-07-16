@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import APIKey
+from app.posthog_client import posthog_client
 
 router = APIRouter(prefix="/api/keys", tags=["api-keys"])
 
@@ -72,6 +73,11 @@ async def create_api_key(
         )
 
     api_key = APIKey.create(db, user_id=current_user.id, name=request.name)
+    posthog_client.capture(
+        "api_key_created",
+        distinct_id=str(current_user.id),
+        properties={"active_key_count": active_count + 1},
+    )
 
     return APIKeyCreated(
         id=api_key.id,
@@ -103,5 +109,14 @@ async def revoke_api_key(
 
     api_key.is_active = False
     db.commit()
+    active_key_count = db.query(APIKey).filter(
+        APIKey.user_id == current_user.id,
+        APIKey.is_active == True,
+    ).count()
+    posthog_client.capture(
+        "api_key_revoked",
+        distinct_id=str(current_user.id),
+        properties={"active_key_count": active_key_count},
+    )
 
     return None
