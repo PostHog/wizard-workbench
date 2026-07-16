@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { router } from '../router.js';
 import { store } from '../store.js';
+import { posthog } from '../posthog.js';
 
 /**
  * Renders the app shell: sidebar + header + content area.
@@ -9,6 +10,12 @@ import { store } from '../store.js';
 export function renderShell(activeSection) {
   const app = document.getElementById('app');
   const user = store.state.currentUser;
+
+  posthog.identify(user.id, {
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  });
 
   app.innerHTML = `
     <div class="app-layout">
@@ -54,6 +61,7 @@ export function renderShell(activeSection) {
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
     await api.logout();
+    posthog.reset();
     router.navigate('/login');
   });
 }
