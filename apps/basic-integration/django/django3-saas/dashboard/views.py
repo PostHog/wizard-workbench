@@ -5,6 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Project, ActivityLog
 from .forms import ProjectForm
+from accounts.posthog import posthog_client
 
 
 @login_required
@@ -58,6 +59,11 @@ def create_project(request):
                 user=request.user,
                 action='project_created',
                 description=f'Created project: {project.name}'
+            )
+            posthog_client.capture(
+                distinct_id=str(request.user.pk),
+                event='project_created',
+                properties={'is_active': project.is_active},
             )
 
             messages.success(request, 'Project created.')

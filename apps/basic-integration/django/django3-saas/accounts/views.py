@@ -9,11 +9,30 @@ from django.contrib.auth.views import (
 from django.contrib import messages
 from django.urls import reverse_lazy
 from .forms import RegisterForm, LoginForm, ProfileForm
+from .posthog import posthog_client
 
 
 class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.request.user
+        posthog_client.set(
+            distinct_id=str(user.pk),
+            properties={
+                'email': user.email,
+                'username': user.username,
+                'company_name': user.company_name,
+            },
+        )
+        posthog_client.capture(
+            distinct_id=str(user.pk),
+            event='user_logged_in',
+            properties={'login_method': 'password'},
+        )
+        return response
 
 
 class CustomLogoutView(LogoutView):
@@ -49,6 +68,19 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            posthog_client.set(
+                distinct_id=str(user.pk),
+                properties={
+                    'email': user.email,
+                    'username': user.username,
+                    'company_name': user.company_name,
+                },
+            )
+            posthog_client.capture(
+                distinct_id=str(user.pk),
+                event='user_registered',
+                properties={'has_company_name': bool(user.company_name)},
+            )
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
