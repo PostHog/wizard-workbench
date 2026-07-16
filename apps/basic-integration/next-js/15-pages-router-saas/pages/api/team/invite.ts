@@ -11,6 +11,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { flushPostHog, getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -108,8 +109,19 @@ export default async function handler(
       ActivityType.INVITE_TEAM_MEMBER
     );
 
+    getPostHogClient().capture({
+      distinctId: String(user.id),
+      event: 'team_member_invited',
+      properties: {
+        invited_role: role
+      }
+    });
+    await flushPostHog();
+
     return res.status(200).json({ success: 'Invitation sent successfully' });
   } catch (error) {
+    getPostHogClient().captureException(error);
+    await flushPostHog();
     console.error('Invite team member error:', error);
     return res.status(500).json({ error: 'Failed to invite team member' });
   }
