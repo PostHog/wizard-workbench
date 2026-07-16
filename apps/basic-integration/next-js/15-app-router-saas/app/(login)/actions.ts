@@ -25,6 +25,7 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+import { createPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -90,6 +91,18 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
+
+  const posthog = createPostHogClient();
+  posthog.identify({
+    distinctId: foundUser.id.toString(),
+    properties: { email: foundUser.email, name: foundUser.name, role: foundUser.role }
+  });
+  posthog.capture({
+    distinctId: foundUser.id.toString(),
+    event: 'user_signed_in',
+    properties: { team_id: foundTeam?.id }
+  });
+  await posthog.shutdown();
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -211,6 +224,18 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
     setSession(createdUser)
   ]);
+
+  const posthog = createPostHogClient();
+  posthog.identify({
+    distinctId: createdUser.id.toString(),
+    properties: { email: createdUser.email, name: createdUser.name, role: createdUser.role }
+  });
+  posthog.capture({
+    distinctId: createdUser.id.toString(),
+    event: 'user_signed_up',
+    properties: { team_id: teamId, joined_existing_team: Boolean(inviteId) }
+  });
+  await posthog.shutdown();
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
