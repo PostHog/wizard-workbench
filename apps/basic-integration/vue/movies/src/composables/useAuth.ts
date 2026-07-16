@@ -1,7 +1,16 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import posthog from 'posthog-js'
 
 const AUTH_KEY = 'auth-user'
+
+export function getAnalyticsDistinctId(username: string) {
+  let hash = 0
+  for (let index = 0; index < username.length; index += 1) {
+    hash = (hash * 31 + username.charCodeAt(index)) | 0
+  }
+  return `viewer_${Math.abs(hash)}`
+}
 
 export function useAuth() {
   const router = useRouter()
@@ -17,6 +26,8 @@ export function useAuth() {
     const sanitizedUsername = username.trim()
     user.value = sanitizedUsername
     localStorage.setItem(AUTH_KEY, sanitizedUsername)
+    posthog.identify(getAnalyticsDistinctId(sanitizedUsername))
+    posthog.capture('user_logged_in')
     
     await router.push('/')
     
@@ -27,6 +38,8 @@ export function useAuth() {
   }
 
   const logout = async () => {
+    posthog.capture('user_logged_out')
+    posthog.reset()
     user.value = null
     localStorage.removeItem(AUTH_KEY)
     await router.push('/login')
