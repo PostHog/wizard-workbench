@@ -8,6 +8,7 @@ import { getInviteLinkToken } from "./accept-invite-link-helpers.server";
 import { createInviteLinkInfoHeaders } from "./accept-invite-link-session.server";
 import type { Route } from ".react-router/types/app/routes/organizations_+/+types/invite-link";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { requireSupabaseUserExists } from "~/features/user-accounts/user-accounts-helpers.server";
 import { createSupabaseServerClient } from "~/features/user-authentication/supabase.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
@@ -27,6 +28,7 @@ export async function acceptInviteLinkAction({
 }: Route.ActionArgs) {
   try {
     const i18n = getInstance(context);
+    const posthog = context.get(posthogContext);
     const result = await validateFormData(request, acceptInviteLinkSchema);
     if (!result.success) return result.response;
 
@@ -70,6 +72,12 @@ export async function acceptInviteLinkAction({
               organizationId: link.organization.id,
               request,
               userAccountId: userAccount.id,
+            });
+
+            posthog?.capture({
+              distinctId: userAccount.id,
+              event: "organization_invite_accepted",
+              properties: { invitation_type: "link" },
             });
 
             return redirectWithToast(

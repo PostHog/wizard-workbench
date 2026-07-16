@@ -4,6 +4,7 @@ import { redirect } from "react-router";
 
 import { requireUserNeedsOnboarding } from "../onboarding-helpers.server";
 import { onboardingOrganizationSchema } from "./onboarding-organization-schemas";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/onboarding+/+types/organization";
 import { uploadOrganizationLogo } from "~/features/organizations/organizations-helpers.server";
 import { saveOrganizationWithOwnerToDatabase } from "~/features/organizations/organizations-model.server";
@@ -20,6 +21,7 @@ export async function onboardingOrganizationAction({
     request,
   });
   const { supabase } = context.get(authContext);
+  const posthog = context.get(posthogContext);
   const result = await validateFormData(
     request,
     coerceFormValue(onboardingOrganizationSchema),
@@ -49,6 +51,12 @@ export async function onboardingOrganizationAction({
       slug: slugify(result.data.name),
     },
     userId: user.id,
+  });
+
+  posthog?.capture({
+    distinctId: user.id,
+    event: "organization_created",
+    properties: { onboarding: true },
   });
 
   return redirect(`/organizations/${organization.slug}`, { headers });

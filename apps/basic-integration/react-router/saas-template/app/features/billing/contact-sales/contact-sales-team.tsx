@@ -1,4 +1,5 @@
 import type { SubmissionResult } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { useForm } from "@conform-to/react/future";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
@@ -30,6 +31,7 @@ export function ContactSalesTeam({
   lastResult,
 }: ContactSalesTeamProps) {
   const { t } = useTranslation("billing", { keyPrefix: "contactSales" });
+  const posthog = usePostHog();
 
   const { form, fields } = useForm(contactSalesFormSchema, {
     lastResult,
@@ -47,7 +49,11 @@ export function ContactSalesTeam({
         </CardDescription>
       </CardHeader>
 
-      <Form method="POST" {...form.props}>
+      <Form
+        method="POST"
+        onSubmit={() => posthog?.capture("contact_sales_submitted")}
+        {...form.props}
+      >
         <FieldSet className="space-y-6" disabled={isContactingSales}>
           <CardContent className="space-y-6">
             <Field data-invalid={fields.firstName.ariaInvalid}>

@@ -2,6 +2,7 @@ import { data, redirect } from "react-router";
 import { z } from "zod";
 
 import { organizationMembershipContext } from "../organizations/organizations-middleware.server";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { updateOrganizationInDatabaseById } from "../organizations/organizations-model.server";
 import {
   CANCEL_SUBSCRIPTION_INTENT,
@@ -67,6 +68,7 @@ export async function billingAction({
       organizationMembershipContext,
     );
     const i18n = getInstance(context);
+    const posthog = context.get(posthogContext);
 
     const result = await validateFormData(request, schema);
 
@@ -147,6 +149,16 @@ export async function billingAction({
         if (organization._count.memberships > price.product.maxSeats) {
           return conflict();
         }
+
+        posthog?.capture({
+          distinctId: user.id,
+          event: "checkout_started",
+          properties: {
+            billing_interval: price.recurring.interval,
+            plan_lookup_key: body.lookupKey,
+            seat_count: organization._count.memberships,
+          },
+        });
 
         const checkoutSession = await createStripeCheckoutSession({
           baseUrl,

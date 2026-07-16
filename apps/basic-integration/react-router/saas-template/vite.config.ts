@@ -48,6 +48,7 @@ const rootConfig = defineConfig({
     sudoFilesPlugin,
   ],
   server: { port: 3000 },
+  ssr: { noExternal: ["@posthog/react", "posthog-js"] },
 });
 
 const testConfig = defineVitestConfig({
