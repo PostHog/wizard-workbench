@@ -61,3 +61,12 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.querySelector('.hero .btn-primary')?.addEventListener('click', () => {
+    window.posthog?.capture('trial_cta_clicked', {
+      placement: 'hero',
+      page: 'home'
+    });
+  });
+</script>
