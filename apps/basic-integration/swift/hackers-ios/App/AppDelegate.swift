@@ -6,6 +6,7 @@
 //
 
 import Data
+import PostHog
 import Shared
 import UIKit
 
@@ -13,6 +14,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_: UIApplication,
                      didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]?) -> Bool
     {
+        let projectToken = Bundle.main.object(forInfoDictionaryKey: "POSTHOG_PROJECT_TOKEN") as? String ?? ""
+        let host = Bundle.main.object(forInfoDictionaryKey: "POSTHOG_HOST") as? String ?? ""
+        precondition(!projectToken.isEmpty && !host.isEmpty, "PostHog configuration is required")
+        let postHogConfig = PostHogConfig(apiKey: projectToken, host: host)
+        postHogConfig.captureApplicationLifecycleEvents = true
+        postHogConfig.errorTrackingConfig.autoCapture = true
+        postHogConfig.sessionReplay = true
+        PostHogSDK.shared.setup(postHogConfig)
+
         // Configure a modest shared URL cache to limit on-disk growth from image/HTTP caching
         // This affects system components like AsyncImage that use URLSession.shared
         let memoryCapacity = 64 * 1024 * 1024 // 64 MB

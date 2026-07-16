@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -256,6 +257,10 @@ public final class FeedViewModel: @unchecked Sendable {
     @MainActor
     public func toggleBookmark(for post: Domain.Post) async -> Bool {
         let newState = await bookmarksController.toggle(post: post)
+        PostHogSDK.shared.capture("bookmark_toggled", properties: [
+            "bookmark_state": newState ? "saved" : "removed",
+            "post_type": post.postType.rawValue,
+        ])
         await handleBookmarksUpdate(postId: post.id, isBookmarked: newState)
         return newState
     }

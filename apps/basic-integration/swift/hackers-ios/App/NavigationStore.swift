@@ -8,6 +8,7 @@
 import Combine
 import Domain
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 import UIKit
@@ -51,6 +52,10 @@ class NavigationStore: NavigationStoreProtocol {
         detailPath.removeAll()
         selectedPost = post
         selectedPostId = post.id
+        PostHogSDK.shared.capture("post_opened", properties: [
+            "post_type": post.postType.rawValue,
+            "has_external_url": !isHackerNewsURL(post.url),
+        ])
 
         // For iPhone navigation, use NavigationPath
         if UIDevice.current.userInterfaceIdiom != .pad && !isRunningOnMac {
@@ -108,6 +113,10 @@ class NavigationStore: NavigationStoreProtocol {
         embeddedBrowserURL = url
         detailPath.removeAll()
         return true
+    }
+
+    private func isHackerNewsURL(_ url: URL) -> Bool {
+        url.host == HackerNewsConstants.host
     }
 
     private var isRunningOnMac: Bool {
