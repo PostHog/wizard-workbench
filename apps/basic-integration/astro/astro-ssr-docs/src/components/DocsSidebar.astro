@@ -42,6 +42,9 @@ const sections = [
           <li>
             <a
               href={link.href}
+              data-posthog-event="documentation_topic_selected"
+              data-topic={link.label}
+              data-section={section.title}
               class:list={["sidebar-link", { active: currentPath === link.href }]}
             >
               {link.label}
@@ -52,3 +55,14 @@ const sections = [
     </div>
   ))}
 </aside>
+
+<script is:inline>
+  document.querySelectorAll('[data-posthog-event="documentation_topic_selected"]').forEach((link) => {
+    link.addEventListener('click', () => {
+      window.posthog?.capture('documentation_topic_selected', {
+        topic: link.dataset.topic,
+        section: link.dataset.section,
+      });
+    });
+  });
+</script>
