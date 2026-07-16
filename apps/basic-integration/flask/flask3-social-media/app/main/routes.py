@@ -36,6 +36,13 @@ def index():
                     language=language)
         db.session.add(post)
         db.session.commit()
+        current_app.extensions['posthog'].capture(
+            'post_created', distinct_id=str(current_user.id),
+            properties={
+                'has_language': bool(language),
+                'post_length': len(form.post.data),
+            },
+        )
         flash(_('Your post is now live!'))
         return redirect(url_for('main.index'))
     page = request.args.get('page', 1, type=int)
@@ -126,6 +133,9 @@ def follow(username):
             return redirect(url_for('main.user', username=username))
         current_user.follow(user)
         db.session.commit()
+        current_app.extensions['posthog'].capture(
+            'user_followed', distinct_id=str(current_user.id),
+        )
         flash(_('You are following %(username)s!', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -190,6 +200,10 @@ def send_message(recipient):
         user.add_notification('unread_message_count',
                               user.unread_message_count())
         db.session.commit()
+        current_app.extensions['posthog'].capture(
+            'message_sent', distinct_id=str(current_user.id),
+            properties={'message_length': len(form.message.data)},
+        )
         flash(_('Your message has been sent.'))
         return redirect(url_for('main.user', username=recipient))
     return render_template('send_message.html', title=_('Send Message'),
@@ -224,6 +238,9 @@ def export_posts():
     else:
         current_user.launch_task('export_posts', _('Exporting posts...'))
         db.session.commit()
+        current_app.extensions['posthog'].capture(
+            'post_export_requested', distinct_id=str(current_user.id),
+        )
     return redirect(url_for('main.user', username=current_user.username))
 
 

@@ -1,3 +1,4 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
@@ -8,6 +9,7 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -38,6 +40,14 @@ babel = Babel()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    posthog_client = Posthog(
+        app.config['POSTHOG_API_KEY'],
+        host=app.config['POSTHOG_HOST'],
+        enable_exception_autocapture=True,
+    )
+    app.extensions['posthog'] = posthog_client
+    atexit.register(posthog_client.shutdown)
 
     db.init_app(app)
     migrate.init_app(app, db)
