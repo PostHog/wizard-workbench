@@ -12,13 +12,6 @@ RUN npm ci
 # Compile src/ -> dist/
 COPY tsconfig.json ./
 COPY src ./src
-# PostHog source map upload credentials — consumed by posthog-cli during npm run build.
-ARG POSTHOG_CLI_API_KEY
-ARG POSTHOG_CLI_PROJECT_ID
-ARG POSTHOG_CLI_HOST
-ENV POSTHOG_CLI_API_KEY=$POSTHOG_CLI_API_KEY \
-    POSTHOG_CLI_PROJECT_ID=$POSTHOG_CLI_PROJECT_ID \
-    POSTHOG_CLI_HOST=$POSTHOG_CLI_HOST
 RUN npm run build
 
 # ---- Runtime stage ----
