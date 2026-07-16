@@ -18,6 +18,7 @@ import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { posthog } from "@/lib/posthog";
 
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
@@ -72,7 +73,14 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              onPress={() => {
+                posthog.capture("user_profile_opened", {
+                  entry_point: "story_detail",
+                });
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -141,6 +149,11 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog.capture("story_discussion_opened", {
+                  story_id: item.id,
+                  entry_point: "story_detail",
+                  comment_count: item.kids?.length || 0,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Warning
                 );
@@ -163,6 +176,10 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture("external_story_opened", {
+                    story_id: item.id,
+                    entry_point: "story_detail",
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +211,13 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog.capture("story_discussion_opened", {
+                  story_id: parentItem.id,
+                  entry_point: "parent_comment",
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{

@@ -1,5 +1,7 @@
 import { View } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
+import { useEffect, useRef } from "react";
+import { PostHogProvider } from "posthog-react-native";
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
@@ -7,33 +9,47 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { Colors } from "@/constants/Colors";
+import { posthog } from "@/lib/posthog";
 
 const queryClient = new QueryClient();
 
 export default function Layout() {
   const safeArea = useSafeAreaInsets();
+  const pathname = usePathname();
+  const previousPathname = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (previousPathname.current !== pathname) {
+      posthog.screen(pathname, {
+        previous_screen: previousPathname.current ?? null,
+      });
+      previousPathname.current = pathname;
+    }
+  }, [pathname]);
 
   return (
     <>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider style={{ backgroundColor: "#fff5ee" }}>
-          <Stack
-            screenOptions={{
-              headerBackground: () => (
-                <View
-                  style={{
-                    backgroundColor: Colors.accent,
-                    height: safeArea.top,
-                  }}
-                />
-              ),
-              headerTintColor: "#f1f1f1",
-              headerBackButtonDisplayMode: "minimal",
-              headerStyle: {
-                backgroundColor: Colors.accent,
-              },
-            }}
-          />
+          <PostHogProvider client={posthog}>
+            <Stack
+              screenOptions={{
+                headerBackground: () => (
+                  <View
+                    style={{
+                      backgroundColor: Colors.accent,
+                      height: safeArea.top,
+                    }}
+                  />
+                ),
+                headerTintColor: "#f1f1f1",
+                headerBackButtonDisplayMode: "minimal",
+                headerStyle: {
+                  backgroundColor: Colors.accent,
+                },
+              }}
+            />
+          </PostHogProvider>
         </SafeAreaProvider>
       </QueryClientProvider>
     </>
