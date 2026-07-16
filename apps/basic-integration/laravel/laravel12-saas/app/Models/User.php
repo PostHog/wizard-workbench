@@ -53,6 +53,18 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         ];
     }
 
+    /**
+     * Get PostHog person properties for this user.
+     */
+    public function getPostHogProperties(): array
+    {
+        return [
+            'email' => $this->email,
+            'name' => $this->name,
+            'created_at' => $this->created_at?->toIso8601String(),
+        ];
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
