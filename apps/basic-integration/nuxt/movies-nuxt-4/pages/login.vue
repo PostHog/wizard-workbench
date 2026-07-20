@@ -4,13 +4,20 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 const { login } = useAuth()
+const posthog = usePostHog()
 
 const handleLogin = async () => {
   error.value = ''
   loading.value = true
 
   try {
-    await login(username.value, password.value)
+    const response = await login(username.value, password.value)
+    if (response.success) {
+      posthog?.identify(response.user)
+      posthog?.capture('user_logged_in', {
+        method: 'password',
+      })
+    }
   } catch (e: any) {
     error.value = e.message || 'Login failed'
   } finally {

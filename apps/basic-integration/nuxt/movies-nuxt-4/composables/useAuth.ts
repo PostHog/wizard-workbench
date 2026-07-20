@@ -1,4 +1,5 @@
 export const useAuth = () => {
+  const posthog = usePostHog()
   const cookie = useCookie<string | null>('auth-user', {
     httpOnly: false,
     secure: true,
@@ -39,6 +40,8 @@ export const useAuth = () => {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error)
     } finally {
+      posthog?.capture('user_logged_out')
+      posthog?.reset()
       user.value = null
       cookie.value = null
       await navigateTo('/login')

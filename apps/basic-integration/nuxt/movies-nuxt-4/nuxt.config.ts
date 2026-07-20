@@ -1,12 +1,14 @@
 import process from 'node:process'
 
 const isDev = process.env.NODE_ENV === 'development'
+const posthogProjectToken = process.env.NUXT_PUBLIC_POSTHOG_PROJECT_TOKEN!
+const posthogHost = process.env.NUXT_PUBLIC_POSTHOG_HOST!
 
 // const apiBaseUrl = 'http://localhost:3001'
 const apiBaseUrl = 'https://movies-proxy.vercel.app'
 
 export default defineNuxtConfig({
-  modules: ['@vueuse/nuxt', '@unocss/nuxt', '@nuxt/image', '@nuxtjs/i18n', '@nuxtjs/html-validator', '@nuxt/test-utils/module'],
+  modules: ['@vueuse/nuxt', '@unocss/nuxt', '@nuxt/image', '@nuxtjs/i18n', '@nuxtjs/html-validator', '@nuxt/test-utils/module', '@posthog/nuxt'],
 
   experimental: {
     // inlineSSRStyles: false,
@@ -21,6 +23,24 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl,
+      posthog: {
+        publicKey: posthogProjectToken,
+        host: posthogHost,
+      },
+    },
+  },
+
+  posthogConfig: {
+    publicKey: posthogProjectToken,
+    host: posthogHost,
+    clientConfig: {
+      capture_exceptions: true,
+      __add_tracing_headers: ['localhost'],
+    },
+    serverConfig: {
+      enableExceptionAutocapture: true,
+      flushAt: 1,
+      flushInterval: 0,
     },
   },
 
