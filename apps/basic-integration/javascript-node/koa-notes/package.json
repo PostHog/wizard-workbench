@@ -9,8 +9,10 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "koa": "^2.15.0",
+    "koa-bodyparser": "^4.4.0",
     "koa-router": "^13.0.0",
-    "koa-bodyparser": "^4.4.0"
+    "posthog-node": "^5.46.0"
   }
 }

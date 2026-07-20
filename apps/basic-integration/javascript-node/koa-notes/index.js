@@ -1,11 +1,37 @@
+import 'dotenv/config';
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { randomUUID } from 'node:crypto';
+import { PostHog } from 'posthog-node';
+
+if (!process.env.POSTHOG_PROJECT_TOKEN || !process.env.POSTHOG_HOST) {
+  throw new Error('POSTHOG_PROJECT_TOKEN and POSTHOG_HOST must be configured');
+}
+
+const posthog = new PostHog(process.env.POSTHOG_PROJECT_TOKEN, {
+  host: process.env.POSTHOG_HOST,
+  enableExceptionAutocapture: true,
+  flushAt: 1,
+  flushInterval: 0,
+});
 
 const app = new Koa();
 const router = new Router();
 
 app.use(bodyParser());
+app.use(async (ctx, next) => {
+  const distinctId = ctx.get('x-posthog-distinct-id');
+  ctx.state.posthogDistinctId = distinctId || randomUUID();
+  await next();
+});
+
+app.on('error', (error, ctx) => {
+  posthog.captureException(error, ctx?.state.posthogDistinctId);
+  posthog.flush().catch((flushError) => {
+    console.error('Failed to flush PostHog exception', flushError);
+  });
+});
 
 const folders = [{ id: 1, name: 'General' }];
 const notes = [];
@@ -21,7 +47,7 @@ router.get('/api/folders', (ctx) => {
   }));
 });
 
-router.post('/api/folders', (ctx) => {
+router.post('/api/folders', async (ctx) => {
   const { name } = ctx.request.body;
 
   if (!name) {
@@ -32,11 +58,20 @@ router.post('/api/folders', (ctx) => {
 
   const folder = { id: nextFolderId++, name };
   folders.push(folder);
+  posthog.capture({
+    distinctId: ctx.state.posthogDistinctId,
+    event: 'folder_created',
+    properties: {
+      folder_id: folder.id,
+      folder_count: folders.length,
+    },
+  });
+  await posthog.flush();
   ctx.status = 201;
   ctx.body = folder;
 });
 
-router.delete('/api/folders/:id', (ctx) => {
+router.delete('/api/folders/:id', async (ctx) => {
   const folderId = parseInt(ctx.params.id, 10);
 
   if (folderId === 1) {
@@ -54,11 +89,25 @@ router.delete('/api/folders/:id', (ctx) => {
   }
 
   // Move notes from deleted folder to General
+  let movedNoteCount = 0;
   for (const note of notes) {
-    if (note.folder_id === folderId) note.folder_id = 1;
+    if (note.folder_id === folderId) {
+      note.folder_id = 1;
+      movedNoteCount += 1;
+    }
   }
 
   folders.splice(index, 1);
+  posthog.capture({
+    distinctId: ctx.state.posthogDistinctId,
+    event: 'folder_deleted',
+    properties: {
+      folder_id: folderId,
+      moved_note_count: movedNoteCount,
+      folder_count: folders.length,
+    },
+  });
+  await posthog.flush();
   ctx.status = 204;
 });
 
@@ -81,7 +130,7 @@ router.get('/api/notes', (ctx) => {
   ctx.body = { notes: result, total: result.length };
 });
 
-router.post('/api/notes', (ctx) => {
+router.post('/api/notes', async (ctx) => {
   const { title, content = '', folder_id = 1 } = ctx.request.body;
 
   if (!title) {
@@ -105,6 +154,17 @@ router.post('/api/notes', (ctx) => {
     updated_at: new Date().toISOString(),
   };
   notes.push(note);
+  posthog.capture({
+    distinctId: ctx.state.posthogDistinctId,
+    event: 'note_created',
+    properties: {
+      note_id: note.id,
+      folder_id,
+      has_content: content.length > 0,
+      note_count: notes.length,
+    },
+  });
+  await posthog.flush();
   ctx.status = 201;
   ctx.body = note;
 });
@@ -121,7 +181,7 @@ router.get('/api/notes/:id', (ctx) => {
   ctx.body = note;
 });
 
-router.patch('/api/notes/:id', (ctx) => {
+router.patch('/api/notes/:id', async (ctx) => {
   const note = notes.find((n) => n.id === parseInt(ctx.params.id, 10));
 
   if (!note) {
@@ -143,10 +203,22 @@ router.patch('/api/notes/:id', (ctx) => {
   }
   note.updated_at = new Date().toISOString();
 
+  posthog.capture({
+    distinctId: ctx.state.posthogDistinctId,
+    event: 'note_updated',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+      title_updated: title !== undefined,
+      content_updated: content !== undefined,
+      folder_updated: folder_id !== undefined,
+    },
+  });
+  await posthog.flush();
   ctx.body = note;
 });
 
-router.delete('/api/notes/:id', (ctx) => {
+router.delete('/api/notes/:id', async (ctx) => {
   const index = notes.findIndex((n) => n.id === parseInt(ctx.params.id, 10));
 
   if (index === -1) {
@@ -155,7 +227,17 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
-  notes.splice(index, 1);
+  const [deletedNote] = notes.splice(index, 1);
+  posthog.capture({
+    distinctId: ctx.state.posthogDistinctId,
+    event: 'note_deleted',
+    properties: {
+      note_id: deletedNote.id,
+      folder_id: deletedNote.folder_id,
+      note_count: notes.length,
+    },
+  });
+  await posthog.flush();
   ctx.status = 204;
 });
 
@@ -164,6 +246,14 @@ app.use(router.allowedMethods());
 
 const PORT = process.env.PORT || 3003;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Koa notes API running on http://localhost:${PORT}`);
 });
+
+async function shutdown() {
+  server.close();
+  await posthog.shutdown();
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
