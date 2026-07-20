@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
+from app.analytics import posthog_client
 from app.config import get_settings
 from app.database import init_db
 from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
@@ -21,6 +22,8 @@ async def lifespan(app: FastAPI):
     init_db()
 
     yield
+
+    posthog_client.flush()
 
 
 app = FastAPI(

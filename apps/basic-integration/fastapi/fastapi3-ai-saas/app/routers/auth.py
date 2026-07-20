@@ -6,6 +6,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from app.analytics import posthog_client
 from app.config import get_settings
 from app.dependencies import CurrentUser, DbSession, RequiredUser, create_session_token
 from app.models import User
@@ -34,6 +35,13 @@ async def login(
     user = User.authenticate(db, email, password)
 
     if user:
+        distinct_id = str(user.id)
+        posthog_client.set(distinct_id=distinct_id, properties={"email": user.email})
+        posthog_client.capture(
+            distinct_id=distinct_id,
+            event="user_logged_in",
+            properties={"login_method": "password"},
+        )
         response = RedirectResponse(url="/dashboard", status_code=302)
         response.set_cookie(
             key="session_token",
@@ -70,6 +78,16 @@ async def signup(
         )
 
     user = User.create(db, email=email, password=password, credits=settings.default_credits)
+    distinct_id = str(user.id)
+    posthog_client.set(distinct_id=distinct_id, properties={"email": user.email})
+    posthog_client.capture(
+        distinct_id=distinct_id,
+        event="user_signed_up",
+        properties={
+            "signup_method": "form",
+            "starting_credits": settings.default_credits,
+        },
+    )
 
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(
@@ -84,6 +102,7 @@ async def signup(
 @router.get("/logout")
 async def logout(current_user: RequiredUser):
     """Logout user."""
+    posthog_client.capture(distinct_id=str(current_user.id), event="user_logged_out")
     response = RedirectResponse(url="/", status_code=302)
     response.delete_cookie(key="session_token")
     return response
