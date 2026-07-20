@@ -1,3 +1,6 @@
+import { PostHog } from 'posthog-node'
+import { getHeader } from 'h3'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -20,6 +23,28 @@ export default defineEventHandler(async (event) => {
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
+
+    const runtimeConfig = useRuntimeConfig()
+    const distinctId = getHeader(event, 'x-posthog-distinct-id')
+    const sessionId = getHeader(event, 'x-posthog-session-id')
+    const posthog = new PostHog(runtimeConfig.public.posthog.publicKey, {
+      host: runtimeConfig.public.posthog.host,
+      flushAt: 1,
+      flushInterval: 0,
+      enableExceptionAutocapture: true,
+    })
+
+    await posthog.withContext(
+      { distinctId: distinctId ?? undefined, sessionId: sessionId ?? undefined },
+      async () => {
+        posthog.capture({
+          distinctId: distinctId ?? 'anonymous',
+          event: 'login_completed',
+          properties: { authentication_method: 'password' },
+        })
+      },
+    )
+    await posthog.shutdown()
 
     return {
       success: true,

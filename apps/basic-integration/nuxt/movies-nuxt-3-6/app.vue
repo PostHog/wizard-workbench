@@ -3,7 +3,13 @@ import '@unocss/reset/tailwind.css'
 
 const route = useRoute()
 const { isAuthenticated } = useAuth()
+const { $posthog } = useNuxtApp()
 const showNavBar = computed(() => isAuthenticated.value && route.path !== '/login')
+
+onErrorCaptured((error) => {
+  $posthog.captureException(error)
+  return false
+})
 
 useHead({
   htmlAttrs: {
