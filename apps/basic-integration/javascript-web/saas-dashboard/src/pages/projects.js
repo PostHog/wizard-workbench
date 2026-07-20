@@ -1,3 +1,4 @@
+import posthog from 'posthog-js';
 import { api } from '../api.js';
 import { router } from '../router.js';
 import { renderShell } from '../components/shell.js';
@@ -75,8 +76,12 @@ export async function renderProjects() {
 
           try {
             const project = await api.createProject(name, desc);
+            posthog.capture('project_created', {
+              project_id: project.id,
+            });
             router.navigate(`/projects/${project.id}`);
           } catch (err) {
+            posthog.captureException(err, { flow: 'project_creation' });
             alert(err.message);
           }
         });
@@ -90,11 +95,15 @@ export async function renderProjects() {
         const id = btn.dataset.id;
         if (confirm('Delete this project and all its tasks?')) {
           await api.deleteProject(id);
+          posthog.capture('project_deleted', {
+            project_id: id,
+          });
           renderProjects();
         }
       });
     });
   } catch (err) {
+    posthog.captureException(err, { flow: 'projects_load' });
     content.innerHTML = `<div class="error-message">Failed to load projects: ${err.message}</div>`;
   }
 }
