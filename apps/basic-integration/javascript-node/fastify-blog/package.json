@@ -9,6 +9,8 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
-    "fastify": "^5.2.0"
+    "dotenv": "^17.4.2",
+    "fastify": "^5.2.0",
+    "posthog-node": "^5.46.0"
   }
 }
