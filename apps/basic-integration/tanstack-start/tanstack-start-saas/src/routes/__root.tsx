@@ -7,6 +7,7 @@ import {
   createRootRoute,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from '@posthog/react'
 import * as React from 'react'
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary'
 import { NotFound } from '~/components/NotFound'
@@ -64,7 +65,17 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <PostHogProvider
+          apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN}
+          options={{
+            api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+            defaults: '2025-05-24',
+            capture_exceptions: true,
+            debug: import.meta.env.DEV,
+          }}
+        >
+          {children}
+        </PostHogProvider>
         <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>

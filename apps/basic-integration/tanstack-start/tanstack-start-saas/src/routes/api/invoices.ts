@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getAllInvoices, createInvoice } from '~/utils/invoices'
+import { getPostHogClient } from '~/utils/posthog-server'
 
 export const Route = createFileRoute('/api/invoices')({
   server: {
@@ -29,10 +30,25 @@ export const Route = createFileRoute('/api/invoices')({
             amount: Number(body.amount),
             dueDate: body.dueDate,
           })
+          const posthog = getPostHogClient()
+          posthog.capture({
+            distinctId: `invoice:${invoice.id}`,
+            event: 'invoice_created',
+            properties: {
+              invoice_id: invoice.id,
+              amount: invoice.amount,
+              due_date: invoice.dueDate,
+              source: 'api',
+            },
+          })
+          await posthog.flush()
 
           return Response.json(invoice, { status: 201 })
         } catch (e) {
           console.error('Error creating invoice:', e)
+          const posthog = getPostHogClient()
+          posthog.captureException(e)
+          await posthog.flush()
           return Response.json(
             { error: 'Failed to create invoice' },
             { status: 500 }
