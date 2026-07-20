@@ -1,5 +1,6 @@
 import { View } from "react-native";
 import { Stack } from "expo-router";
+import { PostHogProvider } from "posthog-react-native";
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
@@ -17,23 +18,30 @@ export default function Layout() {
     <>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider style={{ backgroundColor: "#fff5ee" }}>
-          <Stack
-            screenOptions={{
-              headerBackground: () => (
-                <View
-                  style={{
-                    backgroundColor: Colors.accent,
-                    height: safeArea.top,
-                  }}
-                />
-              ),
-              headerTintColor: "#f1f1f1",
-              headerBackButtonDisplayMode: "minimal",
-              headerStyle: {
-                backgroundColor: Colors.accent,
-              },
+          <PostHogProvider
+            apiKey={process.env.EXPO_PUBLIC_POSTHOG_PROJECT_TOKEN!}
+            options={{
+              host: process.env.EXPO_PUBLIC_POSTHOG_HOST,
             }}
-          />
+          >
+            <Stack
+              screenOptions={{
+                headerBackground: () => (
+                  <View
+                    style={{
+                      backgroundColor: Colors.accent,
+                      height: safeArea.top,
+                    }}
+                  />
+                ),
+                headerTintColor: "#f1f1f1",
+                headerBackButtonDisplayMode: "minimal",
+                headerStyle: {
+                  backgroundColor: Colors.accent,
+                },
+              }}
+            />
+          </PostHogProvider>
         </SafeAreaProvider>
       </QueryClientProvider>
     </>
