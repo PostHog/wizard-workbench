@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -59,6 +60,20 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    if (validatedData.completed !== undefined) {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: request.headers.get('X-PostHog-Distinct-ID') ?? `todo-${todoId}`,
+        event: 'todo_completion_changed',
+        properties: {
+          todo_id: todoId,
+          completed: updatedTodo.completed,
+          $session_id: request.headers.get('X-PostHog-Session-ID') ?? undefined,
+        },
+      });
+      await posthog.flush();
+    }
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -68,6 +83,12 @@ export async function PATCH(
       );
     }
     console.error('Error updating todo:', error);
+    const posthog = getPostHogClient();
+    posthog.captureException(
+      error,
+      request.headers.get('X-PostHog-Distinct-ID') ?? 'anonymous'
+    );
+    await posthog.flush();
     return NextResponse.json(
       { error: 'Failed to update todo' },
       { status: 500 }
@@ -94,9 +115,26 @@ export async function DELETE(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: request.headers.get('X-PostHog-Distinct-ID') ?? `todo-${todoId}`,
+      event: 'todo_deleted',
+      properties: {
+        todo_id: todoId,
+        $session_id: request.headers.get('X-PostHog-Session-ID') ?? undefined,
+      },
+    });
+    await posthog.flush();
+
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
     console.error('Error deleting todo:', error);
+    const posthog = getPostHogClient();
+    posthog.captureException(
+      error,
+      request.headers.get('X-PostHog-Distinct-ID') ?? 'anonymous'
+    );
+    await posthog.flush();
     return NextResponse.json(
       { error: 'Failed to delete todo' },
       { status: 500 }
