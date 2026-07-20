@@ -15,6 +15,7 @@ import Shared
 import SwiftUI
 import UIKit
 import Foundation
+import PostHog
 
 @MainActor
 struct MainContentView: View {
@@ -81,9 +82,10 @@ struct MainContentView: View {
                                 currentUsername: sessionService.username,
                                 onLogin: { username, password in
                                     _ = try await sessionService.authenticate(username: username, password: password)
+                                    identifyAuthenticatedUser(username)
                                 },
                                 onLogout: {
-                                    sessionService.unauthenticate()
+                                    logOut()
                                 },
                                 onShowOnboarding: {
                                     showOnboarding = true
@@ -103,9 +105,10 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    identifyAuthenticatedUser(username)
                 },
                 onLogout: {
-                    sessionService.unauthenticate()
+                    logOut()
                 },
                 textSize: settingsViewModel.textSize
             )
@@ -119,9 +122,10 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    identifyAuthenticatedUser(username)
                 },
                 onLogout: {
-                    sessionService.unauthenticate()
+                    logOut()
                 },
                 onShowOnboarding: {
                     showOnboarding = true
@@ -143,6 +147,17 @@ struct MainContentView: View {
                 showOnboarding = true
             }
         }
+    }
+
+    private func identifyAuthenticatedUser(_ username: String) {
+        PostHogSDK.shared.identify(username, userProperties: ["username": username])
+        PostHogSDK.shared.capture("login_succeeded")
+    }
+
+    private func logOut() {
+        PostHogSDK.shared.capture("user_logged_out")
+        PostHogSDK.shared.reset()
+        sessionService.unauthenticate()
     }
 
     private var isPresentingModal: Bool {

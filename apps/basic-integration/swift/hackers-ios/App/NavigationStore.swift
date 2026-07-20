@@ -8,6 +8,7 @@
 import Combine
 import Domain
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 import UIKit
@@ -51,6 +52,10 @@ class NavigationStore: NavigationStoreProtocol {
         detailPath.removeAll()
         selectedPost = post
         selectedPostId = post.id
+        PostHogSDK.shared.capture("post_opened", properties: [
+            "post_id": post.id,
+            "post_type": selectedPostType.rawValue,
+        ])
 
         // For iPhone navigation, use NavigationPath
         if UIDevice.current.userInterfaceIdiom != .pad && !isRunningOnMac {
@@ -63,6 +68,10 @@ class NavigationStore: NavigationStoreProtocol {
         detailPath.removeAll()
         selectedPost = nil
         selectedPostId = id
+        PostHogSDK.shared.capture("post_opened", properties: [
+            "post_id": id,
+            "post_type": selectedPostType.rawValue,
+        ])
 
         if UIDevice.current.userInterfaceIdiom != .pad && !isRunningOnMac {
             path.append(NavigationDestination.comments(postID: id))
@@ -85,6 +94,9 @@ class NavigationStore: NavigationStoreProtocol {
     }
 
     func selectPostType(_ type: Domain.PostType) {
+        PostHogSDK.shared.capture("feed_category_selected", properties: [
+            "feed_category": type.rawValue,
+        ])
         selectedPostType = type
         selectedPostId = nil
         clearSelection()
@@ -152,6 +164,10 @@ class NavigationStore: NavigationStoreProtocol {
             if let idString = parameters["id"],
                let id = Int(idString)
             {
+                PostHogSDK.shared.capture("deep_link_opened", properties: [
+                    "destination": "item",
+                    "post_id": id,
+                ])
                 navigateToPost(withId: id)
             }
         default:
