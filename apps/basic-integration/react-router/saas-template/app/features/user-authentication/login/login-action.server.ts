@@ -7,6 +7,7 @@ import { loginWithEmailSchema, loginWithGoogleSchema } from "./login-schemas";
 import type { Route } from ".react-router/types/app/routes/_user-authentication+/_anonymous-routes+/+types/login";
 import { getInstance } from "~/features/localization/i18next-middleware.server";
 import { retrieveUserAccountFromDatabaseByEmail } from "~/features/user-accounts/user-accounts-model.server";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { badRequest } from "~/utils/http-responses.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
@@ -74,6 +75,12 @@ export async function loginAction({ request, context }: Route.ActionArgs) {
         throw new Error(errorMessage);
       }
 
+      context.get(posthogContext).capture({
+        distinctId: userAccount.id,
+        event: "login_link_requested",
+        properties: { authentication_method: "email" },
+      });
+
       return { ...data, email: body.email, result: undefined };
     }
     case "loginWithGoogle": {
@@ -85,6 +92,11 @@ export async function loginAction({ request, context }: Route.ActionArgs) {
       if (error) {
         throw error;
       }
+
+      context.get(posthogContext).capture({
+        event: "login_link_requested",
+        properties: { authentication_method: "google" },
+      });
 
       return redirect(data.url, { headers });
     }

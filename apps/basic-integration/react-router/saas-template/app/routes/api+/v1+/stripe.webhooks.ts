@@ -17,6 +17,7 @@ import {
   handleStripeSubscriptionScheduleExpiringEvent,
   handleStripeSubscriptionScheduleUpdatedEvent,
 } from "~/features/billing/stripe-event-handlers.server";
+import { posthogContext } from "~/lib/posthog-middleware.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const json = (payload: unknown, init?: ResponseInit) =>
@@ -33,7 +34,7 @@ const badRequest = (payload?: { message?: string; error?: string }) =>
 
 export const loader = () => notAllowed();
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ context, request }: Route.ActionArgs) {
   const method = request.method;
 
   if (method !== "POST") {
@@ -60,7 +61,13 @@ export async function action({ request }: Route.ActionArgs) {
         return handleStripeChargeDisputeClosedEvent(event);
       }
       case "checkout.session.completed": {
-        return handleStripeCheckoutSessionCompletedEvent(event);
+        const response = await handleStripeCheckoutSessionCompletedEvent(event);
+        context.get(posthogContext).capture({
+          distinctId: event.data.object.metadata?.purchasedById,
+          event: "checkout_completed",
+          properties: { payment_status: event.data.object.payment_status },
+        });
+        return response;
       }
       case "customer.deleted": {
         return handleStripeCustomerDeletedEvent(event);
@@ -69,7 +76,15 @@ export async function action({ request }: Route.ActionArgs) {
         return handleStripeCustomerSubscriptionCreatedEvent(event);
       }
       case "customer.subscription.deleted": {
-        return handleStripeCustomerSubscriptionDeletedEvent(event);
+        const response =
+          await handleStripeCustomerSubscriptionDeletedEvent(event);
+        context.get(posthogContext).capture({
+          event: "subscription_cancelled",
+          properties: {
+            cancellation_reason: event.data.object.cancellation_details?.reason,
+          },
+        });
+        return response;
       }
       case "customer.subscription.updated": {
         return handleStripeCustomerSubscriptionUpdatedEvent(event);
