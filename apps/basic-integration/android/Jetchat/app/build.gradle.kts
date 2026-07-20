@@ -15,7 +15,20 @@
  */
 
 
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+val postHogEnvironment = Properties().apply {
+    val environmentFile = rootProject.file(".env")
+    if (environmentFile.exists()) {
+        environmentFile.inputStream().use(::load)
+    }
+}
+
+fun postHogEnvironmentValue(name: String): String =
+    (System.getenv(name) ?: postHogEnvironment.getProperty(name))
+        ?.takeIf { it.isNotBlank() }
+        ?: error("Missing required PostHog environment variable: $name")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -33,6 +46,17 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "POSTHOG_PROJECT_TOKEN",
+            "\"${postHogEnvironmentValue("POSTHOG_PROJECT_TOKEN")}\"",
+        )
+        buildConfigField(
+            "String",
+            "POSTHOG_HOST",
+            "\"${postHogEnvironmentValue("POSTHOG_HOST")}\"",
+        )
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -75,6 +99,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -96,6 +121,7 @@ dependencies {
     implementation(libs.androidx.glance.material3)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
+    implementation("com.posthog:posthog-android:3.+")
 
     implementation(libs.androidx.activity.compose)
 

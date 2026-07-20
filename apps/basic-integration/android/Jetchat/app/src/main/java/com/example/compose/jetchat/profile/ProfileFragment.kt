@@ -48,6 +48,7 @@ import com.example.compose.jetchat.MainViewModel
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 
 class ProfileFragment : Fragment() {
 
@@ -59,6 +60,10 @@ class ProfileFragment : Fragment() {
         // Consider using safe args plugin
         val userId = arguments?.getString("userId")
         viewModel.setUserId(userId)
+        PostHog.capture(
+            event = "profile_viewed",
+            properties = mapOf("profile_type" to if (userId == null) "self" else "member"),
+        )
     }
 
     @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
