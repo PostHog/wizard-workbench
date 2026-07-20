@@ -11,6 +11,16 @@ class Signups::CompletionsController < ApplicationController
     @signup = Signup.new(signup_params)
 
     if @signup.complete
+      PostHog.identify(
+        distinct_id: @signup.user.posthog_distinct_id,
+        properties: @signup.user.posthog_properties
+      )
+      PostHog.capture(
+        distinct_id: @signup.user.posthog_distinct_id,
+        event: "user_signed_up",
+        properties: { account_id: @signup.account.id }
+      )
+
       welcome_to_account
     else
       invalid_signup

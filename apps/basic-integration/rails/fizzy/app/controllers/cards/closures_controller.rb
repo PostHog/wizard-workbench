@@ -6,6 +6,12 @@ class Cards::ClosuresController < ApplicationController
     @card.close
     refresh_stream_if_needed
 
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_closed",
+      properties: { card_id: @card.id, board_id: @card.board_id }
+    )
+
     respond_to do |format|
       format.turbo_stream
       format.json { head :no_content }
