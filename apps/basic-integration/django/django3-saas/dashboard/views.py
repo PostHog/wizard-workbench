@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
+from posthog import capture
 from .models import Project, ActivityLog
 from .forms import ProjectForm
 
@@ -60,6 +61,11 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            capture('project_created', properties={
+                'project_id': project.pk,
+                'is_active': project.is_active,
+                'has_description': bool(project.description),
+            })
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +89,11 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            capture('project_updated', properties={
+                'project_id': project.pk,
+                'is_active': project.is_active,
+                'has_description': bool(project.description),
+            })
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -96,7 +107,9 @@ def delete_project(request, pk):
     project = get_object_or_404(Project, pk=pk, owner=request.user)
 
     if request.method == 'POST':
+        project_id = project.pk
         name = project.name
+        was_active = project.is_active
         project.delete()
 
         ActivityLog.objects.create(
@@ -105,6 +118,10 @@ def delete_project(request, pk):
             description=f'Deleted project: {name}'
         )
 
+        capture('project_deleted', properties={
+            'project_id': project_id,
+            'was_active': was_active,
+        })
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
 
