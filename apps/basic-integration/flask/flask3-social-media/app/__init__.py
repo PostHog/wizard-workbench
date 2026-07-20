@@ -1,3 +1,4 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
@@ -8,6 +9,7 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -33,11 +35,24 @@ login.login_message = _l('Please log in to access this page.')
 mail = Mail()
 moment = Moment()
 babel = Babel()
+posthog_client = None
 
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    global posthog_client
+    if not app.config['POSTHOG_PROJECT_TOKEN'] or not app.config['POSTHOG_HOST']:
+        raise RuntimeError(
+            'POSTHOG_PROJECT_TOKEN and POSTHOG_HOST must be configured')
+    if posthog_client is None:
+        posthog_client = Posthog(
+            app.config['POSTHOG_PROJECT_TOKEN'],
+            host=app.config['POSTHOG_HOST'],
+            enable_exception_autocapture=True)
+        atexit.register(posthog_client.shutdown)
+    app.extensions['posthog'] = posthog_client
 
     db.init_app(app)
     migrate.init_app(app, db)
