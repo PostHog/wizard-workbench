@@ -2,6 +2,7 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
+import { posthog } from '../../../services/posthog';
 import { isDemoMode, demoTeams } from '../../../services/demoData';
 
 import { getTeamsSuccess, createTeamSuccess, closeTeamModal } from './actions';
@@ -34,6 +35,7 @@ export function* createTeam({ payload }) {
       const newTeam = { id: Date.now(), name, slug };
       yield put(createTeamSuccess(newTeam));
       yield put(closeTeamModal());
+      yield call([posthog, 'capture'], 'team_created', { source: 'demo' });
       toast.showSuccess('Team created');
       return;
     }
@@ -42,9 +44,13 @@ export function* createTeam({ payload }) {
 
     yield put(createTeamSuccess(response.data));
     yield put(closeTeamModal());
+    yield call([posthog, 'capture'], 'team_created', { source: 'api' });
 
     toast.showSuccess('Team created');
   } catch (err) {
+    yield call([posthog, 'captureException'], err, {
+      flow: 'create_team',
+    });
     toast.showError('Error creating team');
   }
 }
@@ -53,6 +59,9 @@ export function* selectActiveTeam({ payload }) {
   const { team } = payload;
 
   yield call([AsyncStorage, 'setItem'], '@Omni:team', JSON.stringify(team));
+  yield call([posthog, 'capture'], 'team_selected', {
+    team_id: String(team.id),
+  });
 
   yield put(getProjectsRequest());
 }
