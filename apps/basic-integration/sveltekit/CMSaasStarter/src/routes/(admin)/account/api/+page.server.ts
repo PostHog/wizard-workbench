@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -27,6 +28,16 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: "email_subscription_updated",
+      properties: {
+        unsubscribed: newUnsubscribedStatus,
+      },
+    })
+    await posthog.flush()
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -221,6 +232,13 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+    })
+    await posthog.flush()
+
     await supabase.auth.signOut()
     redirect(303, "/")
   },
@@ -322,6 +340,25 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog.identify({
+      distinctId: user.id,
+      properties: {
+        email: user.email,
+        name: fullName,
+        company_name: companyName,
+        website,
+      },
+    })
+    posthog.capture({
+      distinctId: user.id,
+      event: "profile_saved",
+      properties: {
+        is_new_profile: newProfile,
+      },
+    })
+    await posthog.flush()
+
     return {
       fullName,
       companyName,
@@ -331,6 +368,13 @@ export const actions = {
   signout: async ({ locals: { supabase, safeGetSession } }) => {
     const { session } = await safeGetSession()
     if (session) {
+      const posthog = getPostHogClient()
+      posthog.capture({
+        distinctId: session.user.id,
+        event: "user_signed_out",
+      })
+      await posthog.flush()
+
       await supabase.auth.signOut()
       redirect(303, "/")
     } else {
