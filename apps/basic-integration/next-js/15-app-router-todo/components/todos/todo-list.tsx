@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -29,12 +30,22 @@ export function TodoList() {
     }
   };
 
+  const analyticsHeaders = () => ({
+    'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id(),
+    'X-POSTHOG-SESSION-ID': posthog.get_session_id(),
+  });
+
   const handleAddTodo = async (title: string, description: string) => {
+    posthog.capture('todo_create_submitted', {
+      has_description: description.trim().length > 0,
+    });
+
     try {
       const response = await fetch('/api/todos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...analyticsHeaders(),
         },
         body: JSON.stringify({ title, description }),
       });
@@ -44,16 +55,22 @@ export function TodoList() {
         setTodos([...todos, newTodo]);
       }
     } catch (error) {
+      posthog.captureException(error);
       console.error('Failed to add todo:', error);
     }
   };
 
   const handleToggleTodo = async (id: number, completed: boolean) => {
+    posthog.capture('todo_completion_toggled', {
+      completed,
+    });
+
     try {
       const response = await fetch(`/api/todos/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          ...analyticsHeaders(),
         },
         body: JSON.stringify({ completed }),
       });
@@ -63,20 +80,27 @@ export function TodoList() {
         setTodos(todos.map((todo) => (todo.id === id ? updatedTodo : todo)));
       }
     } catch (error) {
+      posthog.captureException(error);
       console.error('Failed to update todo:', error);
     }
   };
 
   const handleDeleteTodo = async (id: number) => {
+    posthog.capture('todo_delete_requested', {
+      was_completed: todos.find((todo) => todo.id === id)?.completed ?? false,
+    });
+
     try {
       const response = await fetch(`/api/todos/${id}`, {
         method: 'DELETE',
+        headers: analyticsHeaders(),
       });
 
       if (response.ok) {
         setTodos(todos.filter((todo) => todo.id !== id));
       }
     } catch (error) {
+      posthog.captureException(error);
       console.error('Failed to delete todo:', error);
     }
   };
