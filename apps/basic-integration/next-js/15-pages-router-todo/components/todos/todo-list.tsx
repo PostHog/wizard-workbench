@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -10,6 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export function TodoList() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const posthogHeaders = () => ({
+    'X-PostHog-Distinct-ID': posthog.get_distinct_id(),
+    'X-PostHog-Session-ID': posthog.get_session_id(),
+  });
 
   useEffect(() => {
     fetchTodos();
@@ -23,6 +29,7 @@ export function TodoList() {
         setTodos(data);
       }
     } catch (error) {
+      posthog.captureException(error);
       console.error('Failed to fetch todos:', error);
     } finally {
       setLoading(false);
@@ -35,6 +42,7 @@ export function TodoList() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...posthogHeaders(),
         },
         body: JSON.stringify({ title, description }),
       });
@@ -44,6 +52,7 @@ export function TodoList() {
         setTodos([...todos, newTodo]);
       }
     } catch (error) {
+      posthog.captureException(error);
       console.error('Failed to add todo:', error);
     }
   };
@@ -54,6 +63,7 @@ export function TodoList() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          ...posthogHeaders(),
         },
         body: JSON.stringify({ completed }),
       });
@@ -63,6 +73,7 @@ export function TodoList() {
         setTodos(todos.map((todo) => (todo.id === id ? updatedTodo : todo)));
       }
     } catch (error) {
+      posthog.captureException(error);
       console.error('Failed to update todo:', error);
     }
   };
@@ -71,12 +82,14 @@ export function TodoList() {
     try {
       const response = await fetch(`/api/todos/${id}`, {
         method: 'DELETE',
+        headers: posthogHeaders(),
       });
 
       if (response.ok) {
         setTodos(todos.filter((todo) => todo.id !== id));
       }
     } catch (error) {
+      posthog.captureException(error);
       console.error('Failed to delete todo:', error);
     }
   };
