@@ -1,0 +1,8 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+posthog-rs = "0.20"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
