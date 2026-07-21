@@ -25,6 +25,29 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+import { getPostHogClient } from '@/lib/posthog-server';
+
+async function captureUserEvent(
+  user: User,
+  event: string,
+  properties: Record<string, string | number | boolean | null | undefined> = {}
+) {
+  const posthog = getPostHogClient();
+  posthog.identify({
+    distinctId: String(user.id),
+    properties: {
+      email: user.email,
+      name: user.name,
+      role: user.role
+    }
+  });
+  posthog.capture({
+    distinctId: String(user.id),
+    event,
+    properties
+  });
+  await posthog.flush();
+}
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -88,7 +111,11 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   await Promise.all([
     setSession(foundUser),
-    logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
+    logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN),
+    captureUserEvent(foundUser, 'user_signed_in', {
+      team_id: foundTeam?.id,
+      redirect_to_checkout: formData.get('redirect') === 'checkout'
+    })
   ]);
 
   const redirectTo = formData.get('redirect') as string | null;
@@ -209,7 +236,12 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   await Promise.all([
     db.insert(teamMembers).values(newTeamMember),
     logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
-    setSession(createdUser)
+    setSession(createdUser),
+    captureUserEvent(createdUser, 'user_signed_up', {
+      team_id: teamId,
+      role: userRole,
+      accepted_invitation: Boolean(inviteId)
+    })
   ]);
 
   const redirectTo = formData.get('redirect') as string | null;
@@ -224,7 +256,12 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 export async function signOut() {
   const user = (await getUser()) as User;
   const userWithTeam = await getUserWithTeam(user.id);
-  await logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT);
+  await Promise.all([
+    logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT),
+    captureUserEvent(user, 'user_signed_out', {
+      team_id: userWithTeam?.teamId
+    })
+  ]);
   (await cookies()).delete('session');
 }
 
@@ -279,7 +316,10 @@ export const updatePassword = validatedActionWithUser(
         .update(users)
         .set({ passwordHash: newPasswordHash })
         .where(eq(users.id, user.id)),
-      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PASSWORD)
+      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PASSWORD),
+      captureUserEvent(user, 'password_updated', {
+        team_id: userWithTeam?.teamId
+      })
     ]);
 
     return {
@@ -333,6 +373,9 @@ export const deleteAccount = validatedActionWithUser(
         );
     }
 
+    await captureUserEvent(user, 'account_deleted', {
+      team_id: userWithTeam?.teamId
+    });
     (await cookies()).delete('session');
     redirect('/sign-in');
   }
@@ -351,7 +394,12 @@ export const updateAccount = validatedActionWithUser(
 
     await Promise.all([
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
-      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
+      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT),
+      captureUserEvent(
+        { ...user, name, email },
+        'account_updated',
+        { team_id: userWithTeam?.teamId }
+      )
     ]);
 
     return { name, success: 'Account updated successfully.' };
@@ -381,11 +429,17 @@ export const removeTeamMember = validatedActionWithUser(
         )
       );
 
-    await logActivity(
-      userWithTeam.teamId,
-      user.id,
-      ActivityType.REMOVE_TEAM_MEMBER
-    );
+    await Promise.all([
+      logActivity(
+        userWithTeam.teamId,
+        user.id,
+        ActivityType.REMOVE_TEAM_MEMBER
+      ),
+      captureUserEvent(user, 'team_member_removed', {
+        team_id: userWithTeam.teamId,
+        member_id: memberId
+      })
+    ]);
 
     return { success: 'Team member removed successfully' };
   }
@@ -445,11 +499,17 @@ export const inviteTeamMember = validatedActionWithUser(
       status: 'pending'
     });
 
-    await logActivity(
-      userWithTeam.teamId,
-      user.id,
-      ActivityType.INVITE_TEAM_MEMBER
-    );
+    await Promise.all([
+      logActivity(
+        userWithTeam.teamId,
+        user.id,
+        ActivityType.INVITE_TEAM_MEMBER
+      ),
+      captureUserEvent(user, 'team_member_invited', {
+        team_id: userWithTeam.teamId,
+        invited_role: role
+      })
+    ]);
 
     // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
     // await sendInvitationEmail(email, userWithTeam.team.name, role)

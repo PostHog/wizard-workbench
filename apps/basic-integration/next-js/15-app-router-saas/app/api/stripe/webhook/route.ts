@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
 import { NextRequest, NextResponse } from 'next/server';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 // Use a dummy webhook secret for stub mode
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_stub_secret';
@@ -14,6 +15,9 @@ export async function POST(request: NextRequest) {
   try {
     event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
   } catch (err) {
+    const posthog = getPostHogClient();
+    posthog.captureException(err, 'stripe_webhook');
+    await posthog.flush();
     console.error('Webhook signature verification failed.', err);
     return NextResponse.json(
       { error: 'Webhook signature verification failed.' },
@@ -23,10 +27,26 @@ export async function POST(request: NextRequest) {
 
   switch (event.type) {
     case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
+    case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: String(subscription.customer),
+        event:
+          event.type === 'customer.subscription.updated'
+            ? 'subscription_updated'
+            : 'subscription_deleted',
+        properties: {
+          subscription_id: subscription.id,
+          subscription_status: subscription.status,
+          stripe_event_id: event.id
+        }
+      });
+      await posthog.flush();
       break;
+    }
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
