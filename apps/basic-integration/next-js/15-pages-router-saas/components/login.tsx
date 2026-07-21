@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
+import { getPostHogCorrelationHeaders } from '@/lib/posthog-client';
 
 export function Login({
   mode = 'signin',
@@ -43,7 +45,8 @@ export function Login({
         const response = await fetch(`/api/auth/${mode === 'signin' ? 'sign-in' : 'sign-up'}`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...getPostHogCorrelationHeaders()
           },
           body: JSON.stringify(data)
         });
@@ -57,6 +60,13 @@ export function Login({
           return;
         }
 
+        if (result.userId) {
+          posthog.identify(String(result.userId), {
+            email: data.email,
+            role: result.role
+          });
+        }
+
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
@@ -64,6 +74,7 @@ export function Login({
           window.location.href = result.url;
         }
       } catch (err) {
+        posthog.captureException(err);
         setError('An unexpected error occurred. Please try again.');
       }
     });
