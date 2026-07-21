@@ -111,16 +111,17 @@ export function findApps(appsDir: string): App[] {
       const isWizardRoot = existsSync(join(fullPath, ".wizard-root"));
 
       // Check for JS/TS projects (package.json), Python projects (manage.py for Django, requirements.txt),
-      // Android projects (build.gradle or build.gradle.kts), or Swift/Xcode projects
+      // Android projects (build.gradle or build.gradle.kts), Rust projects (Cargo.toml), or Swift/Xcode projects
       const isJsProject = existsSync(join(fullPath, "package.json"));
       const isDjangoProject = existsSync(join(fullPath, "manage.py"));
       const isPythonProject = existsSync(join(fullPath, "requirements.txt")) || existsSync(join(fullPath, "pyproject.toml"));
       const isAndroidProject = existsSync(join(fullPath, "build.gradle")) || existsSync(join(fullPath, "build.gradle.kts"));
       const isRailsProject = existsSync(join(fullPath, "Gemfile")) && existsSync(join(fullPath, "config.ru"));
+      const isRustProject = existsSync(join(fullPath, "Cargo.toml"));
       const isSwiftProject = existsSync(join(fullPath, "Package.swift")) ||
         readdirSync(fullPath).some(f => f.endsWith(".xcodeproj"));
 
-      if (isWizardRoot || isJsProject || isDjangoProject || isPythonProject || isAndroidProject || isRailsProject || isSwiftProject) {
+      if (isWizardRoot || isJsProject || isDjangoProject || isPythonProject || isAndroidProject || isRailsProject || isRustProject || isSwiftProject) {
         apps.push({ name: relativePath, path: fullPath });
       } else {
         scan(fullPath, relativePath);

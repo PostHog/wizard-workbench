@@ -3,4 +3,10 @@ name = "rust-app"
 version = "0.1.0"
 edition = "2021"
 
+# Intentionally no [profile.release] debug-info settings: the
+# upload-source-maps skill's "keep debug info in release builds" gotcha
+# requires the agent to add them, so the fixture must start without.
+
 [dependencies]
+posthog-rs = "0.20"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
