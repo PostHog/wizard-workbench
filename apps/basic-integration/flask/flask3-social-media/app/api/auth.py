@@ -1,5 +1,7 @@
 import sqlalchemy as sa
+from flask import current_app
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
+from posthog import identify_context
 from app import db
 from app.models import User
 from app.api.errors import error_response
@@ -12,6 +14,13 @@ token_auth = HTTPTokenAuth()
 def verify_password(username, password):
     user = db.session.scalar(sa.select(User).where(User.username == username))
     if user and user.check_password(password):
+        posthog_client = current_app.posthog
+        if posthog_client is not None:
+            identify_context(str(user.id))
+            posthog_client.set(
+                distinct_id=str(user.id),
+                properties={'email': user.email, 'username': user.username},
+            )
         return user
 
 
@@ -22,7 +31,16 @@ def basic_auth_error(status):
 
 @token_auth.verify_token
 def verify_token(token):
-    return User.check_token(token) if token else None
+    user = User.check_token(token) if token else None
+    if user is not None:
+        posthog_client = current_app.posthog
+        if posthog_client is not None:
+            identify_context(str(user.id))
+            posthog_client.set(
+                distinct_id=str(user.id),
+                properties={'email': user.email, 'username': user.username},
+            )
+    return user
 
 
 @token_auth.error_handler

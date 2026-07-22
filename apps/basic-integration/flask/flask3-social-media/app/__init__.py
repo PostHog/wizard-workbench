@@ -1,7 +1,11 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+
+from posthog import Posthog, identify_context, new_context, set_context_session
+from flask import Flask, g, request, current_app
+from flask_login import current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -45,6 +49,51 @@ def create_app(config_class=Config):
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
+
+    if app.config['POSTHOG_PROJECT_TOKEN'] and app.config['POSTHOG_HOST']:
+        app.posthog = Posthog(
+            project_api_key=app.config['POSTHOG_PROJECT_TOKEN'],
+            host=app.config['POSTHOG_HOST'],
+            enable_exception_autocapture=True,
+        )
+        atexit.register(app.posthog.shutdown)
+    else:
+        app.posthog = None
+        if app.debug:
+            missing_variable = 'POSTHOG_PROJECT_TOKEN' \
+                if not app.config['POSTHOG_PROJECT_TOKEN'] else 'POSTHOG_HOST'
+            raise RuntimeError(
+                f'{missing_variable} variable required by PostHog is missing '
+                'or un-configured, this causes events to be silently missed. '
+                f'This error stops appearing once {missing_variable} is '
+                'configured')
+
+    @app.before_request
+    def bind_posthog_request_context():
+        if app.posthog is None:
+            return
+
+        context = new_context(fresh=True)
+        context.__enter__()
+        g.posthog_context = context
+
+        if current_user.is_authenticated:
+            identify_context(str(current_user.id))
+        else:
+            distinct_id = request.headers.get('X-POSTHOG-DISTINCT-ID')
+            if distinct_id:
+                identify_context(distinct_id)
+
+        session_id = request.headers.get('X-POSTHOG-SESSION-ID')
+        if session_id:
+            set_context_session(session_id)
+
+    @app.teardown_request
+    def close_posthog_request_context(error=None):
+        context = g.pop('posthog_context', None)
+        if context is not None:
+            context.__exit__(None, None, None)
+
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if Elasticsearch and app.config['ELASTICSEARCH_URL'] else None
     if Redis and rq:
