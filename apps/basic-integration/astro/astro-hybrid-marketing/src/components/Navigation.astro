@@ -4,18 +4,26 @@ const currentPath = Astro.url.pathname;
 
 <nav class="nav">
   <div class="container nav-inner">
-    <a href="/" class="nav-logo">
+    <a href="/" class="nav-logo" data-posthog-event="logo_clicked">
       <span>NeuralFlow</span> AI
     </a>
     <ul class="nav-links">
-      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]}>Features</a></li>
-      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
-      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
-      <li><a href="/contact" class:list={["nav-link", { active: currentPath === '/contact' }]}>Contact</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/features" data-posthog-event="features_navigation_clicked" class:list={["nav-link", { active: currentPath === '/features' }]}>Features</a></li>
+      <li><a href="/pricing" data-posthog-event="pricing_navigation_clicked" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
+      <li><a href="/about" data-posthog-event="about_navigation_clicked" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
+      <li><a href="/contact" data-posthog-event="contact_navigation_clicked" class:list={["nav-link", { active: currentPath === '/contact' }]}>Contact</a></li>
+      <li><a href="#" data-posthog-event="navigation_get_started_clicked" class="nav-cta">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.querySelectorAll('.nav [data-posthog-event]').forEach((link) => {
+    link.addEventListener('click', () => {
+      window.posthog?.capture(link.dataset.posthogEvent);
+    });
+  });
+</script>
 
 <style>
   .nav-link.active {
