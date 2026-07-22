@@ -3,6 +3,12 @@
 
 export const DEMO_TOKEN = 'demo-token-12345';
 
+export const DEMO_USER = {
+  id: 6,
+  name: 'Demo User',
+  email: 'demo@test.com',
+};
+
 export const demoTeams = [
   { id: 1, name: 'Acme Corp', slug: 'acme-corp' },
   { id: 2, name: 'Startup Inc', slug: 'startup-inc' },
