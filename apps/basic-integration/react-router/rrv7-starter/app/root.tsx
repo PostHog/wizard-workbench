@@ -20,6 +20,8 @@ import Footer from '@/components/footer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+import posthog from '@/lib/posthog.client'
+import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react'
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -88,7 +90,7 @@ export default function App() {
 
   const location = useLocation()
 
-  return (
+  const content = (
     <RouteTransitionManager
       appear
       routes={routes}
@@ -128,6 +130,14 @@ export default function App() {
         </main>
       )}
     </RouteTransitionManager>
+  )
+
+  return posthog ? (
+    <PostHogProvider client={posthog}>
+      <PostHogErrorBoundary>{content}</PostHogErrorBoundary>
+    </PostHogProvider>
+  ) : (
+    content
   )
 }
 
