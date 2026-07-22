@@ -4,6 +4,7 @@ import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   signInSuccess,
@@ -39,7 +40,13 @@ export function* signIn({ payload }) {
 
     // Demo mode - login with demo@test.com / demo
     if (email === 'demo@test.com' && password === 'demo') {
+      // The demo mode has no user primary key, so its login email is the only
+      // stable identifier available for the simulated account.
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
+      if (posthog) {
+        posthog.identify(email, { $set: { email } });
+        posthog.capture('account_signed_in', { sign_in_method: 'demo' });
+      }
       yield put(signInSuccess(DEMO_TOKEN));
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
@@ -49,17 +56,37 @@ export function* signIn({ payload }) {
     }
 
     const response = yield call(api.post, 'sessions', { email, password });
+    const user = response.data.user;
 
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
+
+    if (posthog && user && user.id) {
+      posthog.identify(
+        String(user.id),
+        user.email ? { $set: { email: user.email } } : undefined,
+      );
+    }
+
+    if (posthog) {
+      posthog.capture('account_signed_in', { sign_in_method: 'password' });
+    }
 
     yield put(signInSuccess(response.data.token));
     NavigationService.navigate('Main');
   } catch (err) {
+    if (posthog) {
+      posthog.capture('sign_in_failed', { sign_in_method: 'password' });
+    }
     toast.showError('Invalid credentials');
   }
 }
 
 export function* signOut() {
+  if (posthog) {
+    posthog.capture('account_signed_out');
+    posthog.reset();
+  }
+
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
