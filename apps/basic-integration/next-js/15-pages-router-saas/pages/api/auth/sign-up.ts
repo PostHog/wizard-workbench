@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -119,7 +120,15 @@ export default async function handler(
           .set({ status: 'accepted' })
           .where(eq(invitations.id, invitation.id));
 
-        await logActivity(teamId, createdUser.id, ActivityType.ACCEPT_INVITATION);
+        await logActivity(
+          teamId,
+          createdUser.id,
+          ActivityType.ACCEPT_INVITATION
+        );
+        await captureServerEvent(String(createdUser.id), 'invitation_accepted', {
+          team_id: teamId,
+          role: userRole
+        });
 
         [createdTeam] = await db
           .select()
@@ -152,6 +161,9 @@ export default async function handler(
       userRole = 'owner';
 
       await logActivity(teamId, createdUser.id, ActivityType.CREATE_TEAM);
+      await captureServerEvent(String(createdUser.id), 'team_created', {
+        team_id: teamId
+      });
     }
 
     const newTeamMember: NewTeamMember = {
@@ -165,6 +177,10 @@ export default async function handler(
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
       setSession(createdUser, res)
     ]);
+    await captureServerEvent(String(createdUser.id), 'sign_up_completed', {
+      team_id: teamId,
+      joined_via_invitation: Boolean(inviteId)
+    });
 
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({
@@ -175,7 +191,11 @@ export default async function handler(
       return res.status(200).json(checkoutResult);
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      userId: createdUser.id
+    });
   } catch (error) {
     console.error('Sign up error:', error);
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });

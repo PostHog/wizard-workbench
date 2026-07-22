@@ -5,6 +5,7 @@ import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -95,6 +96,10 @@ export default async function handler(
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    await captureServerEvent(String(user[0].id), 'checkout_completed', {
+      team_id: userTeam[0].teamId,
+      subscription_status: subscription.status
+    });
     return res.redirect('/dashboard');
   } catch (error) {
     console.error('Error handling successful checkout:', error);

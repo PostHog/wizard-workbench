@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -58,6 +59,9 @@ export function Login({
         }
 
         if (result.success && result.redirectTo) {
+          if (typeof result.userId === 'number') {
+            posthog.identify(String(result.userId));
+          }
           router.push(result.redirectTo);
         } else if (result.url) {
           // Stripe checkout redirect
