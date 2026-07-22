@@ -10,8 +10,8 @@ import { BlurView } from "expo-blur";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 import { ListFilter, LucideIcon } from "lucide-react-native";
-
 import { Colors } from "@/constants/Colors";
+import { posthog } from "@/lib/posthog";
 import { StoryType } from "@/constants/stories";
 
 export type Option = {
@@ -86,6 +86,9 @@ export const StoriesSelect = ({
                 key={item.id}
                 style={[styles.option, isSelected && styles.optionSelected]}
                 onPress={() => {
+                  posthog?.capture("story_feed_selected", {
+                    story_type: item.id,
+                  });
                   onChange(item.id);
                   setIsOpen(false);
                 }}

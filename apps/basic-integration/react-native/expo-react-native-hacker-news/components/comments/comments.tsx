@@ -4,6 +4,7 @@ import { FlatList, ListRenderItem, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Spinner } from "@/components/Spinner";
+import { posthog } from "@/lib/posthog";
 import { Comment } from "@/components/comments/comment";
 
 import type { Item } from "@/shared/types";
@@ -57,7 +58,12 @@ export const Comments = ({ id, kids, children }: Props) => {
       data={comments}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage) {
+          posthog?.capture("comments_load_more", {
+            item_id: id,
+          });
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}

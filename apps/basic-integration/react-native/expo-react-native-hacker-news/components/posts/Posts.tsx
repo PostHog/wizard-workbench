@@ -3,6 +3,7 @@ import { FlatList, ListRenderItem, View } from "react-native";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import { Post } from "@/components/posts/Post";
+import { posthog } from "@/lib/posthog";
 import { Spinner } from "@/components/Spinner";
 
 import type { Item } from "@/shared/types";
@@ -78,7 +79,12 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
       data={posts}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage) {
+          posthog?.capture("story_list_load_more", {
+            story_type: storyType,
+          });
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}

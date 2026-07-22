@@ -4,6 +4,7 @@ import { FlatList, ListRenderItem, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Post } from "@/components/posts/Post";
+import { posthog } from "@/lib/posthog";
 import { Spinner } from "@/components/Spinner";
 import { Comment } from "@/components/comments/comment";
 
@@ -58,7 +59,12 @@ export const Activities = ({ id, submitted, children }: Props) => {
       data={activities}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage) {
+          posthog?.capture("user_activities_load_more", {
+            activity_count: submitted?.length || 0,
+          });
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}

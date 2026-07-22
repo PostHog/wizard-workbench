@@ -15,6 +15,7 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
 
 import { parseTitle } from "@/lib/text";
+import { posthog } from "@/lib/posthog";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
@@ -72,7 +73,14 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              onPress={() => {
+                posthog?.capture("item_author_opened", {
+                  item_id: item.id,
+                });
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -120,6 +128,11 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog?.capture("item_score_pressed", {
+                  item_id: item.id,
+                  item_type: item.type,
+                  score: item.score || 0,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -163,6 +176,9 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog?.capture("item_external_link_opened", {
+                    item_id: item.id,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +210,13 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog?.capture("item_parent_opened", {
+                  item_id: item.id,
+                  parent_item_id: parentItem.id,
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
