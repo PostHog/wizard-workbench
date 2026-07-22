@@ -4,6 +4,7 @@ import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { stripe } from '@/lib/payments/stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
 import Stripe from 'stripe';
 
 export default async function handler(
@@ -93,6 +94,11 @@ export default async function handler(
         updatedAt: new Date()
       })
       .where(eq(teams.id, userTeam[0].teamId));
+
+    await captureServerEvent(user[0].id.toString(), 'checkout_completed', {
+      subscription_status: subscription.status,
+      team_id: userTeam[0].teamId
+    });
 
     await setSession(user[0]);
     return res.redirect('/dashboard');
