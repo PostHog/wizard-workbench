@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import type { Person } from '~/types'
 
-defineProps<{
+const props = defineProps<{
   item: Person
 }>()
+const { $posthog } = useNuxtApp()
+
+function trackPersonOpened() {
+  $posthog?.capture('person_opened', {
+    person_id: props.item.id,
+  })
+}
 </script>
 
 <template>
-  <NuxtLink :to="`/person/${item.id}`">
+  <NuxtLink :to="`/person/${item.id}`" @click="trackPersonOpened">
     <div
       block bg-gray4:10 p1
       class="aspect-10/16"
