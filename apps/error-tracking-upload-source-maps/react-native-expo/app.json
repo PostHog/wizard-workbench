@@ -6,7 +6,11 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ablaszkiewicz.reactnativeexpo"
+    },
+    "android": {
+      "package": "com.ablaszkiewicz.reactnativeexpo"
     }
   }
 }
