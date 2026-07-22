@@ -91,6 +91,7 @@ import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -137,6 +138,7 @@ fun ConversationContent(
                 uiState.addMessage(
                     Message(authorMe, clipData.getItemAt(0).text.toString(), timeNow),
                 )
+                PostHog.capture("message_dropped")
 
                 return true
             }
@@ -203,6 +205,7 @@ fun ConversationContent(
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )
+                    PostHog.capture("message_sent")
                 },
                 resetScroll = {
                     scope.launch {
@@ -255,7 +258,13 @@ fun ChannelNameBar(
                 painterResource(id = R.drawable.ic_search),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
-                    .clickable(onClick = { functionalityNotAvailablePopupShown = true })
+                    .clickable(onClick = {
+                        PostHog.capture(
+                            "conversation_utility_selected",
+                            mapOf("utility" to "search"),
+                        )
+                        functionalityNotAvailablePopupShown = true
+                    })
                     .padding(horizontal = 12.dp, vertical = 16.dp)
                     .height(24.dp),
                 contentDescription = stringResource(id = R.string.search),
@@ -265,7 +274,13 @@ fun ChannelNameBar(
                 painterResource(id = R.drawable.ic_info),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
-                    .clickable(onClick = { functionalityNotAvailablePopupShown = true })
+                    .clickable(onClick = {
+                        PostHog.capture(
+                            "conversation_utility_selected",
+                            mapOf("utility" to "info"),
+                        )
+                        functionalityNotAvailablePopupShown = true
+                    })
                     .padding(horizontal = 12.dp, vertical = 16.dp)
                     .height(24.dp),
                 contentDescription = stringResource(id = R.string.info),
@@ -309,7 +324,10 @@ fun Messages(messages: List<Message>, navigateToProfile: (String) -> Unit, scrol
 
                 item {
                     Message(
-                        onAuthorClick = { name -> navigateToProfile(name) },
+                        onAuthorClick = { name ->
+                            PostHog.capture("profile_selected")
+                            navigateToProfile(name)
+                        },
                         msg = content,
                         isUserMe = content.author == authorMe,
                         isFirstMessageByAuthor = isFirstMessageByAuthor,

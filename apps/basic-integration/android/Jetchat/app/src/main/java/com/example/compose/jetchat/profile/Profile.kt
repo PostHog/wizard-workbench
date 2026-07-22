@@ -68,6 +68,7 @@ import com.example.compose.jetchat.components.baselineHeight
 import com.example.compose.jetchat.data.colleagueProfile
 import com.example.compose.jetchat.data.meProfile
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -111,7 +112,13 @@ fun ProfileScreen(
                 .align(Alignment.BottomEnd)
                 // Offsets the FAB to compensate for CoordinatorLayout collapsing behaviour
                 .offset(y = ((-100).dp)),
-            onFabClicked = { functionalityNotAvailablePopupShown = true },
+            onFabClicked = {
+                PostHog.capture(
+                    "profile_action_selected",
+                    mapOf("action" to if (userData.isMe()) "edit" else "message"),
+                )
+                functionalityNotAvailablePopupShown = true
+            },
         )
     }
 }
