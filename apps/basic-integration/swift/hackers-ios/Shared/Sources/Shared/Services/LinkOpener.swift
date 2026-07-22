@@ -6,6 +6,7 @@
 //
 
 import Domain
+import PostHog
 import SafariServices
 import SwiftUI
 
@@ -31,10 +32,20 @@ public enum LinkOpener {
         SFSafariViewController(url: url, configuration: configuration)
     }
 
-    public static func openURL(_ url: URL, with _: Post? = nil) {
-        // Determine user preference for opening links via injected settings use case
+    public static func openURL(_ url: URL, with post: Post? = nil) {
         let settings = settingsProvider()
         let preferSystemBrowser = settings.openInDefaultBrowser || isRunningOnMac
+
+        if isWebURL(url) {
+            var properties: [String: Any] = ["open_in_default_browser": preferSystemBrowser]
+            if let post {
+                properties["post_id"] = post.id
+                properties["post_type"] = post.postType.rawValue
+            }
+            PostHogSDK.shared.capture("link_opened", properties: properties)
+        }
+
+        // Determine user preference for opening links via injected settings use case
 
         // For http/https, either open in-app (SFSafariViewController) or system browser based on preference
         if isWebURL(url) {

@@ -7,6 +7,7 @@
 
 import DesignSystem
 import Domain
+import PostHog
 import Shared
 import SwiftUI
 
@@ -349,6 +350,7 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
     private func postTypeMenuButton(for postType: Domain.PostType) -> some View {
         Button {
             selectedPostType = postType
+            PostHogSDK.shared.capture("feed_category_selected", properties: ["feed_category": postType.rawValue])
             Task {
                 await viewModel.changePostType(postType)
             }
@@ -378,7 +380,7 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
         if navigationStore.openURLInPrimaryContext(post.url, pushOntoDetailStack: !isSidebar) {
             return
         }
-        LinkOpener.openURL(post.url, with: nil)
+        LinkOpener.openURL(post.url, with: post)
     }
 
     private func isHackerNewsItemURL(_ url: URL) -> Bool {

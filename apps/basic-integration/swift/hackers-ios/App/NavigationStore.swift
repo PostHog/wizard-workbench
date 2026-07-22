@@ -8,6 +8,7 @@
 import Combine
 import Domain
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 import UIKit
@@ -51,6 +52,7 @@ class NavigationStore: NavigationStoreProtocol {
         detailPath.removeAll()
         selectedPost = post
         selectedPostId = post.id
+        PostHogSDK.shared.capture("post_opened", properties: ["post_id": post.id, "post_type": post.postType.rawValue])
 
         // For iPhone navigation, use NavigationPath
         if UIDevice.current.userInterfaceIdiom != .pad && !isRunningOnMac {
@@ -63,6 +65,7 @@ class NavigationStore: NavigationStoreProtocol {
         detailPath.removeAll()
         selectedPost = nil
         selectedPostId = id
+        PostHogSDK.shared.capture("post_opened", properties: ["post_id": id])
 
         if UIDevice.current.userInterfaceIdiom != .pad && !isRunningOnMac {
             path.append(NavigationDestination.comments(postID: id))

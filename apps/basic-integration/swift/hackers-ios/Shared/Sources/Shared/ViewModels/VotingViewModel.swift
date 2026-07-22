@@ -7,6 +7,7 @@
 
 import Domain
 import Foundation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -59,6 +60,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.upvote(item: postForVoting)
+            PostHogSDK.shared.capture("post_upvoted", properties: ["post_id": post.id, "post_type": post.postType.rawValue])
 
         } catch {
             // Revert optimistic changes on error
@@ -96,6 +98,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.unvote(item: postForVoting)
+            PostHogSDK.shared.capture("post_unvoted", properties: ["post_id": post.id, "post_type": post.postType.rawValue])
 
         } catch {
             // Revert optimistic changes on error
@@ -128,6 +131,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.upvoteComment(commentForVoting, for: post)
+            PostHogSDK.shared.capture("comment_upvoted", properties: ["comment_id": comment.id, "post_id": post.id])
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = false
@@ -155,6 +159,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.unvoteComment(commentForVoting, for: post)
+            PostHogSDK.shared.capture("comment_unvoted", properties: ["comment_id": comment.id, "post_id": post.id])
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = true

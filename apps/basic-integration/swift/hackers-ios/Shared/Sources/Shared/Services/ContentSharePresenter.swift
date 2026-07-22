@@ -6,6 +6,7 @@
 //
 
 import Domain
+import PostHog
 import SwiftUI
 import UIKit
 
@@ -16,6 +17,7 @@ public final class ContentSharePresenter: @unchecked Sendable {
 
     @MainActor
     public func sharePost(_ post: Post) {
+        PostHogSDK.shared.capture("post_shared", properties: ["post_id": post.id, "post_type": post.postType.rawValue])
         let items: [Any] = [post.title, post.url]
         showShareSheet(items: items)
     }
@@ -32,6 +34,7 @@ public final class ContentSharePresenter: @unchecked Sendable {
 
     @MainActor
     public func shareComment(_ comment: Comment) {
+        PostHogSDK.shared.capture("comment_shared", properties: ["comment_id": comment.id])
         let text = comment.text.strippingHTML()
         let items: [Any] = [text]
         showShareSheet(items: items)

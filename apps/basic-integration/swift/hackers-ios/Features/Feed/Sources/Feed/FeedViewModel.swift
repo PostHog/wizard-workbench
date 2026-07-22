@@ -9,6 +9,7 @@ import Combine
 import Domain
 import Foundation
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 
@@ -311,6 +312,7 @@ public final class FeedViewModel: @unchecked Sendable {
                 await MainActor.run {
                     self.searchResults = annotated
                     self.isSearchInProgress = false
+                    PostHogSDK.shared.capture("search_completed", properties: ["result_count": annotated.count])
                 }
             } catch {
                 if Task.isCancelled { return }
