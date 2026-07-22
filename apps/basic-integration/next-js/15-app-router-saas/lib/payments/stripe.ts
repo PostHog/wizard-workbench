@@ -6,6 +6,7 @@ import {
   getUser,
   updateTeamSubscription
 } from '@/lib/db/queries';
+import { captureServerEvent } from '@/lib/posthog-server';
 import { stripeStub } from './stripe-stub';
 
 // Use stub if STRIPE_MODE=stub or if STRIPE_SECRET_KEY is missing/invalid
@@ -54,6 +55,12 @@ export async function createCheckoutSession({
     subscription_data: {
       trial_period_days: 14
     }
+  });
+
+  await captureServerEvent({
+    distinctId: user.id.toString(),
+    event: 'checkout_started',
+    properties: { team_id: team.id, price_id: priceId }
   });
 
   redirect(session.url!);
@@ -149,12 +156,24 @@ export async function handleSubscriptionChange(
       planName: (plan?.product as Stripe.Product).name,
       subscriptionStatus: status
     });
+    await captureServerEvent({
+      distinctId: `stripe_subscription:${subscriptionId}`,
+      event: 'subscription_updated',
+      properties: { team_id: team.id, subscription_status: status },
+      processPersonProfile: false
+    });
   } else if (status === 'canceled' || status === 'unpaid') {
     await updateTeamSubscription(team.id, {
       stripeSubscriptionId: null,
       stripeProductId: null,
       planName: null,
       subscriptionStatus: status
+    });
+    await captureServerEvent({
+      distinctId: `stripe_subscription:${subscriptionId}`,
+      event: 'subscription_canceled',
+      properties: { team_id: team.id, subscription_status: status },
+      processPersonProfile: false
     });
   }
 }
