@@ -4,7 +4,6 @@
   "main": "index.js",
   "dependencies": {
     "expo": "~57.0.7",
-    "expo-file-system": "~19.0.7",
     "expo-status-bar": "~57.0.1",
     "posthog-react-native": "^4.58.0",
     "react": "19.2.3",
