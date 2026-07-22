@@ -47,6 +47,7 @@ import {
   REFERRAL_SOURCE_OPTIONS,
 } from "~/features/onboarding/organization/onboarding-organization-schemas";
 import { getPageTitle } from "~/utils/get-page-title.server";
+import posthog from "~/lib/posthog.client";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const auth = await requireUserNeedsOnboarding({
@@ -100,6 +101,7 @@ export default function OrganizationOnboardingRoute({
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      onSubmit={() => posthog.capture("onboarding_organization_submitted")}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>

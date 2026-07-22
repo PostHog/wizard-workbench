@@ -42,6 +42,7 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import type { Organization } from "~/generated/browser";
+import posthog from "~/lib/posthog.client";
 import { cn } from "~/lib/utils";
 
 type PendingDowngradeBannerProps = {
@@ -627,7 +628,13 @@ export function BillingPage({
                 {t("cancelSubscriptionModal.changePlan")}
               </Button>
 
-              <Form method="POST" replace>
+              <Form
+                method="POST"
+                onSubmit={() =>
+                  posthog.capture("subscription_cancellation_confirmed")
+                }
+                replace
+              >
                 <Button
                   disabled={isSubmitting}
                   name="intent"

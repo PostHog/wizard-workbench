@@ -29,6 +29,7 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import posthog from "~/lib/posthog.client";
 
 export type CancelOrModifySubscriptionModalContentProps = {
   canCancelSubscription: boolean;
@@ -77,13 +78,23 @@ export function CancelOrModifySubscriptionModalContent({
       (tier === "mid" && isSwitchingToMid) ||
       (tier === "high" && isSwitchingToHigh);
 
+    const captureSubscriptionChange = () =>
+      posthog.capture("subscription_change_requested", {
+        billing_interval: interval,
+        plan_tier: tier,
+      });
+
     // 1. If this is the current tier but only the billing interval is different
     if (isCurrentTier) {
       if (interval !== currentTierInterval) {
         return interval === "annual"
-          ? { children: tModal("switchToAnnualButton") }
+          ? {
+              children: tModal("switchToAnnualButton"),
+              onClick: captureSubscriptionChange,
+            }
           : {
               children: tModal("switchToMonthlyButton"),
+              onClick: captureSubscriptionChange,
               variant: "outline",
             };
       }
@@ -113,8 +124,16 @@ export function CancelOrModifySubscriptionModalContent({
 
     // 3. Default static buttons for upgrade vs downgrade
     return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+      ? {
+          children: tModal("upgradeButton"),
+          disabled: isSubmitting,
+          onClick: captureSubscriptionChange,
+        }
+      : {
+          children: tModal("downgradeButton"),
+          onClick: captureSubscriptionChange,
+          variant: "outline",
+        };
   };
 
   return (

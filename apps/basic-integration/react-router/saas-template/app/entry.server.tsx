@@ -21,6 +21,7 @@ export const streamTimeout = 5000;
 const oneSecond = 1000;
 const nonceLength = 16;
 const MODE = process.env.NODE_ENV ?? "development";
+const POSTHOG_HOST = process.env.VITE_PUBLIC_POSTHOG_HOST;
 
 let mockServerInitialized = false;
 
@@ -107,6 +108,7 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    POSTHOG_HOST,
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],

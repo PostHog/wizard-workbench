@@ -23,6 +23,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "~/components/ui/sidebar";
+import posthog from "~/lib/posthog.client";
 
 export type NavUserProps = {
   user: {
@@ -121,6 +122,7 @@ export function NavUser({ user }: NavUserProps) {
                   <button
                     className="w-full"
                     name="intent"
+                    onClick={() => posthog.reset()}
                     type="submit"
                     value="logout"
                   />
