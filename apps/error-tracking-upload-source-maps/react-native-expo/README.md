@@ -1,9 +1,7 @@
 # Expo source-maps fixture
 
 PostHog SDK installed, no source-map upload configured — run the wizard's
-`upload-source-maps` against this app. Fill `POSTHOG_CLI_API_KEY` in `.env`
-before testing an upload. No `android/`/`ios/` dirs on purpose: the PostHog
-Expo config plugin injects the build hooks at prebuild.
+`upload-source-maps` against this app
 
 ## Setup
 
