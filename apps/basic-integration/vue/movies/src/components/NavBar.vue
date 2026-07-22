@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
+import posthog from 'posthog-js'
 
 const route = useRoute()
 const router = useRouter()
@@ -9,6 +10,11 @@ const { user, logout } = useAuth()
 
 const handleLogout = async () => {
   await logout()
+  posthog.capture('logout_completed')
+}
+
+const captureNavigation = (destination: 'home' | 'movies' | 'tv' | 'search') => {
+  posthog.capture('navigation_selected', { destination })
 }
 
 const isActive = (path: string) => {
@@ -28,6 +34,7 @@ const isActive = (path: string) => {
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :class="{ 'text-primary': isActive('/') && route.path === '/' }"
       aria-label="Home"
+      @click="captureNavigation('home')"
     >
       <span
         :class="isActive('/') && route.path === '/' ? 'i-ph-house-fill text-primary' : 'i-ph-house'"
@@ -40,6 +47,7 @@ const isActive = (path: string) => {
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :class="{ 'text-primary': isActive('/movie') }"
       aria-label="Movies"
+      @click="captureNavigation('movies')"
     >
       <span
         :class="isActive('/movie') ? 'i-ph-film-strip-fill text-primary' : 'i-ph-film-strip'"
@@ -52,6 +60,7 @@ const isActive = (path: string) => {
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :class="{ 'text-primary': isActive('/tv') }"
       aria-label="TV Shows"
+      @click="captureNavigation('tv')"
     >
       <span
         :class="isActive('/tv') ? 'i-ph-television-simple-fill text-primary' : 'i-ph-television-simple'"
@@ -64,6 +73,7 @@ const isActive = (path: string) => {
       class="text-2xl transition-colors hover:text-primary flex items-center justify-center"
       :class="{ 'text-primary': isActive('/search') }"
       aria-label="Search"
+      @click="captureNavigation('search')"
     >
       <span
         :class="isActive('/search') ? 'i-ph-magnifying-glass-fill text-primary' : 'i-ph-magnifying-glass'"

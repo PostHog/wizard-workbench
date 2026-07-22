@@ -5,6 +5,7 @@ import { QUERY_LIST } from '../constants/lists'
 import { listMedia, getMedia } from '../composables/useTMDB'
 import MediaHero from '../components/media/MediaHero.vue'
 import CarouselAutoQuery from '../components/carousel/CarouselAutoQuery.vue'
+import posthog from 'posthog-js'
 
 const type = ref<MediaType>('movie')
 const heroItem = ref<any>({
@@ -17,6 +18,14 @@ const heroItem = ref<any>({
   release_date: '2024-01-01',
   runtime: 120,
 })
+
+const captureFeaturedMediaSelection = () => {
+  posthog.capture('featured_media_selected', {
+    media_id: heroItem.value.id,
+    media_type: type.value,
+    placement: 'home_hero',
+  })
+}
 
 onMounted(async () => {
   try {
@@ -35,7 +44,7 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen bg-black text-white">
     <div v-if="heroItem" class="mb-10">
-      <router-link :to="`/${type}/${heroItem.id}`">
+      <router-link :to="`/${type}/${heroItem.id}`" @click="captureFeaturedMediaSelection">
         <MediaHero :item="heroItem" />
       </router-link>
     </div>
