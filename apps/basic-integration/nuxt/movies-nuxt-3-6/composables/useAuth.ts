@@ -8,6 +8,7 @@ export const useAuth = () => {
   
   const user = useState<string | null>('auth-user', () => cookie.value)
   const isAuthenticated = computed(() => !!user.value)
+  const { $posthog } = useNuxtApp()
 
   const login = async (username: string, password: string) => {
     if (!username?.trim() || !password?.trim()) {
@@ -17,6 +18,12 @@ export const useAuth = () => {
     try {
       const response = await $fetch<{ success: boolean; user: string }>('/api/auth/login', {
         method: 'POST',
+        headers: $posthog
+          ? {
+              'X-POSTHOG-DISTINCT-ID': $posthog.get_distinct_id(),
+              'X-POSTHOG-SESSION-ID': $posthog.get_session_id(),
+            }
+          : undefined,
         body: { username: username.trim(), password },
       })
       
@@ -34,7 +41,15 @@ export const useAuth = () => {
 
   const logout = async () => {
     try {
-      await $fetch('/api/auth/logout', { method: 'POST' })
+      await $fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: $posthog
+          ? {
+              'X-POSTHOG-DISTINCT-ID': $posthog.get_distinct_id(),
+              'X-POSTHOG-SESSION-ID': $posthog.get_session_id(),
+            }
+          : undefined,
+      })
     } catch (error) {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error)

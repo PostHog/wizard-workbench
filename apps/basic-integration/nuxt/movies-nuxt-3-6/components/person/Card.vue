@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import type { Person } from '~/types'
 
-defineProps<{
+const props = defineProps<{
   item: Person
 }>()
+const { $posthog } = useNuxtApp()
+
+function selectPerson() {
+  $posthog?.capture('person_selected', { person_id: props.item.id })
+}
 </script>
 
 <template>
-  <NuxtLink :to="`/person/${item.id}`">
+  <NuxtLink :to="`/person/${item.id}`" @click="selectPerson">
     <div
       block bg-gray4:10 p1
       class="aspect-10/16"
