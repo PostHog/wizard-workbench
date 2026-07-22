@@ -81,10 +81,16 @@ import Layout from '../layouts/Layout.astro';
         messageDiv.textContent = result.message;
         form.reset();
       } else {
+        window.posthog?.capture('contact_form_submission_failed', {
+          failure_type: 'api_error',
+        });
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
       }
     } catch (error) {
+      window.posthog?.capture('contact_form_submission_failed', {
+        failure_type: 'network_error',
+      });
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
     }
