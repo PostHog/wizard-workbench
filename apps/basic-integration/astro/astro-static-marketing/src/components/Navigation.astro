@@ -8,14 +8,39 @@ const currentPath = Astro.url.pathname;
       <span>NeuralFlow</span> AI
     </a>
     <ul class="nav-links">
-      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]}>Features</a></li>
-      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
-      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
-      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/features" class:list={["nav-link", { active: currentPath === '/features' }]} data-posthog-event="feature_page_viewed_from_navigation">Features</a></li>
+      <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]} data-posthog-event="pricing_page_viewed_from_navigation">Pricing</a></li>
+      <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]} data-posthog-event="about_page_viewed_from_navigation">About</a></li>
+      <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]} data-posthog-event="documentation_page_viewed_from_navigation">Docs</a></li>
+      <li><a href="#" class="nav-cta" id="header-get-started">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.querySelectorAll('[data-posthog-event]').forEach((link) => {
+    link.addEventListener('click', () => {
+      switch (link.dataset.posthogEvent) {
+        case 'feature_page_viewed_from_navigation':
+          window.posthog?.capture('feature_page_viewed_from_navigation', { placement: 'header' });
+          break;
+        case 'pricing_page_viewed_from_navigation':
+          window.posthog?.capture('pricing_page_viewed_from_navigation', { placement: 'header' });
+          break;
+        case 'about_page_viewed_from_navigation':
+          window.posthog?.capture('about_page_viewed_from_navigation', { placement: 'header' });
+          break;
+        case 'documentation_page_viewed_from_navigation':
+          window.posthog?.capture('documentation_page_viewed_from_navigation', { placement: 'header' });
+          break;
+      }
+    });
+  });
+
+  document.getElementById('header-get-started')?.addEventListener('click', () => {
+    window.posthog?.capture('header_get_started_clicked', { placement: 'header' });
+  });
+</script>
 
 <style>
   .nav-link.active {

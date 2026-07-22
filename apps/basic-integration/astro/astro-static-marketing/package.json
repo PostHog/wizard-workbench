@@ -9,7 +9,8 @@
     "start": "astro dev --port 3000"
   },
   "dependencies": {
-    "astro": "^5.10.2"
+    "astro": "^5.10.2",
+    "posthog-js": "^1.257.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
