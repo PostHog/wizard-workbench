@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { posthog } from './posthog.js';
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -25,6 +26,12 @@ function json(res, statusCode, data) {
   res.end(JSON.stringify(data));
 }
 
+async function flushPostHog() {
+  try {
+    await posthog.flush();
+  } catch {}
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname;
@@ -47,6 +54,13 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      if (posthog) {
+        posthog.capture({
+          event: 'group_created',
+          properties: { group_id: group.id },
+        });
+        await flushPostHog();
+      }
       return json(res, 201, group);
     }
 
@@ -90,6 +104,13 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_created',
+          properties: { contact_id: contact.id, group_id: contact.group_id },
+        });
+        await flushPostHog();
+      }
       return json(res, 201, contact);
     }
 
@@ -114,6 +135,19 @@ const server = createServer(async (req, res) => {
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_updated',
+          properties: {
+            contact_id: contact.id,
+            group_id: contact.group_id,
+            updated_fields: Object.keys(body).filter((key) =>
+              ['name', 'email', 'phone', 'company', 'group_id'].includes(key)
+            ),
+          },
+        });
+        await flushPostHog();
+      }
       return json(res, 200, contact);
     }
 
@@ -123,13 +157,25 @@ const server = createServer(async (req, res) => {
       const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
+      const contact = contacts[index];
       contacts.splice(index, 1);
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_deleted',
+          properties: { contact_id: contact.id, group_id: contact.group_id },
+        });
+        await flushPostHog();
+      }
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    if (posthog) {
+      posthog.captureException(err);
+      await flushPostHog();
+    }
     json(res, 500, { error: 'Internal server error' });
   }
 });
