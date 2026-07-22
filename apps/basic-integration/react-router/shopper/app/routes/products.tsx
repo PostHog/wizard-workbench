@@ -3,6 +3,7 @@ import type { Route } from "./+types/products";
 import { getProducts, getCategories, type Product } from "../data/products";
 import { useState } from "react";
 import { useCart } from "../context/CartContext";
+import { usePostHog } from "@posthog/react";
 
 export async function clientLoader() {
   return {
@@ -14,19 +15,42 @@ export async function clientLoader() {
 export default function Products({ loaderData }: Route.ComponentProps) {
   const { products, categories } = loaderData;
   const { addToCart } = useCart();
+  const posthog = usePostHog();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+    posthog.capture("product_added_to_cart", {
+      product_id: product.id,
+      product_category: product.category,
+      product_price: product.price,
+      quantity: 1,
+      source: "catalog",
+    });
   };
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
+    posthog.capture("catalog_searched", {
+      has_search_term: Boolean(term.trim()),
+    });
   };
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
+    posthog.capture("catalog_category_selected", {
+      category: category || "all",
+    });
+  };
+
+  const handleProductViewed = (product: Product) => {
+    posthog.capture("product_viewed", {
+      product_id: product.id,
+      product_category: product.category,
+      product_price: product.price,
+      source: "catalog",
+    });
   };
 
   const filteredProducts = products.filter((product) => {
@@ -84,6 +108,7 @@ export default function Products({ loaderData }: Route.ComponentProps) {
               <div className="p-4">
                 <Link
                   to={`/products/${product.id}`}
+                  onClick={() => handleProductViewed(product)}
                   className="text-xl font-semibold text-gray-900 hover:text-indigo-600 transition"
                 >
                   {product.name}
