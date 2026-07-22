@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
@@ -11,6 +12,7 @@ export const Route = createFileRoute('/login')({
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
   const { auth, status } = Route.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -21,6 +23,7 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog.capture('user_logged_in')
     router.invalidate()
   }
 
@@ -56,6 +59,7 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('user_logged_out')
                 auth.logout()
                 router.invalidate()
               }}

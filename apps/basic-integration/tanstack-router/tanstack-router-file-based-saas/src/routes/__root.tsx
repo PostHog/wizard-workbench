@@ -6,6 +6,7 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from '@posthog/react'
 import { Spinner } from '../components/Spinner'
 import { Breadcrumbs } from '../components/Breadcrumbs'
 import type { Auth } from '../utils/auth'
@@ -21,8 +22,25 @@ export const Route = createRootRouteWithContext<{
   component: RootComponent,
 })
 
+interface PostHogImportMetaEnv {
+  readonly DEV: boolean
+  readonly VITE_PUBLIC_POSTHOG_PROJECT_TOKEN?: string
+  readonly VITE_PUBLIC_POSTHOG_HOST?: string
+}
+
+const env = (import.meta as ImportMeta & { env: PostHogImportMetaEnv }).env
+
 function RootComponent() {
-  return (
+  const posthogToken = env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+  const posthogHost = env.VITE_PUBLIC_POSTHOG_HOST
+
+  if ((!posthogToken || !posthogHost) && env.DEV) {
+    throw new Error(
+      `${!posthogToken ? 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN' : 'VITE_PUBLIC_POSTHOG_HOST'} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${!posthogToken ? 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN' : 'VITE_PUBLIC_POSTHOG_HOST'} is configured`,
+    )
+  }
+
+  const app = (
     <>
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
@@ -71,5 +89,20 @@ function RootComponent() {
       </div>
       <TanStackRouterDevtools position="bottom-right" />
     </>
+  )
+
+  if (!posthogToken || !posthogHost) return app
+
+  return (
+    <PostHogProvider
+      apiKey={posthogToken}
+      options={{
+        api_host: posthogHost,
+        capture_exceptions: true,
+        debug: env.DEV,
+      }}
+    >
+      {app}
+    </PostHogProvider>
   )
 }

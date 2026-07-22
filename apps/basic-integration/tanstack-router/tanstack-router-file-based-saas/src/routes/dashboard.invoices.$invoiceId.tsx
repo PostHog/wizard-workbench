@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
@@ -24,6 +25,7 @@ export const Route = createFileRoute('/dashboard/invoices/$invoiceId')({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
@@ -95,6 +97,7 @@ function InvoiceComponent() {
               title: formData.get('title') as string,
               body: formData.get('body') as string,
             })
+            posthog.capture('invoice_updated', { invoice_id: invoice.id })
           }}
           className="space-y-4"
         >
@@ -115,6 +118,12 @@ function InvoiceComponent() {
                   ...old,
                   showNotes: old.showNotes ? undefined : true,
                 })}
+                onClick={() =>
+                  posthog.capture('invoice_notes_toggled', {
+                    invoice_id: invoice.id,
+                    notes_visible: !search.showNotes,
+                  })
+                }
                 className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
                 params={true}
               >
