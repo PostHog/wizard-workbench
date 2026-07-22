@@ -3,8 +3,14 @@ import type { Image } from '~/types'
 
 const images = ref<Image[] | null>(null)
 const index = ref(0)
+const { $posthog } = useNuxtApp()
 
 const current = computed(() => images.value?.[index.value])
+
+function closeModal() {
+  $posthog?.capture('photo_modal_dismissed')
+  images.value = null
+}
 
 provideImageModal((img, idx) => {
   images.value = img
@@ -15,19 +21,21 @@ function prev() {
   if (!images.value?.length)
     return
   index.value = (index.value - 1 + images.value.length) % images.value.length
+  $posthog?.capture('photo_navigated', { direction: 'previous' })
 }
 
 function next() {
   if (!images.value?.length)
     return
   index.value = (index.value + 1) % images.value.length
+  $posthog?.capture('photo_navigated', { direction: 'next' })
 }
 
 useEventListener('keydown', (e) => {
   if (!images.value)
     return
   if (e.key === 'Escape')
-    images.value = null
+    closeModal()
   else if (e.key === 'ArrowLeft')
     prev()
   else if (e.key === 'ArrowRight')
@@ -37,7 +45,7 @@ useEventListener('keydown', (e) => {
 
 <template>
   <div v-if="images && current" fixed top-0 left-0 right-0 bottom-0 z-10 bg-black:90 p5 flex items-center justify-center data-testid="photo-modal">
-    <button type="button" absolute top-1 right-1 z-100 p3 text-3xl n-link bg-black:60 rounded-full data-testid="close-button" @click="images = null">
+    <button type="button" absolute top-1 right-1 z-100 p3 text-3xl n-link bg-black:60 rounded-full data-testid="close-button" @click="closeModal">
       <div i-carbon-close />
     </button>
     <NuxtImg

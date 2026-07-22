@@ -1,5 +1,13 @@
 <script setup lang="ts">
 const { user, logout } = useAuth()
+const { $posthog } = useNuxtApp()
+
+async function handleLogout() {
+  $posthog?.capture('user_logged_out')
+  const logoutRequest = logout()
+  $posthog?.reset()
+  await logoutRequest
+}
 </script>
 
 <template>
@@ -55,7 +63,7 @@ const { user, logout } = useAuth()
       <span class="text-sm text-gray-400">{{ user }}</span>
       <button
         type="button"
-        @click="logout"
+        @click="handleLogout"
         class="text-2xl hover:text-primary cursor-pointer transition-colors flex items-center justify-center"
         :title="$t('Logout')"
         :aria-label="$t('Logout')"

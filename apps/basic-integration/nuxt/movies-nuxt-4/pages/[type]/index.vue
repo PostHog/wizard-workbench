@@ -11,6 +11,14 @@ definePageMeta({
 
 const route = useRoute()
 const type = computed(() => route.params.type as MediaType || 'movie')
+const { $posthog } = useNuxtApp()
+
+function captureFeaturedMediaSelection(itemId: string) {
+  $posthog?.capture('featured_media_selected', {
+    media_id: itemId,
+    media_type: type.value,
+  })
+}
 
 useHead({
   title: type.value === 'movie' ? 'Movies' : 'TV Shows',
@@ -37,6 +45,7 @@ const AsyncWrapper = defineComponent(async (_, ctx) => {
         <NuxtLink 
           :to="`/${type}/${item.id}`"
           :aria-label="`View ${item.title || item.name}`"
+          @click="captureFeaturedMediaSelection(item.id)"
         >
           <MediaHero :item="item" />
         </NuxtLink>
