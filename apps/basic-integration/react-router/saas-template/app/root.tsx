@@ -1,6 +1,7 @@
 import "./app.css";
 
 import { FormOptionsProvider } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
@@ -40,6 +41,7 @@ import { getEnv } from "./utils/env.server";
 import { getDomainUrl } from "./utils/get-domain-url.server";
 import { honeypot } from "./utils/honeypot.server";
 import { useNonce } from "./utils/nonce-provider";
+import { posthogMiddleware } from "./utils/posthog-middleware.server";
 import { securityMiddleware } from "./utils/security-middleware.server";
 import { getToast } from "./utils/toast.server";
 
@@ -63,7 +65,11 @@ export const shouldRevalidate = ({
   return defaultShouldRevalidate;
 };
 
-export const middleware = [securityMiddleware, i18nextMiddleware];
+export const middleware = [
+  securityMiddleware,
+  i18nextMiddleware,
+  posthogMiddleware,
+];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const { colorScheme, honeypotInputProps, toastData } = await promiseHash({
@@ -219,6 +225,12 @@ function BaseErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 }
 
 export function ErrorBoundary({ error, ...props }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog();
+
+  if (!isRouteErrorResponse(error)) {
+    posthog.captureException(error);
+  }
+
   if (isRouteErrorResponse(error) && error.status === 404) {
     return <NotFound className="min-h-svh" />;
   }

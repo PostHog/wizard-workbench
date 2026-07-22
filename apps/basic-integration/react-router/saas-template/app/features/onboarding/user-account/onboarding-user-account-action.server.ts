@@ -13,6 +13,7 @@ import { uploadUserAvatar } from "~/features/user-accounts/settings/account/acco
 import { updateUserAccountInDatabaseById } from "~/features/user-accounts/user-accounts-model.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
+import { posthogContext } from "~/utils/posthog-middleware.server";
 import { redirectWithToast } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -48,6 +49,15 @@ export async function onboardingUserAccountAction({
   await updateUserAccountInDatabaseById({
     id: user.id,
     user: { imageUrl, name: result.data.name },
+  });
+
+  context.get(posthogContext).capture({
+    distinctId: user.id,
+    event: "user_account_onboarding_completed",
+    properties: {
+      avatar_added: Boolean(imageUrl),
+      existing_membership_count: user.memberships.length,
+    },
   });
 
   const { inviteLinkInfo, headers: inviteLinkHeaders } =

@@ -14,6 +14,7 @@ import { combineHeaders } from "~/utils/combine-headers.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { badRequest } from "~/utils/http-responses.server";
+import { posthogContext } from "~/utils/posthog-middleware.server";
 import { createToastHeaders, redirectWithToast } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -70,6 +71,15 @@ export async function acceptInviteLinkAction({
               organizationId: link.organization.id,
               request,
               userAccountId: userAccount.id,
+            });
+
+            context.get(posthogContext).capture({
+              distinctId: userAccount.id,
+              event: "organization_invite_accepted",
+              properties: {
+                invite_type: "invite_link",
+                organization_id: link.organization.id,
+              },
             });
 
             return redirectWithToast(

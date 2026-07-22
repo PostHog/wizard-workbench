@@ -8,6 +8,7 @@ import type { Route } from ".react-router/types/app/routes/_authenticated-routes
 import { uploadOrganizationLogo } from "~/features/organizations/organizations-helpers.server";
 import { saveOrganizationWithOwnerToDatabase } from "~/features/organizations/organizations-model.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import { posthogContext } from "~/utils/posthog-middleware.server";
 import { slugify } from "~/utils/slugify.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -49,6 +50,15 @@ export async function onboardingOrganizationAction({
       slug: slugify(result.data.name),
     },
     userId: user.id,
+  });
+
+  context.get(posthogContext).capture({
+    distinctId: user.id,
+    event: "organization_onboarding_completed",
+    properties: {
+      logo_added: Boolean(imageUrl),
+      organization_id: organization.id,
+    },
   });
 
   return redirect(`/organizations/${organization.slug}`, { headers });

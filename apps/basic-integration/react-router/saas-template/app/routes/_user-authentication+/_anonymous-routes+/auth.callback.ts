@@ -17,6 +17,7 @@ import {
 import { anonymousContext } from "~/features/user-authentication/user-authentication-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { getSearchParameterFromRequest } from "~/utils/get-search-parameter-from-request.server";
+import { posthogContext } from "~/utils/posthog-middleware.server";
 import { redirectWithToast } from "~/utils/toast.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -181,6 +182,18 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const userProfile = await saveUserAccountToDatabase({
       email,
       supabaseUserId: user.id,
+    });
+
+    context.get(posthogContext).capture({
+      distinctId: userProfile.id,
+      event: "user_registered",
+      properties: {
+        invite_type: emailInviteInfo
+          ? "email_invite"
+          : inviteLinkInfo
+            ? "invite_link"
+            : "none",
+      },
     });
 
     if (emailInviteInfo) {

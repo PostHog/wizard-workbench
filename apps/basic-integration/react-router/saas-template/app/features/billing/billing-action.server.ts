@@ -44,6 +44,7 @@ import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
 import { badRequest, conflict, forbidden } from "~/utils/http-responses.server";
+import { posthogContext } from "~/utils/posthog-middleware.server";
 import { createToastHeaders } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -157,6 +158,16 @@ export async function billingAction({
           priceId: price.stripeId,
           purchasedById: user.id,
           seatsUsed: organization._count.memberships,
+        });
+
+        context.get(posthogContext).capture({
+          distinctId: user.id,
+          event: "checkout_started",
+          properties: {
+            organization_id: organization.id,
+            plan_lookup_key: body.lookupKey,
+            seats_used: organization._count.memberships,
+          },
         });
 
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
