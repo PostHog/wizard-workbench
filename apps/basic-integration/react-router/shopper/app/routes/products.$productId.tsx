@@ -1,8 +1,16 @@
 import { Link, data } from "react-router";
+import posthog from "posthog-js";
 import type { Route } from "./+types/products.$productId";
 import { getProductById } from "../data/products";
 import { useCart } from "../context/CartContext";
 import { useState } from "react";
+
+const isPostHogConfigured =
+  typeof window !== "undefined" &&
+  Boolean(
+    import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  );
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const productId = parseInt(params.productId);
@@ -23,6 +31,25 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
+    }
+    if (isPostHogConfigured) {
+      posthog.capture("product_added_to_cart", {
+        product_id: product.id,
+        product_category: product.category,
+        product_price: product.price,
+        quantity,
+        source: "product_detail",
+      });
+    }
+  };
+
+  const handleQuantityChange = (newQuantity: number) => {
+    setQuantity(newQuantity);
+    if (isPostHogConfigured) {
+      posthog.capture("product_quantity_selected", {
+        product_id: product.id,
+        quantity: newQuantity,
+      });
     }
   };
 
@@ -92,7 +119,7 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
             <label className="text-gray-700 font-medium">Quantity:</label>
             <div className="flex items-center border border-gray-300 rounded-lg">
               <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                onClick={() => handleQuantityChange(Math.max(1, quantity - 1))}
                 className="px-4 py-2 hover:bg-gray-100 transition"
               >
                 -
@@ -101,7 +128,7 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
                 type="number"
                 value={quantity}
                 onChange={(e) =>
-                  setQuantity(
+                  handleQuantityChange(
                     Math.max(1, Math.min(product.stock, parseInt(e.target.value) || 1))
                   )
                 }
@@ -111,7 +138,7 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
               />
               <button
                 onClick={() =>
-                  setQuantity(Math.min(product.stock, quantity + 1))
+                  handleQuantityChange(Math.min(product.stock, quantity + 1))
                 }
                 className="px-4 py-2 hover:bg-gray-100 transition"
               >

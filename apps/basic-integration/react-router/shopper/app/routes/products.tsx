@@ -1,8 +1,16 @@
 import { Link } from "react-router";
+import posthog from "posthog-js";
 import type { Route } from "./+types/products";
 import { getProducts, getCategories, type Product } from "../data/products";
 import { useState } from "react";
 import { useCart } from "../context/CartContext";
+
+const isPostHogConfigured =
+  typeof window !== "undefined" &&
+  Boolean(
+    import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  );
 
 export async function clientLoader() {
   return {
@@ -19,14 +27,42 @@ export default function Products({ loaderData }: Route.ComponentProps) {
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+    if (isPostHogConfigured) {
+      posthog.capture("product_added_to_cart", {
+        product_id: product.id,
+        product_category: product.category,
+        product_price: product.price,
+        quantity: 1,
+        source: "catalog",
+      });
+    }
   };
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
+    if (isPostHogConfigured) {
+      posthog.capture("product_search_updated", { query_length: term.length });
+    }
   };
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
+    if (isPostHogConfigured) {
+      posthog.capture("product_category_filtered", {
+        category: category || "all",
+      });
+    }
+  };
+
+  const handleProductViewed = (product: Product) => {
+    if (isPostHogConfigured) {
+      posthog.capture("product_viewed", {
+        product_id: product.id,
+        product_category: product.category,
+        product_price: product.price,
+        source: "catalog",
+      });
+    }
   };
 
   const filteredProducts = products.filter((product) => {
@@ -84,6 +120,7 @@ export default function Products({ loaderData }: Route.ComponentProps) {
               <div className="p-4">
                 <Link
                   to={`/products/${product.id}`}
+                  onClick={() => handleProductViewed(product)}
                   className="text-xl font-semibold text-gray-900 hover:text-indigo-600 transition"
                 >
                   {product.name}

@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import posthog from "posthog-js";
 import { useCart } from "../context/CartContext";
+
+const isPostHogConfigured =
+  typeof window !== "undefined" &&
+  Boolean(
+    import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  );
 
 export default function Checkout() {
   const { cart, getCartTotal, clearCart } = useCart();
@@ -40,11 +48,27 @@ export default function Checkout() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const orderItemCount = cart.reduce((count, item) => count + item.quantity, 0);
+    const orderTotal = getCartTotal() * 1.1;
+
+    if (isPostHogConfigured) {
+      posthog.capture("checkout_submitted", {
+        cart_item_count: orderItemCount,
+        cart_total: orderTotal,
+      });
+    }
+
     setIsProcessing(true);
 
     setTimeout(() => {
       clearCart();
       setIsProcessing(false);
+      if (isPostHogConfigured) {
+        posthog.capture("order_completed", {
+          cart_item_count: orderItemCount,
+          cart_total: orderTotal,
+        });
+      }
       alert("Order placed successfully! Thank you for your purchase.");
       navigate("/products");
     }, 2000);

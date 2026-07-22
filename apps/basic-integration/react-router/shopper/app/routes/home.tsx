@@ -1,5 +1,13 @@
 import { Link } from "react-router";
+import posthog from "posthog-js";
 import type { Route } from "./+types/home";
+
+const isPostHogConfigured =
+  typeof window !== "undefined" &&
+  Boolean(
+    import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  );
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -9,6 +17,12 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+  const handleStartShopping = () => {
+    if (isPostHogConfigured) {
+      posthog.capture("shopping_started");
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="text-center max-w-3xl mx-auto">
@@ -20,6 +34,7 @@ export default function Home() {
         </p>
         <Link
           to="/products"
+          onClick={handleStartShopping}
           className="inline-block bg-indigo-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition shadow-lg hover:shadow-xl"
         >
           Start Shopping

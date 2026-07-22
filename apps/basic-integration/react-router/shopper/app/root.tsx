@@ -11,6 +11,26 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { CartProvider } from "./context/CartContext";
 import Navbar from "./components/Navbar";
+import posthog from "posthog-js";
+
+const posthogToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN;
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST;
+
+if (typeof window !== "undefined") {
+  if (posthogToken && posthogHost) {
+    posthog.init(posthogToken, {
+      api_host: posthogHost,
+      defaults: "2026-01-30",
+    });
+  } else if (import.meta.env.DEV) {
+    const missingVariable = posthogToken
+      ? "VITE_PUBLIC_POSTHOG_HOST"
+      : "VITE_PUBLIC_POSTHOG_PROJECT_TOKEN";
+    console.error(
+      `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+    );
+  }
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -55,6 +75,10 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  if (posthogToken && posthogHost && typeof window !== "undefined") {
+    posthog.captureException(error);
+  }
+
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
