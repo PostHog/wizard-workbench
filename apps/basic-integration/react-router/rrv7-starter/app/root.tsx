@@ -9,6 +9,7 @@ import {
   type MetaFunction,
 } from 'react-router'
 import gsap from 'gsap'
+import { useEffect } from 'react'
 
 import type { Route } from './+types/root'
 import stylesheet from './app.css?url'
@@ -17,9 +18,11 @@ import routes from './routes'
 import { promisifyGsap } from '@/lib/gsap'
 import { Header } from '@/components/header'
 import Footer from '@/components/footer'
+import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+import posthog from '@/lib/posthog.client'
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -85,53 +88,60 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const element = useOutlet()
-
   const location = useLocation()
 
   return (
-    <RouteTransitionManager
-      appear
-      routes={routes}
-      pathname={location.pathname}
-      onEntering={{
-        default: () => {
-          window.scrollTo({ top: 0 })
-        },
-      }}
-      onEnter={{
-        default: (node) => {
-          return promisifyGsap(
-            gsap
-              .timeline({
-                onComplete: () => {
-                  gsap.set(node, { clearProps: 'all' })
-                },
-              })
-              .fromTo(node, { opacity: 0 }, { opacity: 1, duration: 1 })
-          )
-        },
-      }}
-      onExit={{
-        default: (node) => {
-          return promisifyGsap(gsap.timeline().fromTo(node, { opacity: 1 }, { opacity: 0, duration: 0.5 }, 0))
-        },
-      }}
-    >
-      {(ref) => (
-        <main
-          style={{ opacity: 0 }}
-          className="overflow-y-clip flex flex-col min-h-svh"
-          data-pathname={location.pathname}
-          ref={ref}
+    <PostHogProvider client={posthog}>
+      <PostHogErrorBoundary>
+        <RouteTransitionManager
+          appear
+          routes={routes}
+          pathname={location.pathname}
+          onEntering={{
+            default: () => {
+              window.scrollTo({ top: 0 })
+            },
+          }}
+          onEnter={{
+            default: (node) => {
+              return promisifyGsap(
+                gsap
+                  .timeline({
+                    onComplete: () => {
+                      gsap.set(node, { clearProps: 'all' })
+                    },
+                  })
+                  .fromTo(node, { opacity: 0 }, { opacity: 1, duration: 1 })
+              )
+            },
+          }}
+          onExit={{
+            default: (node) => {
+              return promisifyGsap(gsap.timeline().fromTo(node, { opacity: 1 }, { opacity: 0, duration: 0.5 }, 0))
+            },
+          }}
         >
-          {element}
-        </main>
-      )}
-    </RouteTransitionManager>
+          {(ref) => (
+            <main
+              style={{ opacity: 0 }}
+              className="overflow-y-clip flex flex-col min-h-svh"
+              data-pathname={location.pathname}
+              ref={ref}
+            >
+              {element}
+            </main>
+          )}
+        </RouteTransitionManager>
+      </PostHogErrorBoundary>
+    </PostHogProvider>
   )
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  useEffect(() => {
+    posthog.captureException(error)
+  }, [error])
+
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined
