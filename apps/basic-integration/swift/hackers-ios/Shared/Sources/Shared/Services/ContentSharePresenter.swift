@@ -16,12 +16,14 @@ public final class ContentSharePresenter: @unchecked Sendable {
 
     @MainActor
     public func sharePost(_ post: Post) {
+        Analytics.capture("content_shared", properties: ["content_type": "post"])
         let items: [Any] = [post.title, post.url]
         showShareSheet(items: items)
     }
 
     @MainActor
     public func shareURL(_ url: URL, title: String? = nil) {
+        Analytics.capture("content_shared", properties: ["content_type": "link"])
         var items: [Any] = []
         if let title {
             items.append(title)
@@ -32,6 +34,7 @@ public final class ContentSharePresenter: @unchecked Sendable {
 
     @MainActor
     public func shareComment(_ comment: Comment) {
+        Analytics.capture("content_shared", properties: ["content_type": "comment"])
         let text = comment.text.strippingHTML()
         let items: [Any] = [text]
         showShareSheet(items: items)

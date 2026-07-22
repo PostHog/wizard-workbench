@@ -6,6 +6,7 @@
 //
 
 import Domain
+import Shared
 import SwiftUI
 
 @MainActor
@@ -61,8 +62,10 @@ public final class LoginViewModel {
             try await onLogin(username, password)
             isAuthenticated = true
             currentUsername = username
+            Analytics.capture("login_succeeded")
             return true
         } catch {
+            Analytics.capture("login_failed")
             showAlert = true
             password = ""
             return false
@@ -71,6 +74,7 @@ public final class LoginViewModel {
 
     public func logout() {
         onLogout()
+        Analytics.capture("logout_completed")
         isAuthenticated = false
         currentUsername = nil
     }

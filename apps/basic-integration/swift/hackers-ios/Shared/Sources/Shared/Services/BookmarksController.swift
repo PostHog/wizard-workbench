@@ -59,6 +59,10 @@ public final class BookmarksController: @unchecked Sendable {
             } else {
                 cachedIDs.remove(post.id)
             }
+            Analytics.capture("bookmark_changed", properties: [
+                "post_id": post.id,
+                "is_bookmarked": newState
+            ])
             NotificationCenter.default.post(
                 name: .bookmarksDidChange,
                 object: nil,

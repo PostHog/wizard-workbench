@@ -7,7 +7,6 @@
 
 import Domain
 import Foundation
-import Shared
 import SwiftUI
 
 @MainActor
@@ -59,7 +58,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.upvote(item: postForVoting)
-
+            Analytics.capture("post_vote_changed", properties: ["vote_action": "upvote"])
         } catch {
             // Revert optimistic changes on error
             post.upvoted = false
@@ -96,7 +95,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.unvote(item: postForVoting)
-
+            Analytics.capture("post_vote_changed", properties: ["vote_action": "unvote"])
         } catch {
             // Revert optimistic changes on error
             post.upvoted = true
@@ -128,6 +127,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.upvoteComment(commentForVoting, for: post)
+            Analytics.capture("comment_vote_changed", properties: ["vote_action": "upvote"])
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = false
@@ -155,6 +155,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.unvoteComment(commentForVoting, for: post)
+            Analytics.capture("comment_vote_changed", properties: ["vote_action": "unvote"])
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = true

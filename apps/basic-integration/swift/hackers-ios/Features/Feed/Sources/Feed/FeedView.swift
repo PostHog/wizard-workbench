@@ -194,7 +194,10 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
             showThumbnails: viewModel.showThumbnails,
             compactMode: viewModel.compactFeedDesign,
             onLinkTap: { handleLinkTap(post: post) },
-            onCommentsTap: isSidebar ? nil : { navigationStore.showPost(post) },
+            onCommentsTap: isSidebar ? nil : {
+                Analytics.capture("post_opened", properties: ["post_id": post.id])
+                navigationStore.showPost(post)
+            },
             onPostUpdated: { updatedPost in
                 viewModel.replacePost(updatedPost)
             },
@@ -349,6 +352,7 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
     private func postTypeMenuButton(for postType: Domain.PostType) -> some View {
         Button {
             selectedPostType = postType
+            Analytics.capture("feed_category_changed", properties: ["category": postType.displayName])
             Task {
                 await viewModel.changePostType(postType)
             }
@@ -366,6 +370,7 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
 
     private func handleLinkTap(post: Domain.Post) {
         guard !isHackerNewsItemURL(post.url) else {
+            Analytics.capture("post_opened", properties: ["post_id": post.id])
             navigationStore.showPost(post)
             return
         }
@@ -375,6 +380,7 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
             selectedPostId = post.id
         }
 
+        Analytics.capture("post_link_opened", properties: ["post_id": post.id])
         if navigationStore.openURLInPrimaryContext(post.url, pushOntoDetailStack: !isSidebar) {
             return
         }

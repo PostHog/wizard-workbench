@@ -6,6 +6,7 @@
 //
 
 import DesignSystem
+import Shared
 import SwiftUI
 
 public struct OnboardingView: View {
@@ -70,7 +71,7 @@ public struct OnboardingView: View {
     @ViewBuilder
     private var continueButton: some View {
         if #available(iOS 26.0, *) {
-            Button(action: onDismiss) {
+            Button(action: completeOnboarding) {
                 Text("Continue")
                     .scaledFont(.headline)
                     .foregroundStyle(.white)
@@ -79,7 +80,7 @@ public struct OnboardingView: View {
             }
             .glassEffect(.regular.tint(AppColors.appTintColor))
         } else {
-            Button(action: onDismiss) {
+            Button(action: completeOnboarding) {
                 Text("Continue")
                     .scaledFont(.headline)
                     .foregroundStyle(.white)
@@ -90,5 +91,10 @@ public struct OnboardingView: View {
             .clipShape(.rect(cornerRadius: 12))
             .buttonStyle(.plain)
         }
+    }
+
+    private func completeOnboarding() {
+        Analytics.capture("onboarding_completed")
+        onDismiss()
     }
 }
