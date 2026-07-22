@@ -1,0 +1,23 @@
+---
+const projectToken = import.meta.env.PUBLIC_POSTHOG_PROJECT_TOKEN;
+const host = import.meta.env.PUBLIC_POSTHOG_HOST;
+const isDevelopment = import.meta.env.MODE === 'development';
+---
+<script is:inline define:vars={{ projectToken, host, isDevelopment }}>
+  if (!projectToken || !host) {
+    if (isDevelopment) {
+      const missingVariable = !projectToken
+        ? 'PUBLIC_POSTHOG_PROJECT_TOKEN'
+        : 'PUBLIC_POSTHOG_HOST';
+      throw new Error(`${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`);
+    }
+  } else {
+    import('posthog-js').then(({ default: posthog }) => {
+      posthog.init(projectToken, {
+        api_host: host,
+        capture_exceptions: true,
+      });
+      window.posthog = posthog;
+    });
+  }
+</script>
