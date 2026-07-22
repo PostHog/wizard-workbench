@@ -1,4 +1,5 @@
 import { Link, Outlet, createFileRoute } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 import { fetchUsers } from '../utils/users'
 
 export const Route = createFileRoute('/users')({
@@ -8,6 +9,7 @@ export const Route = createFileRoute('/users')({
 
 function UsersComponent() {
   const users = Route.useLoaderData()
+  const posthog = usePostHog()
   const roles = ['Admin', 'Developer', 'Designer', 'Manager', 'Analyst']
 
   return (
@@ -49,6 +51,12 @@ function UsersComponent() {
                 activeProps={{
                   className:
                     'bg-blue-50 dark:bg-blue-900/20 border-r-2 border-blue-600',
+                }}
+                onClick={() => {
+                  posthog.capture('team_member_selected', {
+                    team_member_id: user.id,
+                    role: roles[index % roles.length],
+                  })
                 }}
               >
                 <div

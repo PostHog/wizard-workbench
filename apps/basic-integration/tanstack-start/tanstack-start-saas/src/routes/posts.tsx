@@ -1,4 +1,5 @@
 import { Link, Outlet, createFileRoute } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 import { fetchInvoices } from '../utils/invoices'
 
 export const Route = createFileRoute('/posts')({
@@ -8,6 +9,7 @@ export const Route = createFileRoute('/posts')({
 
 function PostsComponent() {
   const invoices = Route.useLoaderData() ?? []
+  const posthog = usePostHog()
 
   return (
     <div className="h-full flex flex-col">
@@ -38,6 +40,12 @@ function PostsComponent() {
                 activeProps={{
                   className:
                     'bg-blue-50 dark:bg-blue-900/20 border-l-2 border-l-blue-600',
+                }}
+                onClick={() => {
+                  posthog.capture('invoice_selected', {
+                    invoice_id: invoice.id,
+                    status: invoice.status,
+                  })
                 }}
               >
                 <div className="flex items-center justify-between mb-1">
