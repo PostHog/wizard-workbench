@@ -2,7 +2,7 @@
 
 from typing import List
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
@@ -55,6 +55,7 @@ async def list_api_keys(current_user: RequiredUser, db: DbSession):
 @router.post("", response_model=APIKeyCreated, status_code=status.HTTP_201_CREATED)
 async def create_api_key(
     request: APIKeyCreate,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -66,12 +67,21 @@ async def create_api_key(
     ).count()
 
     if active_count >= 5:
+        posthog_client = getattr(http_request.app.state, "posthog", None)
+        if posthog_client is not None:
+            posthog_client.capture(
+                "api_key_creation_blocked", properties={"active_key_count": active_count}
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Maximum of 5 active API keys allowed",
         )
 
     api_key = APIKey.create(db, user_id=current_user.id, name=request.name)
+
+    posthog_client = getattr(http_request.app.state, "posthog", None)
+    if posthog_client is not None:
+        posthog_client.capture("api_key_created")
 
     return APIKeyCreated(
         id=api_key.id,
@@ -86,6 +96,7 @@ async def create_api_key(
 @router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_api_key(
     key_id: int,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -103,5 +114,9 @@ async def revoke_api_key(
 
     api_key.is_active = False
     db.commit()
+
+    posthog_client = getattr(http_request.app.state, "posthog", None)
+    if posthog_client is not None:
+        posthog_client.capture("api_key_revoked")
 
     return None
