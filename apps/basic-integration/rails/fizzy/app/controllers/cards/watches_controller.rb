@@ -8,6 +8,13 @@ class Cards::WatchesController < ApplicationController
   def create
     @card.watch_by Current.user
 
+    if PostHog.initialized?
+      PostHog.capture(
+        distinct_id: Current.user.posthog_distinct_id,
+        event: "card_watch_started"
+      )
+    end
+
     respond_to do |format|
       format.turbo_stream
       format.json { head :no_content }
@@ -16,6 +23,13 @@ class Cards::WatchesController < ApplicationController
 
   def destroy
     @card.unwatch_by Current.user
+
+    if PostHog.initialized?
+      PostHog.capture(
+        distinct_id: Current.user.posthog_distinct_id,
+        event: "card_watch_stopped"
+      )
+    end
 
     respond_to do |format|
       format.turbo_stream
