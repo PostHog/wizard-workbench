@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import timedelta
+from posthog_integration.client import capture
 from .models import Plan, Subscription
 
 # Check if Stripe is configured
@@ -55,6 +56,11 @@ def subscribe(request, plan_slug):
                     },
                     allow_promotion_codes=True,
                 )
+                capture('subscription_checkout_started', properties={
+                    'plan_slug': plan.slug,
+                    'plan_interval': plan.interval,
+                    'billing_provider': 'stripe',
+                })
                 return redirect(checkout_session.url)
             except Exception as e:
                 messages.error(request, f'Payment error: {str(e)}')
@@ -70,6 +76,11 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            capture('subscription_activated', properties={
+                'plan_slug': plan.slug,
+                'plan_interval': plan.interval,
+                'billing_provider': 'demo',
+            })
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -116,6 +127,7 @@ def change_plan(request, plan_slug):
         return redirect('billing:subscribe', plan_slug=plan_slug)
 
     if request.method == 'POST':
+        billing_provider = 'demo'
         if STRIPE_CONFIGURED and subscription.stripe_subscription_id and not subscription.stripe_subscription_id.startswith('sub_demo_'):
             # Update Stripe subscription
             try:
@@ -130,15 +142,22 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+                billing_provider = 'stripe'
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
                 messages.error(request, f'Error changing plan: {str(e)}')
+                return redirect('billing:manage')
         else:
             # Demo mode
             subscription.plan = plan
             subscription.save()
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
+        capture('subscription_plan_changed', properties={
+            'plan_slug': plan.slug,
+            'plan_interval': plan.interval,
+            'billing_provider': billing_provider,
+        })
         return redirect('billing:manage')
 
     return render(request, 'billing/change_plan.html', {
@@ -171,6 +190,10 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        capture('subscription_canceled', properties={
+            'plan_slug': subscription.plan.slug,
+            'billing_provider': 'stripe' if STRIPE_CONFIGURED else 'demo',
+        })
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -194,6 +217,7 @@ def billing_portal(request):
             customer=subscription.stripe_customer_id,
             return_url=request.build_absolute_uri('/billing/manage/'),
         )
+        capture('billing_portal_opened')
         return redirect(portal_session.url)
     except Exception as e:
         messages.error(request, f'Error accessing billing portal: {str(e)}')
@@ -269,6 +293,15 @@ def _handle_checkout_completed(session):
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
     )
+    capture(
+        'subscription_activated',
+        distinct_id=str(user.pk),
+        properties={
+            'plan_slug': plan.slug,
+            'plan_interval': plan.interval,
+            'billing_provider': 'stripe',
+        },
+    )
 
 
 def _handle_subscription_updated(subscription_data):
@@ -323,5 +356,12 @@ def _handle_payment_failed(invoice):
         )
         subscription.status = 'past_due'
         subscription.save()
+        capture(
+            'subscription_payment_failed',
+            distinct_id=str(subscription.user.pk),
+            properties={
+                'plan_slug': subscription.plan.slug,
+            },
+        )
     except Subscription.DoesNotExist:
         pass
