@@ -1,6 +1,8 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use App\Services\PostHogService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -17,6 +19,12 @@ new #[Layout('layouts.guest')] class extends Component
         $this->validate();
 
         $this->form->authenticate();
+
+        $posthog = app(PostHogService::class);
+        $posthog->identifyUser(Auth::user());
+        $posthog->capture('user_logged_in', [
+            'login_method' => 'password',
+        ]);
 
         Session::regenerate();
 
