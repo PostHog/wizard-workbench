@@ -35,6 +35,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         vectorDrawables.useSupportLibrary = true
+
+        buildConfigField(
+            "String?",
+            "POSTHOG_PROJECT_TOKEN",
+            System.getenv("POSTHOG_PROJECT_TOKEN")?.let { "\\\"$it\\\"" } ?: "null",
+        )
+        buildConfigField(
+            "String?",
+            "POSTHOG_HOST",
+            System.getenv("POSTHOG_HOST")?.let { "\\\"$it\\\"" } ?: "null",
+        )
     }
 
     signingConfigs {
@@ -75,6 +86,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -94,6 +106,7 @@ dependencies {
 
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
+    implementation("com.posthog:posthog-android:3.25.0")
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
 

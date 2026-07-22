@@ -87,6 +87,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
+import com.example.compose.jetchat.PostHogAnalytics
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
@@ -134,6 +135,7 @@ fun ConversationContent(
                     return false
                 }
 
+                PostHogAnalytics.capture("message_dropped")
                 uiState.addMessage(
                     Message(authorMe, clipData.getItemAt(0).text.toString(), timeNow),
                 )
@@ -200,6 +202,7 @@ fun ConversationContent(
             )
             UserInput(
                 onMessageSent = { content ->
+                    PostHogAnalytics.capture("message_sent")
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )

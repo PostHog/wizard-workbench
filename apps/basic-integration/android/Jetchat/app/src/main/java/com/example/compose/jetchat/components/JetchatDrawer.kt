@@ -55,6 +55,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.compose.jetchat.PostHogAnalytics
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.data.colleagueProfile
 import com.example.compose.jetchat.data.meProfile
@@ -77,9 +78,11 @@ fun JetchatDrawerContent(
         DividerItem()
         DrawerItemHeader("Chats")
         ChatItem("composers", selectedMenu == "composers") {
+            PostHogAnalytics.capture("chat_channel_selected")
             onChatClicked("composers")
         }
         ChatItem("droidcon-nyc", selectedMenu == "droidcon-nyc") {
+            PostHogAnalytics.capture("chat_channel_selected")
             onChatClicked("droidcon-nyc")
         }
         DividerItem(modifier = Modifier.padding(horizontal = 28.dp))
@@ -88,12 +91,14 @@ fun JetchatDrawerContent(
             "Ali Conors (you)", meProfile.photo,
             selectedMenu == meProfile.userId,
         ) {
+            PostHogAnalytics.capture("profile_opened")
             onProfileClicked(meProfile.userId)
         }
         ProfileItem(
             "Taylor Brooks", colleagueProfile.photo,
             selectedMenu == colleagueProfile.userId,
         ) {
+            PostHogAnalytics.capture("profile_opened")
             onProfileClicked(colleagueProfile.userId)
         }
         if (widgetAddingIsSupported(LocalContext.current)) {
@@ -301,6 +306,7 @@ private fun WidgetDiscoverability() {
             .padding(horizontal = 12.dp)
             .clip(CircleShape)
             .clickable(onClick = {
+                PostHogAnalytics.capture("widget_add_requested")
                 addWidgetToHomeScreen(context)
             }),
         verticalAlignment = CenterVertically,
