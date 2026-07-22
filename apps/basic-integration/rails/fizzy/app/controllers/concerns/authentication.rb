@@ -88,6 +88,7 @@ module Authentication
     def start_new_session_for(identity)
       identity.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
         set_current_session session
+        identify_posthog_user
       end
     end
 

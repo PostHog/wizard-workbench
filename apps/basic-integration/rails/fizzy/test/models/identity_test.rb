@@ -30,6 +30,13 @@ class IdentityTest < ActiveSupport::TestCase
     end
   end
 
+  test "PostHog identity uses the stable primary key" do
+    identity = identities(:david)
+
+    assert_equal identity.id, identity.posthog_distinct_id
+    assert_equal({ email: identity.email_address }, identity.posthog_properties)
+  end
+
   test "join" do
     identity = identities(:david)
     account = accounts(:initech)

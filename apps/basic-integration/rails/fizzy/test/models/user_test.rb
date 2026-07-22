@@ -60,6 +60,13 @@ class UserTest < ActiveSupport::TestCase
     assert user.valid?
   end
 
+  test "PostHog identity uses the stable identity id" do
+    user = users(:kevin)
+
+    assert_equal user.identity_id, user.posthog_distinct_id
+    assert_equal({ email: user.identity.email_address, name: user.name }, user.posthog_properties)
+  end
+
   test "setup?" do
     user = users(:kevin)
 

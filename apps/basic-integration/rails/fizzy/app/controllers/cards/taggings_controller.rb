@@ -9,6 +9,11 @@ class Cards::TaggingsController < ApplicationController
 
   def create
     @card.toggle_tag_with sanitized_tag_title_param
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_tag_toggled",
+      properties: { card_id: @card.id, board_id: @board.id }
+    )
 
     respond_to do |format|
       format.turbo_stream
