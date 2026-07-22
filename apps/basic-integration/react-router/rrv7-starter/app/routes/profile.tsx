@@ -6,14 +6,19 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import { usePostHog } from '@posthog/react'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
+  const posthog = usePostHog()
   const [isFollowing, setIsFollowing] = useState(false)
 
   const handleClick = () => {
     setIsFollowing(!isFollowing)
     if (!isFollowing) {
       onFollow()
+      posthog.capture('follower_followed_back', {
+        follower_position: fakeFollowers.findIndex((follower) => follower.username === username),
+      })
     }
   }
 

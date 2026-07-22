@@ -6,6 +6,7 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { addFollowers, addPurchasedFollowers } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import { usePostHog } from '@posthog/react'
 
 export const meta: Route.MetaFunction = () => {
   const siteUrl = SITE_URL || 'https://clouthub.fake'
@@ -20,6 +21,7 @@ export const meta: Route.MetaFunction = () => {
 
 export default function BuyFollowers() {
   const navigate = useNavigate()
+  const posthog = usePostHog()
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
 
@@ -34,8 +36,14 @@ export default function BuyFollowers() {
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+      posthog.capture('follower_purchase_completed', {
+        package_index: selectedPackage,
+        follower_count: totalFollowers,
+        package_price: pkg.price,
+        bonus_count: pkg.bonus,
+      })
       
-      alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
+      alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`) 
       setPurchased(false)
       setSelectedPackage(null)
       
@@ -75,7 +83,15 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => {
+                  setSelectedPackage(index)
+                  posthog.capture('follower_package_selected', {
+                    package_index: index,
+                    follower_count: totalFollowers,
+                    package_price: pkg.price,
+                    bonus_count: pkg.bonus,
+                  })
+                }}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected
