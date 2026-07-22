@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import posthog from '../posthog.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
 
@@ -98,6 +99,7 @@ export async function renderSettings() {
     // Reset
     document.getElementById('reset-data-btn').addEventListener('click', () => {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
+        posthog.capture('data_reset');
         store.reset();
         store.login(user.email);
         renderSettings();

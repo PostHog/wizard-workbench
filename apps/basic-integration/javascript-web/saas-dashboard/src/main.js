@@ -1,3 +1,4 @@
+import posthog from './posthog.js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -38,5 +39,14 @@ router.notFound(() => {
 });
 
 // --- Start ---
+
+const currentUser = store.state.currentUser;
+if (currentUser?.id) {
+  posthog.identify(currentUser.id, {
+    email: currentUser.email,
+    name: currentUser.name,
+    role: currentUser.role,
+  });
+}
 
 router.start();
