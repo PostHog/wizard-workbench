@@ -1,9 +1,18 @@
 const express = require('express');
+const {
+  setupExpressRequestContext,
+  setupExpressErrorHandler,
+} = require('posthog-node');
+const posthog = require('./posthog');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
+if (posthog) {
+  setupExpressRequestContext(posthog, app);
+}
 
 const todos = [];
 let nextId = 1;
@@ -21,6 +30,14 @@ app.post('/api/todos', (req, res) => {
 
   const todo = { id: nextId++, title, completed: false };
   todos.push(todo);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'todo_created',
+      properties: { completed: todo.completed },
+    });
+  }
+
   res.status(201).json(todo);
 });
 
@@ -31,8 +48,22 @@ app.patch('/api/todos/:id', (req, res) => {
     return res.status(404).json({ error: 'Not found' });
   }
 
-  if (req.body.title !== undefined) todo.title = req.body.title;
-  if (req.body.completed !== undefined) todo.completed = req.body.completed;
+  const titleUpdated = req.body.title !== undefined;
+  const completionUpdated = req.body.completed !== undefined;
+
+  if (titleUpdated) todo.title = req.body.title;
+  if (completionUpdated) todo.completed = req.body.completed;
+
+  if (posthog) {
+    posthog.capture({
+      event: 'todo_updated',
+      properties: {
+        title_updated: titleUpdated,
+        completion_updated: completionUpdated,
+        completed: todo.completed,
+      },
+    });
+  }
 
   res.json(todo);
 });
@@ -45,8 +76,17 @@ app.delete('/api/todos/:id', (req, res) => {
   }
 
   todos.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({ event: 'todo_deleted' });
+  }
+
   res.status(204).send();
 });
+
+if (posthog) {
+  setupExpressErrorHandler(posthog, app);
+}
 
 app.listen(PORT, () => {
   console.log(`Express todo API running on http://localhost:${PORT}`);
