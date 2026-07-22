@@ -3,6 +3,7 @@
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
   import SettingsModule from "../settings_module.svelte"
+  import { posthog } from "../../../../../../hooks.client"
 
   let adminSection: Writable<string> = getContext("adminSection")
   adminSection.set("settings")
@@ -36,6 +37,9 @@
         })
         .then((d) => {
           sentEmail = d.error ? false : true
+          if (!d.error) {
+            posthog?.capture("password_reset_email_requested")
+          }
           sendBtnDisabled = false
           sendBtnText = "Send Forgot Password Email"
         })

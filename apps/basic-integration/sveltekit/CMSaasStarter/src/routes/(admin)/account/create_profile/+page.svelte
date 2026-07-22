@@ -2,6 +2,7 @@
   import { applyAction, enhance } from "$app/forms"
   import type { SubmitFunction } from "@sveltejs/kit"
   import "../../../../app.css"
+  import { posthog } from "../../../../hooks.client"
 
   interface User {
     email: string
@@ -33,6 +34,7 @@
   }
 
   const handleSubmit: SubmitFunction = () => {
+    posthog?.capture("profile_creation_submitted")
     loading = true
     return async ({ update, result }) => {
       await update({ reset: false })
