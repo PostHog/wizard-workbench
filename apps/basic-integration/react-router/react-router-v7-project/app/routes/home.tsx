@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/home";
+import posthog, { isPostHogConfigured } from "~/lib/posthog.client";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -29,6 +30,11 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row sm:space-x-4">
                 <Link
                   to="/countries"
+                  onClick={() => {
+                    if (isPostHogConfigured) {
+                      posthog.capture("explore_countries_started");
+                    }
+                  }}
                   className="flex items-center justify-center px-6 py-3 text-lg text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
                 >
                   Explore Now
@@ -48,6 +54,11 @@ export default function Home() {
                 </Link>
                 <Link
                   to="/about"
+                  onClick={() => {
+                    if (isPostHogConfigured) {
+                      posthog.capture("about_page_opened");
+                    }
+                  }}
                   className="flex items-center px-6 py-3 text-gray-500 bg-gray-100 rounded-md hover:bg-gray-200 hover:text-gray-600"
                 >
                   Learn More

@@ -3,6 +3,7 @@ import type { Route } from "./+types/countries";
 import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
+import posthog, { isPostHogConfigured } from "~/lib/posthog.client";
 
 export async function clientLoader() {
   try {
@@ -48,6 +49,9 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
   const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRegion = e.target.value;
     setRegion(newRegion);
+    if (isPostHogConfigured && newRegion) {
+      posthog.capture("country_region_filtered", { region: newRegion });
+    }
   };
 
   // Ensure loaderData is an array, fallback to empty array
@@ -121,6 +125,11 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 <div className="flex items-start justify-between mb-2">
                   <Link
                     to={`/countries/${countryName}`}
+                    onClick={() => {
+                      if (isPostHogConfigured) {
+                        posthog.capture("country_details_opened", { country_code: country.cca3 });
+                      }
+                    }}
                     className="text-indigo-600 hover:underline text-lg font-semibold flex-1"
                   >
                     {countryName}
@@ -137,7 +146,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
+                        const wasClaimed = isClaimed;
                         claimCountry(countryName);
+                        if (isPostHogConfigured && !wasClaimed) {
+                          posthog.capture("country_claimed", {
+                            country_code: country.cca3,
+                            region: country.region,
+                            points_awarded: 100,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -150,7 +167,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        const wasLiked = isLiked;
                         likeCountry(countryName);
+                        if (isPostHogConfigured && !wasLiked) {
+                          posthog.capture("country_liked", {
+                            country_code: country.cca3,
+                            region: country.region,
+                            points_awarded: 10,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -163,7 +188,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        const wasVisited = user.visitedCountries.includes(countryName);
                         visitCountry(countryName);
+                        if (isPostHogConfigured && !wasVisited) {
+                          posthog.capture("country_visited", {
+                            country_code: country.cca3,
+                            region: country.region,
+                            points_awarded: 50,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
