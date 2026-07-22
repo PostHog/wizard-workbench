@@ -9,6 +9,7 @@ import { Comment } from "@/components/comments/comment";
 import type { Item } from "@/shared/types";
 import { getItemDetails } from "@/api/endpoints";
 import { ITEMS_PER_PAGE } from "@/constants/pagination";
+import { posthog } from "@/lib/posthog";
 
 type Props = Pick<Item, "id" | "kids"> & {
   children: ReactNode;
@@ -57,7 +58,10 @@ export const Comments = ({ id, kids, children }: Props) => {
       data={comments}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage) {
+          posthog?.capture("comment_thread_load_more", { item_id: id });
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}

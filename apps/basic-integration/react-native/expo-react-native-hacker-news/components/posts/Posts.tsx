@@ -12,6 +12,7 @@ import {
   type StoryType,
   MAP_STORY_TYPE_TO_STORY_ENDPOINTS,
 } from "@/constants/stories";
+import { posthog } from "@/lib/posthog";
 
 const renderItem: ListRenderItem<Item> = ({ item }) => {
   return (
@@ -78,7 +79,10 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
       data={posts}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage) {
+          posthog?.capture("story_feed_load_more", { story_type: storyType });
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}

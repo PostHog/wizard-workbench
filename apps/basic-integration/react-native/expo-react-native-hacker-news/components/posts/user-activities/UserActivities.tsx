@@ -10,6 +10,7 @@ import { Comment } from "@/components/comments/comment";
 import { getItemDetails } from "@/api/endpoints";
 import type { Item, User } from "@/shared/types";
 import { ITEMS_PER_PAGE } from "@/constants/pagination";
+import { posthog } from "@/lib/posthog";
 
 type Props = Pick<User, "id" | "submitted"> & {
   children: ReactNode;
@@ -58,7 +59,10 @@ export const Activities = ({ id, submitted, children }: Props) => {
       data={activities}
       onEndReachedThreshold={0.5}
       onEndReached={() => {
-        if (hasNextPage) fetchNextPage();
+        if (hasNextPage) {
+          posthog?.capture("user_activity_load_more");
+          fetchNextPage();
+        }
       }}
       contentContainerStyle={{ flexGrow: 1 }}
       renderItem={renderItem}
