@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import posthog from '../../lib/posthog'
 
 const scrollEl = ref<HTMLDivElement>()
 
 function scrollLeft() {
+  posthog.capture('carousel_scrolled', { direction: 'left' })
   scrollEl.value?.scrollBy({
     left: -window.innerWidth,
     behavior: 'smooth',
@@ -11,6 +13,7 @@ function scrollLeft() {
 }
 
 function scrollRight() {
+  posthog.capture('carousel_scrolled', { direction: 'right' })
   scrollEl.value?.scrollBy({
     left: window.innerWidth,
     behavior: 'smooth',

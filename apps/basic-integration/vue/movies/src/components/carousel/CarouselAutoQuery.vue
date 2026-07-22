@@ -4,6 +4,7 @@ import type { QueryItem } from '../../types'
 import { listMedia } from '../../composables/useTMDB'
 import MediaCard from '../media/MediaCard.vue'
 import CarouselBase from './CarouselBase.vue'
+import posthog from '../../lib/posthog'
 
 const props = defineProps<{
   query: QueryItem
@@ -11,6 +12,13 @@ const props = defineProps<{
 
 const items = ref<any[]>([])
 const loading = ref(true)
+
+function exploreCategory() {
+  posthog.capture('category_explored', {
+    media_type: props.query.type,
+    category: props.query.query,
+  })
+}
 
 onMounted(async () => {
   try {
@@ -30,7 +38,7 @@ onMounted(async () => {
       {{ query.title }}
     </template>
     <template #more>
-      <router-link :to="`/${query.type}/category/${query.query}`" class="n-link">
+      <router-link :to="`/${query.type}/category/${query.query}`" class="n-link" @click="exploreCategory">
         Explore more
       </router-link>
     </template>
