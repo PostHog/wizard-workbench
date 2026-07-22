@@ -29,6 +29,7 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import posthog from "~/lib/posthog.client";
 
 export type CancelOrModifySubscriptionModalContentProps = {
   canCancelSubscription: boolean;
@@ -81,9 +82,25 @@ export function CancelOrModifySubscriptionModalContent({
     if (isCurrentTier) {
       if (interval !== currentTierInterval) {
         return interval === "annual"
-          ? { children: tModal("switchToAnnualButton") }
+          ? {
+              children: tModal("switchToAnnualButton"),
+              onClick: () => {
+                posthog?.capture("subscription_change_requested", {
+                  billing_interval: interval,
+                  current_plan_tier: currentTier,
+                  requested_plan_tier: tier,
+                });
+              },
+            }
           : {
               children: tModal("switchToMonthlyButton"),
+              onClick: () => {
+                posthog?.capture("subscription_change_requested", {
+                  billing_interval: interval,
+                  current_plan_tier: currentTier,
+                  requested_plan_tier: tier,
+                });
+              },
               variant: "outline",
             };
       }
@@ -113,8 +130,28 @@ export function CancelOrModifySubscriptionModalContent({
 
     // 3. Default static buttons for upgrade vs downgrade
     return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+      ? {
+          children: tModal("upgradeButton"),
+          disabled: isSubmitting,
+          onClick: () => {
+            posthog?.capture("subscription_change_requested", {
+              billing_interval: interval,
+              current_plan_tier: currentTier,
+              requested_plan_tier: tier,
+            });
+          },
+        }
+      : {
+          children: tModal("downgradeButton"),
+          onClick: () => {
+            posthog?.capture("subscription_change_requested", {
+              billing_interval: interval,
+              current_plan_tier: currentTier,
+              requested_plan_tier: tier,
+            });
+          },
+          variant: "outline",
+        };
   };
 
   return (
@@ -515,7 +552,12 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={(event) => {
+                  posthog?.capture("subscription_cancellation_requested", {
+                    current_plan_tier: currentTier,
+                  });
+                  onCancelSubscriptionClick?.(event);
+                }}
                 type="button"
                 variant="outline"
               >

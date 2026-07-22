@@ -16,6 +16,7 @@ import {
 import { Field, FieldError, FieldLabel, FieldSet } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
+import posthog from "~/lib/posthog.client";
 
 type EditBillingEmailModalContentProps = {
   billingEmail: string;
@@ -76,6 +77,9 @@ export function EditBillingEmailModalContent({
           disabled={isUpdatingBillingEmail}
           form="edit-billing-email-form"
           name="intent"
+          onClick={() => {
+            posthog?.capture("billing_email_update_submitted");
+          }}
           type="submit"
           value={UPDATE_BILLING_EMAIL_INTENT}
         >

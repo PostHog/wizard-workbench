@@ -28,6 +28,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import type { UserAccount } from "~/generated/browser";
+import posthog from "~/lib/posthog.client";
 
 const ONE_MB = 1_000_000;
 
@@ -180,6 +181,9 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
           <div className="max-w-min">
             <Button
               name="intent"
+              onClick={() => {
+                posthog?.capture("user_account_update_submitted");
+              }}
               type="submit"
               value={UPDATE_USER_ACCOUNT_INTENT}
             >

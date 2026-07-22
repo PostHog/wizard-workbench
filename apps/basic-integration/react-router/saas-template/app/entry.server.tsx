@@ -107,6 +107,7 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    "https://*.posthog.com",
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],
@@ -119,6 +120,7 @@ export default async function handleRequest(
                   "script-src": [
                     "'strict-dynamic'",
                     "'self'",
+                    "https://*.posthog.com",
                     `'nonce-${nonce}'`,
                   ],
                   // Inline event handlers with nonce

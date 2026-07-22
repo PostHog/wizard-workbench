@@ -27,6 +27,7 @@ import {
 } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { OrganizationMembershipRole } from "~/generated/browser";
+import posthog from "~/lib/posthog.client";
 
 export type EmailInviteCardProps = {
   currentUserIsOwner: boolean;
@@ -163,6 +164,12 @@ export function EmailInviteCard({
           disabled={disabled}
           form={form.props.id}
           name="intent"
+          onClick={() => {
+            posthog?.capture("organization_invite_sent", {
+              invited_role:
+                fields.role.value ?? OrganizationMembershipRole.member,
+            });
+          }}
           type="submit"
           value={INVITE_BY_EMAIL_INTENT}
         >

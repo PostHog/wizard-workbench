@@ -23,6 +23,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "~/components/ui/sidebar";
+import posthog from "~/lib/posthog.client";
 
 export type NavUserProps = {
   user: {
@@ -115,7 +116,12 @@ export function NavUser({ user }: NavUserProps) {
 
             <DropdownMenuSeparator />
 
-            <Form action="/logout" method="post" replace>
+            <Form
+              action="/logout"
+              method="post"
+              onSubmit={() => posthog?.reset()}
+              replace
+            >
               <DropdownMenuItem
                 render={
                   <button

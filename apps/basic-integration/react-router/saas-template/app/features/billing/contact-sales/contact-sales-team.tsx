@@ -19,6 +19,7 @@ import { Field, FieldError, FieldLabel, FieldSet } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import { Textarea } from "~/components/ui/textarea";
+import posthog from "~/lib/posthog.client";
 
 export type ContactSalesTeamProps = {
   isContactingSales?: boolean;
@@ -150,7 +151,14 @@ export function ContactSalesTeam({
               {t("submitDisclaimer")}
             </p>
 
-            <Button name="intent" type="submit" value={CONTACT_SALES_INTENT}>
+            <Button
+              name="intent"
+              onClick={() => {
+                posthog?.capture("contact_sales_submitted");
+              }}
+              type="submit"
+              value={CONTACT_SALES_INTENT}
+            >
               {isContactingSales ? (
                 <>
                   <Spinner />

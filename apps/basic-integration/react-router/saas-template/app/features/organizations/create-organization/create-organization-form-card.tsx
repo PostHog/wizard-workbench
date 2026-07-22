@@ -32,6 +32,7 @@ import {
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
+import posthog from "~/lib/posthog.client";
 
 const ONE_MB = 1_000_000;
 
@@ -145,6 +146,9 @@ export function CreateOrganizationFormCard({
             disabled={isCreatingOrganization}
             form={form.id}
             name="intent"
+            onClick={() => {
+              posthog?.capture("organization_created");
+            }}
             type="submit"
             value={CREATE_ORGANIZATION_INTENT}
           >
