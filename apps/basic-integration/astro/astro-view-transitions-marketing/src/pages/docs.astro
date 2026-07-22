@@ -13,22 +13,22 @@ import Layout from '../layouts/Layout.astro';
   <section class="features" style="padding-top: 3rem;">
     <div class="container">
       <div class="features-grid">
-        <a href="#" class="feature-card" style="text-decoration: none;">
+        <a href="#" class="feature-card" style="text-decoration: none;" data-posthog-event="documentation_topic_selected" data-posthog-topic="getting_started">
           <div class="feature-icon">🚀</div>
           <h3>Getting Started</h3>
           <p>Set up your account and start using NeuralFlow in under 5 minutes.</p>
         </a>
-        <a href="#" class="feature-card" style="text-decoration: none;">
+        <a href="#" class="feature-card" style="text-decoration: none;" data-posthog-event="documentation_topic_selected" data-posthog-topic="api_reference">
           <div class="feature-icon">📚</div>
           <h3>API Reference</h3>
           <p>Complete API documentation with examples for all endpoints.</p>
         </a>
-        <a href="#" class="feature-card" style="text-decoration: none;">
+        <a href="#" class="feature-card" style="text-decoration: none;" data-posthog-event="documentation_topic_selected" data-posthog-topic="integrations">
           <div class="feature-icon">🔌</div>
           <h3>Integrations</h3>
           <p>Connect NeuralFlow with your favorite tools and services.</p>
         </a>
-        <a href="#" class="feature-card" style="text-decoration: none;">
+        <a href="#" class="feature-card" style="text-decoration: none;" data-posthog-event="documentation_topic_selected" data-posthog-topic="workflows">
           <div class="feature-icon">🔄</div>
           <h3>Workflows</h3>
           <p>Build powerful automation workflows with our visual builder.</p>
@@ -47,3 +47,13 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.querySelectorAll('[data-posthog-topic]').forEach((link) => {
+    link.addEventListener('click', () => {
+      window.posthog?.capture('documentation_topic_selected', {
+        topic: link.dataset.posthogTopic,
+      });
+    });
+  });
+</script>
