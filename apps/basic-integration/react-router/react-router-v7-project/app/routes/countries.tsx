@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
+import { usePostHog } from "@posthog/react";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
 
@@ -34,6 +35,7 @@ export async function clientLoader() {
 }
 
 export default function Countries({ loaderData }: Route.ComponentProps) {
+  const posthog = usePostHog();
   const { user } = useAuth();
   const [search, setSearch] = useState<string>("");
   const [region, setRegion] = useState<string>("");
@@ -42,12 +44,18 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSearch = e.target.value;
     setSearch(newSearch);
+    if (!search && newSearch) {
+      posthog.capture("country_search_used");
+    }
   };
 
   // Handler for region filter
   const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRegion = e.target.value;
     setRegion(newRegion);
+    if (newRegion) {
+      posthog.capture("country_region_filtered", { region: newRegion });
+    }
   };
 
   // Ensure loaderData is an array, fallback to empty array
@@ -137,7 +145,13 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
-                        claimCountry(countryName);
+                        if (!isClaimed) {
+                          claimCountry(countryName);
+                          posthog.capture("country_claimed", {
+                            country_code: country.cca3,
+                            region: country.region,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -150,7 +164,13 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
-                        likeCountry(countryName);
+                        if (!isLiked) {
+                          likeCountry(countryName);
+                          posthog.capture("country_liked", {
+                            country_code: country.cca3,
+                            region: country.region,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -163,7 +183,14 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
-                        visitCountry(countryName);
+                        const isVisited = user.visitedCountries.includes(countryName);
+                        if (!isVisited) {
+                          visitCountry(countryName);
+                          posthog.capture("country_visited", {
+                            country_code: country.cca3,
+                            region: country.region,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
