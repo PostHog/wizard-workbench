@@ -5,13 +5,32 @@ const currentYear = new Date().getFullYear();
 <footer class="footer">
   <div class="container footer-inner">
     <ul class="footer-links">
-      <li><a href="/features" class="footer-link">Features</a></li>
-      <li><a href="/pricing" class="footer-link">Pricing</a></li>
-      <li><a href="/about" class="footer-link">About</a></li>
-      <li><a href="/docs" class="footer-link">Docs</a></li>
-      <li><a href="#" class="footer-link">Privacy</a></li>
-      <li><a href="#" class="footer-link">Terms</a></li>
+      <li><a href="/features" class="footer-link" data-posthog-footer="features">Features</a></li>
+      <li><a href="/pricing" class="footer-link" data-posthog-footer="pricing">Pricing</a></li>
+      <li><a href="/about" class="footer-link" data-posthog-footer="about">About</a></li>
+      <li><a href="/docs" class="footer-link" data-posthog-footer="docs">Docs</a></li>
+      <li><a href="#" class="footer-link" data-posthog-legal="privacy">Privacy</a></li>
+      <li><a href="#" class="footer-link" data-posthog-legal="terms">Terms</a></li>
     </ul>
     <p class="footer-copy">&copy; {currentYear} NeuralFlow AI. All rights reserved.</p>
   </div>
 </footer>
+
+<script is:inline>
+  document.querySelectorAll('[data-posthog-footer]').forEach((link) => {
+    link.addEventListener('click', () => {
+      window.posthog?.capture('footer_navigation_clicked', {
+        destination: link.dataset.posthogFooter,
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-posthog-legal]').forEach((link) => {
+    link.addEventListener('click', () => {
+      window.posthog?.capture('legal_link_clicked', {
+        document: link.dataset.posthogLegal,
+        location: 'footer',
+      });
+    });
+  });
+</script>
