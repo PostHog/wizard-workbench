@@ -64,3 +64,6 @@ group :test do
   gem "vcr"
   gem "mocha"
 end
+
+gem "posthog-ruby", "~> 3.18"
+gem "posthog-rails", "~> 3.17"

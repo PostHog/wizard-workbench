@@ -71,6 +71,13 @@ Rails.application.configure do
 
     # Specify URI for violation reports (e.g., Sentry CSP endpoint)
     policy.report_uri report_uri if report_uri
+
+    if ENV["POSTHOG_PROJECT_TOKEN"].present?
+      posthog_host = ENV.fetch("POSTHOG_HOST", "https://us.i.posthog.com")
+      posthog_assets_host = posthog_host.sub(".i.posthog.com", "-assets.i.posthog.com")
+      policy.script_src(*policy.script_src, posthog_assets_host)
+      policy.connect_src(*policy.connect_src, posthog_host, posthog_assets_host)
+    end
   end
 
   # Report violations without enforcing the policy.

@@ -28,6 +28,14 @@ class BoardsController < ApplicationController
   def create
     @board = Board.create! board_params.with_defaults(all_access: true)
 
+    if ENV["POSTHOG_PROJECT_TOKEN"].present?
+      PostHog.capture(
+        distinct_id: Current.user.posthog_distinct_id,
+        event: "board_created",
+        properties: { board_id: @board.id.to_s, all_access: @board.all_access }
+      )
+    end
+
     respond_to do |format|
       format.html { redirect_to board_path(@board) }
       format.json { head :created, location: board_path(@board, format: :json) }
@@ -57,7 +65,16 @@ class BoardsController < ApplicationController
   end
 
   def destroy
+    board_id = @board.id.to_s
     @board.destroy
+
+    if ENV["POSTHOG_PROJECT_TOKEN"].present?
+      PostHog.capture(
+        distinct_id: Current.user.posthog_distinct_id,
+        event: "board_deleted",
+        properties: { board_id: board_id }
+      )
+    end
 
     respond_to do |format|
       format.html { redirect_to root_path }
