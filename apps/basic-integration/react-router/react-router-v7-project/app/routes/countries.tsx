@@ -2,7 +2,8 @@ import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
-import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
+import { claimCountry, likeCountry, visitCountry, getCurrentUser } from "~/lib/utils/auth";
+import { usePostHog } from "@posthog/react";
 
 export async function clientLoader() {
   try {
@@ -35,6 +36,7 @@ export async function clientLoader() {
 
 export default function Countries({ loaderData }: Route.ComponentProps) {
   const { user } = useAuth();
+  const posthog = usePostHog();
   const [search, setSearch] = useState<string>("");
   const [region, setRegion] = useState<string>("");
 
@@ -42,12 +44,18 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSearch = e.target.value;
     setSearch(newSearch);
+    if (newSearch.length > 0) {
+      posthog?.capture('country_searched', { search_term_length: newSearch.length });
+    }
   };
 
   // Handler for region filter
   const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRegion = e.target.value;
     setRegion(newRegion);
+    if (newRegion) {
+      posthog?.capture('country_region_filtered', { region: newRegion });
+    }
   };
 
   // Ensure loaderData is an array, fallback to empty array
@@ -137,7 +145,16 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
+                        const prevAchievements = getCurrentUser()?.achievements.length ?? 0;
                         claimCountry(countryName);
+                        posthog?.capture('country_claimed', { country: countryName, region: country.region });
+                        const updatedUser = getCurrentUser();
+                        if (updatedUser && updatedUser.achievements.length > prevAchievements) {
+                          const newAchievements = updatedUser.achievements.slice(prevAchievements);
+                          newAchievements.forEach((achievement: string) => {
+                            posthog?.capture('achievement_unlocked', { achievement });
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -150,7 +167,16 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        const prevAchievements = getCurrentUser()?.achievements.length ?? 0;
                         likeCountry(countryName);
+                        posthog?.capture('country_liked', { country: countryName, region: country.region });
+                        const updatedUser = getCurrentUser();
+                        if (updatedUser && updatedUser.achievements.length > prevAchievements) {
+                          const newAchievements = updatedUser.achievements.slice(prevAchievements);
+                          newAchievements.forEach((achievement: string) => {
+                            posthog?.capture('achievement_unlocked', { achievement });
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -163,7 +189,16 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        const prevAchievements = getCurrentUser()?.achievements.length ?? 0;
                         visitCountry(countryName);
+                        posthog?.capture('country_visited', { country: countryName, region: country.region });
+                        const updatedUser = getCurrentUser();
+                        if (updatedUser && updatedUser.achievements.length > prevAchievements) {
+                          const newAchievements = updatedUser.achievements.slice(prevAchievements);
+                          newAchievements.forEach((achievement: string) => {
+                            posthog?.capture('achievement_unlocked', { achievement });
+                          });
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"

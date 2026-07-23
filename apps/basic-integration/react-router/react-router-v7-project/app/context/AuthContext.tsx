@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
+import { usePostHog } from '@posthog/react'
 
 interface AuthContextType {
   user: FakeUser | null
@@ -14,10 +15,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
+  const posthog = usePostHog()
 
   useEffect(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
+    if (currentUser) {
+      posthog?.identify(currentUser.id, { username: currentUser.username })
+    }
   }, [])
 
   const login = (username: string, password: string): boolean => {
