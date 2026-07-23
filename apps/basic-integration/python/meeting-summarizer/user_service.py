@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """User Management Service - A pure Python background service for managing users."""
 
+import atexit
+import os
 import uuid
 from datetime import datetime
 from typing import Optional
 
 from database import UserDatabase
 from models import User
+from dotenv import load_dotenv
+from posthog import Posthog
 
 
 class UserService:
@@ -17,6 +21,25 @@ class UserService:
         self.db = UserDatabase()
         self.service_id = str(uuid.uuid4())
         print(f"User service initialized (ID: {self.service_id})")
+        self._posthog = self._init_posthog()
+
+    def _init_posthog(self):
+        load_dotenv()
+        token = os.getenv('POSTHOG_PROJECT_TOKEN')
+        if not token:
+            print(
+                'WARNING: POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, '
+                'this causes events to be silently missed. This error stops appearing once '
+                'POSTHOG_PROJECT_TOKEN is configured'
+            )
+            return None
+        client = Posthog(
+            token,
+            host=os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com'),
+            enable_exception_autocapture=True,
+        )
+        atexit.register(client.shutdown)
+        return client
 
     def register_user(self, email: str, username: str, full_name: Optional[str] = None, metadata: Optional[dict] = None) -> Optional[User]:
         """Register a new user."""
@@ -36,6 +59,12 @@ class UserService:
 
         if self.db.create_user(user):
             print(f"✓ User registered: {username} ({email})")
+            if self._posthog:
+                self._posthog.set(distinct_id=user_id, properties={
+                    'username': username,
+                    'is_active': True,
+                })
+                self._posthog.capture(distinct_id=user_id, event='user_registered')
             return user
         else:
             print(f"✗ Failed to register user: {username} (email or username already exists)")
@@ -63,6 +92,8 @@ class UserService:
 
         if success:
             print(f"✓ User deactivated: {user_id}")
+            if self._posthog:
+                self._posthog.capture(distinct_id=user_id, event='user_deactivated')
         else:
             print(f"✗ Failed to deactivate user: {user_id}")
 
@@ -77,6 +108,8 @@ class UserService:
 
             if success:
                 print(f"✓ User deleted: {user_id}")
+                if self._posthog:
+                    self._posthog.capture(distinct_id=user_id, event='user_deleted')
                 return True
 
         print(f"✗ Failed to delete user: {user_id}")
