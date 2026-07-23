@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -95,16 +96,37 @@ export default async function handler(
       logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
     ]);
 
+    const distinctId = req.headers['x-posthog-distinct-id'] as string | undefined;
+    const posthog = getPostHogClient();
+    const captureId = distinctId || String(foundUser.id);
+
+    posthog.identify({
+      distinctId: String(foundUser.id),
+      properties: { role: foundUser.role },
+    });
+
+    posthog.capture({
+      distinctId: captureId,
+      event: 'user_signed_in',
+      properties: {
+        user_id: foundUser.id,
+        team_id: foundTeam?.id ?? null,
+        ...(distinctId ? { $set: { $anon_distinct_id: distinctId } } : {}),
+      },
+    });
+
+    await posthog.flush();
+
     if (redirect === 'checkout' && foundTeam) {
       const checkoutResult = await createCheckoutSession({
         team: foundTeam,
         priceId,
         userId: foundUser.id
       });
-      return res.status(200).json(checkoutResult);
+      return res.status(200).json({ ...checkoutResult, userId: foundUser.id });
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({ success: true, redirectTo: '/dashboard', userId: foundUser.id });
   } catch (error) {
     console.error('Sign in error:', error);
     return res.status(500).json({ error: 'Failed to sign in. Please try again.' });
