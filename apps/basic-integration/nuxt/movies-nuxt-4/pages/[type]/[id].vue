@@ -25,6 +25,15 @@ useHead({
     { property: 'og:image', content: $img(`/tmdb${item.poster_path}`, { width: 1200, height: 630 }) },
   ],
 })
+
+const posthog = usePostHog()
+onMounted(() => {
+  posthog?.capture('media_viewed', {
+    media_id: item.id,
+    media_title: item.name || item.title,
+    media_type: type.value,
+  })
+})
 </script>
 
 <template>
