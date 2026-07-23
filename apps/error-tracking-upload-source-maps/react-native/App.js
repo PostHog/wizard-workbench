@@ -1,6 +1,6 @@
 import React from 'react';
 import { PostHogProvider } from 'posthog-react-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { Button, NativeModules, StyleSheet, Text, View } from 'react-native';
 
 function App() {
   return (
@@ -10,6 +10,13 @@ function App() {
     >
       <View style={styles.container}>
         <Text>Source map upload example (bare React Native)</Text>
+        {/* Crashes the app natively (not a JS error). Only shows up in PostHog
+            error tracking when native crash autocapture is enabled; the crash
+            report uploads on the NEXT app launch. */}
+        <Button
+          title="Trigger native crash"
+          onPress={() => NativeModules.NativeCrashTest.crash()}
+        />
       </View>
     </PostHogProvider>
   );
