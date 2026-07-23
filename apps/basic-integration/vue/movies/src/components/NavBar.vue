@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import posthog from 'posthog-js'
 import { useAuth } from '../composables/useAuth'
 
 const route = useRoute()
@@ -8,6 +9,8 @@ const router = useRouter()
 const { user, logout } = useAuth()
 
 const handleLogout = async () => {
+  posthog.capture('user_logged_out')
+  posthog.reset()
   await logout()
 }
 
