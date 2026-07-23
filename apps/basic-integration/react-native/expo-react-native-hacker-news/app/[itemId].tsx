@@ -13,6 +13,7 @@ import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
@@ -21,6 +22,7 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
+  const posthog = usePostHog();
   const { width: windowWidth } = useWindowDimensions();
 
   if (typeof itemId !== "string") {
@@ -120,6 +122,11 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog.capture("story_detail_upvoted", {
+                  story_id: item.id,
+                  story_title: item.title,
+                  score: item.score ?? 0,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -163,6 +170,11 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture("story_detail_link_opened", {
+                    story_id: item.id,
+                    story_title: item.title,
+                    url: item.url,
+                  });
                   Linking.openURL(item.url);
                 }}
               >

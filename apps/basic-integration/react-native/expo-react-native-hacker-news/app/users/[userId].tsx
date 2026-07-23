@@ -5,9 +5,11 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import RenderHTML from "react-native-render-html";
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import { usePostHog } from "posthog-react-native";
 
 import { Activities } from "@/components/posts/user-activities/UserActivities";
 
@@ -16,7 +18,16 @@ import { Avatar } from "@/components/Avatar";
 
 export default function UserDetails() {
   const { userId } = useLocalSearchParams();
+  const posthog = usePostHog();
   const { width: windowWidth } = useWindowDimensions();
+
+  useEffect(() => {
+    if (typeof userId === "string") {
+      posthog.capture("user_profile_viewed", {
+        profile_user_id: userId,
+      });
+    }
+  }, [userId, posthog]);
 
   if (typeof userId !== "string") {
     return router.back();
