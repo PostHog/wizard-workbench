@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PosthogService } from '@core/services/posthog.service';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,8 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PosthogService);
 
   /**
    * Authenticates the user.
@@ -41,7 +43,13 @@ export class AuthenticationService {
       firstName,
       lastName,
     });
-    this._credentialsService.setCredentials(credentials, context.remember);
+    this.credentialsService.setCredentials(credentials, context.remember);
+    this.posthogService.client.identify(credentials.id, {
+      email: credentials.email,
+      name: credentials.fullName.trim(),
+      role: credentials.roles[0],
+    });
+    this.posthogService.client.capture('user_logged_in');
 
     return of(credentials);
   }

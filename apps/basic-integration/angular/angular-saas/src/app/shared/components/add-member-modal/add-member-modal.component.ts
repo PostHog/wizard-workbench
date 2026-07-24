@@ -2,6 +2,7 @@ import { Component, input, output, inject, ChangeDetectionStrategy, signal } fro
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../modal/modal.component';
 import { DataService } from '@app/@core/services/data.service';
+import { PosthogService } from '@app/@core/services/posthog.service';
 import { HotToastService } from '@ngxpert/hot-toast';
 
 interface MemberForm {
@@ -158,6 +159,7 @@ interface MemberForm {
 })
 export class AddMemberModalComponent {
   private readonly dataService = inject(DataService);
+  private readonly posthogService = inject(PosthogService);
   private readonly toast = inject(HotToastService);
 
   isOpen = input(false);
@@ -197,6 +199,7 @@ export class AddMemberModalComponent {
       role: current.role,
       avatar: current.avatar,
     });
+    this.posthogService.client.capture('team_member_added', { role: current.role });
 
     this.toast.success(`${current.name} added to the team!`);
     this.resetForm();
