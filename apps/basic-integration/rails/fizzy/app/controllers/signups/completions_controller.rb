@@ -23,6 +23,12 @@ class Signups::CompletionsController < ApplicationController
     end
 
     def welcome_to_account
+      PostHog.capture(
+        distinct_id: Current.identity.posthog_distinct_id,
+        event: "account_created",
+        properties: { signup_method: "magic_link" }
+      )
+
       respond_to do |format|
         format.html do
           flash[:welcome_letter] = true
