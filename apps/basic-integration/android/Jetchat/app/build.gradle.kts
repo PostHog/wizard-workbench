@@ -28,6 +28,8 @@ android {
 
     defaultConfig {
         applicationId = "com.example.compose.jetchat"
+        buildConfigField("String", "POSTHOG_PROJECT_TOKEN", "\"${System.getenv("POSTHOG_PROJECT_TOKEN") ?: ""}\"")
+        buildConfigField("String", "POSTHOG_HOST", "\"${System.getenv("POSTHOG_HOST") ?: ""}\"")
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
@@ -75,6 +77,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -96,6 +99,7 @@ dependencies {
     implementation(libs.androidx.glance.material3)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
+    implementation("com.posthog:posthog-android:3.+")
 
     implementation(libs.androidx.activity.compose)
 
