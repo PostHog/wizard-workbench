@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getInvoiceById, updateInvoice, deleteInvoice } from '~/utils/invoices'
+import { getPostHogClient } from '~/utils/posthog-server'
 
 export const Route = createFileRoute('/api/invoices/$invoiceId')({
   server: {
@@ -37,6 +38,23 @@ export const Route = createFileRoute('/api/invoices/$invoiceId')({
             return Response.json({ error: 'Invoice not found' }, { status: 404 })
           }
 
+          const sessionId = request.headers.get('X-PostHog-Session-Id')
+          const distinctId = request.headers.get('X-PostHog-Distinct-Id')
+          const posthog = getPostHogClient()
+          if (posthog && distinctId) {
+            posthog.capture({
+              distinctId,
+              event: 'invoice_updated',
+              properties: {
+                $session_id: sessionId || undefined,
+                invoice_id: id,
+                updated_fields: Object.keys(body),
+                source: 'api',
+              },
+            })
+            await posthog.flush()
+          }
+
           return Response.json(invoice)
         } catch (e) {
           console.error('Error updating invoice:', e)
@@ -59,6 +77,22 @@ export const Route = createFileRoute('/api/invoices/$invoiceId')({
 
         if (!deleted) {
           return Response.json({ error: 'Invoice not found' }, { status: 404 })
+        }
+
+        const sessionId = request.headers.get('X-PostHog-Session-Id')
+        const distinctId = request.headers.get('X-PostHog-Distinct-Id')
+        const posthog = getPostHogClient()
+        if (posthog && distinctId) {
+          posthog.capture({
+            distinctId,
+            event: 'invoice_deleted',
+            properties: {
+              $session_id: sessionId || undefined,
+              invoice_id: id,
+              source: 'api',
+            },
+          })
+          await posthog.flush()
         }
 
         return Response.json({ success: true })
