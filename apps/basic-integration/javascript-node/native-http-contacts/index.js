@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { posthog } from './posthog.js';
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -47,6 +48,11 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      posthog?.capture({
+        event: 'group_created',
+        properties: { initial_contact_count: 0 },
+      });
+      await posthog?.flush();
       return json(res, 201, group);
     }
 
@@ -90,6 +96,15 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      posthog?.capture({
+        event: 'contact_created',
+        properties: {
+          group_id: contact.group_id,
+          has_phone: Boolean(contact.phone),
+          has_company: Boolean(contact.company),
+        },
+      });
+      await posthog?.flush();
       return json(res, 201, contact);
     }
 
@@ -108,12 +123,33 @@ const server = createServer(async (req, res) => {
       if (!contact) return json(res, 404, { error: 'Contact not found' });
 
       const body = await parseBody(req);
-      if (body.name !== undefined) contact.name = body.name;
-      if (body.email !== undefined) contact.email = body.email;
-      if (body.phone !== undefined) contact.phone = body.phone;
-      if (body.company !== undefined) contact.company = body.company;
-      if (body.group_id !== undefined) contact.group_id = body.group_id;
+      const updated_fields = [];
+      if (body.name !== undefined) {
+        contact.name = body.name;
+        updated_fields.push('name');
+      }
+      if (body.email !== undefined) {
+        contact.email = body.email;
+        updated_fields.push('email');
+      }
+      if (body.phone !== undefined) {
+        contact.phone = body.phone;
+        updated_fields.push('phone');
+      }
+      if (body.company !== undefined) {
+        contact.company = body.company;
+        updated_fields.push('company');
+      }
+      if (body.group_id !== undefined) {
+        contact.group_id = body.group_id;
+        updated_fields.push('group_id');
+      }
 
+      posthog?.capture({
+        event: 'contact_updated',
+        properties: { updated_fields },
+      });
+      await posthog?.flush();
       return json(res, 200, contact);
     }
 
@@ -124,12 +160,16 @@ const server = createServer(async (req, res) => {
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
       contacts.splice(index, 1);
+      posthog?.capture({ event: 'contact_deleted' });
+      await posthog?.flush();
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    posthog?.captureException(err);
+    await posthog?.flush();
     json(res, 500, { error: 'Internal server error' });
   }
 });
