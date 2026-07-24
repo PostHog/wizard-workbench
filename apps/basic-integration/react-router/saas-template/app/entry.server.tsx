@@ -107,6 +107,9 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    process.env.VITE_PUBLIC_POSTHOG_HOST ||
+                      "https://us.i.posthog.com",
+                    "https://us-assets.i.posthog.com",
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],

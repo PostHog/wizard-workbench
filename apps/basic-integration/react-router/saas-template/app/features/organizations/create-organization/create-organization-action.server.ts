@@ -8,6 +8,7 @@ import { uploadOrganizationLogo } from "~/features/organizations/organizations-h
 import { saveOrganizationWithOwnerToDatabase } from "~/features/organizations/organizations-model.server";
 import { requireAuthenticatedUserExists } from "~/features/user-accounts/user-accounts-helpers.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import { posthogContext } from "~/lib/posthog-middleware";
 import { slugify } from "~/utils/slugify.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -20,6 +21,7 @@ export async function createOrganizationAction({
     request,
   });
   const { supabase } = context.get(authContext);
+  const posthog = context.get(posthogContext);
   const result = await validateFormData(
     request,
     coerceFormValue(createOrganizationFormSchema),
@@ -49,6 +51,17 @@ export async function createOrganizationAction({
       slug: slugify(result.data.name),
     },
     userId: user.id,
+  });
+
+  posthog?.capture({
+    distinctId: user.id,
+    event: "additional_organization_created",
+    properties: {
+      has_logo: Boolean(result.data.logo),
+      organization_id: organization.id,
+      organization_slug: organization.slug,
+      source: "dashboard",
+    },
   });
 
   return redirect(`/organizations/${organization.slug}`, { headers });
