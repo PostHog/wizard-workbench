@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
+import { PostHogIdentify } from '@/components/posthog-identify';
 
 export const metadata: Metadata = {
   title: 'Next.js SaaS Starter',
@@ -15,11 +16,13 @@ export const viewport: Viewport = {
 
 const manrope = Manrope({ subsets: ['latin'] });
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getUser();
+
   return (
     <html
       lang="en"
@@ -36,6 +39,14 @@ export default function RootLayout({
             }
           }}
         >
+          {user && (
+            <PostHogIdentify
+              userId={user.id}
+              email={user.email}
+              name={user.name ?? null}
+              role={user.role}
+            />
+          )}
           {children}
         </SWRConfig>
       </body>
