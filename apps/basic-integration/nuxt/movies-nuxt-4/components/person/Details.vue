@@ -1,23 +1,32 @@
 <script setup lang="ts">
 import type { Person } from '~/types'
 
-defineProps<{
+const props = defineProps<{
   item: Person
 }>()
 
 const tab = ref<'known' | 'credits' | 'photos'>('known')
+const { $posthog } = useNuxtApp()
+
+function selectTab(selectedTab: typeof tab.value) {
+  tab.value = selectedTab
+  $posthog?.capture('person_detail_tab_selected', {
+    person_id: props.item.id,
+    tab: selectedTab,
+  })
+}
 </script>
 
 <template>
   <PersonInfo :item="item" />
   <div flex items-center justify-center gap8 py6>
-    <button n-tab :class="{ 'n-tab-active': tab === 'known' }" data-testid="tab-known" @click="tab = 'known'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'known' }" data-testid="tab-known" @click="selectTab('known')">
       {{ $t('Known For') }}
     </button>
-    <button n-tab :class="{ 'n-tab-active': tab === 'credits' }" data-testid="tab-credits" @click="tab = 'credits'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'credits' }" data-testid="tab-credits" @click="selectTab('credits')">
       {{ $t('Credits') }}
     </button>
-    <button n-tab :class="{ 'n-tab-active': tab === 'photos' }" data-testid="tab-photos" @click="tab = 'photos'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'photos' }" data-testid="tab-photos" @click="selectTab('photos')">
       {{ $t('Person Photos') }}
     </button>
   </div>
