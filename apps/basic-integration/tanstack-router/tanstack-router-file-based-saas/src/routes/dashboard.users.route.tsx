@@ -1,6 +1,7 @@
 import { createFileRoute, Link, MatchRoute, Outlet, retainSearchParams, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
+import { usePostHog } from '@posthog/react'
 import { Spinner } from '../components/Spinner'
 import { fetchUsers } from '../utils/mockTodos'
 
@@ -37,6 +38,7 @@ function UsersComponent() {
   const { users } = Route.useLoaderData()
   const sortBy = usersView?.sortBy ?? 'name'
   const filterBy = usersView?.filterBy
+  const posthog = usePostHog()
 
   const [filterDraft, setFilterDraft] = React.useState(filterBy ?? '')
 
@@ -88,6 +90,13 @@ function UsersComponent() {
           <input
             value={filterDraft}
             onChange={(e) => setFilterDraft(e.target.value)}
+            onBlur={(e) => {
+              if (e.target.value) {
+                posthog.capture('team_member_searched', {
+                  result_count: users.length,
+                })
+              }
+            }}
             placeholder="Search team members..."
             className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
           />

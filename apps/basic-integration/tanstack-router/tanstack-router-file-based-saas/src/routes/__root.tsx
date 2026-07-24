@@ -6,9 +6,19 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from '@posthog/react'
 import { Spinner } from '../components/Spinner'
 import { Breadcrumbs } from '../components/Breadcrumbs'
 import type { Auth } from '../utils/auth'
+
+const posthogKey = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
+if (!posthogKey && import.meta.env.DEV) {
+  console.error(
+    'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_PROJECT_TOKEN is configured',
+  )
+}
 
 function RouterSpinner() {
   const isLoading = useRouterState({ select: (s) => s.status === 'pending' })
@@ -22,6 +32,29 @@ export const Route = createRootRouteWithContext<{
 })
 
 function RootComponent() {
+  return (
+    <>
+      {posthogKey ? (
+        <PostHogProvider
+          apiKey={posthogKey}
+          options={{
+            api_host: '/ingest',
+            ui_host: posthogHost || 'https://us.posthog.com',
+            defaults: '2026-01-30',
+            capture_exceptions: true,
+            debug: import.meta.env.DEV,
+          }}
+        >
+          <RootLayout />
+        </PostHogProvider>
+      ) : (
+        <RootLayout />
+      )}
+    </>
+  )
+}
+
+function RootLayout() {
   return (
     <>
       <div className={`min-h-screen flex flex-col`}>
