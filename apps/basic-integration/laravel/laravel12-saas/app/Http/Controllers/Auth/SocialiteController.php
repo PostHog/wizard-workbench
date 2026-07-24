@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
@@ -39,6 +40,11 @@ class SocialiteController extends Controller
         }
 
         Auth::login($user);
+
+        app(PostHogService::class)->identifyUser($user);
+        app(PostHogService::class)->capture((string) $user->getKey(), 'user_logged_in', [
+            'login_method' => $provider,
+        ]);
 
         return redirect('/dashboard');
     }
