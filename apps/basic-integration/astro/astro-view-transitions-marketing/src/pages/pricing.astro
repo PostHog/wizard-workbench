@@ -63,3 +63,17 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  const planCallsToAction = [
+    ['.pricing-card:nth-child(1) .btn', 'plan_get_started_clicked', 'starter'],
+    ['.pricing-card:nth-child(2) .btn', 'trial_cta_clicked', 'pro'],
+    ['.pricing-card:nth-child(3) .btn', 'contact_sales_clicked', 'enterprise'],
+  ];
+
+  planCallsToAction.forEach(([selector, event, plan]) => {
+    document.querySelector(selector)?.addEventListener('click', () => {
+      window.posthog?.capture(event, { plan, placement: 'pricing' });
+    });
+  });
+</script>
