@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getInvoiceById, updateInvoice, deleteInvoice } from '~/utils/invoices'
+import { getPostHogClient } from '~/utils/posthog-server'
 
 export const Route = createFileRoute('/api/invoices/$invoiceId')({
   server: {
@@ -24,6 +25,9 @@ export const Route = createFileRoute('/api/invoices/$invoiceId')({
       PATCH: async ({ params, request }) => {
         console.info(`PATCH /api/invoices/${params.invoiceId} @`, request.url)
         const id = Number(params.invoiceId)
+        const sessionId = request.headers.get('X-PostHog-Session-Id')
+        const distinctId =
+          request.headers.get('X-PostHog-Distinct-Id') || 'anonymous'
 
         if (isNaN(id)) {
           return Response.json({ error: 'Invalid invoice ID' }, { status: 400 })
@@ -35,6 +39,21 @@ export const Route = createFileRoute('/api/invoices/$invoiceId')({
 
           if (!invoice) {
             return Response.json({ error: 'Invoice not found' }, { status: 404 })
+          }
+
+          const posthog = getPostHogClient()
+          if (posthog) {
+            posthog.capture({
+              distinctId,
+              event: 'invoice_updated',
+              properties: {
+                $session_id: sessionId || undefined,
+                invoice_id: id,
+                updated_fields: Object.keys(body),
+                source: 'api',
+              },
+            })
+            await posthog.flush()
           }
 
           return Response.json(invoice)
@@ -50,6 +69,9 @@ export const Route = createFileRoute('/api/invoices/$invoiceId')({
       DELETE: async ({ params, request }) => {
         console.info(`DELETE /api/invoices/${params.invoiceId} @`, request.url)
         const id = Number(params.invoiceId)
+        const sessionId = request.headers.get('X-PostHog-Session-Id')
+        const distinctId =
+          request.headers.get('X-PostHog-Distinct-Id') || 'anonymous'
 
         if (isNaN(id)) {
           return Response.json({ error: 'Invalid invoice ID' }, { status: 400 })
@@ -59,6 +81,20 @@ export const Route = createFileRoute('/api/invoices/$invoiceId')({
 
         if (!deleted) {
           return Response.json({ error: 'Invoice not found' }, { status: 404 })
+        }
+
+        const posthog = getPostHogClient()
+        if (posthog) {
+          posthog.capture({
+            distinctId,
+            event: 'invoice_deleted',
+            properties: {
+              $session_id: sessionId || undefined,
+              invoice_id: id,
+              source: 'api',
+            },
+          })
+          await posthog.flush()
         }
 
         return Response.json({ success: true })

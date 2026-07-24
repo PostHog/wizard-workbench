@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getAllInvoices, createInvoice } from '~/utils/invoices'
+import { getPostHogClient } from '~/utils/posthog-server'
 
 export const Route = createFileRoute('/api/invoices')({
   server: {
@@ -12,11 +13,27 @@ export const Route = createFileRoute('/api/invoices')({
 
       POST: async ({ request }) => {
         console.info('POST /api/invoices @', request.url)
+        const sessionId = request.headers.get('X-PostHog-Session-Id')
+        const distinctId =
+          request.headers.get('X-PostHog-Distinct-Id') || 'anonymous'
         try {
           const body = await request.json()
 
           // Validate required fields
           if (!body.title || !body.amount || !body.dueDate) {
+            const posthog = getPostHogClient()
+            if (posthog) {
+              posthog.capture({
+                distinctId,
+                event: 'invoice_create_api_error',
+                properties: {
+                  $session_id: sessionId || undefined,
+                  reason: 'missing_required_fields',
+                  source: 'api',
+                },
+              })
+              await posthog.flush()
+            }
             return Response.json(
               { error: 'Missing required fields: title, amount, dueDate' },
               { status: 400 }
@@ -29,6 +46,21 @@ export const Route = createFileRoute('/api/invoices')({
             amount: Number(body.amount),
             dueDate: body.dueDate,
           })
+
+          const posthog = getPostHogClient()
+          if (posthog) {
+            posthog.capture({
+              distinctId,
+              event: 'invoice_created',
+              properties: {
+                $session_id: sessionId || undefined,
+                invoice_id: invoice.id,
+                amount: invoice.amount,
+                source: 'api',
+              },
+            })
+            await posthog.flush()
+          }
 
           return Response.json(invoice, { status: 201 })
         } catch (e) {

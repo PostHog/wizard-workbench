@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { updateInvoice, getInvoiceById } from '~/utils/invoices'
+import { getPostHogClient } from '~/utils/posthog-server'
 
 export const Route = createFileRoute('/api/invoices/$invoiceId/pay')({
   server: {
@@ -7,6 +8,9 @@ export const Route = createFileRoute('/api/invoices/$invoiceId/pay')({
       POST: async ({ params, request }) => {
         console.info(`POST /api/invoices/${params.invoiceId}/pay @`, request.url)
         const id = Number(params.invoiceId)
+        const sessionId = request.headers.get('X-PostHog-Session-Id')
+        const distinctId =
+          request.headers.get('X-PostHog-Distinct-Id') || 'anonymous'
 
         if (isNaN(id)) {
           return Response.json({ error: 'Invalid invoice ID' }, { status: 400 })
@@ -26,6 +30,21 @@ export const Route = createFileRoute('/api/invoices/$invoiceId/pay')({
         }
 
         const invoice = updateInvoice(id, { status: 'paid' })
+
+        const posthog = getPostHogClient()
+        if (posthog) {
+          posthog.capture({
+            distinctId,
+            event: 'invoice_paid',
+            properties: {
+              $session_id: sessionId || undefined,
+              invoice_id: id,
+              amount: existing.amount,
+              source: 'api',
+            },
+          })
+          await posthog.flush()
+        }
 
         return Response.json(invoice)
       },
