@@ -555,10 +555,10 @@ jobs:
           fi
 
       - name: Setup wizard dependencies
-        # Restores wizard / context-mill / MCP from the cache warmed by the
+        # Restores wizard / context-mill from the cache warmed by the
         # setup-deps job (keyed on each repo's resolved commit SHA), falling
         # back to a clean build on a miss (e.g. macOS runners, cache eviction).
-        # Exports WIZARD_PATH / CONTEXT_MILL_PATH / MCP_PATH.
+        # Exports WIZARD_PATH / CONTEXT_MILL_PATH.
         uses: ./.github/actions/setup-wizard-deps
         with:
           wizard_ref: ${{ needs.discover.outputs.input_wizard_ref }}
@@ -606,33 +606,10 @@ jobs:
             echo "::warning::Context Mill server failed to start after 2 minutes"
           fi
 
-          # Start MCP server in background (consumes from local examples server)
-          cd $MCP_PATH
-          pnpm dev:local-resources &
-          MCP_PID=$!
-          disown $MCP_PID
+          # The posthog MCP is the hosted prod server — no local MCP process.
+          # MCP_URL overrides the wizard's local-mcp MCP half; skills stay local.
+          echo "MCP_URL=https://mcp.posthog.com/mcp" >> $GITHUB_ENV
 
-          # Wait for MCP server to be ready (retry every 30s, max 2 minutes)
-          echo "Waiting for MCP server to start..."
-          MCP_READY=false
-          for attempt in 1 2 3 4; do
-            for i in {1..30}; do
-              if curl -s http://localhost:8787/mcp > /dev/null 2>&1; then
-                echo "MCP server is ready"
-                MCP_READY=true
-                break 2
-              fi
-              sleep 1
-            done
-            if [ "$attempt" -lt 4 ]; then
-              echo "::warning::MCP server not ready after $((attempt * 30))s, retrying..."
-            fi
-          done
-          if [ "$MCP_READY" = "false" ]; then
-            echo "::warning::MCP server failed to start after 2 minutes"
-          fi
-
-          echo "mcp_pid=$MCP_PID" >> $GITHUB_OUTPUT
           echo "context_mill_pid=$CONTEXT_MILL_PID" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -642,7 +619,6 @@ jobs:
           # Dependency paths
           WIZARD_PATH: ${{ env.WIZARD_PATH }}
           CONTEXT_MILL_PATH: ${{ env.CONTEXT_MILL_PATH }}
-          MCP_PATH: ${{ env.MCP_PATH }}
           # Dependency refs (for PR body)
           WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
           CONTEXT_MILL_REF: ${{ needs.discover.outputs.input_context_mill_ref }}
@@ -689,7 +665,6 @@ jobs:
           POSTHOG_WIZARD_PROJECT_ID: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_TARGET_PROJECT_ID }}
           WIZARD_PATH: ${{ env.WIZARD_PATH }}
           CONTEXT_MILL_PATH: ${{ env.CONTEXT_MILL_PATH }}
-          MCP_PATH: ${{ env.MCP_PATH }}
           WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
           CONTEXT_MILL_REF: ${{ needs.discover.outputs.input_context_mill_ref }}
           POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
@@ -710,7 +685,6 @@ jobs:
           curl -s http://localhost:8765/skills-mcp-resources.zip -o skills-mcp-resources.zip || true
 
           # Stop servers
-          kill "$MCP_PID" 2>/dev/null || true
           kill "$CONTEXT_MILL_PID" 2>/dev/null || true
 
           # Extract PR URL
@@ -766,7 +740,6 @@ jobs:
         env:
           WIZARD_OUTCOME: ${{ steps.execute-wizard.outcome }}
           MATRIX_APP: ${{ matrix.app }}
-          MCP_PID: ${{ steps.run-wizard.outputs.mcp_pid }}
           CONTEXT_MILL_PID: ${{ steps.run-wizard.outputs.context_mill_pid }}
 
       - name: Configure AWS credentials
@@ -825,7 +798,7 @@ jobs:
           echo "### Dependency Versions" >> $GITHUB_STEP_SUMMARY
           echo "- **wizard:** $WIZARD_REF" >> $GITHUB_STEP_SUMMARY
           echo "- **context-mill:** $CONTEXT_MILL_REF" >> $GITHUB_STEP_SUMMARY
-          echo "- **mcp (posthog):** $POSTHOG_REF" >> $GITHUB_STEP_SUMMARY
+          echo "- **mcp:** prod (mcp.posthog.com)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -n "$PR_URL" ]; then
             echo "**PR:** $PR_URL" >> $GITHUB_STEP_SUMMARY

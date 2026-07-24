@@ -9,6 +9,7 @@ inputs:
     description: 'Context Mill repo branch/tag/sha'
     required: true
   posthog_ref:
+    # Deprecated: the posthog MCP is no longer built locally (CI hits prod MCP).
     description: 'PostHog repo branch/tag/sha (for MCP)'
     required: true
   app_token:
@@ -54,14 +55,11 @@ runs:
         }
         WIZARD_SHA=$(resolve_sha wizard "$WIZARD_REF")
         CONTEXT_MILL_SHA=$(resolve_sha context-mill "$CONTEXT_MILL_REF")
-        POSTHOG_SHA=$(resolve_sha posthog "$POSTHOG_REF")
         echo "wizard_sha=$WIZARD_SHA" >> "$GITHUB_OUTPUT"
         echo "context_mill_sha=$CONTEXT_MILL_SHA" >> "$GITHUB_OUTPUT"
-        echo "posthog_sha=$POSTHOG_SHA" >> "$GITHUB_OUTPUT"
         echo "Resolved SHAs:"
         echo "  wizard ($WIZARD_REF) -> $WIZARD_SHA"
         echo "  context-mill ($CONTEXT_MILL_REF) -> $CONTEXT_MILL_SHA"
-        echo "  posthog ($POSTHOG_REF) -> $POSTHOG_SHA"
 
     # ------------------------------------------------------------------ wizard
     - name: Restore wizard cache
@@ -172,55 +170,3 @@ runs:
       shell: bash
       run: echo "CONTEXT_MILL_PATH=$HOME/context-mill" >> "$GITHUB_ENV"
 
-    # ----------------------------------------------------------- posthog (MCP)
-    - name: Restore posthog cache
-      id: cache-posthog
-      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-      with:
-        path: ~/posthog
-        key: posthog-${{ runner.os }}-${{ steps.resolve.outputs.posthog_sha }}
-
-    - name: Build PostHog MCP
-      if: steps.cache-posthog.outputs.cache-hit != 'true'
-      shell: bash
-      env:
-        POSTHOG_SHA: ${{ steps.resolve.outputs.posthog_sha }}
-      run: |
-        echo "::group::Fetching PostHog monorepo at $POSTHOG_SHA"
-        rm -rf "$HOME/posthog"
-        git init -q "$HOME/posthog"
-        cd "$HOME/posthog"
-        git remote add origin https://github.com/PostHog/posthog.git
-        git fetch --depth 1 origin "$POSTHOG_SHA"
-        git checkout -q FETCH_HEAD
-        echo "::endgroup::"
-
-        echo "::group::Installing MCP dependencies (filtered to @posthog/mcp)"
-        # The monorepo is cloned solely to build services/mcp, so install only
-        # that package and its workspace dependencies. A full-workspace install
-        # also fetches and compiles unrelated native addons from plugin-server
-        # (lz4, node-rdkafka), which @posthog/mcp does not use and which break
-        # node-gyp on a cold cache (gyp_main.py "Permission denied", make Error
-        # 126) — the recurring "flaky install" failure. The trailing "..."
-        # selects @posthog/mcp plus its workspace deps and nothing else.
-        pnpm install --frozen-lockfile --filter "@posthog/mcp..."
-        echo "::endgroup::"
-
-        echo "::group::Building MCP UI apps"
-        cd "$HOME/posthog/services/mcp"
-        pnpm build
-        echo "::endgroup::"
-
-        # Drop the .git dir before caching — not needed to run, just bloat.
-        rm -rf "$HOME/posthog/.git"
-
-    - name: Save posthog cache
-      if: inputs.save_cache == 'true' && steps.cache-posthog.outputs.cache-hit != 'true'
-      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-      with:
-        path: ~/posthog
-        key: posthog-${{ runner.os }}-${{ steps.resolve.outputs.posthog_sha }}
-
-    - name: Export MCP_PATH
-      shell: bash
-      run: echo "MCP_PATH=$HOME/posthog/services/mcp" >> "$GITHUB_ENV"
