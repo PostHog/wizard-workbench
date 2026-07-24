@@ -3,6 +3,7 @@ import type { Route } from "./+types/products";
 import { getProducts, getCategories, type Product } from "../data/products";
 import { useState } from "react";
 import { useCart } from "../context/CartContext";
+import posthog from "../posthog.client";
 
 export async function clientLoader() {
   return {
@@ -19,6 +20,22 @@ export default function Products({ loaderData }: Route.ComponentProps) {
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+    posthog.capture("product_added_to_cart", {
+      product_id: product.id,
+      product_category: product.category,
+      unit_price: product.price,
+      quantity: 1,
+      source: "product_catalogue",
+    });
+  };
+
+  const handleProductSelected = (product: Product) => {
+    posthog.capture("product_selected", {
+      product_id: product.id,
+      product_category: product.category,
+      unit_price: product.price,
+      source: "product_catalogue",
+    });
   };
 
   const handleSearch = (term: string) => {
@@ -27,6 +44,9 @@ export default function Products({ loaderData }: Route.ComponentProps) {
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
+    posthog.capture("product_category_filtered", {
+      category: category || "all",
+    });
   };
 
   const filteredProducts = products.filter((product) => {
@@ -84,6 +104,7 @@ export default function Products({ loaderData }: Route.ComponentProps) {
               <div className="p-4">
                 <Link
                   to={`/products/${product.id}`}
+                  onClick={() => handleProductSelected(product)}
                   className="text-xl font-semibold text-gray-900 hover:text-indigo-600 transition"
                 >
                   {product.name}
