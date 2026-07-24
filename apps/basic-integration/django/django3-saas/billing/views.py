@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
+from django.apps import apps
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -70,6 +71,14 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            apps.get_app_config('accounts').posthog_client.capture(
+                'subscription_started',
+                properties={
+                    'billing_mode': 'demo',
+                    'plan_slug': plan.slug,
+                    'plan_interval': plan.interval,
+                },
+            )
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -130,6 +139,14 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+                apps.get_app_config('accounts').posthog_client.capture(
+                    'subscription_plan_changed',
+                    properties={
+                        'billing_mode': 'stripe',
+                        'plan_slug': plan.slug,
+                        'plan_interval': plan.interval,
+                    },
+                )
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
                 messages.error(request, f'Error changing plan: {str(e)}')
@@ -137,6 +154,14 @@ def change_plan(request, plan_slug):
             # Demo mode
             subscription.plan = plan
             subscription.save()
+            apps.get_app_config('accounts').posthog_client.capture(
+                'subscription_plan_changed',
+                properties={
+                    'billing_mode': 'demo',
+                    'plan_slug': plan.slug,
+                    'plan_interval': plan.interval,
+                },
+            )
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -171,6 +196,17 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        apps.get_app_config('accounts').posthog_client.capture(
+            'subscription_canceled',
+            properties={
+                'billing_mode': (
+                    'demo' if subscription.stripe_subscription_id.startswith('sub_demo_')
+                    else 'stripe'
+                ),
+                'plan_slug': subscription.plan.slug,
+                'plan_interval': subscription.plan.interval,
+            },
+        )
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -269,6 +305,15 @@ def _handle_checkout_completed(session):
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
     )
+    apps.get_app_config('accounts').posthog_client.capture(
+        'subscription_started',
+        distinct_id=str(user.pk),
+        properties={
+            'billing_mode': 'stripe',
+            'plan_slug': plan.slug,
+            'plan_interval': plan.interval,
+        },
+    )
 
 
 def _handle_subscription_updated(subscription_data):
@@ -323,5 +368,14 @@ def _handle_payment_failed(invoice):
         )
         subscription.status = 'past_due'
         subscription.save()
+        apps.get_app_config('accounts').posthog_client.capture(
+            'subscription_payment_failed',
+            distinct_id=str(subscription.user.pk),
+            properties={
+                'billing_mode': 'stripe',
+                'plan_slug': subscription.plan.slug,
+                'plan_interval': subscription.plan.interval,
+            },
+        )
     except Subscription.DoesNotExist:
         pass
