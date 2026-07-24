@@ -606,6 +606,23 @@ jobs:
             echo "::warning::Context Mill server failed to start after 2 minutes"
           fi
 
+          # The MCP hono server hard-exits without Redis (posthog services/mcp
+          # requires redis at localhost:6379) — start one before it.
+          if command -v docker > /dev/null 2>&1; then
+            docker run -d --name wizard-ci-redis -p 6379:6379 redis:7-alpine
+          elif command -v brew > /dev/null 2>&1; then
+            brew install redis > /dev/null 2>&1 || true
+            redis-server --daemonize yes
+          else
+            sudo apt-get install -y redis-server > /dev/null 2>&1 && sudo service redis-server start
+          fi
+          for i in {1..30}; do
+            if (echo PING | (command -v redis-cli > /dev/null 2>&1 && redis-cli 2>/dev/null || nc -w1 localhost 6379) | grep -q PONG); then
+              echo "Redis is ready"; break
+            fi
+            sleep 1
+          done
+
           # Start MCP server in background (consumes from local examples server)
           cd $MCP_PATH
           pnpm dev:local-resources &
@@ -629,7 +646,10 @@ jobs:
             fi
           done
           if [ "$MCP_READY" = "false" ]; then
-            echo "::warning::MCP server failed to start after 2 minutes"
+            # Fail fast: without the MCP the dashboard task fails in every app,
+            # burning a full agent run per matrix cell to report an infra outage.
+            echo "::error::MCP server failed to start after 2 minutes — infra failure, not a wizard failure"
+            exit 1
           fi
 
           echo "mcp_pid=$MCP_PID" >> $GITHUB_OUTPUT
