@@ -1,10 +1,13 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+
+import posthog
+from flask import Flask, g, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
@@ -45,6 +48,50 @@ def create_app(config_class=Config):
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
+
+    posthog_client = None
+    if app.config['POSTHOG_PROJECT_TOKEN'] and app.config['POSTHOG_HOST']:
+        posthog_client = posthog.Posthog(
+            project_api_key=app.config['POSTHOG_PROJECT_TOKEN'],
+            host=app.config['POSTHOG_HOST'],
+            enable_exception_autocapture=True,
+        )
+        atexit.register(posthog_client.shutdown)
+    elif app.debug or app.testing:
+        missing_var = 'POSTHOG_PROJECT_TOKEN' if not app.config['POSTHOG_PROJECT_TOKEN'] else 'POSTHOG_HOST'
+        raise RuntimeError(
+            f'{missing_var} variable required by PostHog is missing or un-configured, '
+            f'this causes events to be silently missed. This error stops appearing once '
+            f'{missing_var} is configured'
+        )
+    app.posthog = posthog_client
+
+    @app.before_request
+    def bind_posthog_identity():
+        """Bind the current request to its authenticated analytics identity."""
+        if app.posthog is None:
+            return
+
+        g.posthog_context = app.posthog.new_context()
+        g.posthog_context.__enter__()
+        distinct_id = (
+            str(current_user.id) if current_user.is_authenticated
+            else request.headers.get('X-POSTHOG-DISTINCT-ID')
+        )
+        if distinct_id:
+            app.posthog.identify_context(distinct_id)
+
+    @app.teardown_request
+    def clear_posthog_identity(exception):
+        context = g.pop('posthog_context', None)
+        if context is not None:
+            if exception is None:
+                context.__exit__(None, None, None)
+            else:
+                context.__exit__(
+                    type(exception), exception, exception.__traceback__
+                )
+
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if Elasticsearch and app.config['ELASTICSEARCH_URL'] else None
     if Redis and rq:
