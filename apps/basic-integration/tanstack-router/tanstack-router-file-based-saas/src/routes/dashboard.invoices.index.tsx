@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { Spinner } from '../components/Spinner'
@@ -5,11 +6,15 @@ import { useMutation } from '../hooks/useMutation'
 import { postInvoice } from '../utils/mockTodos'
 import type { Invoice } from '../utils/mockTodos'
 
+// A stable authenticated user ID is not exposed by the demo auth model yet.
+const DISTINCT_ID = 'DISTINCT_ID'
+
 export const Route = createFileRoute('/dashboard/invoices/')({
   component: InvoicesIndexComponent,
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
 
   const createInvoiceMutation = useMutation({
@@ -32,6 +37,10 @@ function InvoicesIndexComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            posthog.capture('invoice_creation_submitted', {
+              distinct_id: DISTINCT_ID,
+              session_id: posthog.get_session_id(),
+            })
             createInvoiceMutation.mutate({
               title: formData.get('title') as string,
               body: formData.get('body') as string,

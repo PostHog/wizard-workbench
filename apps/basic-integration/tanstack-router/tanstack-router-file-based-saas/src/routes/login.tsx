@@ -1,16 +1,20 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
+
+// A stable authenticated user ID is not exposed by the demo auth model yet.
+const DISTINCT_ID = 'DISTINCT_ID'
 
 export const Route = createFileRoute('/login')({
   validateSearch: z.object({
     redirect: z.string().optional(),
   }),
-}).update({
   component: LoginComponent,
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
   const { auth, status } = Route.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -21,6 +25,10 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog.capture('login_submitted', {
+      distinct_id: DISTINCT_ID,
+      session_id: posthog.get_session_id(),
+    })
     router.invalidate()
   }
 
@@ -56,6 +64,10 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('logout_completed', {
+                  distinct_id: DISTINCT_ID,
+                  session_id: posthog.get_session_id(),
+                })
                 auth.logout()
                 router.invalidate()
               }}
