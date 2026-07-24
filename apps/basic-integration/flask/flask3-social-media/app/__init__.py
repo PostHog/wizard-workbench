@@ -1,7 +1,8 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+from flask import Flask, g, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -19,6 +20,7 @@ except ImportError:
     Redis = None
     rq = None
 from config import Config
+from posthog import Posthog, identify_context, new_context
 
 
 def get_locale():
@@ -45,6 +47,43 @@ def create_app(config_class=Config):
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
+
+    posthog_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    if posthog_token and posthog_host:
+        app.posthog_client = Posthog(
+            posthog_token,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        atexit.register(app.posthog_client.shutdown)
+    elif app.debug or app.testing:
+        missing_key = 'POSTHOG_PROJECT_TOKEN' if not posthog_token else 'POSTHOG_HOST'
+        raise RuntimeError(
+            f'{missing_key} variable required by PostHog is missing or un-configured, '
+            f'this causes events to be silently missed. This error stops appearing '
+            f'once {missing_key} is configured'
+        )
+    else:
+        app.posthog_client = None
+
+    @app.before_request
+    def establish_posthog_identity():
+        if app.posthog_client is None:
+            return
+        posthog_context = new_context(fresh=True)
+        posthog_context.__enter__()
+        g.posthog_context = posthog_context
+        from flask_login import current_user
+        if current_user.is_authenticated:
+            identify_context(str(current_user.id))
+
+    @app.teardown_request
+    def clear_posthog_identity(error=None):
+        posthog_context = g.pop('posthog_context', None)
+        if posthog_context is not None:
+            posthog_context.__exit__(None, None, None)
+
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if Elasticsearch and app.config['ELASTICSEARCH_URL'] else None
     if Redis and rq:
