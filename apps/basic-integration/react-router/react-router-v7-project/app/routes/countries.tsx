@@ -136,7 +136,14 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        if (!isClaimed) {
+                          const { default: posthog } = await import('~/lib/posthog');
+                          posthog.capture('country_claimed', {
+                            country_name: countryName,
+                            country_region: country.region,
+                          });
+                        }
                         claimCountry(countryName);
                         window.location.reload();
                       }}
@@ -149,7 +156,14 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        if (!isLiked) {
+                          const { default: posthog } = await import('~/lib/posthog');
+                          posthog.capture('country_liked', {
+                            country_name: countryName,
+                            country_region: country.region,
+                          });
+                        }
                         likeCountry(countryName);
                         window.location.reload();
                       }}
@@ -162,7 +176,14 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        if (!user.visitedCountries.includes(countryName)) {
+                          const { default: posthog } = await import('~/lib/posthog');
+                          posthog.capture('country_visited', {
+                            country_name: countryName,
+                            country_region: country.region,
+                          });
+                        }
                         visitCountry(countryName);
                         window.location.reload();
                       }}

@@ -64,7 +64,12 @@ export default function Profile() {
                   View Stats
                 </Link>
                 <button
-                  onClick={logout}
+                  onClick={() => {
+                    void import('~/lib/posthog').then(({ default: posthog }) => {
+                      posthog.capture('user_logged_out')
+                      logout()
+                    })
+                  }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
                 >
                   Logout
