@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
+import { posthog } from "~/lib/posthog.client";
 import { OrganizationMembershipRole } from "~/generated/browser";
 
 export type EmailInviteCardProps = {
@@ -70,7 +71,11 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={() => posthog.capture("organization_invite_submitted")}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

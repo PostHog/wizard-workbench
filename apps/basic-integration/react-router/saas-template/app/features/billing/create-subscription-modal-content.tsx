@@ -29,6 +29,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
+import { posthog } from "~/lib/posthog.client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
 export type CreateSubscriptionModalContentProps = {
@@ -97,6 +98,11 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () =>
+        posthog.capture("subscription_checkout_started", {
+          billing_interval: interval,
+          plan_tier: tier,
+        }),
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };
