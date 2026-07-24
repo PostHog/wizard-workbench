@@ -1,6 +1,18 @@
 import Fastify from 'fastify';
+import { posthog } from './posthog.js';
 
 const fastify = Fastify({ logger: true });
+
+fastify.setErrorHandler(async (error, request, reply) => {
+  if (posthog) {
+    posthog.captureException(error, '$POSTHOG_PERSONLESS');
+    await posthog.flush();
+  }
+
+  request.log.error(error);
+  const statusCode = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+  return reply.status(statusCode).send({ error: statusCode === 500 ? 'Internal Server Error' : error.message });
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +51,19 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+
+  if (posthog) {
+    posthog.capture({
+      distinctId: '$POSTHOG_PERSONLESS',
+      event: 'post_created',
+      properties: {
+        post_id: post.id,
+        published: post.published,
+      },
+    });
+    await posthog.flush();
+  }
+
   return reply.status(201).send(post);
 });
 
@@ -63,9 +88,32 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   }
 
   const { title, body, published } = request.body || {};
-  if (title !== undefined) post.title = title;
-  if (body !== undefined) post.body = body;
-  if (published !== undefined) post.published = published;
+  const updated_fields = [];
+  if (title !== undefined) {
+    post.title = title;
+    updated_fields.push('title');
+  }
+  if (body !== undefined) {
+    post.body = body;
+    updated_fields.push('body');
+  }
+  if (published !== undefined) {
+    post.published = published;
+    updated_fields.push('published');
+  }
+
+  if (posthog) {
+    posthog.capture({
+      distinctId: '$POSTHOG_PERSONLESS',
+      event: 'post_updated',
+      properties: {
+        post_id: post.id,
+        published: post.published,
+        updated_fields,
+      },
+    });
+    await posthog.flush();
+  }
 
   return post;
 });
@@ -79,11 +127,24 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   }
 
   const postId = posts[index].id;
+  const deleted_comment_count = comments.filter((comment) => comment.post_id === postId).length;
   posts.splice(index, 1);
 
   // Remove associated comments
   for (let i = comments.length - 1; i >= 0; i--) {
     if (comments[i].post_id === postId) comments.splice(i, 1);
+  }
+
+  if (posthog) {
+    posthog.capture({
+      distinctId: '$POSTHOG_PERSONLESS',
+      event: 'post_deleted',
+      properties: {
+        post_id: postId,
+        deleted_comment_count,
+      },
+    });
+    await posthog.flush();
   }
 
   return reply.status(204).send();
@@ -111,6 +172,19 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+
+  if (posthog) {
+    posthog.capture({
+      distinctId: '$POSTHOG_PERSONLESS',
+      event: 'comment_created',
+      properties: {
+        comment_id: comment.id,
+        post_id: comment.post_id,
+      },
+    });
+    await posthog.flush();
+  }
+
   return reply.status(201).send(comment);
 });
 
