@@ -1,10 +1,13 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+
+from posthog import Posthog, identify_context, new_context
+from flask import Flask, g, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
@@ -53,6 +56,40 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    posthog_token = app.config.get('POSTHOG_PROJECT_TOKEN')
+    posthog_host = app.config.get('POSTHOG_HOST')
+    if not posthog_token or not posthog_host:
+        if app.debug:
+            missing = 'POSTHOG_PROJECT_TOKEN' if not posthog_token else 'POSTHOG_HOST'
+            raise RuntimeError(
+                f'{missing} variable required by PostHog is missing or un-configured, '
+                f'this causes events to be silently missed. This error stops appearing '
+                f'once {missing} is configured'
+            )
+        app.posthog_client = None
+    else:
+        app.posthog_client = Posthog(
+            posthog_token,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        atexit.register(app.posthog_client.shutdown)
+
+    @app.before_request
+    def establish_posthog_context():
+        """Bind the authenticated user to all PostHog reporting in this request."""
+        g.posthog_context = new_context(fresh=True)
+        g.posthog_context.__enter__()
+        if current_user.is_authenticated:
+            identify_context(str(current_user.id))
+
+    @app.teardown_request
+    def close_posthog_context(error):
+        context = g.pop('posthog_context', None)
+        if context is not None:
+            context.__exit__(type(error), error, error.__traceback__
+                             if error is not None else None)
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)

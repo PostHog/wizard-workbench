@@ -1,5 +1,6 @@
 import sqlalchemy as sa
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
+from posthog import identify_context
 from app import db
 from app.models import User
 from app.api.errors import error_response
@@ -12,6 +13,7 @@ token_auth = HTTPTokenAuth()
 def verify_password(username, password):
     user = db.session.scalar(sa.select(User).where(User.username == username))
     if user and user.check_password(password):
+        identify_posthog_user(user)
         return user
 
 
@@ -22,7 +24,15 @@ def basic_auth_error(status):
 
 @token_auth.verify_token
 def verify_token(token):
-    return User.check_token(token) if token else None
+    user = User.check_token(token) if token else None
+    if user:
+        identify_posthog_user(user)
+    return user
+
+
+def identify_posthog_user(user):
+    """Bind API authentication to the active request's PostHog context."""
+    identify_context(str(user.id))
 
 
 @token_auth.error_handler

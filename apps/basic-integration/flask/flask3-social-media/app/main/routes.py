@@ -13,6 +13,13 @@ from app.translate import translate
 from app.main import bp
 
 
+def capture_posthog_event(event, properties=None):
+    """Capture an authenticated request event when PostHog is configured."""
+    posthog_client = current_app.posthog_client
+    if posthog_client is not None:
+        posthog_client.capture(event, properties=properties or {})
+
+
 @bp.before_app_request
 def before_request():
     if current_user.is_authenticated:
@@ -36,6 +43,9 @@ def index():
                     language=language)
         db.session.add(post)
         db.session.commit()
+        capture_posthog_event('post_created', {
+            'language_detected': bool(language),
+        })
         flash(_('Your post is now live!'))
         return redirect(url_for('main.index'))
     page = request.args.get('page', 1, type=int)
@@ -99,9 +109,14 @@ def user_popup(username):
 def edit_profile():
     form = EditProfileForm(current_user.username)
     if form.validate_on_submit():
+        username_changed = form.username.data != current_user.username
         current_user.username = form.username.data
         current_user.about_me = form.about_me.data
         db.session.commit()
+        capture_posthog_event('profile_updated', {
+            'username_changed': username_changed,
+            'about_me_provided': bool(form.about_me.data),
+        })
         flash(_('Your changes have been saved.'))
         return redirect(url_for('main.edit_profile'))
     elif request.method == 'GET':
@@ -126,6 +141,7 @@ def follow(username):
             return redirect(url_for('main.user', username=username))
         current_user.follow(user)
         db.session.commit()
+        capture_posthog_event('user_followed')
         flash(_('You are following %(username)s!', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -147,6 +163,7 @@ def unfollow(username):
             return redirect(url_for('main.user', username=username))
         current_user.unfollow(user)
         db.session.commit()
+        capture_posthog_event('user_unfollowed')
         flash(_('You are not following %(username)s.', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -190,6 +207,9 @@ def send_message(recipient):
         user.add_notification('unread_message_count',
                               user.unread_message_count())
         db.session.commit()
+        capture_posthog_event('message_sent', {
+            'message_length': len(form.message.data),
+        })
         flash(_('Your message has been sent.'))
         return redirect(url_for('main.user', username=recipient))
     return render_template('send_message.html', title=_('Send Message'),
@@ -224,6 +244,7 @@ def export_posts():
     else:
         current_user.launch_task('export_posts', _('Exporting posts...'))
         db.session.commit()
+        capture_posthog_event('posts_export_requested')
     return redirect(url_for('main.user', username=current_user.username))
 
 
