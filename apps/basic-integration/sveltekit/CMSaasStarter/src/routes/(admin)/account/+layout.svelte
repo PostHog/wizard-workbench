@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invalidate } from "$app/navigation"
   import { onMount } from "svelte"
+  import posthog from "posthog-js"
 
   let { data, children } = $props()
 
@@ -10,6 +11,11 @@
   })
 
   onMount(() => {
+    // Identify user on page load/refresh if already signed in
+    if (session?.user) {
+      posthog.identify(session.user.id, { email: session.user.email })
+    }
+
     const { data } = supabase.auth.onAuthStateChange((event, _session) => {
       if (_session?.expires_at !== session?.expires_at) {
         invalidate("supabase:auth")
