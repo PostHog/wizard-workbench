@@ -15,6 +15,7 @@ import Shared
 import SwiftUI
 import UIKit
 import Foundation
+import PostHog
 
 @MainActor
 struct MainContentView: View {
@@ -81,9 +82,11 @@ struct MainContentView: View {
                                 currentUsername: sessionService.username,
                                 onLogin: { username, password in
                                     _ = try await sessionService.authenticate(username: username, password: password)
+                                    PostHogSDK.shared.capture("login_completed")
                                 },
                                 onLogout: {
                                     sessionService.unauthenticate()
+                                    PostHogSDK.shared.capture("logout_completed")
                                 },
                                 onShowOnboarding: {
                                     showOnboarding = true
@@ -103,9 +106,11 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    PostHogSDK.shared.capture("login_completed")
                 },
                 onLogout: {
                     sessionService.unauthenticate()
+                    PostHogSDK.shared.capture("logout_completed")
                 },
                 textSize: settingsViewModel.textSize
             )
@@ -119,9 +124,11 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    PostHogSDK.shared.capture("login_completed")
                 },
                 onLogout: {
                     sessionService.unauthenticate()
+                    PostHogSDK.shared.capture("logout_completed")
                 },
                 onShowOnboarding: {
                     showOnboarding = true
@@ -134,6 +141,7 @@ struct MainContentView: View {
             onboardingCoordinator
                 .makeOnboardingView {
                     showOnboarding = false
+                    PostHogSDK.shared.capture("onboarding_dismissed")
                 }
                 .textScaling(for: settingsViewModel.textSize)
                 .toastOverlay(toastPresenter)
