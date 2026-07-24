@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
+from posthog import capture
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import (
     LoginView, LogoutView,
@@ -15,9 +16,18 @@ class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        capture('user_logged_in', properties={'login_method': 'password'})
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def post(self, request, *args, **kwargs):
+        capture('user_logged_out')
+        return super().post(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -25,6 +35,11 @@ class CustomPasswordResetView(PasswordResetView):
     email_template_name = 'accounts/password_reset_email.html'
     subject_template_name = 'accounts/password_reset_subject.txt'
     success_url = reverse_lazy('accounts:password_reset_done')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        capture('password_reset_requested')
+        return response
 
 
 class CustomPasswordResetDoneView(PasswordResetDoneView):
@@ -49,6 +64,7 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            capture('user_registered')
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +79,7 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            capture('account_settings_updated')
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
