@@ -5,14 +5,27 @@ const isDocs = currentPath.startsWith('/docs');
 
 <nav class="nav">
   <div class="nav-inner">
-    <a href="/" class="nav-logo">
+    <a href="/" class="nav-logo" data-posthog-event="documentation_navigation_clicked" data-posthog-placement="logo">
       <span>NeuralFlow</span> Docs
     </a>
     <ul class="nav-links">
-      <li><a href="/docs" class:list={["nav-link", { active: isDocs }]}>Documentation</a></li>
-      <li><a href="/docs/api" class="nav-link">API Reference</a></li>
-      <li><a href="https://github.com" class="nav-link" target="_blank">GitHub</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/docs" class:list={["nav-link", { active: isDocs }]} data-posthog-event="documentation_navigation_clicked" data-posthog-placement="documentation">Documentation</a></li>
+      <li><a href="/docs/api" class="nav-link" data-posthog-event="documentation_navigation_clicked" data-posthog-placement="api_reference">API Reference</a></li>
+      <li><a href="https://github.com" class="nav-link" target="_blank" data-posthog-event="github_link_clicked" data-posthog-placement="navigation">GitHub</a></li>
+      <li><a href="#" class="nav-cta" data-posthog-event="documentation_navigation_clicked" data-posthog-placement="get_started">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  const navigationEventTargets = document.querySelectorAll('[data-posthog-event]');
+
+  navigationEventTargets.forEach((target) => {
+    target.addEventListener('click', () => {
+      window.posthog?.capture(target.dataset.posthogEvent, {
+        destination: target.getAttribute('href'),
+        placement: target.dataset.posthogPlacement,
+      });
+    });
+  });
+</script>
