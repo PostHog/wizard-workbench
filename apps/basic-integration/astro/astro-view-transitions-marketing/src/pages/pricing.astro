@@ -63,3 +63,26 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.querySelector('.pricing-card:nth-child(1) .btn')?.addEventListener('click', () => {
+    window.posthog?.capture('trial_started', {
+      source: 'pricing',
+      plan: 'starter',
+    });
+  });
+
+  document.querySelector('.pricing-card:nth-child(2) .btn')?.addEventListener('click', () => {
+    window.posthog?.capture('trial_started', {
+      source: 'pricing',
+      plan: 'pro',
+    });
+  });
+
+  document.querySelector('.pricing-card:nth-child(3) .btn')?.addEventListener('click', () => {
+    window.posthog?.capture('sales_contact_requested', {
+      source: 'pricing',
+      plan: 'enterprise',
+    });
+  });
+</script>
