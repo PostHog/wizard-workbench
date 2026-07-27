@@ -5,6 +5,7 @@ import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { capturePostHogEvent } from '@/lib/posthog-server';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -88,7 +89,17 @@ export async function GET(request: NextRequest) {
       })
       .where(eq(teams.id, userTeam[0].teamId));
 
-    await setSession(user[0]);
+    await Promise.all([
+      setSession(user[0]),
+      capturePostHogEvent({
+        distinctId: user[0].id.toString(),
+        event: 'subscription_checkout_completed',
+        properties: {
+          subscription_status: subscription.status,
+          plan_name: (plan.product as Stripe.Product).name
+        }
+      })
+    ]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
