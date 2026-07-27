@@ -6,6 +6,7 @@ import {
   getUser,
   updateTeamSubscription
 } from '@/lib/db/queries';
+import { captureServerEvent } from '@/lib/posthog-server';
 import { stripeStub } from './stripe-stub';
 
 // Use stub if STRIPE_MODE=stub or if STRIPE_SECRET_KEY is missing/invalid
@@ -36,6 +37,10 @@ export async function createCheckoutSession({
   if (!team || !user) {
     redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
   }
+
+  await captureServerEvent(user.id.toString(), 'checkout_started', {
+    has_existing_customer: Boolean(team.stripeCustomerId)
+  });
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
@@ -135,6 +140,7 @@ export async function handleSubscriptionChange(
   const status = subscription.status;
 
   const team = await getTeamByStripeCustomerId(customerId);
+  const distinctId = `team:${team?.id ?? customerId}`;
 
   if (!team) {
     console.error('Team not found for Stripe customer:', customerId);
@@ -149,12 +155,18 @@ export async function handleSubscriptionChange(
       planName: (plan?.product as Stripe.Product).name,
       subscriptionStatus: status
     });
+    await captureServerEvent(distinctId, 'subscription_status_changed', {
+      subscription_status: status
+    });
   } else if (status === 'canceled' || status === 'unpaid') {
     await updateTeamSubscription(team.id, {
       stripeSubscriptionId: null,
       stripeProductId: null,
       planName: null,
       subscriptionStatus: status
+    });
+    await captureServerEvent(distinctId, 'subscription_status_changed', {
+      subscription_status: status
     });
   }
 }
