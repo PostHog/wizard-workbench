@@ -36,6 +36,8 @@ function ManageSubscription() {
       const result = await response.json();
 
       if (response.ok && result.url) {
+        const { default: posthog } = await import('@/instrumentation-client');
+        posthog.capture('subscription_management_opened');
         window.location.href = result.url;
       }
     } catch (err) {
@@ -102,6 +104,8 @@ function TeamMembers() {
           return;
         }
 
+        const { default: posthog } = await import('@/instrumentation-client');
+        posthog.capture('team_member_removed');
         // Refresh team data
         mutate('/api/team');
       } catch (err) {
@@ -207,6 +211,8 @@ function InviteTeamMember() {
           return;
         }
 
+        const { default: posthog } = await import('@/instrumentation-client');
+        posthog.capture('team_member_invited', { invited_role: data.role });
         setSuccess(result.success);
         // Reset form
         (e.target as HTMLFormElement).reset();

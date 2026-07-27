@@ -52,6 +52,8 @@ export default function GeneralPage() {
           return;
         }
 
+        const { default: posthog } = await import('@/instrumentation-client');
+        posthog.capture('account_settings_updated');
         setSuccess(result.success);
         setName(result.name);
       } catch (err) {

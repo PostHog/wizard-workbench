@@ -89,6 +89,12 @@ function PricingCard({
         if (result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
+          const { default: posthog } = await import('@/instrumentation-client');
+          posthog.capture('checkout_started', {
+            plan_name: name,
+            billing_interval: interval,
+            trial_days: trialDays
+          });
           window.location.href = result.url;
         }
       } catch (err) {
