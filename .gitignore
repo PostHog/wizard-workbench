@@ -5,6 +5,10 @@ vendor/
 **/vendor/
 **/.pnpm-store/
 
+# CocoaPods — installed per-fixture by `pod install`, never committed
+**/Pods/
+**/.symlinks/
+
 # Laravel
 **/storage/
 **/public/fonts/
