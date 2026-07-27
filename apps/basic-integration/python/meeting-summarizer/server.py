@@ -19,10 +19,12 @@ from datetime import datetime, timedelta
 from threading import Lock
 import traceback
 import mimetypes
+from contextlib import contextmanager
 
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+from posthog_client import posthog_client
 
 
 # Session management
@@ -108,6 +110,39 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 return self.db.get_user(session['user_id'])
         return None
 
+    @contextmanager
+    def _posthog_request_context(self):
+        """Bind the authenticated user to all PostHog work in this request."""
+        if not posthog_client:
+            yield
+            return
+
+        user = self._get_current_user()
+        with posthog_client.new_context():
+            if user:
+                posthog_client.identify_context(user.user_id)
+            yield
+
+    @contextmanager
+    def _posthog_authenticated_context(self, user):
+        """Establish identity after a request changes authentication state."""
+        if not posthog_client:
+            yield
+            return
+
+        with posthog_client.new_context():
+            posthog_client.identify_context(user.user_id)
+            posthog_client.set(
+                distinct_id=user.user_id,
+                properties={"email": user.email},
+            )
+            yield
+
+    def _handle_with_posthog_context(self, handler):
+        """Run a request handler with request-scoped PostHog identity."""
+        with self._posthog_request_context():
+            return handler()
+
     def _serve_static_file(self, file_path):
         """Serve a static file"""
         try:
@@ -140,6 +175,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         """Handle GET requests"""
+        self._handle_with_posthog_context(self._do_get)
+
+    def _do_get(self):
+        """Handle GET requests in the request-scoped PostHog context."""
         try:
             parsed_path = urlparse(self.path)
             path = parsed_path.path
@@ -248,6 +287,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """Handle POST requests"""
+        self._handle_with_posthog_context(self._do_post)
+
+    def _do_post(self):
+        """Handle POST requests in the request-scoped PostHog context."""
         try:
             parsed_path = urlparse(self.path)
             path = parsed_path.path
@@ -274,23 +317,32 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
 
-                    # Send response with session cookie
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'application/json')
-                    self.send_header('Set-Cookie', f'session_id={session_id}; Path=/; HttpOnly; SameSite=Lax')
-                    self.end_headers()
+                    with self._posthog_authenticated_context(user):
+                        if posthog_client:
+                            posthog_client.capture("login_succeeded")
 
-                    response_data = json.dumps({
-                        'success': True,
-                        'user': {
-                            'id': user.user_id,
-                            'username': user.username,
-                            'email': user.email
-                        }
-                    })
-                    self.wfile.write(response_data.encode('utf-8'))
+                        # Send response with session cookie
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json')
+                        self.send_header('Set-Cookie', f'session_id={session_id}; Path=/; HttpOnly; SameSite=Lax')
+                        self.end_headers()
+
+                        response_data = json.dumps({
+                            'success': True,
+                            'user': {
+                                'id': user.user_id,
+                                'username': user.username,
+                                'email': user.email
+                            }
+                        })
+                        self.wfile.write(response_data.encode('utf-8'))
                 else:
                     logging.warning(f"Login failed for: {email} (user {'found but inactive' if user else 'not found'})")
+                    if posthog_client:
+                        posthog_client.capture(
+                            "login_failed",
+                            properties={"failure_reason": "invalid_or_inactive_user"},
+                        )
                     self._send_json({'error': 'User not found or inactive'}, 401)
                 return
 
@@ -299,6 +351,9 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 session_id = self._get_session_id()
                 if session_id:
                     self.sessions.delete_session(session_id)
+
+                if posthog_client:
+                    posthog_client.capture("logout_completed")
 
                 self._set_headers(200, 'application/json')
                 self.send_header('Set-Cookie', 'session_id=; Path=/; HttpOnly; Max-Age=0')
@@ -332,6 +387,14 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_user(user):
+                    if posthog_client:
+                        posthog_client.capture(
+                            "user_created",
+                            properties={
+                                "has_full_name": bool(user.full_name),
+                                "has_metadata": bool(user.metadata),
+                            },
+                        )
                     self._send_json(user.to_dict(), 201)
                 else:
                     self._send_json({'error': 'User already exists'}, 409)
@@ -370,6 +433,17 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    if posthog_client:
+                        posthog_client.capture(
+                            "meeting_created",
+                            properties={
+                                "transcript_length": len(transcript),
+                                "duration_minutes": duration,
+                                "action_item_count": len(action_items),
+                                "key_point_count": len(key_points),
+                                "participant_count": len(participants),
+                            },
+                        )
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -385,6 +459,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         """Handle PUT requests"""
+        self._handle_with_posthog_context(self._do_put)
+
+    def _do_put(self):
+        """Handle PUT requests in the request-scoped PostHog context."""
         try:
             parsed_path = urlparse(self.path)
             path = parsed_path.path
@@ -401,6 +479,14 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
                 if self.db.update_user(user_id, **data):
                     updated_user = self.db.get_user(user_id)
+                    if posthog_client:
+                        posthog_client.capture(
+                            "user_updated",
+                            properties={
+                                "updated_field_count": len(data),
+                                "updated_own_account": user_id == current_user.user_id,
+                            },
+                        )
                     self._send_json(updated_user.to_dict())
                 else:
                     self._send_json({'error': 'User not found'}, 404)
@@ -414,6 +500,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         """Handle DELETE requests"""
+        self._handle_with_posthog_context(self._do_delete)
+
+    def _do_delete(self):
+        """Handle DELETE requests in the request-scoped PostHog context."""
         try:
             parsed_path = urlparse(self.path)
             path = parsed_path.path
@@ -428,6 +518,11 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 user_id = path.split('/')[-1]
 
                 if self.db.delete_user(user_id):
+                    if posthog_client:
+                        posthog_client.capture(
+                            "user_deleted",
+                            properties={"deleted_own_account": user_id == current_user.user_id},
+                        )
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'User not found'}, 404)
@@ -449,6 +544,11 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    if posthog_client:
+                        posthog_client.capture(
+                            "meeting_deleted",
+                            properties={"duration_minutes": meeting.duration_minutes},
+                        )
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
