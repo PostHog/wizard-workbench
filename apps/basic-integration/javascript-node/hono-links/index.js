@@ -1,7 +1,17 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
 
 const app = new Hono();
+
+app.onError(async (err, c) => {
+  if (posthog) {
+    posthog.captureException(err);
+    await posthog.flush();
+  }
+
+  return c.json({ error: 'Internal server error' }, 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +57,19 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_created',
+      properties: {
+        $process_person_profile: false,
+        tag_count: tags.length,
+        has_description: Boolean(description),
+      },
+    });
+    await posthog.flush();
+  }
+
   return c.json(link, 201);
 });
 
@@ -76,11 +99,26 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  if (posthog) {
+    posthog.capture({
+      event: 'link_updated',
+      properties: {
+        $process_person_profile: false,
+        changed_url: body.url !== undefined,
+        changed_title: body.title !== undefined,
+        changed_description: body.description !== undefined,
+        changed_tags: body.tags !== undefined,
+        changed_favorite: body.favorite !== undefined,
+      },
+    });
+    await posthog.flush();
+  }
+
   return c.json(link);
 });
 
 // Delete a link
-app.delete('/api/links/:id', (c) => {
+app.delete('/api/links/:id', async (c) => {
   const index = links.findIndex((l) => l.id === parseInt(c.req.param('id'), 10));
 
   if (index === -1) {
@@ -88,6 +126,15 @@ app.delete('/api/links/:id', (c) => {
   }
 
   links.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_deleted',
+      properties: { $process_person_profile: false },
+    });
+    await posthog.flush();
+  }
+
   return c.body(null, 204);
 });
 
