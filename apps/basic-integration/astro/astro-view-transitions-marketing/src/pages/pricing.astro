@@ -63,3 +63,16 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.querySelectorAll('.pricing-card .btn').forEach((cta) => {
+    cta.addEventListener('click', () => {
+      const plan = cta.closest('.pricing-card')?.querySelector('h3')?.textContent?.toLowerCase();
+
+      window.posthog?.capture('pricing_plan_selected', {
+        plan,
+        intent: cta.textContent?.trim().toLowerCase().replaceAll(' ', '_'),
+      });
+    });
+  });
+</script>
