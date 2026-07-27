@@ -1,4 +1,4 @@
-from flask import render_template, request
+from flask import current_app, render_template, request
 from app import db
 from app.errors import bp
 from app.api.errors import error_response as api_error_response
@@ -19,6 +19,10 @@ def not_found_error(error):
 @bp.app_errorhandler(500)
 def internal_error(error):
     db.session.rollback()
+    posthog_client = current_app.posthog
+    original_exception = getattr(error, 'original_exception', None)
+    if posthog_client and original_exception:
+        posthog_client.capture_exception(original_exception)
     if wants_json_response():
         return api_error_response(500)
     return render_template('errors/500.html'), 500
