@@ -8,6 +8,8 @@ import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppUpdateService, Logger } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
+import { PosthogService } from '@core/services/posthog.service';
+import { AuthenticationService } from '@app/auth/services/authentication.service';
 
 @Component({
   selector: 'app-root',
@@ -24,10 +26,17 @@ export class AppComponent implements OnInit {
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly posthogService = inject(PosthogService);
+  private readonly authenticationService = inject(AuthenticationService);
 
   title = 'angular-boilerplate';
 
   ngOnInit() {
+    this.posthogService.init(environment.posthogKey, {
+      api_host: environment.posthogHost,
+    });
+    this.authenticationService.identifyCurrentUser();
+
     // Setup logger
     if (environment.production) {
       Logger.enableProductionMode();
