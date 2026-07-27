@@ -16,3 +16,17 @@ const isDocs = currentPath.startsWith('/docs');
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav a').forEach((link) => {
+      link.addEventListener('click', () => {
+        window.posthog?.capture('documentation_navigation_clicked', {
+          destination: link.getAttribute('href'),
+          navigation_area: 'primary',
+          link_label: link.textContent?.trim(),
+        });
+      });
+    });
+  });
+</script>
