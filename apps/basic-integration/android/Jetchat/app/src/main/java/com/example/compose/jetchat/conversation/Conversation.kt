@@ -91,6 +91,7 @@ import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.launch
 
 /**
@@ -203,6 +204,12 @@ fun ConversationContent(
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )
+                    if (BuildConfig.POSTHOG_PROJECT_TOKEN.isNotBlank() && BuildConfig.POSTHOG_HOST.isNotBlank()) {
+                        PostHogAndroid.getInstance().capture(
+                            "message_sent",
+                            mapOf("channel" to uiState.channelName),
+                        )
+                    }
                 },
                 resetScroll = {
                     scope.launch {

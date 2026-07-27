@@ -40,6 +40,7 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.compose.jetchat.auth.LoginScreen
 import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.launch
 
 /**
@@ -83,6 +84,7 @@ class NavActivity : AppCompatActivity() {
                         LoginScreen(
                             onLogin = { username, password ->
                                 viewModel.login(username, password)
+                                capturePostHogEvent("login_completed")
                             },
                         )
                     } else {
@@ -91,6 +93,7 @@ class NavActivity : AppCompatActivity() {
                             selectedMenu = selectedMenu,
                             username = loggedInUsername,
                             onChatClicked = {
+                                capturePostHogEvent("channel_selected", mapOf("channel" to it))
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
                                     drawerState.close()
@@ -98,6 +101,7 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onProfileClicked = {
+                                capturePostHogEvent("profile_opened")
                                 val bundle = bundleOf("userId" to it)
                                 findNavController().navigate(R.id.nav_profile, bundle)
                                 scope.launch {
@@ -106,6 +110,7 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onLogoutClicked = {
+                                capturePostHogEvent("logout_completed")
                                 viewModel.logout()
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
@@ -120,6 +125,12 @@ class NavActivity : AppCompatActivity() {
                 }
             },
         )
+    }
+
+    private fun capturePostHogEvent(event: String, properties: Map<String, Any> = emptyMap()) {
+        if (BuildConfig.POSTHOG_PROJECT_TOKEN.isNotBlank() && BuildConfig.POSTHOG_HOST.isNotBlank()) {
+            PostHogAndroid.getInstance().capture(event, properties)
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {
