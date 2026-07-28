@@ -16,6 +16,14 @@
 
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+val postHogProperties = Properties()
+rootProject.file(".env").inputStream().use { postHogProperties.load(it) }
+val postHogProjectToken = System.getenv("POSTHOG_PROJECT_TOKEN") ?: postHogProperties.getProperty("POSTHOG_PROJECT_TOKEN")
+    ?: error("POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_PROJECT_TOKEN is configured")
+val postHogHost = System.getenv("POSTHOG_HOST") ?: postHogProperties.getProperty("POSTHOG_HOST")
+    ?: error("POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -35,6 +43,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         vectorDrawables.useSupportLibrary = true
+        buildConfigField("String", "POSTHOG_PROJECT_TOKEN", "\"$postHogProjectToken\"")
+        buildConfigField("String", "POSTHOG_HOST", "\"$postHogHost\"")
     }
 
     signingConfigs {
@@ -77,6 +87,7 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
+        buildConfig = true
     }
 
     packaging.resources {
@@ -114,6 +125,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.util)
     implementation(libs.androidx.compose.ui.viewbinding)
     implementation(libs.androidx.compose.ui.googlefonts)
+    implementation("com.posthog:posthog-android:3.+")
 
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
