@@ -50,6 +50,20 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
     setRegion(newRegion);
   };
 
+  const captureCountryAction = (
+    event: "country_claimed" | "country_liked" | "country_visited",
+    countryName: string,
+    countryRegion: string,
+  ) => {
+    void import("~/posthog.client").then(({ default: posthog }) => {
+      posthog.capture(event, {
+        country_name: countryName,
+        country_region: countryRegion,
+      });
+      window.location.reload();
+    });
+  };
+
   // Ensure loaderData is an array, fallback to empty array
   const countries = Array.isArray(loaderData) ? loaderData : [];
 
@@ -137,8 +151,12 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
-                        claimCountry(countryName);
-                        window.location.reload();
+                        if (!isClaimed) {
+                          claimCountry(countryName);
+                          captureCountryAction("country_claimed", countryName, country.region);
+                        } else {
+                          window.location.reload();
+                        }
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isClaimed
@@ -150,8 +168,12 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
-                        likeCountry(countryName);
-                        window.location.reload();
+                        if (!isLiked) {
+                          likeCountry(countryName);
+                          captureCountryAction("country_liked", countryName, country.region);
+                        } else {
+                          window.location.reload();
+                        }
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isLiked
@@ -163,8 +185,13 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
-                        visitCountry(countryName);
-                        window.location.reload();
+                        const hasVisited = user.visitedCountries.includes(countryName);
+                        if (!hasVisited) {
+                          visitCountry(countryName);
+                          captureCountryAction("country_visited", countryName, country.region);
+                        } else {
+                          window.location.reload();
+                        }
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
                     >
