@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}About · Bookmark vault{% endblock %}
+
+{% block content %}
+<nav><a href="/">Back to bookmarks</a></nav>
+
+<h1>About</h1>
+<p class="lede">
+  A small FastAPI bookmark manager with server-rendered Jinja templates and an in-memory store, used
+  as a test app for the PostHog wizard. Bookmarks reset whenever the server restarts.
+</p>
+{% endblock %}
