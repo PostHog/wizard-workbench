@@ -76,6 +76,19 @@ async def generate_content(
         credits_used=credits_needed,
     )
 
+    from app.main import posthog_client
+
+    if posthog_client is not None:
+        posthog_client.capture(
+            "content_generated",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+                "prompt_length": len(request.prompt),
+            },
+        )
+
     return GenerateResponse(
         id=generation.id,
         content=mock_content,

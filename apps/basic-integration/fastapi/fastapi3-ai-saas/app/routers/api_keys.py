@@ -73,6 +73,14 @@ async def create_api_key(
 
     api_key = APIKey.create(db, user_id=current_user.id, name=request.name)
 
+    from app.main import posthog_client
+
+    if posthog_client is not None:
+        posthog_client.capture(
+            "api_key_created",
+            properties={"active_key_count": active_count + 1},
+        )
+
     return APIKeyCreated(
         id=api_key.id,
         name=api_key.name,
@@ -103,5 +111,10 @@ async def revoke_api_key(
 
     api_key.is_active = False
     db.commit()
+
+    from app.main import posthog_client
+
+    if posthog_client is not None:
+        posthog_client.capture("api_key_revoked")
 
     return None
