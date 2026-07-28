@@ -1,0 +1,46 @@
+---
+const projectToken = import.meta.env.PUBLIC_POSTHOG_PROJECT_TOKEN;
+const apiHost = import.meta.env.PUBLIC_POSTHOG_HOST;
+const isDevelopment = import.meta.env.DEV;
+---
+<script is:inline define:vars={{ projectToken, apiHost, isDevelopment }}>
+  (() => {
+    if (!projectToken || !apiHost) {
+      if (isDevelopment) {
+        throw new Error(
+          `${!projectToken ? 'PUBLIC_POSTHOG_PROJECT_TOKEN' : 'PUBLIC_POSTHOG_HOST'} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${!projectToken ? 'PUBLIC_POSTHOG_PROJECT_TOKEN' : 'PUBLIC_POSTHOG_HOST'} is configured`,
+        );
+      }
+      return;
+    }
+
+    if (window.posthog) return;
+
+    const posthog = window.posthog = window.posthog || [];
+    posthog._i = posthog._i || [];
+    const methods = 'capture captureException identify reset isFeatureEnabled getFeatureFlag getFeatureFlagPayload onFeatureFlags'.split(' ');
+    methods.forEach((method) => {
+      posthog[method] = (...args) => posthog.push([method, ...args]);
+    });
+    posthog.init = function (token, config, name) {
+      const instance = name ? (posthog[name] = []) : posthog;
+      instance.people = instance.people || [];
+      instance.toString = () => `posthog${name ? `.${name}` : ''} (stub)`;
+      posthog._i.push([token, config, name]);
+    };
+
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `${apiHost}/static/array.js`;
+    script.crossOrigin = 'anonymous';
+    document.head.appendChild(script);
+
+    posthog.init(projectToken, {
+      api_host: apiHost,
+      capture_pageview: true,
+      capture_pageleave: true,
+      capture_exceptions: true,
+      tracing_headers: [window.location.hostname],
+    });
+  })();
+</script>
