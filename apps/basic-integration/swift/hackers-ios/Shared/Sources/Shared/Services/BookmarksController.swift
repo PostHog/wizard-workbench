@@ -56,8 +56,10 @@ public final class BookmarksController: @unchecked Sendable {
             let newState = try await bookmarksUseCase.toggleBookmark(post: post)
             if newState {
                 cachedIDs.insert(post.id)
+                NotificationCenter.default.post(name: .postHogEvent, object: nil, userInfo: ["event": "bookmark_added", "post_id": post.id])
             } else {
                 cachedIDs.remove(post.id)
+                NotificationCenter.default.post(name: .postHogEvent, object: nil, userInfo: ["event": "bookmark_removed", "post_id": post.id])
             }
             NotificationCenter.default.post(
                 name: .bookmarksDidChange,

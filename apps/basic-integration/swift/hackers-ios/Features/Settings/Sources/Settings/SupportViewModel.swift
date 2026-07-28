@@ -80,6 +80,10 @@ public final class SupportViewModel: @unchecked Sendable {
             defer { self.processingProductId = nil }
             do {
                 let result = try await self.supportUseCase.purchase(productId: product.id)
+                if result == .success {
+                    let productKind = product.kind == .subscription ? "subscription" : "tip"
+                    NotificationCenter.default.post(name: .postHogEvent, object: nil, userInfo: ["event": "purchase_completed", "product_id": product.id, "product_kind": productKind])
+                }
                 self.handle(result: result, for: product)
                 if result == .success, product.kind == .subscription {
                     self.isSubscribed = true
@@ -100,6 +104,9 @@ public final class SupportViewModel: @unchecked Sendable {
             defer { self.isRestoring = false }
             do {
                 let result = try await self.supportUseCase.restorePurchases()
+                if result == .success {
+                    NotificationCenter.default.post(name: .postHogEvent, object: nil, userInfo: ["event": "purchases_restored"])
+                }
                 await self.updateSubscriptionStatus()
                 self.handleRestore(result: result)
             } catch {

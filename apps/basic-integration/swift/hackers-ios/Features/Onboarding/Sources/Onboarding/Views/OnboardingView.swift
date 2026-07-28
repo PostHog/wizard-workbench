@@ -12,6 +12,11 @@ public struct OnboardingView: View {
     private let onboardingData: OnboardingData
     private let onDismiss: () -> Void
 
+    private func completeOnboarding() {
+        NotificationCenter.default.post(name: .postHogEvent, object: nil, userInfo: ["event": "onboarding_completed"])
+        onDismiss()
+    }
+
     public init(onboardingData: OnboardingData, onDismiss: @escaping () -> Void) {
         self.onboardingData = onboardingData
         self.onDismiss = onDismiss
@@ -70,7 +75,7 @@ public struct OnboardingView: View {
     @ViewBuilder
     private var continueButton: some View {
         if #available(iOS 26.0, *) {
-            Button(action: onDismiss) {
+            Button(action: completeOnboarding) {
                 Text("Continue")
                     .scaledFont(.headline)
                     .foregroundStyle(.white)
@@ -79,7 +84,7 @@ public struct OnboardingView: View {
             }
             .glassEffect(.regular.tint(AppColors.appTintColor))
         } else {
-            Button(action: onDismiss) {
+            Button(action: completeOnboarding) {
                 Text("Continue")
                     .scaledFont(.headline)
                     .foregroundStyle(.white)

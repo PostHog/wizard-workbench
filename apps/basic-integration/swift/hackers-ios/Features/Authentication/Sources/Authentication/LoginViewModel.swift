@@ -61,6 +61,7 @@ public final class LoginViewModel {
             try await onLogin(username, password)
             isAuthenticated = true
             currentUsername = username
+            NotificationCenter.default.post(name: .postHogEvent, object: nil, userInfo: ["event": "login_completed"])
             return true
         } catch {
             showAlert = true
@@ -71,6 +72,7 @@ public final class LoginViewModel {
 
     public func logout() {
         onLogout()
+        NotificationCenter.default.post(name: .postHogEvent, object: nil, userInfo: ["event": "logout_completed"])
         isAuthenticated = false
         currentUsername = nil
     }

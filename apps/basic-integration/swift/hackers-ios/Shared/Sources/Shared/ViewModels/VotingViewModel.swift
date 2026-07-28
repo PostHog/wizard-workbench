@@ -59,6 +59,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.upvote(item: postForVoting)
+            NotificationCenter.default.post(name: .postHogEvent, object: nil, userInfo: ["event": "post_upvoted", "post_id": post.id])
 
         } catch {
             // Revert optimistic changes on error
@@ -96,6 +97,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.unvote(item: postForVoting)
+            NotificationCenter.default.post(name: .postHogEvent, object: nil, userInfo: ["event": "post_unvoted", "post_id": post.id])
 
         } catch {
             // Revert optimistic changes on error
@@ -128,6 +130,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.upvoteComment(commentForVoting, for: post)
+            NotificationCenter.default.post(name: .postHogEvent, object: nil, userInfo: ["event": "comment_upvoted", "comment_id": comment.id, "post_id": post.id])
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = false
@@ -155,6 +158,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.unvoteComment(commentForVoting, for: post)
+            NotificationCenter.default.post(name: .postHogEvent, object: nil, userInfo: ["event": "comment_unvoted", "comment_id": comment.id, "post_id": post.id])
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = true
