@@ -79,7 +79,7 @@ msgid "Invalid username or password"
 msgstr "Nombre de usuario o contraseña inválidos"
 
 #: app/auth/routes.py:46
-msgid "Congratulations, you are now a registered user!"
+msgid "Congratulations, your registration is complete!"
 msgstr "¡Felicitaciones, ya eres un usuario registrado!"
 
 #: app/auth/routes.py:61
