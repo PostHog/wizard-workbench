@@ -59,6 +59,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.upvote(item: postForVoting)
+            AnalyticsEvent.postUpvoted.capture()
 
         } catch {
             // Revert optimistic changes on error
@@ -96,6 +97,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.unvote(item: postForVoting)
+            AnalyticsEvent.postUnvoted.capture()
 
         } catch {
             // Revert optimistic changes on error
@@ -128,6 +130,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.upvoteComment(commentForVoting, for: post)
+            AnalyticsEvent.commentUpvoted.capture()
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = false
@@ -155,6 +158,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.unvoteComment(commentForVoting, for: post)
+            AnalyticsEvent.commentUnvoted.capture()
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = true
