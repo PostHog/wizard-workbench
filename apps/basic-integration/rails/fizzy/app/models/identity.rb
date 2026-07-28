@@ -20,6 +20,16 @@ class Identity < ApplicationRecord
     end
   end
 
+  # Uses the account-independent identity UUID so the same person remains linked
+  # across their account memberships.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  def posthog_properties
+    { email: email_address }
+  end
+
   def send_magic_link(**attributes)
     attributes[:purpose] = attributes.delete(:for) if attributes.key?(:for)
 

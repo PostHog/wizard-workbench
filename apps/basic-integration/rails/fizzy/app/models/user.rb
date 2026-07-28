@@ -24,6 +24,20 @@ class User < ApplicationRecord
     end
   end
 
+  # Used by posthog-rails to associate controller exceptions with the authenticated person.
+  # Identity IDs survive account membership changes, unlike email addresses.
+  def posthog_distinct_id
+    identity_id.to_s
+  end
+
+  # Sent only with PostHog identification, never as event properties.
+  def posthog_properties
+    {
+      email: identity&.email_address,
+      name: name
+    }.compact
+  end
+
   def setup?
     name != identity.email_address
   end
