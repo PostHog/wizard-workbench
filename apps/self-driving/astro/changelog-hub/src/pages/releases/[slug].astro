@@ -1,0 +1,27 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { findRelease } from '../../lib/releases';
+
+const { slug } = Astro.params;
+const release = slug ? findRelease(slug) : undefined;
+
+if (!release) {
+  return Astro.redirect('/', 302);
+}
+---
+
+<Layout title={`${release.title} · Changelog`}>
+  <nav><a href="/">Back to changelog</a></nav>
+
+  <h1>{release.title}</h1>
+  <p class="lede">v{release.version} · {release.date}</p>
+
+  <article class="card">
+    <p>{release.summary}</p>
+    <ul>
+      {release.notes.map((note) => <li>{note}</li>)}
+    </ul>
+  </article>
+
+  <p class="meta">{release.reactions} people found this useful.</p>
+</Layout>

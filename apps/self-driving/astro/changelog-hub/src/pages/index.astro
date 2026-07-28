@@ -1,0 +1,84 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { listReleases } from '../lib/releases';
+
+const releases = listReleases();
+---
+
+<Layout title="Changelog">
+  <nav><a href="/about">About</a></nav>
+
+  <h1>Changelog</h1>
+  <p class="lede">Everything we shipped, newest first.</p>
+
+  <form class="card row" id="subscribe-form">
+    <input type="email" name="email" placeholder="you@example.com" required />
+    <button class="primary" type="submit">Subscribe</button>
+  </form>
+  <p class="meta" id="subscribe-status"></p>
+
+  {
+    releases.map((release) => (
+      <article class="card">
+        <div class="row">
+          <div>
+            <h2>
+              <a href={`/releases/${release.slug}`}>{release.title}</a>
+            </h2>
+            <div class="meta">
+              v{release.version} · {release.date}
+            </div>
+          </div>
+          <button class="react" data-slug={release.slug}>
+            👍 <span>{release.reactions}</span>
+          </button>
+        </div>
+        <p class="meta">{release.summary}</p>
+      </article>
+    ))
+  }
+</Layout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('#subscribe-form');
+  const status = document.querySelector<HTMLParagraphElement>('#subscribe-status');
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const email = new FormData(form).get('email');
+
+    const response = await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      if (status) status.textContent = 'That email did not look right.';
+      return;
+    }
+
+    const result = await response.json();
+    if (status) {
+      status.textContent = result.subscribed
+        ? 'Subscribed. Expect a note on every release.'
+        : 'You are already subscribed.';
+    }
+    form.reset();
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('button.react').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const slug = button.dataset.slug;
+      const response = await fetch(`/api/releases/${slug}/react`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) return;
+
+      const release = await response.json();
+      const count = button.querySelector('span');
+      if (count) count.textContent = String(release.reactions);
+    });
+  });
+</script>
