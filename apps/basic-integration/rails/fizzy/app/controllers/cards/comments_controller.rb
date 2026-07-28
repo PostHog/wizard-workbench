@@ -12,6 +12,14 @@ class Cards::CommentsController < ApplicationController
   def create
     @comment = @card.comments.create!(comment_params)
 
+    if ENV["POSTHOG_PROJECT_TOKEN"].present?
+      PostHog.capture(
+        distinct_id: Current.identity.posthog_distinct_id,
+        event: "comment_created",
+        properties: { card_status: @card.status }
+      )
+    end
+
     respond_to do |format|
       format.turbo_stream
       format.json { head :created, location: card_comment_path(@card, @comment, format: :json) }

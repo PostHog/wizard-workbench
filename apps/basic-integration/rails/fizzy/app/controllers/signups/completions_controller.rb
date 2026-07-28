@@ -11,6 +11,7 @@ class Signups::CompletionsController < ApplicationController
     @signup = Signup.new(signup_params)
 
     if @signup.complete
+      capture_signup_completed
       welcome_to_account
     else
       invalid_signup
@@ -20,6 +21,16 @@ class Signups::CompletionsController < ApplicationController
   private
     def signup_params
       params.expect(signup: %i[ full_name ]).with_defaults(identity: Current.identity)
+    end
+
+    def capture_signup_completed
+      return unless ENV["POSTHOG_PROJECT_TOKEN"].present?
+
+      PostHog.capture(
+        distinct_id: Current.identity.posthog_distinct_id,
+        event: "signup_completed",
+        properties: { account_id: @signup.account.id }
+      )
     end
 
     def welcome_to_account
