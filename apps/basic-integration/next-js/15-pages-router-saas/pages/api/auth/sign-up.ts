@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -175,7 +176,35 @@ export default async function handler(
       return res.status(200).json(checkoutResult);
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    await Promise.all([
+      captureServerEvent(String(createdUser.id), 'user_signed_up', {
+        team_id: teamId,
+        signup_source: inviteId ? 'invitation' : 'direct'
+      }),
+      ...(inviteId
+        ? [
+            captureServerEvent(
+              String(createdUser.id),
+              'team_invitation_accepted',
+              { team_id: teamId, invited_role: userRole }
+            )
+          ]
+        : [
+            captureServerEvent(String(createdUser.id), 'team_created', {
+              team_id: teamId
+            })
+          ])
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      user: {
+        id: createdUser.id,
+        email: createdUser.email,
+        role: createdUser.role
+      }
+    });
   } catch (error) {
     console.error('Sign up error:', error);
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });
