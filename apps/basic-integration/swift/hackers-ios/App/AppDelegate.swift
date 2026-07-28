@@ -13,6 +13,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_: UIApplication,
                      didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]?) -> Bool
     {
+        PostHogManager.setup()
+
         // Configure a modest shared URL cache to limit on-disk growth from image/HTTP caching
         // This affects system components like AsyncImage that use URLSession.shared
         let memoryCapacity = 64 * 1024 * 1024 // 64 MB
