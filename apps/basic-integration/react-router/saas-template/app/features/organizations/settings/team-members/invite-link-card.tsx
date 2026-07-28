@@ -113,6 +113,14 @@ export function InviteLinkCard({
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
                   setLinkCopied(true);
+                  if (
+                    import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                    import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+                  ) {
+                    void import("posthog-js").then(({ default: posthog }) => {
+                      posthog.capture("organization_invite_link_copied");
+                    });
+                  }
                 }}
                 size="icon"
                 variant="ghost"

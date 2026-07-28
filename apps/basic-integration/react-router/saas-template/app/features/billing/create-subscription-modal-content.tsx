@@ -73,6 +73,20 @@ export function CreateSubscriptionModalContent({
   const getFeatures = (key: string): string[] =>
     t(`plans.${key}.features`, "", { returnObjects: true }) as string[];
 
+  const captureCheckoutStarted = (interval: Interval, tier: Tier) => {
+    if (
+      import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+    ) {
+      void import("posthog-js").then(({ default: posthog }) => {
+        posthog.capture("billing_checkout_started", {
+          billing_period: interval,
+          selected_tier: tier,
+        });
+      });
+    }
+  };
+
   const getButtonProps = (
     interval: Interval,
     tier: Tier,
@@ -97,6 +111,7 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () => captureCheckoutStarted(interval, tier),
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };
