@@ -17,6 +17,16 @@ const currentPath = Astro.url.pathname;
   </div>
 </nav>
 
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('.nav-cta')?.addEventListener('click', () => {
+      window.posthog?.capture('trial_cta_clicked', {
+        placement: 'navigation',
+      });
+    });
+  });
+</script>
+
 <style>
   .nav-link.active {
     color: var(--color-text);
