@@ -24,7 +24,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Basic integrations</li>
             <li>Email support</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
+          <a href="#" class="btn btn-secondary pricing-plan-cta" data-plan="starter" style="width: 100%; justify-content: center;">Get Started</a>
         </div>
 
         <div class="pricing-card featured">
@@ -40,7 +40,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Advanced analytics</li>
             <li>Custom workflows</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
+          <a href="#" class="btn btn-primary pricing-plan-cta" data-plan="pro" style="width: 100%; justify-content: center;">Start Free Trial</a>
         </div>
 
         <div class="pricing-card">
@@ -57,9 +57,26 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="#" class="btn btn-secondary pricing-plan-cta" data-plan="enterprise" style="width: 100%; justify-content: center;">Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll('.pricing-plan-cta').forEach((cta) => {
+      cta.addEventListener('click', () => {
+        const plan = cta.dataset.plan;
+        window.posthog?.capture('pricing_plan_selected', { plan });
+
+        if (plan === 'pro') {
+          window.posthog?.capture('free_trial_cta_clicked', {
+            placement: 'pricing',
+          });
+        }
+      });
+    });
+  });
+</script>
