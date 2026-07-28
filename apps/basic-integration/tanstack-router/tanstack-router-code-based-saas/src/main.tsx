@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -33,6 +34,7 @@ import { useMutation } from './useMutation'
 import type { NotFoundRouteProps } from '@tanstack/react-router'
 import type { Invoice } from './mockTodos'
 import './styles.css'
+import { posthogConfig } from './posthog'
 
 //
 
@@ -85,7 +87,7 @@ function RouterSpinner() {
 }
 
 function RootComponent() {
-  return (
+  const app = (
     <>
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
@@ -134,6 +136,12 @@ function RootComponent() {
       <TanStackRouterDevtools position="bottom-right" />
     </>
   )
+
+  return posthogConfig ? (
+    <PostHogProvider apiKey={posthogConfig.apiKey} options={posthogConfig.options}>
+      {app}
+    </PostHogProvider>
+  ) : app
 }
 
 const indexRoute = createRoute({
@@ -433,6 +441,7 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
     onSuccess: () => router.invalidate(),
@@ -453,6 +462,7 @@ function InvoicesIndexComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            posthog.capture('invoice_creation_submitted')
             createInvoiceMutation.mutate({
               title: formData.get('title') as string,
               body: formData.get('body') as string,
@@ -514,6 +524,7 @@ const invoiceRoute = createRoute({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
@@ -578,6 +589,9 @@ function InvoiceComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            posthog.capture('invoice_update_submitted', {
+              invoice_id: invoice.id,
+            })
             updateInvoiceMutation.mutate({
               id: invoice.id,
               title: formData.get('title') as string,
@@ -1002,6 +1016,7 @@ const profileRoute = createRoute({
 })
 
 function ProfileComponent() {
+  const posthog = usePostHog()
   const { username } = profileRoute.useRouteContext()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
@@ -1067,6 +1082,7 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                posthog.capture('demo_logout_completed')
                 auth.logout()
                 router.invalidate()
               }}
@@ -1093,6 +1109,7 @@ const loginRoute = createRoute({
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -1103,6 +1120,7 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog.capture('demo_login_completed')
     router.invalidate()
   }
 
@@ -1138,6 +1156,7 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('demo_logout_completed')
                 auth.logout()
                 router.invalidate()
               }}
