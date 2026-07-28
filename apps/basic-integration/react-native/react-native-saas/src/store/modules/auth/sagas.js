@@ -4,6 +4,20 @@ import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
+
+const ANALYTICS_USER_STORAGE_KEY = '@Omni:analyticsUser';
+const DEMO_USER_ID = 'demo-user';
+
+function* identifyUser(distinctId, email) {
+  if (!posthog || !distinctId) {
+    return;
+  }
+
+  yield call([posthog, 'identify'], distinctId, {
+    $set: { email },
+  });
+}
 
 import {
   signInSuccess,
@@ -21,6 +35,17 @@ export function* init() {
     // Grant permissions immediately in demo mode
     if (isDemoMode(token)) {
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
+      yield call(identifyUser, DEMO_USER_ID, 'demo@test.com');
+    } else {
+      const analyticsUser = yield call(
+        [AsyncStorage, 'getItem'],
+        ANALYTICS_USER_STORAGE_KEY,
+      );
+
+      if (analyticsUser) {
+        const { distinctId, email } = JSON.parse(analyticsUser);
+        yield call(identifyUser, distinctId, email);
+      }
     }
   }
 
@@ -41,8 +66,14 @@ export function* signIn({ payload }) {
     if (email === 'demo@test.com' && password === 'demo') {
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
       yield put(signInSuccess(DEMO_TOKEN));
+      yield call(identifyUser, DEMO_USER_ID, email);
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
+      if (posthog) {
+        yield call([posthog, 'capture'], 'user_logged_in', {
+          login_method: 'demo',
+        });
+      }
       toast.showSuccess('Welcome to demo mode!');
       NavigationService.navigate('Main');
       return;
@@ -52,6 +83,20 @@ export function* signIn({ payload }) {
 
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
+    // The session response exposes no stable user primary key, so email is the
+    // documented fallback distinct ID until the API returns one.
+    yield call(
+      [AsyncStorage, 'setItem'],
+      ANALYTICS_USER_STORAGE_KEY,
+      JSON.stringify({ distinctId: email, email }),
+    );
+    yield call(identifyUser, email, email);
+    if (posthog) {
+      yield call([posthog, 'capture'], 'user_logged_in', {
+        login_method: 'password',
+      });
+    }
+
     yield put(signInSuccess(response.data.token));
     NavigationService.navigate('Main');
   } catch (err) {
@@ -60,6 +105,11 @@ export function* signIn({ payload }) {
 }
 
 export function* signOut() {
+  if (posthog) {
+    yield call([posthog, 'capture'], 'user_logged_out');
+    yield call([posthog, 'reset']);
+  }
+
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
