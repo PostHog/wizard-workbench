@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
+from posthog import capture
 from datetime import timedelta
 from .models import Project, ActivityLog
 from .forms import ProjectForm
@@ -53,6 +54,9 @@ def create_project(request):
             project = form.save(commit=False)
             project.owner = request.user
             project.save()
+            capture('project_created', properties={
+                'project_count': request.user.projects.count(),
+            })
 
             ActivityLog.objects.create(
                 user=request.user,
@@ -76,6 +80,7 @@ def edit_project(request, pk):
         form = ProjectForm(request.POST, instance=project)
         if form.is_valid():
             form.save()
+            capture('project_updated')
 
             ActivityLog.objects.create(
                 user=request.user,
@@ -98,6 +103,9 @@ def delete_project(request, pk):
     if request.method == 'POST':
         name = project.name
         project.delete()
+        capture('project_deleted', properties={
+            'project_count': request.user.projects.count(),
+        })
 
         ActivityLog.objects.create(
             user=request.user,
