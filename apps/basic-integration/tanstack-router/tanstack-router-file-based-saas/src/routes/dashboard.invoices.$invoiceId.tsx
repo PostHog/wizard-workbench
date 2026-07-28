@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
@@ -28,6 +29,7 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
     onSuccess: () => router.invalidate(),
@@ -90,6 +92,9 @@ function InvoiceComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            posthog.capture('invoice_update_submitted', {
+              invoice_id: invoice.id,
+            })
             updateInvoiceMutation.mutate({
               id: invoice.id,
               title: formData.get('title') as string,
