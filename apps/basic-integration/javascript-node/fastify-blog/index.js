@@ -1,6 +1,15 @@
 import Fastify from 'fastify';
+import { posthog } from './posthog.js';
 
 const fastify = Fastify({ logger: true });
+
+fastify.setErrorHandler((error, request, reply) => {
+  posthog?.captureException(error, request.headers['x-posthog-distinct-id']);
+  request.log.error(error);
+
+  const statusCode = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
+  reply.status(statusCode).send({ error: statusCode === 500 ? 'Internal Server Error' : error.message });
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +48,13 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+  posthog?.capture({
+    event: 'post_created',
+    properties: {
+      post_id: post.id,
+      published: post.published,
+    },
+  });
   return reply.status(201).send(post);
 });
 
@@ -63,10 +79,28 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   }
 
   const { title, body, published } = request.body || {};
-  if (title !== undefined) post.title = title;
-  if (body !== undefined) post.body = body;
-  if (published !== undefined) post.published = published;
+  const updated_fields = [];
+  if (title !== undefined) {
+    post.title = title;
+    updated_fields.push('title');
+  }
+  if (body !== undefined) {
+    post.body = body;
+    updated_fields.push('body');
+  }
+  if (published !== undefined) {
+    post.published = published;
+    updated_fields.push('published');
+  }
 
+  posthog?.capture({
+    event: 'post_updated',
+    properties: {
+      post_id: post.id,
+      published: post.published,
+      updated_fields,
+    },
+  });
   return post;
 });
 
@@ -86,6 +120,10 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
     if (comments[i].post_id === postId) comments.splice(i, 1);
   }
 
+  posthog?.capture({
+    event: 'post_deleted',
+    properties: { post_id: postId },
+  });
   return reply.status(204).send();
 });
 
@@ -111,10 +149,21 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+  posthog?.capture({
+    event: 'comment_created',
+    properties: {
+      comment_id: comment.id,
+      post_id: comment.post_id,
+    },
+  });
   return reply.status(201).send(comment);
 });
 
 const PORT = process.env.PORT || 3001;
+
+fastify.addHook('onClose', async () => {
+  await posthog?.shutdown();
+});
 
 fastify.listen({ port: PORT }, (err) => {
   if (err) {
