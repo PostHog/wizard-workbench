@@ -6,6 +6,7 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { addFollowers, addPurchasedFollowers } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import posthog from '@/lib/posthog.client'
 
 export const meta: Route.MetaFunction = () => {
   const siteUrl = SITE_URL || 'https://clouthub.fake'
@@ -34,6 +35,11 @@ export default function BuyFollowers() {
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+      posthog.capture('follower_purchase_completed', {
+        follower_count: totalFollowers,
+        package_price: pkg.price,
+        includes_bonus: pkg.bonus > 0,
+      })
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
@@ -75,7 +81,14 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => {
+                  setSelectedPackage(index)
+                  posthog.capture('follower_package_selected', {
+                    follower_count: totalFollowers,
+                    package_price: pkg.price,
+                    includes_bonus: pkg.bonus > 0,
+                  })
+                }}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected
