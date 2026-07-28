@@ -4,6 +4,7 @@ import {
   IconSelector,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
+import posthog from "posthog-js";
 import { Form, href, Link } from "react-router";
 import { useHydrated } from "remix-utils/use-hydrated";
 
@@ -115,7 +116,12 @@ export function NavUser({ user }: NavUserProps) {
 
             <DropdownMenuSeparator />
 
-            <Form action="/logout" method="post" replace>
+            <Form
+              action="/logout"
+              method="post"
+              onSubmit={() => posthog.reset()}
+              replace
+            >
               <DropdownMenuItem
                 render={
                   <button
