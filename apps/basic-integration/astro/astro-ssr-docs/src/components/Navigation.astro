@@ -16,3 +16,19 @@ const isDocs = currentPath.startsWith('/docs');
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('.nav-cta')?.addEventListener('click', () => {
+      window.posthog?.capture('documentation_get_started_clicked', {
+        location: 'primary_navigation',
+      });
+    });
+
+    document.querySelector('a[href="https://github.com"]')?.addEventListener('click', () => {
+      window.posthog?.capture('documentation_github_clicked', {
+        location: 'primary_navigation',
+      });
+    });
+  });
+</script>
