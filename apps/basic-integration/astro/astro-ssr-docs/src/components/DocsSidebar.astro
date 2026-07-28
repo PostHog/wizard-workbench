@@ -43,6 +43,8 @@ const sections = [
             <a
               href={link.href}
               class:list={["sidebar-link", { active: currentPath === link.href }]}
+              data-docs-section={section.title}
+              data-docs-topic={link.label}
             >
               {link.label}
             </a>
@@ -52,3 +54,15 @@ const sections = [
     </div>
   ))}
 </aside>
+
+<script is:inline>
+  document.querySelector('.docs-sidebar')?.addEventListener('click', (event) => {
+    const link = event.target.closest('[data-docs-topic]');
+    if (!link) return;
+
+    window.posthog?.capture('docs_sidebar_navigation_clicked', {
+      section: link.dataset.docsSection,
+      topic: link.dataset.docsTopic,
+    });
+  });
+</script>

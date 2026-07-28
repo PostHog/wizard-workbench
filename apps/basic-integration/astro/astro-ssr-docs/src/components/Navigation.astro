@@ -9,10 +9,21 @@ const isDocs = currentPath.startsWith('/docs');
       <span>NeuralFlow</span> Docs
     </a>
     <ul class="nav-links">
-      <li><a href="/docs" class:list={["nav-link", { active: isDocs }]}>Documentation</a></li>
-      <li><a href="/docs/api" class="nav-link">API Reference</a></li>
-      <li><a href="https://github.com" class="nav-link" target="_blank">GitHub</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/docs" class:list={["nav-link", { active: isDocs }]} data-nav-destination="documentation">Documentation</a></li>
+      <li><a href="/docs/api" class="nav-link" data-nav-destination="api_reference">API Reference</a></li>
+      <li><a href="https://github.com" class="nav-link" target="_blank" data-nav-destination="github">GitHub</a></li>
+      <li><a href="#" class="nav-cta" data-nav-destination="get_started">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.querySelector('.nav')?.addEventListener('click', (event) => {
+    const link = event.target.closest('[data-nav-destination]');
+    if (!link) return;
+
+    window.posthog?.capture('documentation_navigation_clicked', {
+      destination: link.dataset.navDestination,
+    });
+  });
+</script>
