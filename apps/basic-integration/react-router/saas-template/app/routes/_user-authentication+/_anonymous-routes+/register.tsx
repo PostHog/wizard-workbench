@@ -2,6 +2,7 @@ import { useForm } from "@conform-to/react/future";
 import { IconMail } from "@tabler/icons-react";
 import { Trans, useTranslation } from "react-i18next";
 import { data, Form, href, Link, useNavigation } from "react-router";
+import posthog from "posthog-js";
 import * as z from "zod";
 
 import type { Route } from "./+types/register";
@@ -117,7 +118,13 @@ export default function RegisterRoute({
         </div>
 
         {/* Email Registration Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmit={() =>
+            posthog.capture("registration_submitted", { method: "email" })
+          }
+          {...form.props}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -161,7 +168,12 @@ export default function RegisterRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Registration Form */}
-        <Form method="POST">
+        <Form
+          method="POST"
+          onSubmit={() =>
+            posthog.capture("registration_submitted", { method: "google" })
+          }
+        >
           <Field>
             <Button
               name="intent"

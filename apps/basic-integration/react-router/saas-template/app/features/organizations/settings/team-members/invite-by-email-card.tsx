@@ -3,6 +3,7 @@ import { useForm } from "@conform-to/react/future";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
+import posthog from "posthog-js";
 import { useHydrated } from "remix-utils/use-hydrated";
 
 import { INVITE_BY_EMAIL_INTENT } from "./team-members-constants";
@@ -70,7 +71,14 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmit={(event) => {
+            const role = new FormData(event.currentTarget).get("role");
+            posthog.capture("organization_invite_submitted", { role });
+          }}
+          {...form.props}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

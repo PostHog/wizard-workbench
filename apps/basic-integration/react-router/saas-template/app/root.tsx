@@ -219,6 +219,16 @@ function BaseErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 }
 
 export function ErrorBoundary({ error, ...props }: Route.ErrorBoundaryProps) {
+  useEffect(() => {
+    if (isRouteErrorResponse(error) && error.status === 404) return;
+
+    void import("posthog-js").then(({ default: posthog }) => {
+      if (posthog.__loaded) {
+        posthog.captureException(error);
+      }
+    });
+  }, [error]);
+
   if (isRouteErrorResponse(error) && error.status === 404) {
     return <NotFound className="min-h-svh" />;
   }

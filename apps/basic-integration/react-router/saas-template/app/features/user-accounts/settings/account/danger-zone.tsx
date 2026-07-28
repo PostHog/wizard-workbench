@@ -1,5 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import { Form } from "react-router";
+import posthog from "posthog-js";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -105,7 +106,11 @@ function DeleteAccountDialogComponent({
             {t("cancel")}
           </DialogClose>
 
-          <Form method="POST" replace>
+          <Form
+            method="POST"
+            onSubmit={() => posthog.capture("account_deletion_confirmed")}
+            replace
+          >
             <Button
               disabled={isDeletingAccount}
               name="intent"

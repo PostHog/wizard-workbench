@@ -2,6 +2,7 @@ import { useForm } from "@conform-to/react/future";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
+import posthog from "posthog-js";
 import { useHydrated } from "remix-utils/use-hydrated";
 import { z } from "zod";
 
@@ -97,7 +98,11 @@ function DeleteOrganizationDialogComponent({
           <DialogDescription>{t("dialogDescription")}</DialogDescription>
         </DialogHeader>
 
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmit={() => posthog.capture("organization_deletion_confirmed")}
+          {...form.props}
+        >
           <FieldSet disabled={isSubmitting}>
             <Field data-invalid={fields.confirmation.ariaInvalid}>
               <FieldLabel htmlFor={fields.confirmation.id}>

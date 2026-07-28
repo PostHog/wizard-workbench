@@ -4,6 +4,7 @@ import { IconCircleX } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, href, Link, useNavigation } from "react-router";
+import posthog from "posthog-js";
 import { useHydrated } from "remix-utils/use-hydrated";
 
 import type { Interval, Tier } from "./billing-constants";
@@ -627,7 +628,13 @@ export function BillingPage({
                 {t("cancelSubscriptionModal.changePlan")}
               </Button>
 
-              <Form method="POST" replace>
+              <Form
+                method="POST"
+                onSubmit={() =>
+                  posthog.capture("subscription_cancellation_confirmed")
+                }
+                replace
+              >
                 <Button
                   disabled={isSubmitting}
                   name="intent"
