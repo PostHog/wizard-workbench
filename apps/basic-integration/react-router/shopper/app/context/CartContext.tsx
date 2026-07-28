@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Product } from "../data/products";
+import posthog from "../posthog.client";
 
 export interface CartItem extends Product {
   quantity: number;
@@ -21,21 +22,37 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const addToCart = (product: Product) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.id === product.id);
-      if (existingItem) {
-        return prevCart.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prevCart, { ...product, quantity: 1 }];
+    const existingItem = cart.find((item) => item.id === product.id);
+    const quantity = existingItem ? existingItem.quantity + 1 : 1;
+
+    posthog.capture("product_added_to_cart", {
+      product_id: product.id,
+      category: product.category,
+      unit_price: product.price,
+      quantity,
     });
+
+    setCart(
+      existingItem
+        ? cart.map((item) =>
+            item.id === product.id ? { ...item, quantity } : item
+          )
+        : [...cart, { ...product, quantity }]
+    );
   };
 
   const removeFromCart = (productId: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
+    const item = cart.find((cartItem) => cartItem.id === productId);
+    if (item) {
+      posthog.capture("cart_item_removed", {
+        product_id: item.id,
+        category: item.category,
+        unit_price: item.price,
+        quantity: item.quantity,
+      });
+    }
+
+    setCart(cart.filter((cartItem) => cartItem.id !== productId));
   };
 
   const updateQuantity = (productId: number, quantity: number) => {
@@ -43,8 +60,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart(productId);
       return;
     }
-    setCart((prevCart) =>
-      prevCart.map((item) =>
+
+    const item = cart.find((cartItem) => cartItem.id === productId);
+    if (item && item.quantity !== quantity) {
+      posthog.capture("cart_item_quantity_changed", {
+        product_id: item.id,
+        category: item.category,
+        previous_quantity: item.quantity,
+        quantity,
+      });
+    }
+
+    setCart(
+      cart.map((item) =>
         item.id === productId ? { ...item, quantity } : item
       )
     );
