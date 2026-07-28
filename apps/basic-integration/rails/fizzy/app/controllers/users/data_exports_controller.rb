@@ -11,6 +11,11 @@ class Users::DataExportsController < ApplicationController
 
   def create
     @user.data_exports.create!(account: Current.account).build_later
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "data_export_requested",
+      properties: { account_id: Current.account.id }
+    )
     redirect_to @user, notice: "Export started. You'll receive an email when it's ready."
   end
 

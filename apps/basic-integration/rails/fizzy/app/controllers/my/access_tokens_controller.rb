@@ -15,6 +15,11 @@ class My::AccessTokensController < ApplicationController
 
   def create
     access_token = my_access_tokens.create!(access_token_params)
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "access_token_created",
+      properties: { permission: access_token.permission }
+    )
     expiring_id = verifier.generate access_token.id, expires_in: 10.seconds
 
     redirect_to my_access_token_path(expiring_id)
@@ -22,6 +27,10 @@ class My::AccessTokensController < ApplicationController
 
   def destroy
     my_access_tokens.find(params[:id]).destroy!
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "access_token_revoked"
+    )
     redirect_to my_access_tokens_path
   end
 

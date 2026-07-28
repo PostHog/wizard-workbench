@@ -24,6 +24,21 @@ class User < ApplicationRecord
     end
   end
 
+  # Used by posthog-rails to associate controller exceptions with this user.
+  # The primary key is stable; email addresses are mutable PII and belong only
+  # in person properties.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  def posthog_properties
+    {
+      email: identity&.email_address,
+      name: name,
+      account_id: account_id
+    }.compact
+  end
+
   def setup?
     name != identity.email_address
   end
