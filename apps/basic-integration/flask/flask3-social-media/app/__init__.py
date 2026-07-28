@@ -1,7 +1,11 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+
+from posthog import Posthog, identify_context, set_context_session
+from flask import Flask, current_app, g, request
+from flask_login import current_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -25,6 +29,24 @@ def get_locale():
     return request.accept_languages.best_match(current_app.config['LANGUAGES'])
 
 
+def identify_posthog_user(user, set_person_properties=False):
+    """Associate the active request's analytics context with an authenticated user."""
+    posthog_client = current_app.posthog
+    if posthog_client is None:
+        return
+
+    distinct_id = str(user.id)
+    identify_context(distinct_id)
+    if set_person_properties:
+        posthog_client.set(
+            distinct_id=distinct_id,
+            properties={
+                'email': user.email,
+                'username': user.username,
+            },
+        )
+
+
 db = SQLAlchemy()
 migrate = Migrate()
 login = LoginManager()
@@ -38,6 +60,54 @@ babel = Babel()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    if not app.config['POSTHOG_PROJECT_TOKEN'] or not app.config['POSTHOG_HOST']:
+        if app.debug:
+            missing = 'POSTHOG_PROJECT_TOKEN' if not app.config['POSTHOG_PROJECT_TOKEN'] else 'POSTHOG_HOST'
+            raise RuntimeError(
+                f'{missing} variable required by PostHog is missing or un-configured, '
+                f'this causes events to be silently missed. This error stops appearing '
+                f'once {missing} is configured'
+            )
+        app.posthog = None
+    else:
+        app.posthog = Posthog(
+            project_api_key=app.config['POSTHOG_PROJECT_TOKEN'],
+            host=app.config['POSTHOG_HOST'],
+            enable_exception_autocapture=True,
+        )
+        atexit.register(app.posthog.shutdown)
+
+    @app.before_request
+    def bind_posthog_request_context():
+        posthog_client = app.posthog
+        if posthog_client is None:
+            return
+
+        context = posthog_client.new_context(fresh=True)
+        context.__enter__()
+        g.posthog_context = context
+
+        if current_user.is_authenticated:
+            identify_context(str(current_user.id))
+        else:
+            distinct_id = request.headers.get('X-POSTHOG-DISTINCT-ID')
+            if distinct_id:
+                identify_context(distinct_id)
+
+        session_id = request.headers.get('X-POSTHOG-SESSION-ID')
+        if session_id:
+            set_context_session(session_id)
+
+    @app.teardown_request
+    def close_posthog_request_context(exception):
+        context = g.pop('posthog_context', None)
+        if context is not None:
+            if exception:
+                context.__exit__(type(exception), exception,
+                                 exception.__traceback__)
+            else:
+                context.__exit__(None, None, None)
 
     db.init_app(app)
     migrate.init_app(app, db)
