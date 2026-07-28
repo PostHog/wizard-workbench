@@ -6,15 +6,20 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import posthog from '@/lib/posthog.client'
 
-function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
+function FollowButton({ onFollow }: { onFollow: () => void }) {
   const [isFollowing, setIsFollowing] = useState(false)
 
   const handleClick = () => {
-    setIsFollowing(!isFollowing)
-    if (!isFollowing) {
+    const newFollowingState = !isFollowing
+    setIsFollowing(newFollowingState)
+    if (newFollowingState) {
       onFollow()
     }
+    posthog.capture('follow_back_toggled', {
+      is_following: newFollowingState,
+    })
   }
 
   return (
@@ -142,7 +147,6 @@ export default function Profile() {
                   <span className="text-sm text-primary/50">Followed you 2 minutes ago</span>
                 </div>
                 <FollowButton 
-                  username={follower.username}
                   onFollow={() => {
                     const newFollowing = getFollowing() + 1
                     setFollowing(newFollowing)
