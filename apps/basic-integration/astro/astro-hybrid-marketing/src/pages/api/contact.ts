@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -44,6 +45,22 @@ export const POST: APIRoute = async ({ request }) => {
       message: data.message,
       timestamp: new Date().toISOString(),
     });
+
+    const posthog = getPostHogServer();
+    if (posthog) {
+      const distinctId = request.headers.get('X-PostHog-Distinct-Id') ?? crypto.randomUUID();
+      const sessionId = request.headers.get('X-PostHog-Session-Id');
+
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_submitted',
+        properties: {
+          interest: data.interest,
+          $session_id: sessionId ?? undefined,
+        },
+      });
+      await posthog.flush();
+    }
 
     return new Response(
       JSON.stringify({
