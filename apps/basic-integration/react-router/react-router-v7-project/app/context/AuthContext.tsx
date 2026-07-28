@@ -2,6 +2,31 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
 
+function identifyUser(user: FakeUser, event?: 'user_logged_in' | 'user_signed_up') {
+  if (typeof window === 'undefined') return
+
+  void import('~/lib/posthog').then(({ default: posthog }) => {
+    posthog.identify(user.id, {
+      email: user.email,
+      username: user.username,
+    })
+    if (event) {
+      posthog.capture(event)
+    }
+  })
+}
+
+function resetPostHog(event?: 'user_logged_out') {
+  if (typeof window === 'undefined') return
+
+  void import('~/lib/posthog').then(({ default: posthog }) => {
+    if (event) {
+      posthog.capture(event)
+    }
+    posthog.reset()
+  })
+}
+
 interface AuthContextType {
   user: FakeUser | null
   login: (username: string, password: string) => boolean
@@ -17,12 +42,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const currentUser = getCurrentUser()
+    if (currentUser) {
+      identifyUser(currentUser)
+    }
     setUser(currentUser)
   }, [])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      if (user && user.id !== loggedInUser.id) {
+        resetPostHog()
+      }
+      identifyUser(loggedInUser, 'user_logged_in')
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      if (user && user.id !== newUser.id) {
+        resetPostHog()
+      }
+      identifyUser(newUser, 'user_signed_up')
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    resetPostHog('user_logged_out')
     fakeLogout()
     setUser(null)
   }

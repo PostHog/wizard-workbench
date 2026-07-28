@@ -136,8 +136,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
-                        claimCountry(countryName);
+                      onClick={async () => {
+                        if (!isClaimed) {
+                          claimCountry(countryName);
+                          const { default: posthog } = await import('~/lib/posthog');
+                          posthog.capture('country_claimed', {
+                            country_code: country.cca3,
+                            country_region: country.region,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -149,8 +156,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
-                        likeCountry(countryName);
+                      onClick={async () => {
+                        if (!isLiked) {
+                          likeCountry(countryName);
+                          const { default: posthog } = await import('~/lib/posthog');
+                          posthog.capture('country_liked', {
+                            country_code: country.cca3,
+                            country_region: country.region,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -162,8 +176,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
-                        visitCountry(countryName);
+                      onClick={async () => {
+                        if (!user.visitedCountries.includes(countryName)) {
+                          visitCountry(countryName);
+                          const { default: posthog } = await import('~/lib/posthog');
+                          posthog.capture('country_visited', {
+                            country_code: country.cca3,
+                            country_region: country.region,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
