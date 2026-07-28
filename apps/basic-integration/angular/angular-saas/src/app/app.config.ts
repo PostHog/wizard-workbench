@@ -1,4 +1,4 @@
-import { ApplicationConfig, enableProdMode, importProvidersFrom, provideZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, enableProdMode, ErrorHandler, importProvidersFrom, provideZonelessChangeDetection } from '@angular/core';
 import { PreloadAllModules, provideRouter, RouteReuseStrategy, withEnabledBlockingInitialNavigation, withInMemoryScrolling, withPreloading, withRouterConfig } from '@angular/router';
 import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -10,6 +10,7 @@ import { environment } from '@env/environment';
 import { ApiPrefixInterceptor, ErrorHandlerInterceptor } from '@core/interceptors';
 import { RouteReusableStrategy } from '@core/helpers';
 import { provideSocketIo } from '@core/socket-io';
+import { PosthogErrorHandler } from '@core/services/posthog-error-handler';
 
 if (environment.production) {
   enableProdMode();
@@ -17,6 +18,7 @@ if (environment.production) {
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: ErrorHandler, useClass: PosthogErrorHandler },
     provideZonelessChangeDetection(),
 
     importProvidersFrom(TranslateModule.forRoot()),
