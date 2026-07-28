@@ -8,6 +8,8 @@ import {
   useOutlet,
   type MetaFunction,
 } from 'react-router'
+import { useEffect, useState, type ReactNode } from 'react'
+import type { PostHog } from 'posthog-js'
 import gsap from 'gsap'
 
 import type { Route } from './+types/root'
@@ -20,6 +22,7 @@ import Footer from '@/components/footer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+import { getPostHogClient } from '@/lib/posthog'
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -83,14 +86,38 @@ export function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
+type PostHogComponents = typeof import('@posthog/react')
+
+function PostHogIntegration({ children }: { children: ReactNode }) {
+  const [client, setClient] = useState<PostHog | null>(null)
+  const [components, setComponents] = useState<PostHogComponents | null>(null)
+
+  useEffect(() => {
+    void Promise.all([getPostHogClient(), import('@posthog/react')]).then(([posthog, react]) => {
+      setClient(posthog)
+      setComponents(react)
+    })
+  }, [])
+
+  if (!client || !components) return children
+
+  const { PostHogErrorBoundary, PostHogProvider } = components
+  return (
+    <PostHogProvider client={client}>
+      <PostHogErrorBoundary>{children}</PostHogErrorBoundary>
+    </PostHogProvider>
+  )
+}
+
 export default function App() {
   const element = useOutlet()
 
   const location = useLocation()
 
   return (
-    <RouteTransitionManager
-      appear
+    <PostHogIntegration>
+      <RouteTransitionManager
+        appear
       routes={routes}
       pathname={location.pathname}
       onEntering={{
@@ -126,8 +153,9 @@ export default function App() {
         >
           {element}
         </main>
-      )}
-    </RouteTransitionManager>
+        )}
+      </RouteTransitionManager>
+    </PostHogIntegration>
   )
 }
 
