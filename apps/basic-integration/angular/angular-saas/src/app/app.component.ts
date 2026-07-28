@@ -7,7 +7,10 @@ import { environment } from '@env/environment';
 import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppUpdateService, Logger } from '@core/services';
+import { CredentialsService } from '@app/auth/services/credentials.service';
 import { SocketIoService } from '@core/socket-io';
+import { PosthogService } from '@core/services/posthog.service';
+import { AuthenticationService } from '@app/auth/services/authentication.service';
 
 @Component({
   selector: 'app-root',
@@ -24,10 +27,20 @@ export class AppComponent implements OnInit {
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly authenticationService = inject(AuthenticationService);
+  private readonly posthogService = inject(PosthogService);
 
   title = 'angular-boilerplate';
 
   ngOnInit() {
+    this.posthogService.init();
+
+    const credentials = this.credentialsService.credentials();
+    if (credentials?.id) {
+      this.authenticationService.identify(credentials);
+    }
+
     // Setup logger
     if (environment.production) {
       Logger.enableProductionMode();
