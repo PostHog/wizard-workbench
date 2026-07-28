@@ -56,6 +56,12 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  if (typeof window !== "undefined" && !isRouteErrorResponse(error)) {
+    void import("./lib/posthog.client").then(({ default: posthog }) => {
+      posthog.captureException(error);
+    });
+  }
+
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
