@@ -11,6 +11,7 @@ import {
   storyTypes,
 } from "@/constants/stories";
 import { Colors } from "@/constants/Colors";
+import { posthog } from "@/lib/posthog";
 
 export default function HomeScreen() {
   const [storyType, setStoryType] = useState<StoryType>("topstories");
@@ -41,7 +42,12 @@ export default function HomeScreen() {
       <Posts storyType={storyType} />
       <StoriesSelect
         value={storyType}
-        onChange={setStoryType}
+        onChange={(nextStoryType) => {
+          posthog?.capture("story_type_selected", {
+            story_type: nextStoryType,
+          });
+          setStoryType(nextStoryType);
+        }}
         options={storyOptions}
       />
     </>
