@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Product } from "../data/products";
+import posthog from "../posthog.client";
 
 export interface CartItem extends Product {
   quantity: number;
@@ -21,6 +22,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const addToCart = (product: Product) => {
+    posthog.capture("product_added_to_cart", {
+      product_id: product.id,
+      product_category: product.category,
+      product_price: product.price,
+      quantity: 1,
+    });
+
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
@@ -35,6 +43,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const removeFromCart = (productId: number) => {
+    const item = cart.find((cartItem) => cartItem.id === productId);
+    if (item) {
+      posthog.capture("cart_item_removed", {
+        product_id: item.id,
+        product_category: item.category,
+        quantity: item.quantity,
+      });
+    }
+
     setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
   };
 
@@ -43,6 +60,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart(productId);
       return;
     }
+    const item = cart.find((cartItem) => cartItem.id === productId);
+    if (item && item.quantity !== quantity) {
+      posthog.capture("cart_quantity_updated", {
+        product_id: item.id,
+        product_category: item.category,
+        previous_quantity: item.quantity,
+        quantity,
+      });
+    }
+
     setCart((prevCart) =>
       prevCart.map((item) =>
         item.id === productId ? { ...item, quantity } : item
