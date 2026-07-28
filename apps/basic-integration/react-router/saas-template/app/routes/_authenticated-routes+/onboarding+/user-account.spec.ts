@@ -328,7 +328,7 @@ describe("/onboarding/user-account route action", () => {
         }),
       );
       expect(toast).toMatchObject({
-        description: `You are now a member of ${organization.name}`,
+        description: `Your account joined ${organization.name}`,
         id: expect.any(String) as string,
         title: "Successfully joined organization",
         type: "success",
@@ -390,7 +390,7 @@ describe("/onboarding/user-account route action", () => {
         }),
       );
       expect(toast).toMatchObject({
-        description: `You are now a member of ${organization.name}`,
+        description: `Your account joined ${organization.name}`,
         id: expect.any(String) as string,
         title: "Successfully joined organization",
         type: "success",

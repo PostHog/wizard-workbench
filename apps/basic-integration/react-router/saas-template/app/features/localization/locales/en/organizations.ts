@@ -14,7 +14,7 @@ export default {
       "Please register or log in to accept the invitation.",
     inviteEmailValidToastTitle: "Success",
     inviteYouToJoin: "{{inviterName}} invites you to join {{organizationName}}",
-    joinSuccessToastDescription: "You are now a member of {{organizationName}}",
+    joinSuccessToastDescription: "Your account joined {{organizationName}}",
     joinSuccessToastTitle: "Successfully joined organization",
     organizationFullToastDescription:
       "The organization has reached its member limit",
@@ -37,7 +37,7 @@ export default {
       "Please register or log in to accept the invitation",
     inviteLinkValidToastTitle: "Success",
     inviteYouToJoin: "{{inviterName}} invites you to join {{organizationName}}",
-    joinSuccessToastDescription: "You are now a member of {{organizationName}}",
+    joinSuccessToastDescription: "Your account joined {{organizationName}}",
     joinSuccessToastTitle: "Successfully joined organization",
     organizationFullToastDescription:
       "The organization has reached its member limit",
