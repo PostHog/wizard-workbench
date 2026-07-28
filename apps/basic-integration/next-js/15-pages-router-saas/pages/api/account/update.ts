@@ -9,6 +9,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -61,7 +62,10 @@ export default async function handler(
 
     await Promise.all([
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
-      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
+      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT),
+      captureServerEvent(user.id, 'account_updated', {
+        has_team: Boolean(userWithTeam?.teamId)
+      })
     ]);
 
     return res.status(200).json({ name, success: 'Account updated successfully.' });

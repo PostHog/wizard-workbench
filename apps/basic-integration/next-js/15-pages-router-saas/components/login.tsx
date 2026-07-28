@@ -57,7 +57,10 @@ export function Login({
           return;
         }
 
-        if (result.success && result.redirectTo) {
+        if (result.success && result.user && result.redirectTo) {
+          window.dispatchEvent(
+            new CustomEvent('posthog:identify', { detail: result.user })
+          );
           router.push(result.redirectTo);
         } else if (result.url) {
           // Stripe checkout redirect

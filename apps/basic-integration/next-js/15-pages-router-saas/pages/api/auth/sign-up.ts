@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -119,7 +120,13 @@ export default async function handler(
           .set({ status: 'accepted' })
           .where(eq(invitations.id, invitation.id));
 
-        await logActivity(teamId, createdUser.id, ActivityType.ACCEPT_INVITATION);
+        await Promise.all([
+          logActivity(teamId, createdUser.id, ActivityType.ACCEPT_INVITATION),
+          captureServerEvent(createdUser.id, 'team_invitation_accepted', {
+            team_id: teamId,
+            role: userRole
+          })
+        ]);
 
         [createdTeam] = await db
           .select()
@@ -151,7 +158,10 @@ export default async function handler(
       teamId = createdTeam.id;
       userRole = 'owner';
 
-      await logActivity(teamId, createdUser.id, ActivityType.CREATE_TEAM);
+      await Promise.all([
+        logActivity(teamId, createdUser.id, ActivityType.CREATE_TEAM),
+        captureServerEvent(createdUser.id, 'team_created', { team_id: teamId })
+      ]);
     }
 
     const newTeamMember: NewTeamMember = {
@@ -163,7 +173,11 @@ export default async function handler(
     await Promise.all([
       db.insert(teamMembers).values(newTeamMember),
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
-      setSession(createdUser, res)
+      setSession(createdUser, res),
+      captureServerEvent(createdUser.id, 'user_signed_up', {
+        team_id: teamId,
+        signup_method: inviteId ? 'invitation' : 'direct'
+      })
     ]);
 
     if (redirect === 'checkout' && createdTeam) {
@@ -175,7 +189,16 @@ export default async function handler(
       return res.status(200).json(checkoutResult);
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      user: {
+        id: createdUser.id,
+        email: createdUser.email,
+        name: createdUser.name,
+        role: createdUser.role
+      }
+    });
   } catch (error) {
     console.error('Sign up error:', error);
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });
