@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { capturePersonlessEvent } from "$lib/server/posthog"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -73,6 +74,11 @@ export const actions = {
     await sendAdminEmail({
       subject: "New contact request",
       body: `New contact request from ${firstName} ${lastName}.\n\nEmail: ${email}\n\nPhone: ${phone}\n\nCompany: ${company}\n\nMessage: ${message}`,
+    })
+
+    await capturePersonlessEvent("contact_request_submitted", {
+      has_company: Boolean(company),
+      has_phone: Boolean(phone),
     })
   },
 }
