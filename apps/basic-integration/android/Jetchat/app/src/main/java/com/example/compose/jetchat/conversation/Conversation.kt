@@ -91,6 +91,7 @@ import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -203,6 +204,7 @@ fun ConversationContent(
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )
+                    PostHog.capture(event = "chat_message_sent")
                 },
                 resetScroll = {
                     scope.launch {
