@@ -1,9 +1,17 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { posthog } from './posthog.js';
 
 const app = new Koa();
 const router = new Router();
+
+app.on('error', async (err) => {
+  if (!posthog) return;
+
+  posthog.captureException(err);
+  await posthog.flush();
+});
 
 app.use(bodyParser());
 
@@ -21,7 +29,7 @@ router.get('/api/folders', (ctx) => {
   }));
 });
 
-router.post('/api/folders', (ctx) => {
+router.post('/api/folders', async (ctx) => {
   const { name } = ctx.request.body;
 
   if (!name) {
@@ -32,11 +40,20 @@ router.post('/api/folders', (ctx) => {
 
   const folder = { id: nextFolderId++, name };
   folders.push(folder);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'folder_created',
+      properties: { folder_id: folder.id },
+    });
+    await posthog.flush();
+  }
+
   ctx.status = 201;
   ctx.body = folder;
 });
 
-router.delete('/api/folders/:id', (ctx) => {
+router.delete('/api/folders/:id', async (ctx) => {
   const folderId = parseInt(ctx.params.id, 10);
 
   if (folderId === 1) {
@@ -53,12 +70,23 @@ router.delete('/api/folders/:id', (ctx) => {
     return;
   }
 
+  const moved_note_count = notes.filter((note) => note.folder_id === folderId).length;
+
   // Move notes from deleted folder to General
   for (const note of notes) {
     if (note.folder_id === folderId) note.folder_id = 1;
   }
 
   folders.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'folder_deleted',
+      properties: { folder_id: folderId, moved_note_count },
+    });
+    await posthog.flush();
+  }
+
   ctx.status = 204;
 });
 
@@ -81,7 +109,7 @@ router.get('/api/notes', (ctx) => {
   ctx.body = { notes: result, total: result.length };
 });
 
-router.post('/api/notes', (ctx) => {
+router.post('/api/notes', async (ctx) => {
   const { title, content = '', folder_id = 1 } = ctx.request.body;
 
   if (!title) {
@@ -105,6 +133,20 @@ router.post('/api/notes', (ctx) => {
     updated_at: new Date().toISOString(),
   };
   notes.push(note);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'note_created',
+      properties: {
+        note_id: note.id,
+        folder_id: note.folder_id,
+        has_content: Boolean(note.content),
+        content_length: note.content.length,
+      },
+    });
+    await posthog.flush();
+  }
+
   ctx.status = 201;
   ctx.body = note;
 });
@@ -121,7 +163,7 @@ router.get('/api/notes/:id', (ctx) => {
   ctx.body = note;
 });
 
-router.patch('/api/notes/:id', (ctx) => {
+router.patch('/api/notes/:id', async (ctx) => {
   const note = notes.find((n) => n.id === parseInt(ctx.params.id, 10));
 
   if (!note) {
@@ -143,10 +185,24 @@ router.patch('/api/notes/:id', (ctx) => {
   }
   note.updated_at = new Date().toISOString();
 
+  if (posthog) {
+    posthog.capture({
+      event: 'note_updated',
+      properties: {
+        note_id: note.id,
+        folder_id: note.folder_id,
+        title_updated: title !== undefined,
+        content_updated: content !== undefined,
+        folder_updated: folder_id !== undefined,
+      },
+    });
+    await posthog.flush();
+  }
+
   ctx.body = note;
 });
 
-router.delete('/api/notes/:id', (ctx) => {
+router.delete('/api/notes/:id', async (ctx) => {
   const index = notes.findIndex((n) => n.id === parseInt(ctx.params.id, 10));
 
   if (index === -1) {
@@ -155,7 +211,16 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
-  notes.splice(index, 1);
+  const [note] = notes.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'note_deleted',
+      properties: { note_id: note.id, folder_id: note.folder_id },
+    });
+    await posthog.flush();
+  }
+
   ctx.status = 204;
 });
 
