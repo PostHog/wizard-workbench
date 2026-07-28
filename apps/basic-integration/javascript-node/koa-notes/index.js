@@ -1,8 +1,15 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { posthog } from './posthog.js';
 
 const app = new Koa();
+
+app.on('error', (error) => {
+  if (posthog) {
+    posthog.captureException(error);
+  }
+});
 const router = new Router();
 
 app.use(bodyParser());
@@ -32,6 +39,10 @@ router.post('/api/folders', (ctx) => {
 
   const folder = { id: nextFolderId++, name };
   folders.push(folder);
+  posthog?.capture({
+    event: 'folder_created',
+    properties: { folder_id: folder.id },
+  });
   ctx.status = 201;
   ctx.body = folder;
 });
@@ -59,6 +70,10 @@ router.delete('/api/folders/:id', (ctx) => {
   }
 
   folders.splice(index, 1);
+  posthog?.capture({
+    event: 'folder_deleted',
+    properties: { folder_id: folderId },
+  });
   ctx.status = 204;
 });
 
@@ -105,6 +120,14 @@ router.post('/api/notes', (ctx) => {
     updated_at: new Date().toISOString(),
   };
   notes.push(note);
+  posthog?.capture({
+    event: 'note_created',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+      has_content: Boolean(content),
+    },
+  });
   ctx.status = 201;
   ctx.body = note;
 });
@@ -143,6 +166,15 @@ router.patch('/api/notes/:id', (ctx) => {
   }
   note.updated_at = new Date().toISOString();
 
+  posthog?.capture({
+    event: 'note_updated',
+    properties: {
+      note_id: note.id,
+      changed_title: title !== undefined,
+      changed_content: content !== undefined,
+      changed_folder: folder_id !== undefined,
+    },
+  });
   ctx.body = note;
 });
 
@@ -156,6 +188,10 @@ router.delete('/api/notes/:id', (ctx) => {
   }
 
   notes.splice(index, 1);
+  posthog?.capture({
+    event: 'note_deleted',
+    properties: { note_id: parseInt(ctx.params.id, 10) },
+  });
   ctx.status = 204;
 });
 
