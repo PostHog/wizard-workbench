@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +20,11 @@ class VerifyEmailController extends Controller
         }
 
         if ($request->user()->markEmailAsVerified()) {
-            event(new Verified($request->user()));
+            $user = $request->user();
+
+            event(new Verified($user));
+
+            app(PostHogService::class)->capture((string) $user->getAuthIdentifier(), 'email_verified');
         }
 
         return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
