@@ -1,9 +1,39 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
+
+async function captureAccountEvent({
+  distinctId,
+  event,
+  properties,
+  request,
+}: {
+  distinctId: string
+  event: string
+  properties?: Record<string, boolean>
+  request: Request
+}) {
+  const posthog = getPostHogClient()
+  if (!posthog) return
+
+  const sessionId = request.headers.get("x-posthog-session-id")
+  posthog.capture({
+    distinctId,
+    event,
+    properties: {
+      ...properties,
+      ...(sessionId ? { $session_id: sessionId } : {}),
+    },
+  })
+  await posthog.flush()
+}
 
 export const actions = {
-  toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
+  toggleEmailSubscription: async ({
+    request,
+    locals: { supabase, safeGetSession },
+  }) => {
     const { session } = await safeGetSession()
 
     if (!session) {
@@ -27,6 +57,13 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    await captureAccountEvent({
+      distinctId: session.user.id,
+      event: "email_subscription_toggled",
+      properties: { unsubscribed: newUnsubscribedStatus },
+      request,
+    })
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -70,6 +107,12 @@ export const actions = {
         email,
       })
     }
+
+    await captureAccountEvent({
+      distinctId: session.user.id,
+      event: "email_change_requested",
+      request,
+    })
 
     return {
       email,
@@ -172,6 +215,13 @@ export const actions = {
       })
     }
 
+    await captureAccountEvent({
+      distinctId: session.user.id,
+      event: "password_updated",
+      properties: { used_recovery_flow: Boolean(isRecoverySession) },
+      request,
+    })
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +270,12 @@ export const actions = {
         currentPassword,
       })
     }
+
+    await captureAccountEvent({
+      distinctId: user.id,
+      event: "account_deleted",
+      request,
+    })
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -321,6 +377,13 @@ export const actions = {
         },
       })
     }
+
+    await captureAccountEvent({
+      distinctId: user.id,
+      event: "profile_saved",
+      properties: { profile_created: newProfile },
+      request,
+    })
 
     return {
       fullName,

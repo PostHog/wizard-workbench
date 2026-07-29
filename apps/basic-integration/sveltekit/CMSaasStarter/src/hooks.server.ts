@@ -6,7 +6,8 @@ import {
 } from "$env/static/public"
 import { createServerClient } from "@supabase/ssr"
 import { createClient, type AMREntry } from "@supabase/supabase-js"
-import type { Handle } from "@sveltejs/kit"
+import type { Handle, HandleServerError } from "@sveltejs/kit"
+import { getPostHogClient } from "$lib/server/posthog"
 import { sequence } from "@sveltejs/kit/hooks"
 
 export const supabase: Handle = async ({ event, resolve }) => {
@@ -105,3 +106,13 @@ const authGuard: Handle = async ({ event, resolve }) => {
 }
 
 export const handle: Handle = sequence(supabase, authGuard)
+
+export const handleError: HandleServerError = async ({ error, status, message }) => {
+  const posthog = getPostHogClient()
+  if (posthog) {
+    posthog.captureException(error, "server")
+    await posthog.flush()
+  }
+
+  return { status, message }
+}
