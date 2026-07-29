@@ -7,6 +7,8 @@
  *   router.navigate('/dashboard')
  */
 
+import { isPostHogConfigured, posthog } from './posthog.js';
+
 const routes = [];
 let notFoundHandler = null;
 
@@ -50,6 +52,8 @@ function resolve() {
   } else if (notFoundHandler) {
     notFoundHandler();
   }
+
+  if (isPostHogConfigured) posthog.capture('$pageview');
 }
 
 export const router = {
