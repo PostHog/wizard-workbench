@@ -6,11 +6,17 @@
 //
 
 import DesignSystem
+import PostHog
 import SwiftUI
 
 public struct OnboardingView: View {
     private let onboardingData: OnboardingData
     private let onDismiss: () -> Void
+
+    private func completeOnboarding() {
+        PostHogSDK.shared.capture("onboarding_completed")
+        onDismiss()
+    }
 
     public init(onboardingData: OnboardingData, onDismiss: @escaping () -> Void) {
         self.onboardingData = onboardingData
@@ -39,7 +45,7 @@ public struct OnboardingView: View {
             .navigationBarBackButtonHidden()
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                        Button(action: onDismiss) {
+                        Button(action: completeOnboarding) {
                             Image(systemName: "xmark")
                                 .font(.headline)
                         }
@@ -70,7 +76,7 @@ public struct OnboardingView: View {
     @ViewBuilder
     private var continueButton: some View {
         if #available(iOS 26.0, *) {
-            Button(action: onDismiss) {
+            Button(action: completeOnboarding) {
                 Text("Continue")
                     .scaledFont(.headline)
                     .foregroundStyle(.white)
@@ -79,7 +85,7 @@ public struct OnboardingView: View {
             }
             .glassEffect(.regular.tint(AppColors.appTintColor))
         } else {
-            Button(action: onDismiss) {
+            Button(action: completeOnboarding) {
                 Text("Continue")
                     .scaledFont(.headline)
                     .foregroundStyle(.white)

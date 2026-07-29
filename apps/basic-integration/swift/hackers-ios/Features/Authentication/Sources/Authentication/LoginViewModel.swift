@@ -6,6 +6,7 @@
 //
 
 import Domain
+import PostHog
 import SwiftUI
 
 @MainActor
@@ -59,6 +60,7 @@ public final class LoginViewModel {
 
         do {
             try await onLogin(username, password)
+            PostHogSDK.shared.capture("login_succeeded")
             isAuthenticated = true
             currentUsername = username
             return true
