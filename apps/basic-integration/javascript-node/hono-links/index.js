@@ -1,7 +1,18 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
 
 const app = new Hono();
+
+app.onError(async (err, c) => {
+  if (posthog) {
+    const distinctId = c.req.header('x-posthog-distinct-id');
+    posthog.captureException(err, distinctId);
+    await posthog.flush();
+  }
+
+  return c.text('Internal Server Error', 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +58,19 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_created',
+      properties: {
+        link_id: link.id,
+        tag_count: tags.length,
+        has_description: Boolean(description),
+      },
+    });
+    await posthog.flush();
+  }
+
   return c.json(link, 201);
 });
 
@@ -70,24 +94,66 @@ app.patch('/api/links/:id', async (c) => {
   }
 
   const body = await c.req.json();
-  if (body.url !== undefined) link.url = body.url;
-  if (body.title !== undefined) link.title = body.title;
-  if (body.description !== undefined) link.description = body.description;
-  if (body.tags !== undefined) link.tags = body.tags;
-  if (body.favorite !== undefined) link.favorite = body.favorite;
+  const updatedFields = [];
+  if (body.url !== undefined) {
+    link.url = body.url;
+    updatedFields.push('url');
+  }
+  if (body.title !== undefined) {
+    link.title = body.title;
+    updatedFields.push('title');
+  }
+  if (body.description !== undefined) {
+    link.description = body.description;
+    updatedFields.push('description');
+  }
+  if (body.tags !== undefined) {
+    link.tags = body.tags;
+    updatedFields.push('tags');
+  }
+  if (body.favorite !== undefined) {
+    link.favorite = body.favorite;
+    updatedFields.push('favorite');
+  }
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_updated',
+      properties: {
+        link_id: link.id,
+        updated_fields: updatedFields,
+        is_favorite: link.favorite,
+        tag_count: link.tags.length,
+      },
+    });
+    await posthog.flush();
+  }
 
   return c.json(link);
 });
 
 // Delete a link
-app.delete('/api/links/:id', (c) => {
+app.delete('/api/links/:id', async (c) => {
   const index = links.findIndex((l) => l.id === parseInt(c.req.param('id'), 10));
 
   if (index === -1) {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [link] = links.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_deleted',
+      properties: {
+        link_id: link.id,
+        was_favorite: link.favorite,
+        tag_count: link.tags.length,
+      },
+    });
+    await posthog.flush();
+  }
+
   return c.body(null, 204);
 });
 
