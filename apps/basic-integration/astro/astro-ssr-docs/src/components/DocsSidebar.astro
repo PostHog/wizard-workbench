@@ -43,6 +43,8 @@ const sections = [
             <a
               href={link.href}
               class:list={["sidebar-link", { active: currentPath === link.href }]}
+              data-posthog-section={section.title.toLowerCase().replaceAll(' ', '_')}
+              data-posthog-navigation={link.label.toLowerCase().replaceAll(' ', '_')}
             >
               {link.label}
             </a>
@@ -52,3 +54,16 @@ const sections = [
     </div>
   ))}
 </aside>
+
+<script is:inline>
+  document.querySelectorAll('[data-posthog-navigation]').forEach((link) => {
+    link.addEventListener('click', () => {
+      window.posthog?.capture('documentation_navigation_clicked', {
+        navigation_item: link.dataset.posthogNavigation,
+        navigation_section: link.dataset.posthogSection,
+        navigation_location: 'sidebar',
+        destination: link.getAttribute('href'),
+      });
+    });
+  });
+</script>
