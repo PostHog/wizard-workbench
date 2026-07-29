@@ -6,6 +6,7 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from '@posthog/react'
 import { Spinner } from '../components/Spinner'
 import { Breadcrumbs } from '../components/Breadcrumbs'
 import type { Auth } from '../utils/auth'
@@ -22,6 +23,34 @@ export const Route = createRootRouteWithContext<{
 })
 
 function RootComponent() {
+  const token = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+  const host = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
+  if (!token || !host) {
+    if (import.meta.env.DEV) {
+      throw new Error(
+        `${!token ? 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN' : 'VITE_PUBLIC_POSTHOG_HOST'} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${!token ? 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN' : 'VITE_PUBLIC_POSTHOG_HOST'} is configured`,
+      )
+    }
+
+    return <AppContent />
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={token}
+      options={{
+        api_host: host,
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
+      <AppContent />
+    </PostHogProvider>
+  )
+}
+
+function AppContent() {
   return (
     <>
       <div className={`min-h-screen flex flex-col`}>
