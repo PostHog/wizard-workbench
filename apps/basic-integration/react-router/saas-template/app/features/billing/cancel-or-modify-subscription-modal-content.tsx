@@ -1,4 +1,5 @@
 import { IconCheck } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -81,9 +82,35 @@ export function CancelOrModifySubscriptionModalContent({
     if (isCurrentTier) {
       if (interval !== currentTierInterval) {
         return interval === "annual"
-          ? { children: tModal("switchToAnnualButton") }
+          ? {
+              children: tModal("switchToAnnualButton"),
+              onClick: () => {
+                if (
+                  window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                  window.ENV.VITE_PUBLIC_POSTHOG_HOST
+                ) {
+                  posthog.capture("subscription_change_requested", {
+                    billing_interval: interval,
+                    current_plan_tier: currentTier,
+                    requested_plan_tier: tier,
+                  });
+                }
+              },
+            }
           : {
               children: tModal("switchToMonthlyButton"),
+              onClick: () => {
+                if (
+                  window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                  window.ENV.VITE_PUBLIC_POSTHOG_HOST
+                ) {
+                  posthog.capture("subscription_change_requested", {
+                    billing_interval: interval,
+                    current_plan_tier: currentTier,
+                    requested_plan_tier: tier,
+                  });
+                }
+              },
               variant: "outline",
             };
       }
@@ -113,8 +140,38 @@ export function CancelOrModifySubscriptionModalContent({
 
     // 3. Default static buttons for upgrade vs downgrade
     return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+      ? {
+          children: tModal("upgradeButton"),
+          disabled: isSubmitting,
+          onClick: () => {
+            if (
+              window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+              window.ENV.VITE_PUBLIC_POSTHOG_HOST
+            ) {
+              posthog.capture("subscription_change_requested", {
+                billing_interval: interval,
+                current_plan_tier: currentTier,
+                requested_plan_tier: tier,
+              });
+            }
+          },
+        }
+      : {
+          children: tModal("downgradeButton"),
+          onClick: () => {
+            if (
+              window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+              window.ENV.VITE_PUBLIC_POSTHOG_HOST
+            ) {
+              posthog.capture("subscription_change_requested", {
+                billing_interval: interval,
+                current_plan_tier: currentTier,
+                requested_plan_tier: tier,
+              });
+            }
+          },
+          variant: "outline",
+        };
   };
 
   return (

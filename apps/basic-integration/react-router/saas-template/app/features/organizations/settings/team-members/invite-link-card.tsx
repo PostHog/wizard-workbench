@@ -4,6 +4,7 @@ import {
   IconCopy,
 } from "@tabler/icons-react";
 import copyToClipboard from "copy-to-clipboard";
+import posthog from "posthog-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
@@ -113,6 +114,12 @@ export function InviteLinkCard({
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
                   setLinkCopied(true);
+                  if (
+                    window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                    window.ENV.VITE_PUBLIC_POSTHOG_HOST
+                  ) {
+                    posthog.capture("invite_link_copied");
+                  }
                 }}
                 size="icon"
                 variant="ghost"
@@ -166,6 +173,14 @@ export function InviteLinkCard({
                   className="w-full"
                   disabled={disabled}
                   name="intent"
+                  onClick={() => {
+                    if (
+                      window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                      window.ENV.VITE_PUBLIC_POSTHOG_HOST
+                    ) {
+                      posthog.capture("invite_link_regenerated");
+                    }
+                  }}
                   type="submit"
                   value="createNewInviteLink"
                 >
@@ -184,6 +199,14 @@ export function InviteLinkCard({
                 <Button
                   disabled={isDeactivatingLink}
                   name="intent"
+                  onClick={() => {
+                    if (
+                      window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                      window.ENV.VITE_PUBLIC_POSTHOG_HOST
+                    ) {
+                      posthog.capture("invite_link_deactivated");
+                    }
+                  }}
                   type="submit"
                   value="deactivateInviteLink"
                   variant="outline"
@@ -220,6 +243,14 @@ export function InviteLinkCard({
               className="w-full"
               disabled={disabled}
               name="intent"
+              onClick={() => {
+                if (
+                  window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                  window.ENV.VITE_PUBLIC_POSTHOG_HOST
+                ) {
+                  posthog.capture("invite_link_regenerated");
+                }
+              }}
               type="submit"
               value="createNewInviteLink"
             >

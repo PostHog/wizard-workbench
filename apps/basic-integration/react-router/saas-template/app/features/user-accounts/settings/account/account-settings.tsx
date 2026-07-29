@@ -2,6 +2,7 @@ import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconUser } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
 
@@ -57,6 +58,14 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
     <Form
       encType="multipart/form-data"
       method="POST"
+      onSubmit={() => {
+        if (
+          window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+          window.ENV.VITE_PUBLIC_POSTHOG_HOST
+        ) {
+          posthog.capture("account_settings_saved");
+        }
+      }}
       {...form.props}
       aria-describedby={
         form.errors && form.errors.length > 0
