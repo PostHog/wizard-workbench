@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
+import { usePostHog } from "@posthog/react";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
 
@@ -35,6 +36,7 @@ export async function clientLoader() {
 
 export default function Countries({ loaderData }: Route.ComponentProps) {
   const { user } = useAuth();
+  const posthog = usePostHog();
   const [search, setSearch] = useState<string>("");
   const [region, setRegion] = useState<string>("");
 
@@ -110,6 +112,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
             const countryName = country.name.common;
             const isClaimed = user?.claimedCountries.includes(countryName);
             const isLiked = user?.likedCountries.includes(countryName);
+            const isVisited = user?.visitedCountries.includes(countryName);
             
             return (
               <li
@@ -137,6 +140,13 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
+                        if (!isClaimed) {
+                          posthog.capture('country_claimed', {
+                            country_name: countryName,
+                            country_region: country.region,
+                            total_claimed_countries: user.claimedCountries.length + 1,
+                          });
+                        }
                         claimCountry(countryName);
                         window.location.reload();
                       }}
@@ -150,6 +160,13 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        if (!isLiked) {
+                          posthog.capture('country_liked', {
+                            country_name: countryName,
+                            country_region: country.region,
+                            total_liked_countries: user.likedCountries.length + 1,
+                          });
+                        }
                         likeCountry(countryName);
                         window.location.reload();
                       }}
@@ -163,6 +180,13 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        if (!isVisited) {
+                          posthog.capture('country_visited', {
+                            country_name: countryName,
+                            country_region: country.region,
+                            total_visited_countries: user.visitedCountries.length + 1,
+                          });
+                        }
                         visitCountry(countryName);
                         window.location.reload();
                       }}
