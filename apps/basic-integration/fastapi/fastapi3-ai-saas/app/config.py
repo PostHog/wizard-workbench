@@ -2,7 +2,8 @@
 
 from functools import lru_cache
 
-from pydantic_settings import BaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -25,9 +26,15 @@ class Settings(BaseSettings):
     # Credits
     default_credits: int = 100
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    # PostHog
+    posthog_project_token: str | None = Field(default=None)
+    posthog_host: str | None = Field(default=None)
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 @lru_cache

@@ -1,6 +1,7 @@
 """Acme AI - FastAPI SaaS Application."""
 
 from contextlib import asynccontextmanager
+import atexit
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -8,19 +9,49 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
+from app.middleware import PostHogMiddleware
+from posthog import Posthog
 
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
+posthog_client: Posthog | None = None
+
+
+def _init_posthog() -> Posthog | None:
+    """Create the process-wide PostHog client when configured."""
+    if not settings.posthog_project_token or not settings.posthog_host:
+        if settings.debug:
+            missing = "POSTHOG_PROJECT_TOKEN" if not settings.posthog_project_token else "POSTHOG_HOST"
+            raise RuntimeError(
+                f"{missing} variable required by PostHog is missing or un-configured, "
+                f"this causes events to be silently missed. This error stops appearing once {missing} is configured"
+            )
+        return None
+    client = Posthog(
+        project_api_key=settings.posthog_project_token,
+        host=settings.posthog_host,
+        enable_exception_autocapture=True,
+    )
+    atexit.register(client.shutdown)
+    return client
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events for startup/shutdown."""
+    # Initialize PostHog once for the process.
+    global posthog_client
+    posthog_client = _init_posthog()
+    app.state.posthog_client = posthog_client
+
     # Initialize database
     init_db()
 
     yield
+
+    if posthog_client is not None:
+        posthog_client.flush()
+        posthog_client.shutdown()
 
 
 app = FastAPI(
@@ -28,8 +59,14 @@ app = FastAPI(
     description="AI content generation platform",
     lifespan=lifespan,
 )
+app.add_middleware(
+    PostHogMiddleware,
+    get_client=lambda: posthog_client,
+)
 
-# Include routers
+# Include routers after creating the shared PostHog client reference used by auth routes.
+from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
+
 app.include_router(auth.router)
 app.include_router(generate.router)
 app.include_router(pages.router)
