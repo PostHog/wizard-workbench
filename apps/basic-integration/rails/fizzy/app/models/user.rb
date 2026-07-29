@@ -32,6 +32,21 @@ class User < ApplicationRecord
     verified_at.present?
   end
 
+  # Used by posthog-rails to associate request errors with this stable user.
+  # A user UUID remains stable even if the identity's email address changes.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  # Sent only with PostHog identify calls as person properties, not event data.
+  def posthog_properties
+    {
+      email: identity&.email_address,
+      name: name,
+      account_id: account.external_account_id
+    }.compact
+  end
+
   def verify
     update!(verified_at: Time.current) unless verified?
   end
