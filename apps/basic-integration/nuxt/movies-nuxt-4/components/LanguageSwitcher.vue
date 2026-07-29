@@ -1,11 +1,13 @@
 <script setup>
 const { locale, locales, setLocale } = useI18n()
+const { $posthog } = useNuxtApp()
 
 const availableLocales = computed(() => {
   return (locales.value)
 })
 
 function updateLocale(event) {
+  $posthog?.capture('locale_changed')
   setLocale(event.target.value)
   window.location.reload()
 }
