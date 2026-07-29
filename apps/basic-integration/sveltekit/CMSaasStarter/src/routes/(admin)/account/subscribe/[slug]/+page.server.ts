@@ -5,6 +5,7 @@ import {
   fetchSubscription,
   getOrCreateCustomerId,
 } from "../../subscription_helpers.server"
+import { getPostHogClient } from "$lib/server/posthog"
 import type { PageServerLoad } from "./$types"
 const stripe = new Stripe(PRIVATE_STRIPE_API_KEY, { apiVersion: "2023-08-16" })
 
@@ -60,6 +61,16 @@ export const load: PageServerLoad = async ({
   } catch (e) {
     console.error("Error creating checkout session", e)
     error(500, "Unknown Error (SSE): If issue persists please contact us.")
+  }
+
+  const posthog = getPostHogClient()
+  if (posthog && user?.id) {
+    posthog.capture({
+      distinctId: user.id,
+      event: "subscription_checkout_started",
+      properties: { plan_id: params.slug },
+    })
+    await posthog.flush()
   }
 
   redirect(303, checkoutUrl ?? "/pricing")
