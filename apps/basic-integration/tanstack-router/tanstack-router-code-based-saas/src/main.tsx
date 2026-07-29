@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -35,6 +36,11 @@ import type { Invoice } from './mockTodos'
 import './styles.css'
 
 //
+
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+    import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+)
 
 type UsersViewSortBy = 'name' | 'id' | 'email'
 
@@ -85,7 +91,16 @@ function RouterSpinner() {
 }
 
 function RootComponent() {
-  return (
+  const posthogToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+  const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
+  if ((!posthogToken || !posthogHost) && import.meta.env.DEV) {
+    throw new Error(
+      `${!posthogToken ? 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN' : 'VITE_PUBLIC_POSTHOG_HOST'} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${!posthogToken ? 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN' : 'VITE_PUBLIC_POSTHOG_HOST'} is configured`,
+    )
+  }
+
+  const app = (
     <>
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
@@ -134,6 +149,12 @@ function RootComponent() {
       <TanStackRouterDevtools position="bottom-right" />
     </>
   )
+
+  return posthogToken && posthogHost ? (
+    <PostHogProvider apiKey={posthogToken} options={{ api_host: posthogHost, capture_exceptions: true }}>
+      {app}
+    </PostHogProvider>
+  ) : app
 }
 
 const indexRoute = createRoute({
@@ -433,9 +454,17 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: invoice }) => {
+      if (isPostHogConfigured) {
+        posthog.capture('invoice_created', {
+          invoice_id: invoice.id,
+        })
+      }
+      return router.invalidate()
+    },
   })
 
   return (
@@ -514,12 +543,20 @@ const invoiceRoute = createRoute({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: updatedInvoice }) => {
+      if (isPostHogConfigured && updatedInvoice) {
+        posthog.capture('invoice_updated', {
+          invoice_id: updatedInvoice.id,
+        })
+      }
+      return router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
