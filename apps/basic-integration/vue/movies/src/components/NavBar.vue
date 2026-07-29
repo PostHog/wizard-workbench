@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
+import posthog from '../lib/posthog'
 
 const route = useRoute()
 const router = useRouter()
@@ -9,6 +10,8 @@ const { user, logout } = useAuth()
 
 const handleLogout = async () => {
   await logout()
+  posthog.capture('logout_completed')
+  posthog.reset()
 }
 
 const isActive = (path: string) => {
