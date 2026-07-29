@@ -27,6 +27,11 @@ class BoardsController < ApplicationController
 
   def create
     @board = Board.create! board_params.with_defaults(all_access: true)
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "board_created",
+      properties: { all_access: @board.all_access }
+    )
 
     respond_to do |format|
       format.html { redirect_to board_path(@board) }
@@ -43,6 +48,11 @@ class BoardsController < ApplicationController
   def update
     @board.update! board_params
     @board.accesses.revise granted: grantees, revoked: revokees if grantees_changed?
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "board_updated",
+      properties: { access_list_changed: grantees_changed? }
+    )
 
     respond_to do |format|
       format.html do
@@ -58,6 +68,10 @@ class BoardsController < ApplicationController
 
   def destroy
     @board.destroy
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "board_deleted"
+    )
 
     respond_to do |format|
       format.html { redirect_to root_path }

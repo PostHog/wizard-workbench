@@ -24,6 +24,22 @@ class User < ApplicationRecord
     end
   end
 
+  # Used by posthog-rails to associate automatically captured exceptions with the user.
+  # The stable database id avoids placing user-entered identity data in error events.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  # Sent only with identify calls, so mutable user-entered data stays on the
+  # person profile instead of being repeated in event properties.
+  def posthog_properties
+    {
+      email: identity&.email_address,
+      name: name,
+      account_id: account_id
+    }.compact
+  end
+
   def setup?
     name != identity.email_address
   end

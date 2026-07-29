@@ -11,6 +11,10 @@ class Cards::CommentsController < ApplicationController
 
   def create
     @comment = @card.comments.create!(comment_params)
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "comment_created"
+    )
 
     respond_to do |format|
       format.turbo_stream
