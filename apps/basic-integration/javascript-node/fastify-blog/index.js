@@ -1,6 +1,14 @@
 import Fastify from 'fastify';
+import { posthog } from './posthog.js';
 
 const fastify = Fastify({ logger: true });
+
+async function captureEvent(event, properties) {
+  if (posthog) {
+    posthog.capture({ event, properties });
+    await posthog.flush();
+  }
+}
 
 const posts = [];
 const comments = [];
@@ -39,6 +47,10 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+  await captureEvent('post_created', {
+    post_id: post.id,
+    published: post.published,
+  });
   return reply.status(201).send(post);
 });
 
@@ -67,6 +79,10 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  await captureEvent('post_updated', {
+    post_id: post.id,
+    published: post.published,
+  });
   return post;
 });
 
@@ -81,11 +97,19 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   const postId = posts[index].id;
   posts.splice(index, 1);
 
+  let deletedCommentCount = 0;
   // Remove associated comments
   for (let i = comments.length - 1; i >= 0; i--) {
-    if (comments[i].post_id === postId) comments.splice(i, 1);
+    if (comments[i].post_id === postId) {
+      comments.splice(i, 1);
+      deletedCommentCount++;
+    }
   }
 
+  await captureEvent('post_deleted', {
+    post_id: postId,
+    deleted_comment_count: deletedCommentCount,
+  });
   return reply.status(204).send();
 });
 
@@ -111,7 +135,21 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+  await captureEvent('comment_created', {
+    comment_id: comment.id,
+    post_id: comment.post_id,
+  });
   return reply.status(201).send(comment);
+});
+
+fastify.setErrorHandler(async (error, request, reply) => {
+  if (posthog) {
+    posthog.captureException(error);
+    await posthog.flush();
+  }
+
+  request.log.error(error);
+  return reply.status(error.statusCode || 500).send({ error: 'Internal Server Error' });
 });
 
 const PORT = process.env.PORT || 3001;
