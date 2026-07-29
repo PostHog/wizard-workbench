@@ -21,7 +21,14 @@ export function CTA() {
         </div>
 
         <div className="mt-8 flex items-center justify-center gap-4">
-          <Button render={<Link to="/register" />}>
+          <Button
+            onClick={() => {
+              void import("~/lib/posthog.client").then(({ default: posthog }) => {
+                posthog.capture("signup_started");
+              });
+            }}
+            render={<Link to="/register" />}
+          >
             {t("buttons.primary")}
           </Button>
 

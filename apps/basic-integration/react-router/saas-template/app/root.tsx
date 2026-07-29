@@ -1,7 +1,7 @@
 import "./app.css";
 
 import { FormOptionsProvider } from "@conform-to/react/future";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
 import {
@@ -24,6 +24,7 @@ import type { Route } from "./+types/root";
 import { NotFound } from "./components/not-found";
 import { Toaster } from "./components/ui/sonner";
 import { getColorScheme } from "./features/color-scheme/color-scheme.server";
+import { createSupabaseServerClient } from "./features/user-authentication/supabase.server";
 import { useColorScheme } from "./features/color-scheme/use-color-scheme";
 import {
   getInstance,
@@ -66,11 +67,15 @@ export const shouldRevalidate = ({
 export const middleware = [securityMiddleware, i18nextMiddleware];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const { colorScheme, honeypotInputProps, toastData } = await promiseHash({
-    colorScheme: getColorScheme(request),
-    honeypotInputProps: honeypot.getInputProps(),
-    toastData: getToast(request),
-  });
+  const { supabase, headers: authHeaders } = createSupabaseServerClient({ request });
+  const { colorScheme, honeypotInputProps, toastData, userResult } =
+    await promiseHash({
+      colorScheme: getColorScheme(request),
+      honeypotInputProps: honeypot.getInputProps(),
+      toastData: getToast(request),
+      userResult: supabase.auth.getUser(),
+    });
+  const user = userResult.data.user;
   const locale = getLocale(context);
   const i18next = getInstance(context);
   const title = i18next.t("appName");
@@ -80,6 +85,16 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       colorScheme,
       ENV: getEnv(),
       honeypotInputProps,
+      authUser: user
+        ? {
+            email: user.email ?? null,
+            id: user.id,
+            name:
+              typeof user.user_metadata.name === "string"
+                ? user.user_metadata.name
+                : null,
+          }
+        : null,
       locale,
       requestInfo: {
         hints: getHints(request),
@@ -93,6 +108,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     {
       headers: combineHeaders(
         { "Set-Cookie": await localeCookie.serialize(locale) },
+        authHeaders,
         toastHeaders,
       ),
     },
@@ -177,14 +193,41 @@ export function Layout({
   );
 }
 
-export default function App({ loaderData: { locale } }: Route.ComponentProps) {
+export default function App({
+  loaderData: { authUser, locale },
+}: Route.ComponentProps) {
   const { i18n } = useTranslation();
+  const identifiedUserId = useRef<string | null>(null);
 
   useEffect(() => {
     if (i18n.language !== locale) {
       i18n.changeLanguage(locale);
     }
   }, [i18n, locale]);
+
+  useEffect(() => {
+    void import("./lib/posthog.client").then(({ default: posthog }) => {
+      if (!authUser) {
+        if (identifiedUserId.current) {
+          posthog.reset();
+          identifiedUserId.current = null;
+        }
+        return;
+      }
+
+      if (identifiedUserId.current === authUser.id) return;
+
+      if (identifiedUserId.current) {
+        posthog.reset();
+      }
+
+      posthog.identify(authUser.id, {
+        ...(authUser.email ? { email: authUser.email } : {}),
+        ...(authUser.name ? { name: authUser.name } : {}),
+      });
+      identifiedUserId.current = authUser.id;
+    });
+  }, [authUser]);
 
   return <Outlet />;
 }
@@ -219,6 +262,20 @@ function BaseErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 }
 
 export function ErrorBoundary({ error, ...props }: Route.ErrorBoundaryProps) {
+  if (typeof document !== "undefined") {
+    void import("./lib/posthog.client").then(({ default: posthog }) => {
+      posthog.captureException(
+        error instanceof Error
+          ? error
+          : new Error(
+              isRouteErrorResponse(error)
+                ? `${error.status} ${error.statusText}`
+                : "An unexpected route error occurred",
+            ),
+      );
+    });
+  }
+
   if (isRouteErrorResponse(error) && error.status === 404) {
     return <NotFound className="min-h-svh" />;
   }

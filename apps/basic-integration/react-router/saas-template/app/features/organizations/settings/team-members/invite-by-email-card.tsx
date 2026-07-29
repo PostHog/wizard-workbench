@@ -70,7 +70,24 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          {...form.props}
+          method="POST"
+          onSubmit={(event) => {
+            form.props.onSubmit?.(event);
+
+            if (event.defaultPrevented) return;
+
+            const formData = new FormData(event.currentTarget);
+            const role = formData.get(fields.role.name);
+
+            void import("~/lib/posthog.client").then(({ default: posthog }) => {
+              posthog.capture("team_invite_submitted", {
+                role: typeof role === "string" ? role : undefined,
+              });
+            });
+          }}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">
