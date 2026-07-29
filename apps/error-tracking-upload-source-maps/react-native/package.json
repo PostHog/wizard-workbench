@@ -1,10 +1,26 @@
 {
-  "name": "react-native-app",
+  "name": "SourceMapExampleRN",
   "version": "0.0.1",
   "private": true,
-  "//": "Minimal React Native marker: the `react-native` dependency makes the wizard's source-maps detection pick the `react-native` variant, which it reports as unsupported-platform. No app code on purpose. See the wizard's detect.ts (pickJsVariant).",
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start"
+  },
   "dependencies": {
-    "react": "18.2.0",
-    "react-native": "0.74.0"
+    "react": "19.2.3",
+    "react-native": "0.86.0",
+    "@react-native-async-storage/async-storage": "^2.1.0",
+    "posthog-react-native": "^4.58.0"
+  },
+  "devDependencies": {
+    "@react-native-community/cli": "20.1.0",
+    "@react-native-community/cli-platform-android": "20.1.0",
+    "@react-native-community/cli-platform-ios": "20.1.0",
+    "@react-native/babel-preset": "0.86.0",
+    "@react-native/metro-config": "0.86.0"
+  },
+  "engines": {
+    "node": ">= 22.11.0"
   }
 }
