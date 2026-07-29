@@ -11,6 +11,7 @@ Flask-Moment
 Flask-SQLAlchemy
 Flask-WTF
 gunicorn
+posthog
 langdetect
 PyJWT
 python-dotenv

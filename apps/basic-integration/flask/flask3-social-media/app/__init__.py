@@ -1,13 +1,15 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+from flask import Flask, g, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog, identify_context, new_context
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -45,6 +47,46 @@ def create_app(config_class=Config):
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
+
+    posthog_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    if posthog_token and posthog_host:
+        app.posthog = Posthog(
+            posthog_token,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        atexit.register(app.posthog.shutdown)
+    elif app.debug:
+        missing = 'POSTHOG_PROJECT_TOKEN' if not posthog_token else 'POSTHOG_HOST'
+        raise RuntimeError(
+            f'{missing} variable required by PostHog is missing or un-configured, '
+            f'this causes events to be silently missed. This error stops appearing '
+            f'once {missing} is configured'
+        )
+    else:
+        app.posthog = None
+
+    @app.before_request
+    def bind_posthog_request_context():
+        if app.posthog is None:
+            return
+        context = new_context()
+        context.__enter__()
+        g.posthog_context = context
+        distinct_id = (
+            str(current_user.id) if current_user.is_authenticated
+            else request.headers.get('X-POSTHOG-DISTINCT-ID')
+        )
+        if distinct_id:
+            identify_context(distinct_id)
+
+    @app.teardown_request
+    def close_posthog_request_context(exception):
+        context = g.pop('posthog_context', None)
+        if context is not None:
+            context.__exit__(None, None, None)
+
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if Elasticsearch and app.config['ELASTICSEARCH_URL'] else None
     if Redis and rq:
