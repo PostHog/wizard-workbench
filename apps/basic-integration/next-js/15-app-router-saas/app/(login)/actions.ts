@@ -25,6 +25,7 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -90,6 +91,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
+  await captureServerEvent(foundUser.id.toString(), 'user_signed_in');
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -211,6 +213,10 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
     setSession(createdUser)
   ]);
+  await captureServerEvent(createdUser.id.toString(), 'user_signed_up', {
+    role: userRole,
+    invited: Boolean(inviteId)
+  });
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -281,6 +287,7 @@ export const updatePassword = validatedActionWithUser(
         .where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PASSWORD)
     ]);
+    await captureServerEvent(user.id.toString(), 'password_updated');
 
     return {
       success: 'Password updated successfully.'
@@ -334,6 +341,7 @@ export const deleteAccount = validatedActionWithUser(
     }
 
     (await cookies()).delete('session');
+    await captureServerEvent(user.id.toString(), 'account_deleted');
     redirect('/sign-in');
   }
 );
@@ -353,6 +361,7 @@ export const updateAccount = validatedActionWithUser(
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
+    await captureServerEvent(user.id.toString(), 'account_updated');
 
     return { name, success: 'Account updated successfully.' };
   }
@@ -386,6 +395,7 @@ export const removeTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.REMOVE_TEAM_MEMBER
     );
+    await captureServerEvent(user.id.toString(), 'team_member_removed');
 
     return { success: 'Team member removed successfully' };
   }
@@ -450,6 +460,7 @@ export const inviteTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+    await captureServerEvent(user.id.toString(), 'team_member_invited', { role });
 
     // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
     // await sendInvitationEmail(email, userWithTeam.team.name, role)
