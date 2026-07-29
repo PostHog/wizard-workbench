@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		PHG00000000000000000001 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = PHG00000000000000000002 /* PostHog */; };
 		2406B38728AD083500CB396B /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 2406B38628AD083500CB396B /* SwiftSoup */; };
 		241E7B412E511BC20013EEA1 /* Data in Frameworks */ = {isa = PBXBuildFile; productRef = 241E7B402E511BC20013EEA1 /* Data */; };
 		241E7B492E51D1C80013EEA1 /* Settings in Frameworks */ = {isa = PBXBuildFile; productRef = 241E7B482E51D1C80013EEA1 /* Settings */; };
@@ -102,6 +103,7 @@
 				2406B38728AD083500CB396B /* SwiftSoup in Frameworks */,
 				241E7B412E511BC20013EEA1 /* Data in Frameworks */,
 				248256FB2E59D2540068E91E /* Networking in Frameworks */,
+				PHG00000000000000000001 /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -192,6 +194,7 @@
 				248256FD2E59D2660068E91E /* Feed */,
 				2482576D2E5B38190068E91E /* Onboarding */,
 				B2F5BEA03AC34B9DB788D8E2 /* Authentication */,
+				PHG00000000000000000002 /* PostHog */,
 			);
 			productName = Hackers2;
 			productReference = 24F39F8518AFB1150055F8DC /* Hackers.app */;
@@ -227,6 +230,7 @@
 			);
 			mainGroup = 24F39F7C18AFB1150055F8DC;
 			packageReferences = (
+				PHG00000000000000000003 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				2406B38528AD083500CB396B /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 				241E7B3F2E511BC20013EEA1 /* XCLocalSwiftPackageReference "Data" */,
 				241E7B422E511BE50013EEA1 /* XCLocalSwiftPackageReference "DesignSystem" */,
@@ -583,6 +587,17 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		PHG00000000000000000003 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.59.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCLocalSwiftPackageReference section */
 		241E7B3F2E511BC20013EEA1 /* XCLocalSwiftPackageReference "Data" */ = {
 			isa = XCLocalSwiftPackageReference;
@@ -634,6 +649,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		PHG00000000000000000002 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PHG00000000000000000003 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
 		2406B38628AD083500CB396B /* SwiftSoup */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 2406B38528AD083500CB396B /* XCRemoteSwiftPackageReference "SwiftSoup" */;
