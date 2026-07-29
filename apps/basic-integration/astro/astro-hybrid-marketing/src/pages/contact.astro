@@ -77,6 +77,9 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        (window as any).posthog?.capture('contact_form_submitted', {
+          interest: data.interest,
+        });
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();

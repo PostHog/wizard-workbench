@@ -1,0 +1,39 @@
+---
+const projectToken = import.meta.env.PUBLIC_POSTHOG_PROJECT_TOKEN;
+const host = import.meta.env.PUBLIC_POSTHOG_HOST;
+---
+<script is:inline define:vars={{ projectToken, host }}>
+  (function () {
+    if (!projectToken || !host) {
+      if (import.meta.env.DEV) {
+        throw new Error('PUBLIC_POSTHOG_PROJECT_TOKEN and PUBLIC_POSTHOG_HOST variables required by PostHog are missing or un-configured, this error stops appearing once they are configured');
+      }
+      return;
+    }
+
+    var posthog = window.posthog || [];
+    if (!posthog.__SV) {
+      posthog.init = function (token, options) {
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = options.api_host + '/static/array.js';
+        document.head.appendChild(script);
+        posthog._i = posthog._i || [];
+        posthog._i.push([token, options]);
+      };
+      ['capture', 'identify', 'reset'].forEach(function (method) {
+        posthog[method] = function () {
+          posthog.push([method].concat(Array.prototype.slice.call(arguments)));
+        };
+      });
+      posthog.__SV = 1;
+      window.posthog = posthog;
+    }
+
+    posthog.init(projectToken, {
+      api_host: host,
+      tracing_headers: [window.location.hostname],
+      capture_exceptions: true
+    });
+  })();
+</script>
