@@ -6,6 +6,12 @@ const props = defineProps({
 const message = computed(() => String(props.error?.message || ''))
 const is404 = computed(() => props.error?.statusCode === 404 || message.value?.includes('404'))
 const isDev = process.dev
+const { $posthog: posthog } = useNuxtApp()
+
+if (!is404.value) {
+  const error = props.error instanceof Error ? props.error : new Error(message.value || 'Nuxt application error')
+  posthog?.captureException(error)
+}
 
 function handleError() {
   return clearError({ redirect: '/' })
