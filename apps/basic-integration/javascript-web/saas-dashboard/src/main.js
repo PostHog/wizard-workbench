@@ -1,4 +1,6 @@
+import './posthog.js';
 import { router } from './router.js';
+import { identifyCurrentUser } from './api.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
 import { renderDashboard } from './pages/dashboard.js';
@@ -39,4 +41,5 @@ router.notFound(() => {
 
 // --- Start ---
 
+identifyCurrentUser();
 router.start();

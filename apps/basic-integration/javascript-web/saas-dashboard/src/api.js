@@ -6,11 +6,31 @@
  * fetch() calls to a backend.
  */
 import { store } from './store.js';
+import posthog, { isPostHogEnabled } from './posthog.js';
 
 const DELAY_MS = 150;
 
+function identifyUser(user) {
+  if (!isPostHogEnabled) return;
+
+  posthog.identify(user.id, {
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  });
+}
+
+export function identifyCurrentUser() {
+  const user = store.state.currentUser;
+  if (user) identifyUser(user);
+}
+
 function delay(ms = DELAY_MS) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function capture(event, properties) {
+  if (isPostHogEnabled) posthog.capture(event, properties);
 }
 
 export const api = {
@@ -21,11 +41,17 @@ export const api = {
     if (!success) {
       throw new Error('Invalid credentials. Use a team member email.');
     }
-    return store.state.currentUser;
+
+    const user = store.state.currentUser;
+    identifyUser(user);
+    capture('user_logged_in', { role: user.role });
+    return user;
   },
 
   async logout() {
     await delay(50);
+    capture('user_logged_out');
+    if (isPostHogEnabled) posthog.reset();
     store.logout();
   },
 
@@ -45,34 +71,61 @@ export const api = {
     await delay();
 
     if (!name.trim()) throw new Error('Project name is required');
-    return store.createProject(name.trim(), description.trim());
+    const project = store.createProject(name.trim(), description.trim());
+    capture('project_created', { project_id: project.id });
+    return project;
   },
 
   async deleteProject(id) {
     await delay();
+    const project = store.getProject(id);
     store.deleteProject(id);
+    if (project) capture('project_deleted', { project_id: id, task_count: project.tasks.length });
   },
 
   async addTask(projectId, title, priority) {
     await delay();
 
     if (!title.trim()) throw new Error('Task title is required');
-    return store.addTask(projectId, title.trim(), priority);
+    const task = store.addTask(projectId, title.trim(), priority);
+    if (task) capture('task_created', { project_id: projectId, task_id: task.id, priority: task.priority });
+    return task;
   },
 
   async updateTaskStatus(projectId, taskId, status) {
     await delay(50);
+    const task = store.getProject(projectId)?.tasks.find((item) => item.id === taskId);
+    const previousStatus = task?.status;
     store.updateTaskStatus(projectId, taskId, status);
+    if (task && previousStatus !== status) {
+      capture('task_status_updated', {
+        project_id: projectId,
+        task_id: taskId,
+        previous_status: previousStatus,
+        status,
+      });
+    }
   },
 
   async deleteTask(projectId, taskId) {
     await delay(50);
+    const task = store.getProject(projectId)?.tasks.find((item) => item.id === taskId);
     store.deleteTask(projectId, taskId);
+    if (task) capture('task_deleted', { project_id: projectId, task_id: taskId, status: task.status });
   },
 
   async assignTask(projectId, taskId, assigneeId) {
     await delay(50);
+    const task = store.getProject(projectId)?.tasks.find((item) => item.id === taskId);
+    const previousAssigneeId = task?.assignee;
     store.assignTask(projectId, taskId, assigneeId);
+    if (task && previousAssigneeId !== assigneeId) {
+      capture('task_assigned', {
+        project_id: projectId,
+        task_id: taskId,
+        assignment_status: assigneeId ? 'assigned' : 'unassigned',
+      });
+    }
   },
 
   async getStats() {
@@ -88,6 +141,7 @@ export const api = {
   async updateSettings(updates) {
     await delay();
     store.updateSettings(updates);
+    capture('settings_updated', { setting_keys: Object.keys(updates) });
     return store.state.settings;
   },
 
