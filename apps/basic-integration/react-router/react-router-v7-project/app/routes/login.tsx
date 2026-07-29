@@ -23,8 +23,18 @@ export default function Login() {
       setIsLoading(false)
 
       if (success) {
+        void import('~/lib/posthog').then(({ default: posthog }) => {
+          posthog.capture('account_logged_in', {
+            authentication_method: 'password',
+          })
+        })
         navigate('/profile')
       } else {
+        void import('~/lib/posthog').then(({ default: posthog }) => {
+          posthog.capture('login_failed', {
+            authentication_method: 'password',
+          })
+        })
         setError('Invalid credentials! (But this is fake, so any password works if the username exists)')
       }
     }, 500)

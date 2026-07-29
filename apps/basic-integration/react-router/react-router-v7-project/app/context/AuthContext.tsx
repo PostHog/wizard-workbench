@@ -2,6 +2,21 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
 
+function identifyUser(user: FakeUser) {
+  void import('~/lib/posthog').then(({ default: posthog }) => {
+    posthog.identify(user.id, {
+      email: user.email,
+      username: user.username,
+    })
+  })
+}
+
+function resetPostHog() {
+  void import('~/lib/posthog').then(({ default: posthog }) => {
+    posthog.reset()
+  })
+}
+
 interface AuthContextType {
   user: FakeUser | null
   login: (username: string, password: string) => boolean
@@ -17,12 +32,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const currentUser = getCurrentUser()
+    if (currentUser) {
+      identifyUser(currentUser)
+    }
     setUser(currentUser)
   }, [])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      identifyUser(loggedInUser)
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      identifyUser(newUser)
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    resetPostHog()
     fakeLogout()
     setUser(null)
   }

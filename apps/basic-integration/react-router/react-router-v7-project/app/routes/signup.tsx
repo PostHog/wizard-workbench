@@ -24,6 +24,11 @@ export default function Signup() {
         setIsLoading(false)
 
         if (newUser) {
+          void import('~/lib/posthog').then(({ default: posthog }) => {
+            posthog.capture('account_created', {
+              authentication_method: 'password',
+            })
+          })
           navigate('/profile')
         } else {
           setError('Signup failed! (But this is fake, so it should always work)')

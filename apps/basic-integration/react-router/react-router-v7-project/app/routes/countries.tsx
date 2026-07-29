@@ -136,8 +136,16 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        const wasAlreadyClaimed = user.claimedCountries.includes(countryName);
                         claimCountry(countryName);
+                        if (!wasAlreadyClaimed) {
+                          const { default: posthog } = await import('~/lib/posthog');
+                          posthog.capture('country_claimed', {
+                            country_name: countryName,
+                            country_region: country.region,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -149,8 +157,16 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        const wasAlreadyLiked = user.likedCountries.includes(countryName);
                         likeCountry(countryName);
+                        if (!wasAlreadyLiked) {
+                          const { default: posthog } = await import('~/lib/posthog');
+                          posthog.capture('country_liked', {
+                            country_name: countryName,
+                            country_region: country.region,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -162,8 +178,16 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        const wasAlreadyVisited = user.visitedCountries.includes(countryName);
                         visitCountry(countryName);
+                        if (!wasAlreadyVisited) {
+                          const { default: posthog } = await import('~/lib/posthog');
+                          posthog.capture('country_visited', {
+                            country_name: countryName,
+                            country_region: country.region,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
