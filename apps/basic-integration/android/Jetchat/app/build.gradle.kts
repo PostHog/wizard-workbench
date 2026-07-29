@@ -15,7 +15,15 @@
  */
 
 
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+val posthogProperties = Properties().apply {
+    rootProject.file(".env").takeIf { it.isFile }?.inputStream()?.use(::load)
+}
+
+fun posthogConfigValue(name: String): String =
+    System.getenv(name) ?: posthogProperties.getProperty(name).orEmpty()
 
 plugins {
     alias(libs.plugins.android.application)
@@ -33,6 +41,8 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "POSTHOG_PROJECT_TOKEN", "\"${posthogConfigValue("POSTHOG_PROJECT_TOKEN")}\"")
+        buildConfigField("String", "POSTHOG_HOST", "\"${posthogConfigValue("POSTHOG_HOST")}\"")
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -77,11 +87,10 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
+        buildConfig = true
     }
 
     packaging.resources {
-        // Multiple dependency bring these files in. Exclude them to enable
-        // our test APK to build (has no effect on our AARs)
         excludes += "/META-INF/AL2.0"
         excludes += "/META-INF/LGPL2.1"
     }
@@ -91,14 +100,11 @@ dependencies {
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)
-
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.material3)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
-
     implementation(libs.androidx.activity.compose)
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.compose.runtime.livedata)
@@ -106,7 +112,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.navigation.fragment)
     implementation(libs.androidx.navigation.ui.ktx)
-
     implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui.tooling.preview)
@@ -114,9 +119,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.util)
     implementation(libs.androidx.compose.ui.viewbinding)
     implementation(libs.androidx.compose.ui.googlefonts)
-
+    implementation("com.posthog:posthog-android:3.+")
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-
     androidTestImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
