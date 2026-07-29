@@ -1,9 +1,16 @@
+import 'dotenv/config';
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { posthog } from './posthog.js';
 
 const app = new Koa();
 const router = new Router();
+
+app.on('error', (error) => {
+  posthog?.captureException(error);
+  void posthog?.flush();
+});
 
 app.use(bodyParser());
 
@@ -32,6 +39,12 @@ router.post('/api/folders', (ctx) => {
 
   const folder = { id: nextFolderId++, name };
   folders.push(folder);
+  posthog?.capture({
+    event: 'folder_created',
+    properties: {
+      is_default_folder: false,
+    },
+  });
   ctx.status = 201;
   ctx.body = folder;
 });
@@ -54,11 +67,21 @@ router.delete('/api/folders/:id', (ctx) => {
   }
 
   // Move notes from deleted folder to General
+  let notesMovedToGeneral = 0;
   for (const note of notes) {
-    if (note.folder_id === folderId) note.folder_id = 1;
+    if (note.folder_id === folderId) {
+      note.folder_id = 1;
+      notesMovedToGeneral += 1;
+    }
   }
 
   folders.splice(index, 1);
+  posthog?.capture({
+    event: 'folder_deleted',
+    properties: {
+      notes_moved_to_general: notesMovedToGeneral,
+    },
+  });
   ctx.status = 204;
 });
 
@@ -105,6 +128,13 @@ router.post('/api/notes', (ctx) => {
     updated_at: new Date().toISOString(),
   };
   notes.push(note);
+  posthog?.capture({
+    event: 'note_created',
+    properties: {
+      has_content: content.length > 0,
+      is_in_default_folder: folder_id === 1,
+    },
+  });
   ctx.status = 201;
   ctx.body = note;
 });
@@ -142,6 +172,14 @@ router.patch('/api/notes/:id', (ctx) => {
     note.folder_id = folder_id;
   }
   note.updated_at = new Date().toISOString();
+  posthog?.capture({
+    event: 'note_updated',
+    properties: {
+      title_updated: title !== undefined,
+      content_updated: content !== undefined,
+      folder_updated: folder_id !== undefined,
+    },
+  });
 
   ctx.body = note;
 });
@@ -155,7 +193,13 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
-  notes.splice(index, 1);
+  const [deletedNote] = notes.splice(index, 1);
+  posthog?.capture({
+    event: 'note_deleted',
+    properties: {
+      was_in_default_folder: deletedNote.folder_id === 1,
+    },
+  });
   ctx.status = 204;
 });
 
