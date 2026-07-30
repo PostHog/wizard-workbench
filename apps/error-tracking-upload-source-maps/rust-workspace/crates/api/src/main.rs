@@ -8,8 +8,8 @@ async fn main() {
     ))
     .await;
 
-    let error = Error::other("hello from rust-app");
+    let error = Error::other("hello from rust-workspace-api");
     let _ = client.capture_exception(&error).await;
 
-    println!("Source Map Example (Rust)");
+    println!("Source Map Example (Rust workspace member)");
 }
