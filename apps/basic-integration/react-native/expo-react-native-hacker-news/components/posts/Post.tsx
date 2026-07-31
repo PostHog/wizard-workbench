@@ -10,6 +10,7 @@ import { useMemo } from "react";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
+import { posthog } from "@/lib/posthog";
 import { Link2, MessageSquareText } from "lucide-react-native";
 
 import type { Item } from "@/shared/types";
@@ -34,6 +35,10 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
+          posthog?.capture("story_opened", {
+            story_id: id,
+            destination: isExternal ? "external" : "details",
+          });
           if (isExternal) Linking.openURL(url);
           else await navigateToDetails();
         }}
@@ -66,6 +71,10 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog?.capture("comments_opened", {
+              story_id: id,
+              comment_count: kids?.length || 0,
+            });
             await navigateToDetails();
           }}
         >
@@ -86,6 +95,10 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           <Pressable
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              posthog?.capture("external_link_opened", {
+                story_id: id,
+                link_host: new URL(url).host,
+              });
               Linking.openURL(url);
             }}
           >
