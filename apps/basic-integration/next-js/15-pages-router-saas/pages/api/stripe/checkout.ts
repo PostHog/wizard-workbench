@@ -4,6 +4,7 @@ import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { stripe } from '@/lib/payments/stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
 import Stripe from 'stripe';
 
 export default async function handler(
@@ -94,7 +95,13 @@ export default async function handler(
       })
       .where(eq(teams.id, userTeam[0].teamId));
 
-    await setSession(user[0]);
+    await Promise.all([
+      setSession(user[0]),
+      captureServerEvent(String(user[0].id), 'checkout_completed', {
+        team_id: userTeam[0].teamId,
+        subscription_status: subscription.status
+      })
+    ]);
     return res.redirect('/dashboard');
   } catch (error) {
     console.error('Error handling successful checkout:', error);

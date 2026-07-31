@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
 
@@ -28,6 +29,9 @@ function UserMenu() {
       await fetch('/api/auth/sign-out', {
         method: 'POST'
       });
+
+      posthog.capture('user_signed_out');
+      posthog.reset();
 
       // Clear SWR cache
       mutate('/api/user', null, false);
