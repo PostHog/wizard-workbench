@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import posthog, { isPostHogEnabled } from '../posthog.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
 import { showModal } from '../components/modal.js';
@@ -105,6 +106,7 @@ function render(project, members) {
 
         try {
           await api.addTask(project.id, title, priority);
+          if (isPostHogEnabled) posthog.capture('task_created', { priority });
           document.getElementById('modal-overlay')?.remove();
           const updated = await api.getProject(project.id);
           render(updated, members);
@@ -119,6 +121,9 @@ function render(project, members) {
   content.querySelectorAll('.move-task').forEach((btn) => {
     btn.addEventListener('click', async () => {
       await api.updateTaskStatus(project.id, btn.dataset.taskId, btn.dataset.status);
+      if (isPostHogEnabled) {
+        posthog.capture('task_status_changed', { destination_status: btn.dataset.status });
+      }
       const updated = await api.getProject(project.id);
       render(updated, members);
     });
@@ -136,6 +141,9 @@ function render(project, members) {
         modalEl.querySelectorAll('.assign-option').forEach((opt) => {
           opt.addEventListener('click', async () => {
             await api.assignTask(project.id, btn.dataset.taskId, opt.dataset.assignee || null);
+            if (isPostHogEnabled) {
+              posthog.capture('task_assignee_changed', { is_assigned: Boolean(opt.dataset.assignee) });
+            }
             document.getElementById('modal-overlay')?.remove();
             const updated = await api.getProject(project.id);
             render(updated, members);
@@ -149,6 +157,7 @@ function render(project, members) {
   content.querySelectorAll('.delete-task').forEach((btn) => {
     btn.addEventListener('click', async () => {
       await api.deleteTask(project.id, btn.dataset.taskId);
+      if (isPostHogEnabled) posthog.capture('task_deleted');
       const updated = await api.getProject(project.id);
       render(updated, members);
     });
