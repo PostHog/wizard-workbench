@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { posthog } from './posthog.js';
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -25,6 +26,13 @@ function json(res, statusCode, data) {
   res.end(JSON.stringify(data));
 }
 
+async function captureEvent(event, properties) {
+  if (!posthog) return;
+
+  posthog.capture({ event, properties });
+  await posthog.flush();
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname;
@@ -47,6 +55,9 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      await captureEvent('group_created', {
+        contact_count: 0,
+      });
       return json(res, 201, group);
     }
 
@@ -90,6 +101,11 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      await captureEvent('contact_created', {
+        has_phone: Boolean(contact.phone),
+        has_company: Boolean(contact.company),
+        used_default_group: !body.group_id,
+      });
       return json(res, 201, contact);
     }
 
@@ -114,6 +130,11 @@ const server = createServer(async (req, res) => {
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      await captureEvent('contact_updated', {
+        updated_fields: Object.keys(body).filter((field) =>
+          ['name', 'email', 'phone', 'company', 'group_id'].includes(field)
+        ),
+      });
       return json(res, 200, contact);
     }
 
@@ -123,16 +144,44 @@ const server = createServer(async (req, res) => {
       const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
-      contacts.splice(index, 1);
+      const [contact] = contacts.splice(index, 1);
+      await captureEvent('contact_deleted', {
+        had_phone: Boolean(contact.phone),
+        had_company: Boolean(contact.company),
+      });
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    if (posthog) {
+      const distinctId = req.headers['x-posthog-distinct-id'];
+      posthog.captureException(err, typeof distinctId === 'string' ? distinctId : undefined);
+      await posthog.flush();
+    }
     json(res, 500, { error: 'Internal server error' });
   }
 });
+
+if (posthog) {
+  const shutdown = async () => {
+    await posthog.shutdown();
+    process.exit(0);
+  };
+  process.once('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
+  process.on('uncaughtException', async (err) => {
+    posthog.captureException(err);
+    await posthog.shutdown();
+    process.exit(1);
+  });
+  process.on('unhandledRejection', async (reason) => {
+    posthog.captureException(reason);
+    await posthog.shutdown();
+    process.exit(1);
+  });
+}
 
 const PORT = process.env.PORT || 3004;
 
