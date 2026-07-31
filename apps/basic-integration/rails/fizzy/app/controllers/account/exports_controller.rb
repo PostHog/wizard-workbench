@@ -10,6 +10,7 @@ class Account::ExportsController < ApplicationController
 
   def create
     Current.account.exports.create!(user: Current.user).build_later
+    capture_posthog_event "account_export_requested"
     redirect_to account_settings_path, notice: "Export started. You'll receive an email when it's ready."
   end
 

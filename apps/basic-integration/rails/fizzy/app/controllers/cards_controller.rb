@@ -14,11 +14,13 @@ class CardsController < ApplicationController
     respond_to do |format|
       format.html do
         card = Current.user.draft_new_card_in(@board)
+        capture_posthog_event "card_created", creation_method: "web", status: card.status
         redirect_to card_draft_path(card)
       end
 
       format.json do
         card = @board.cards.create! card_params.merge(creator: Current.user, status: "published")
+        capture_posthog_event "card_created", creation_method: "api", status: card.status
         head :created, location: card_path(card, format: :json)
       end
     end

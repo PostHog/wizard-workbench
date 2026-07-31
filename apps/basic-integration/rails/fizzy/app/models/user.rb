@@ -16,6 +16,19 @@ class User < ApplicationRecord
   has_many :pinned_cards, through: :pins, source: :card
   has_many :data_exports, class_name: "User::DataExport", dependent: :destroy
 
+  # A user's identity is stable across the accounts they belong to.
+  def posthog_distinct_id
+    identity_id.to_s
+  end
+
+  def posthog_properties
+    {
+      email: identity&.email_address,
+      name: name,
+      role: role
+    }.compact
+  end
+
   def deactivate
     transaction do
       accesses.destroy_all
