@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -51,6 +52,8 @@ new #[Layout('layouts.guest')] class extends Component
                 ])->save();
 
                 event(new PasswordReset($user));
+
+                app(PostHogService::class)->capture((string) $user->getAuthIdentifier(), 'password_reset_completed');
             }
         );
 
