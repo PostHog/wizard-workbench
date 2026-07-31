@@ -35,6 +35,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         vectorDrawables.useSupportLibrary = true
+
+        buildConfigField(
+            "String",
+            "POSTHOG_PROJECT_TOKEN",
+            "\\\"${System.getenv("POSTHOG_PROJECT_TOKEN") ?: ""}\\\"",
+        )
+        buildConfigField(
+            "String",
+            "POSTHOG_HOST",
+            "\\\"${System.getenv("POSTHOG_HOST") ?: ""}\\\"",
+        )
     }
 
     signingConfigs {
@@ -77,6 +88,7 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
+        buildConfig = true
     }
 
     packaging.resources {
@@ -114,6 +126,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.util)
     implementation(libs.androidx.compose.ui.viewbinding)
     implementation(libs.androidx.compose.ui.googlefonts)
+
+    implementation("com.posthog:posthog-android:3.+")
 
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
