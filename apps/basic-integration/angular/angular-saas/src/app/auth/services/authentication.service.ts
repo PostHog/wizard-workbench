@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PosthogService } from '@core/services';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,8 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PosthogService);
 
   /**
    * Authenticates the user.
@@ -41,9 +43,29 @@ export class AuthenticationService {
       firstName,
       lastName,
     });
-    this._credentialsService.setCredentials(credentials, context.remember);
+    this.credentialsService.setCredentials(credentials, context.remember);
+    this.identify(credentials);
+    this.posthogService.client.capture('user_logged_in', {
+      remember_session: Boolean(context.remember),
+      is_mobile: Boolean(context.isMobile),
+      role_count: credentials.roles.length,
+    });
 
     return of(credentials);
+  }
+
+  /**
+   * Identifies the authenticated user with their stable credential ID.
+   */
+  identify(credentials: Credentials): void {
+    if (!credentials.id) return;
+
+    this.posthogService.client.identify(credentials.id, {
+      email: credentials.email,
+      name: credentials.fullName.trim(),
+      username: credentials.username,
+      roles: credentials.roles,
+    });
   }
 
   /**
@@ -82,10 +104,12 @@ export class AuthenticationService {
   }
 
   /**
-   * Logs out the user and clear credentials.
+   * Logs out the user and clears the PostHog identity before credentials are removed.
    * @return True if the user was logged out successfully.
    */
-  logout(): Observable<any> {
+  logout(): Observable<boolean> {
+    this.posthogService.client.capture('user_logged_out');
+    this.posthogService.client.reset();
     return of(true);
   }
 }
