@@ -9,6 +9,14 @@ const props = defineProps<{
 const credits = [...props.items]
   .sort((a, b) => (b.release_date || b.first_air_date || '9999')
     .localeCompare(a.release_date || a.first_air_date || '9999'))
+const { $posthog } = useNuxtApp()
+
+function captureMediaDetailOpen(item: Media) {
+  $posthog?.capture('media_detail_opened', {
+    media_id: item.id,
+    media_type: item.media_type,
+  })
+}
 </script>
 
 <template>
@@ -21,6 +29,7 @@ const credits = [...props.items]
       :key="i.id"
       :to="`/${i.media_type}/${i.id}`"
       flex="col" gap2 px2 py3 bg-gray:5
+      @click="captureMediaDetailOpen(i)"
     >
       <div text-center w-20 tabular-nums>
         {{ i.release_date ? i.release_date.slice(0, 4) : i.first_air_date ? i.first_air_date.slice(0, 4) : '-' }}
