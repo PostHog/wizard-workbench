@@ -4,7 +4,7 @@ import os
 from flask import Flask, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
@@ -19,6 +19,7 @@ except ImportError:
     Redis = None
     rq = None
 from config import Config
+from app.posthog import bind_request_context, end_request_context, init_posthog
 
 
 def get_locale():
@@ -45,6 +46,20 @@ def create_app(config_class=Config):
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
+    init_posthog(app)
+
+    @app.before_request
+    def bind_posthog_request_context():
+        bind_request_context(
+            user=current_user,
+            distinct_id=request.headers.get('X-POSTHOG-DISTINCT-ID'),
+            session_id=request.headers.get('X-POSTHOG-SESSION-ID'),
+        )
+
+    @app.teardown_request
+    def close_posthog_request_context(error=None):
+        end_request_context(error)
+
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if Elasticsearch and app.config['ELASTICSEARCH_URL'] else None
     if Redis and rq:
