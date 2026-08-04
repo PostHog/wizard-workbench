@@ -1,0 +1,6 @@
+[project]
+name = "wb-aio-openai-agents-travel-triage"
+version = "0.0.0"
+description = "PostHog-less OpenAI Agents SDK travel desk for testing `wizard ai-observability`."
+requires-python = ">=3.10"
+dependencies = ["openai-agents>=0.2.0"]

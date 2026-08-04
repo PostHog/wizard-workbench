@@ -44,6 +44,13 @@
       "ciCapable": true
     },
     {
+      "id": "ai-observability",
+      "dir": "ai-observability",
+      "label": "AI Observability",
+      "description": "Instrument an app's LLM calls so they emit $ai_generation events",
+      "ciCapable": true
+    },
+    {
       "id": "skill",
       "dir": "misc",
       "label": "Skill",

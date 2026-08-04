@@ -1,0 +1,2 @@
+# PostHog-less weather assistant. OpenAI SDK only.
+openai>=1.60.0
