@@ -20,6 +20,7 @@ import Footer from '@/components/footer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+import { PostHogClientProvider } from '@/components/posthog-provider'
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -118,14 +119,16 @@ export default function App() {
       }}
     >
       {(ref) => (
-        <main
-          style={{ opacity: 0 }}
-          className="overflow-y-clip flex flex-col min-h-svh"
-          data-pathname={location.pathname}
-          ref={ref}
-        >
-          {element}
-        </main>
+        <PostHogClientProvider>
+          <main
+            style={{ opacity: 0 }}
+            className="overflow-y-clip flex flex-col min-h-svh"
+            data-pathname={location.pathname}
+            ref={ref}
+          >
+            {element}
+          </main>
+        </PostHogClientProvider>
       )}
     </RouteTransitionManager>
   )
