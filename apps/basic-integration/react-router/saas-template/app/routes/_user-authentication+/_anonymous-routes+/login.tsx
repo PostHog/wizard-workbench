@@ -116,7 +116,15 @@ export default function LoginRoute({
         </div>
 
         {/* Email Login Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          {...form.props}
+          method="POST"
+          onSubmit={() => {
+            void import("posthog-js").then(({ default: posthog }) => {
+              posthog.capture("login_submitted", { method: "email" });
+            });
+          }}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -160,7 +168,14 @@ export default function LoginRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Login Form */}
-        <Form method="POST">
+        <Form
+          method="POST"
+          onSubmit={() => {
+            void import("posthog-js").then(({ default: posthog }) => {
+              posthog.capture("login_submitted", { method: "google" });
+            });
+          }}
+        >
           <Field>
             <Button
               name="intent"

@@ -61,7 +61,16 @@ export function CreateOrganizationFormCard({
         </CardHeader>
 
         <CardContent>
-          <Form encType="multipart/form-data" method="POST" {...form.props}>
+          <Form
+            {...form.props}
+            encType="multipart/form-data"
+            method="POST"
+            onSubmit={() => {
+              void import("posthog-js").then(({ default: posthog }) => {
+                posthog.capture("organization_creation_submitted");
+              });
+            }}
+          >
             <FieldSet
               className="flex flex-col gap-6"
               disabled={isCreatingOrganization}

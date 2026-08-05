@@ -91,8 +91,6 @@ export default function OrganizationOnboardingRoute({
 
   return (
     <Form
-      encType="multipart/form-data"
-      method="POST"
       {...form.props}
       aria-describedby={
         form.errors && form.errors.length > 0
@@ -100,6 +98,13 @@ export default function OrganizationOnboardingRoute({
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      encType="multipart/form-data"
+      method="POST"
+      onSubmit={() => {
+        void import("posthog-js").then(({ default: posthog }) => {
+          posthog.capture("onboarding_organization_submitted");
+        });
+      }}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>
