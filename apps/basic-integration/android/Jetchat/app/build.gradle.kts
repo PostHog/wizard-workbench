@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-
+import java.io.FileInputStream
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -27,6 +28,19 @@ android {
     namespace = "com.example.compose.jetchat"
 
     defaultConfig {
+        val posthogProperties = Properties().apply {
+            val envFile = rootProject.file(".env")
+            if (envFile.exists()) {
+                FileInputStream(envFile).use(::load)
+            }
+        }
+        val posthogProjectToken = posthogProperties.getProperty("POSTHOG_PROJECT_TOKEN")
+            ?: System.getenv("POSTHOG_PROJECT_TOKEN")
+            ?: ""
+        val posthogHost = posthogProperties.getProperty("POSTHOG_HOST")
+            ?: System.getenv("POSTHOG_HOST")
+            ?: ""
+
         applicationId = "com.example.compose.jetchat"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
@@ -35,6 +49,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         vectorDrawables.useSupportLibrary = true
+        buildConfigField("String", "POSTHOG_PROJECT_TOKEN", "\"$posthogProjectToken\"")
+        buildConfigField("String", "POSTHOG_HOST", "\"$posthogHost\"")
     }
 
     signingConfigs {
@@ -75,6 +91,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -96,6 +113,7 @@ dependencies {
     implementation(libs.androidx.glance.material3)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
+    implementation("com.posthog:posthog-android:3.+")
 
     implementation(libs.androidx.activity.compose)
 
