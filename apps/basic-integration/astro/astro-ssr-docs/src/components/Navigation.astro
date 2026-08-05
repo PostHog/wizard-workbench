@@ -9,10 +9,20 @@ const isDocs = currentPath.startsWith('/docs');
       <span>NeuralFlow</span> Docs
     </a>
     <ul class="nav-links">
-      <li><a href="/docs" class:list={["nav-link", { active: isDocs }]}>Documentation</a></li>
-      <li><a href="/docs/api" class="nav-link">API Reference</a></li>
-      <li><a href="https://github.com" class="nav-link" target="_blank">GitHub</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/docs" class:list={["nav-link", { active: isDocs }]} data-posthog-event="documentation_started" data-posthog-source="primary_navigation">Documentation</a></li>
+      <li><a href="/docs/api" class="nav-link" data-posthog-event="api_reference_opened" data-posthog-source="primary_navigation">API Reference</a></li>
+      <li><a href="https://github.com" class="nav-link" target="_blank" data-posthog-event="github_repository_opened">GitHub</a></li>
+      <li><a href="#" class="nav-cta" data-posthog-event="documentation_started" data-posthog-source="primary_navigation_cta">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.querySelectorAll('.nav [data-posthog-event]').forEach((link) => {
+    link.addEventListener('click', () => {
+      window.posthog?.capture(link.dataset.posthogEvent, {
+        source: link.dataset.posthogSource,
+      });
+    });
+  });
+</script>
