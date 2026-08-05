@@ -86,6 +86,14 @@ function PricingCard({
 
         const result = await response.json();
 
+        if (result.redirectTo || result.url) {
+          const { default: posthog } = await import('posthog-js');
+          posthog.capture('checkout_started', {
+            billing_interval: interval,
+            plan_name: name
+          });
+        }
+
         if (result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {

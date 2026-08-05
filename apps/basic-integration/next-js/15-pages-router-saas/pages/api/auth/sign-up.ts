@@ -172,10 +172,25 @@ export default async function handler(
         priceId,
         userId: createdUser.id
       });
-      return res.status(200).json(checkoutResult);
+      return res.status(200).json({
+        ...checkoutResult,
+        user: {
+          id: createdUser.id,
+          email: createdUser.email,
+          role: createdUser.role
+        }
+      });
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      user: {
+        id: createdUser.id,
+        email: createdUser.email,
+        role: createdUser.role
+      }
+    });
   } catch (error) {
     console.error('Sign up error:', error);
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });
