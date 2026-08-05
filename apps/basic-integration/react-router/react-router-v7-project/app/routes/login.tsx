@@ -23,6 +23,11 @@ export default function Login() {
       setIsLoading(false)
 
       if (success) {
+        if (import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+          void import('posthog-js').then(({ default: posthog }) => {
+            posthog.capture('user_logged_in')
+          })
+        }
         navigate('/profile')
       } else {
         setError('Invalid credentials! (But this is fake, so any password works if the username exists)')

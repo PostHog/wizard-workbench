@@ -136,7 +136,14 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        if (!isClaimed && import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+                          const { default: posthog } = await import('posthog-js');
+                          posthog.capture('country_claimed', {
+                            country_name: countryName,
+                            region: country.region,
+                          });
+                        }
                         claimCountry(countryName);
                         window.location.reload();
                       }}
@@ -149,7 +156,14 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        if (!isLiked && import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+                          const { default: posthog } = await import('posthog-js');
+                          posthog.capture('country_liked', {
+                            country_name: countryName,
+                            region: country.region,
+                          });
+                        }
                         likeCountry(countryName);
                         window.location.reload();
                       }}
@@ -162,7 +176,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        const hasVisited = user.visitedCountries.includes(countryName);
+                        if (!hasVisited && import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+                          const { default: posthog } = await import('posthog-js');
+                          posthog.capture('country_visited', {
+                            country_name: countryName,
+                            region: country.region,
+                          });
+                        }
                         visitCountry(countryName);
                         window.location.reload();
                       }}

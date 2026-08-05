@@ -24,6 +24,11 @@ export default function Signup() {
         setIsLoading(false)
 
         if (newUser) {
+          if (import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+            void import('posthog-js').then(({ default: posthog }) => {
+              posthog.capture('user_signed_up')
+            })
+          }
           navigate('/profile')
         } else {
           setError('Signup failed! (But this is fake, so it should always work)')
