@@ -1,4 +1,5 @@
 export const useAuth = () => {
+  const { $posthog } = useNuxtApp()
   const cookie = useCookie<string | null>('auth-user', {
     httpOnly: false,
     secure: true,
@@ -23,6 +24,7 @@ export const useAuth = () => {
       if (response.success) {
         user.value = response.user
         cookie.value = response.user
+        $posthog?.capture('login_succeeded')
         await navigateTo('/')
       }
       
