@@ -7,11 +7,27 @@ import {
   createRootRoute,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from 'posthog-js/react'
+import posthog from 'posthog-js'
 import * as React from 'react'
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary'
 import { NotFound } from '~/components/NotFound'
 import appCss from '~/styles/app.css?url'
 import { seo } from '~/utils/seo'
+
+const posthogProjectToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+
+if (typeof window !== 'undefined' && posthogProjectToken) {
+  posthog.init(posthogProjectToken, {
+    api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+    defaults: '2025-05-24',
+    capture_exceptions: true,
+  })
+} else if (typeof window !== 'undefined' && import.meta.env.DEV) {
+  throw new Error(
+    'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_PROJECT_TOKEN is configured',
+  )
+}
 
 export const Route = createRootRoute({
   head: () => ({
@@ -64,8 +80,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
-        <TanStackRouterDevtools position="bottom-right" />
+        <PostHogProvider client={posthog}>
+          {children}
+          <TanStackRouterDevtools position="bottom-right" />
+        </PostHogProvider>
         <Scripts />
       </body>
     </html>
