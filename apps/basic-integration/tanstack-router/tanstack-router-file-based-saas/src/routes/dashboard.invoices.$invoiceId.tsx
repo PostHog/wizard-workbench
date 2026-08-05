@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 import * as React from 'react'
 import { z } from 'zod'
 import { InvoiceFields } from '../components/InvoiceFields'
@@ -24,6 +25,7 @@ export const Route = createFileRoute('/dashboard/invoices/$invoiceId')({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
@@ -90,6 +92,7 @@ function InvoiceComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            posthog.capture('invoice_update_submitted', { invoice_id: invoice.id })
             updateInvoiceMutation.mutate({
               id: invoice.id,
               title: formData.get('title') as string,
