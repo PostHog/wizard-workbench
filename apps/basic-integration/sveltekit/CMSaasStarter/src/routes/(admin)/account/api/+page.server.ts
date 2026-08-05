@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { capturePostHogEvent } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -27,6 +28,12 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    await capturePostHogEvent({
+      distinctId: session.user.id,
+      event: "email_subscription_toggled",
+      properties: { unsubscribed: newUnsubscribedStatus },
+    })
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -71,13 +78,18 @@ export const actions = {
       })
     }
 
+    await capturePostHogEvent({
+      distinctId: session.user.id,
+      event: "email_change_requested",
+    })
+
     return {
       email,
     }
   },
   updatePassword: async ({ request, locals: { supabase, safeGetSession } }) => {
     const { session, user, amr } = await safeGetSession()
-    if (!session) {
+    if (!session || !user?.id) {
       redirect(303, "/login")
     }
 
@@ -172,6 +184,12 @@ export const actions = {
       })
     }
 
+    await capturePostHogEvent({
+      distinctId: user?.id,
+      event: "password_changed",
+      properties: { recovery_flow: Boolean(isRecoverySession) },
+    })
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +238,8 @@ export const actions = {
         currentPassword,
       })
     }
+
+    await capturePostHogEvent({ distinctId: user.id, event: "account_deleted" })
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -303,6 +323,11 @@ export const actions = {
     // If the profile was just created, send an email to the user and admin
     const newProfile =
       priorProfile?.updated_at === null && priorProfileError === null
+    await capturePostHogEvent({
+      distinctId: user.id,
+      event: newProfile ? "profile_created" : "profile_updated",
+    })
+
     if (newProfile) {
       await sendAdminEmail({
         subject: "Profile Created",
