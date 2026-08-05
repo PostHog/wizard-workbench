@@ -7,6 +7,12 @@ class ApplicationController < ActionController::Base
   include TurboFlash, ViewTransitions
   include RoutingHeaders
 
+  helper_method :current_user
+
+  def current_user
+    Current.user
+  end
+
   etag { "v1" }
   stale_when_importmap_changes
   allow_browser versions: :modern

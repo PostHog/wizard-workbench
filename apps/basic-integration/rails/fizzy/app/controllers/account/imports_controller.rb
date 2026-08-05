@@ -14,6 +14,11 @@ class Account::ImportsController < ApplicationController
 
     if signup.complete
       start_import(signup.account)
+      PostHog.capture(
+        distinct_id: signup.user.posthog_distinct_id,
+        event: "account_import_started",
+        properties: { account_id: signup.account.id }
+      )
     else
       render :new, alert: "Couldn't create account."
     end

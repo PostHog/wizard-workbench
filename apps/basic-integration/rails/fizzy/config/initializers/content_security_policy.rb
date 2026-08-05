@@ -48,10 +48,13 @@ Rails.application.configure do
   config.content_security_policy_nonce_generator = ->(request) { SecureRandom.base64(16) }
   config.content_security_policy_nonce_directives = %w[ script-src ]
 
+  posthog_host = ENV["POSTHOG_HOST"]
+  posthog_assets_host = posthog_host&.sub(".i.posthog.com", "-assets.i.posthog.com")
+
   config.content_security_policy do |policy|
     policy.default_src :self, *sources.(:default_src)
-    policy.script_src :self, *sources.(:script_src)
-    policy.connect_src :self, *sources.(:connect_src)
+    policy.script_src :self, posthog_assets_host, *sources.(:script_src)
+    policy.connect_src :self, posthog_host, *sources.(:connect_src)
     policy.frame_src :self, *sources.(:frame_src)
 
     # Don't fight user tools: permit inline styles, data:/https: sources, and
