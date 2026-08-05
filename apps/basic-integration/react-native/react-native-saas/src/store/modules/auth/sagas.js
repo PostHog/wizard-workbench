@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
+import { posthog } from '../../../config/posthog';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
 
 import {
@@ -43,6 +44,7 @@ export function* signIn({ payload }) {
       yield put(signInSuccess(DEMO_TOKEN));
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
+      posthog?.capture('signed_in', { authentication_method: 'demo' });
       toast.showSuccess('Welcome to demo mode!');
       NavigationService.navigate('Main');
       return;
@@ -53,6 +55,7 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+    posthog?.capture('signed_in', { authentication_method: 'password' });
     NavigationService.navigate('Main');
   } catch (err) {
     toast.showError('Invalid credentials');
@@ -60,6 +63,7 @@ export function* signIn({ payload }) {
 }
 
 export function* signOut() {
+  posthog?.capture('signed_out');
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
