@@ -14,6 +14,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
 
+import { posthog } from "@/lib/posthog";
 import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
@@ -72,7 +73,14 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              onPress={() => {
+                posthog?.capture("hacker_news_user_opened", {
+                  source: "item_author",
+                });
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -163,6 +171,10 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog?.capture("external_link_opened", {
+                    item_id: item.id,
+                    source: "item_details",
+                  });
                   Linking.openURL(item.url);
                 }}
               >

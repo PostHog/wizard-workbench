@@ -12,6 +12,7 @@ import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link2, MessageSquareText } from "lucide-react-native";
 
+import { posthog } from "@/lib/posthog";
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
@@ -22,7 +23,11 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     return text === undefined;
   }, [text]);
 
-  const navigateToDetails = async () => {
+  const navigateToDetails = async (source: "story_title" | "comments_button") => {
+    posthog?.capture(source === "story_title" ? "story_opened" : "comments_opened", {
+      item_id: id,
+      item_type: "story",
+    });
     await QC.prefetchQuery({
       queryKey: getItemDetailsQueryKey(id),
       queryFn: getItemQueryFn,
@@ -34,8 +39,13 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
-          if (isExternal) Linking.openURL(url);
-          else await navigateToDetails();
+          if (isExternal) {
+            posthog?.capture("external_story_opened", {
+              item_id: id,
+              source: "story_title",
+            });
+            Linking.openURL(url);
+          } else await navigateToDetails("story_title");
         }}
       >
         <Text style={{ color: "black", fontSize: 20, fontWeight: 500 }}>
@@ -66,7 +76,7 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
-            await navigateToDetails();
+            await navigateToDetails("comments_button");
           }}
         >
           <MessageSquareText color="black" width={16} />
@@ -86,6 +96,10 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           <Pressable
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              posthog?.capture("external_story_opened", {
+                item_id: id,
+                source: "link_button",
+              });
               Linking.openURL(url);
             }}
           >

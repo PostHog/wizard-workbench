@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 import { ListFilter, LucideIcon } from "lucide-react-native";
 
+import { posthog } from "@/lib/posthog";
 import { Colors } from "@/constants/Colors";
 import { StoryType } from "@/constants/stories";
 
@@ -86,6 +87,11 @@ export const StoriesSelect = ({
                 key={item.id}
                 style={[styles.option, isSelected && styles.optionSelected]}
                 onPress={() => {
+                  if (item.id !== value) {
+                    posthog?.capture("story_feed_changed", {
+                      story_type: item.id,
+                    });
+                  }
                   onChange(item.id);
                   setIsOpen(false);
                 }}
