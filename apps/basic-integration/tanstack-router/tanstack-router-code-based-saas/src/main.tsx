@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -32,6 +33,7 @@ import {
 import { useMutation } from './useMutation'
 import type { NotFoundRouteProps } from '@tanstack/react-router'
 import type { Invoice } from './mockTodos'
+import posthog from './posthog'
 import './styles.css'
 
 //
@@ -85,7 +87,7 @@ function RouterSpinner() {
 }
 
 function RootComponent() {
-  return (
+  const content = (
     <>
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
@@ -133,6 +135,12 @@ function RootComponent() {
       </div>
       <TanStackRouterDevtools position="bottom-right" />
     </>
+  )
+
+  return posthog ? (
+    <PostHogProvider client={posthog}>{content}</PostHogProvider>
+  ) : (
+    content
   )
 }
 
@@ -453,6 +461,7 @@ function InvoicesIndexComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            posthog?.capture('invoice_creation_submitted')
             createInvoiceMutation.mutate({
               title: formData.get('title') as string,
               body: formData.get('body') as string,
@@ -578,6 +587,9 @@ function InvoiceComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            posthog?.capture('invoice_update_submitted', {
+              invoice_id: invoice.id,
+            })
             updateInvoiceMutation.mutate({
               id: invoice.id,
               title: formData.get('title') as string,
@@ -1244,6 +1256,12 @@ const routeTree = rootRoute.addChildren([
   pathlessLayoutRoute.addChildren([pathlessLayoutARoute, pathlessLayoutBRoute]),
 ])
 
+function GlobalErrorComponent({ error }: { error: unknown }) {
+  posthog?.captureException(error)
+
+  return <ErrorComponent error={error} />
+}
+
 const router = createRouter({
   routeTree,
   defaultPendingComponent: () => (
@@ -1251,7 +1269,7 @@ const router = createRouter({
       <Spinner />
     </div>
   ),
-  defaultErrorComponent: ({ error }) => <ErrorComponent error={error} />,
+  defaultErrorComponent: GlobalErrorComponent,
   context: {
     auth: undefined!, // We'll inject this when we render
   },
@@ -1271,8 +1289,10 @@ const auth: Auth = {
   login: (username: string) => {
     auth.username = username
     auth.status = 'loggedIn'
+    posthog?.capture('user_logged_in')
   },
   logout: () => {
+    posthog?.capture('user_logged_out')
     auth.status = 'loggedOut'
     auth.username = undefined
   },
