@@ -15,6 +15,10 @@ const EVALUATION_CRITERIA_REVENUE = readFileSync(
   join(__dirname, "prompts/evaluation-revenue.md"),
   "utf-8",
 ).trim();
+const EVALUATION_CRITERIA_AI_OBSERVABILITY = readFileSync(
+  join(__dirname, "prompts/evaluation-ai-observability.md"),
+  "utf-8",
+).trim();
 const OUTPUT_FORMAT = readFileSync(join(__dirname, "prompts/output-format.md"), "utf-8").trim();
 const OUTPUT_FORMAT_REVENUE = readFileSync(
   join(__dirname, "prompts/output-format-revenue.md"),
@@ -24,6 +28,12 @@ const OUTPUT_FORMAT_REVENUE = readFileSync(
 /** Per-command prompt overrides. Extend when a new command gets its own rubric. */
 const PROMPTS_BY_COMMAND: Record<string, { rubric: string; outputFormat: string }> = {
   revenue: { rubric: EVALUATION_CRITERIA_REVENUE, outputFormat: OUTPUT_FORMAT_REVENUE },
+  // Reuses the default output format — the AIO rubric keeps the same four
+  // dimensions, only the items differ.
+  "ai-observability": {
+    rubric: EVALUATION_CRITERIA_AI_OBSERVABILITY,
+    outputFormat: OUTPUT_FORMAT,
+  },
 };
 
 // Commandments loading: fetch from GitHub > COMMANDMENTS_PATH env var > vendored fallback

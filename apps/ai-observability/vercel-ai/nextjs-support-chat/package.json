@@ -1,0 +1,24 @@
+{
+  "name": "wb-aio-nextjs-support-chat",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PostHog-less Next.js App Router support chat (Vercel AI SDK) for testing `wizard ai-observability`.",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.0",
+    "ai": "^5.0.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.6.3"
+  }
+}

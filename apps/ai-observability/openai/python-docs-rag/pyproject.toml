@@ -1,0 +1,6 @@
+[project]
+name = "wb-aio-openai-docs-rag"
+version = "0.0.0"
+description = "PostHog-less RAG docs assistant (OpenAI embeddings + responses) for testing `wizard ai-observability`."
+requires-python = ">=3.10"
+dependencies = ["openai>=1.60.0"]
