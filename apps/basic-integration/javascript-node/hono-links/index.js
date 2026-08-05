@@ -1,7 +1,19 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
 
 const app = new Hono();
+
+app.onError(async (error, c) => {
+  posthog?.captureException(error, undefined, {
+    $request_method: c.req.method,
+    $request_path: c.req.path,
+  });
+  await posthog?.flush();
+
+  console.error(error);
+  return c.json({ error: 'Internal server error' }, 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +59,16 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  posthog?.capture({
+    event: 'link_created',
+    properties: {
+      tag_count: tags.length,
+      has_description: Boolean(description),
+    },
+  });
+  await posthog?.flush();
+
   return c.json(link, 201);
 });
 
@@ -76,18 +98,40 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  posthog?.capture({
+    event: 'link_updated',
+    properties: {
+      updated_fields: Object.keys(body).filter((field) =>
+        ['url', 'title', 'description', 'tags', 'favorite'].includes(field)
+      ),
+      tag_count: Array.isArray(link.tags) ? link.tags.length : 0,
+      is_favorite: link.favorite,
+    },
+  });
+  await posthog?.flush();
+
   return c.json(link);
 });
 
 // Delete a link
-app.delete('/api/links/:id', (c) => {
+app.delete('/api/links/:id', async (c) => {
   const index = links.findIndex((l) => l.id === parseInt(c.req.param('id'), 10));
 
   if (index === -1) {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [link] = links.splice(index, 1);
+
+  posthog?.capture({
+    event: 'link_deleted',
+    properties: {
+      tag_count: Array.isArray(link.tags) ? link.tags.length : 0,
+      was_favorite: link.favorite,
+    },
+  });
+  await posthog?.flush();
+
   return c.body(null, 204);
 });
 
