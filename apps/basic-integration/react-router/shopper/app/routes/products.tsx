@@ -3,6 +3,7 @@ import type { Route } from "./+types/products";
 import { getProducts, getCategories, type Product } from "../data/products";
 import { useState } from "react";
 import { useCart } from "../context/CartContext";
+import { capture } from "../lib/posthog.client";
 
 export async function clientLoader() {
   return {
@@ -19,6 +20,13 @@ export default function Products({ loaderData }: Route.ComponentProps) {
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+    capture("product_added_to_cart", {
+      product_id: product.id,
+      product_category: product.category,
+      unit_price: product.price,
+      quantity: 1,
+      source: "catalog",
+    });
   };
 
   const handleSearch = (term: string) => {
