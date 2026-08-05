@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { router } from '../router.js';
+import posthog, { isPostHogConfigured } from '../posthog.js';
 
 export function renderLogin() {
   const app = document.getElementById('app');
@@ -40,6 +41,7 @@ export function renderLogin() {
 
     try {
       await api.login(email);
+      if (isPostHogConfigured) posthog.capture('sign_in_completed');
       router.navigate('/dashboard');
     } catch (err) {
       errorEl.textContent = err.message;

@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { router } from '../router.js';
 import { store } from '../store.js';
+import posthog, { isPostHogConfigured } from '../posthog.js';
 
 /**
  * Renders the app shell: sidebar + header + content area.
@@ -53,6 +54,7 @@ export function renderShell(activeSection) {
   `;
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
+    if (isPostHogConfigured) posthog.capture('sign_out_requested');
     await api.logout();
     router.navigate('/login');
   });

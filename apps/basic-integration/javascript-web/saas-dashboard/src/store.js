@@ -5,7 +5,19 @@
  * and re-render your current view.
  */
 
+import posthog, { isPostHogConfigured } from './posthog.js';
+
 const STORAGE_KEY = 'trackflow_data';
+
+function identifyUser(user) {
+  if (!isPostHogConfigured || !user?.id) return;
+
+  posthog.identify(user.id, {
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  });
+}
 
 const DEFAULT_STATE = {
   currentUser: null,
@@ -130,15 +142,24 @@ export const store = {
   login(email) {
     const member = state.teamMembers.find((m) => m.email === email);
     if (!member) return false;
+    if (state.currentUser?.id && state.currentUser.id !== member.id && isPostHogConfigured) {
+      posthog.reset();
+    }
     state.currentUser = member;
     this.save();
+    identifyUser(member);
     this.logActivity('logged_in', member.name);
     return true;
   },
 
   logout() {
+    if (state.currentUser && isPostHogConfigured) posthog.reset();
     state.currentUser = null;
     this.save();
+  },
+
+  identifyCurrentUser() {
+    identifyUser(state.currentUser);
   },
 
   // --- Projects ---
