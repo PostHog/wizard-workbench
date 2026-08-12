@@ -4,6 +4,7 @@ import { Spinner } from '../components/Spinner'
 import { useMutation } from '../hooks/useMutation'
 import { postInvoice } from '../utils/mockTodos'
 import type { Invoice } from '../utils/mockTodos'
+import posthog from '../posthog'
 
 export const Route = createFileRoute('/dashboard/invoices/')({
   component: InvoicesIndexComponent,
@@ -14,7 +15,10 @@ function InvoicesIndexComponent() {
 
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: invoice }) => {
+      posthog.capture('invoice_created', { invoice_id: invoice.id })
+      return router.invalidate()
+    },
   })
 
   return (

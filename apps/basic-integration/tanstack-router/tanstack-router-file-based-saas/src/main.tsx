@@ -9,6 +9,7 @@ import { auth } from './utils/auth'
 import { Spinner } from './components/Spinner'
 import { routeTree } from './routeTree.gen'
 import { useSessionStorage } from './hooks/useSessionStorage'
+import { captureException } from './posthog'
 import './styles.css'
 
 //
@@ -20,7 +21,11 @@ const router = createRouter({
       <Spinner />
     </div>
   ),
-  defaultErrorComponent: ({ error }) => <ErrorComponent error={error} />,
+  defaultErrorComponent: ({ error }) => {
+    captureException(error)
+
+    return <ErrorComponent error={error} />
+  },
   context: {
     auth: undefined!, // We'll inject this when we render
   },
