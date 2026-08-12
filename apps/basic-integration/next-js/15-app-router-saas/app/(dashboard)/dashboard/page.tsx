@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -40,6 +41,12 @@ function SubscriptionSkeleton() {
 function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
 
+  function handleSubscriptionManagement() {
+    if (posthog.__loaded) {
+      posthog.capture('subscription_management_opened');
+    }
+  }
+
   return (
     <Card className="mb-8">
       <CardHeader>
@@ -60,7 +67,10 @@ function ManageSubscription() {
                   : 'No active subscription'}
               </p>
             </div>
-            <form action={customerPortalAction}>
+            <form
+              action={customerPortalAction}
+              onSubmit={handleSubscriptionManagement}
+            >
               <Button type="submit" variant="outline">
                 Manage Subscription
               </Button>
@@ -103,6 +113,12 @@ function TeamMembers() {
   const getUserDisplayName = (user: Pick<User, 'id' | 'name' | 'email'>) => {
     return user.name || user.email || 'Unknown User';
   };
+
+  function handleTeamMemberRemoval() {
+    if (posthog.__loaded) {
+      posthog.capture('team_member_removal_submitted');
+    }
+  }
 
   if (!teamData?.teamMembers?.length) {
     return (
@@ -154,7 +170,7 @@ function TeamMembers() {
                 </div>
               </div>
               {index > 1 ? (
-                <form action={removeAction}>
+                <form action={removeAction} onSubmit={handleTeamMemberRemoval}>
                   <input type="hidden" name="memberId" value={member.id} />
                   <Button
                     type="submit"
@@ -195,13 +211,23 @@ function InviteTeamMember() {
     FormData
   >(inviteTeamMember, {});
 
+  function handleTeamMemberInvite() {
+    if (posthog.__loaded) {
+      posthog.capture('team_member_invited');
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Invite Team Member</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={inviteAction} className="space-y-4">
+        <form
+          action={inviteAction}
+          className="space-y-4"
+          onSubmit={handleTeamMemberInvite}
+        >
           <div>
             <Label htmlFor="email" className="mb-2">
               Email
