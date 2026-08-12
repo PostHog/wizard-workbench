@@ -1,9 +1,38 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { PostHog } from 'posthog-node';
+
+const posthogProjectToken = process.env.POSTHOG_PROJECT_TOKEN;
+const posthogHost = process.env.POSTHOG_HOST;
+
+if (!posthogProjectToken && process.env.NODE_ENV !== 'production') {
+  throw new Error(
+    'POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_PROJECT_TOKEN is configured'
+  );
+}
+
+if (!posthogHost && process.env.NODE_ENV !== 'production') {
+  throw new Error(
+    'POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured'
+  );
+}
+
+export const posthog = posthogProjectToken && posthogHost
+  ? new PostHog(posthogProjectToken, {
+      host: posthogHost,
+      enableExceptionAutocapture: true,
+    })
+  : null;
 
 const app = new Koa();
 const router = new Router();
+
+app.on('error', (error) => {
+  if (posthog) {
+    posthog.captureException(error);
+  }
+});
 
 app.use(bodyParser());
 
@@ -32,6 +61,12 @@ router.post('/api/folders', (ctx) => {
 
   const folder = { id: nextFolderId++, name };
   folders.push(folder);
+  if (posthog) {
+    posthog.capture({
+      event: 'folder_created',
+      properties: { folder_id: folder.id },
+    });
+  }
   ctx.status = 201;
   ctx.body = folder;
 });
@@ -59,6 +94,12 @@ router.delete('/api/folders/:id', (ctx) => {
   }
 
   folders.splice(index, 1);
+  if (posthog) {
+    posthog.capture({
+      event: 'folder_deleted',
+      properties: { folder_id: folderId },
+    });
+  }
   ctx.status = 204;
 });
 
@@ -105,6 +146,12 @@ router.post('/api/notes', (ctx) => {
     updated_at: new Date().toISOString(),
   };
   notes.push(note);
+  if (posthog) {
+    posthog.capture({
+      event: 'note_created',
+      properties: { note_id: note.id, folder_id: note.folder_id },
+    });
+  }
   ctx.status = 201;
   ctx.body = note;
 });
@@ -143,6 +190,19 @@ router.patch('/api/notes/:id', (ctx) => {
   }
   note.updated_at = new Date().toISOString();
 
+  if (posthog) {
+    posthog.capture({
+      event: 'note_updated',
+      properties: {
+        note_id: note.id,
+        folder_id: note.folder_id,
+        title_updated: title !== undefined,
+        content_updated: content !== undefined,
+        folder_updated: folder_id !== undefined,
+      },
+    });
+  }
+
   ctx.body = note;
 });
 
@@ -155,7 +215,13 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
-  notes.splice(index, 1);
+  const [deletedNote] = notes.splice(index, 1);
+  if (posthog) {
+    posthog.capture({
+      event: 'note_deleted',
+      properties: { note_id: deletedNote.id, folder_id: deletedNote.folder_id },
+    });
+  }
   ctx.status = 204;
 });
 
@@ -164,6 +230,18 @@ app.use(router.allowedMethods());
 
 const PORT = process.env.PORT || 3003;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Koa notes API running on http://localhost:${PORT}`);
 });
+
+const shutdown = () => {
+  server.close(async () => {
+    if (posthog) {
+      await posthog.shutdown();
+    }
+    process.exit(0);
+  });
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
