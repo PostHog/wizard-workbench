@@ -12,6 +12,16 @@ export default function Cart() {
     updateQuantity(item.id, newQuantity);
   };
 
+  const handleCheckoutStarted = () => {
+    const subtotal = getCartTotal();
+    void import("../posthog.client").then(({ default: posthog }) => {
+      posthog.capture("checkout_started", {
+        item_count: cart.reduce((count, item) => count + item.quantity, 0),
+        cart_value: subtotal,
+      });
+    });
+  };
+
   if (cart.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16">
@@ -154,6 +164,7 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={handleCheckoutStarted}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout

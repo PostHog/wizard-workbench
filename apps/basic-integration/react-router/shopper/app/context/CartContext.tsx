@@ -1,6 +1,15 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Product } from "../data/products";
 
+function captureCartEvent(
+  event: "product_added_to_cart" | "product_removed_from_cart" | "cart_quantity_updated",
+  properties: Record<string, number | string>,
+) {
+  void import("../posthog.client").then(({ default: posthog }) => {
+    posthog.capture(event, properties);
+  });
+}
+
 export interface CartItem extends Product {
   quantity: number;
 }
@@ -21,21 +30,38 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const addToCart = (product: Product) => {
+    const existingItem = cart.find((item) => item.id === product.id);
+    const quantity = (existingItem?.quantity ?? 0) + 1;
+
     setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
         return prevCart.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+          item.id === product.id ? { ...item, quantity } : item,
         );
       }
-      return [...prevCart, { ...product, quantity: 1 }];
+      return [...prevCart, { ...product, quantity }];
+    });
+
+    captureCartEvent("product_added_to_cart", {
+      product_id: product.id,
+      product_category: product.category,
+      unit_price: product.price,
+      quantity,
     });
   };
 
   const removeFromCart = (productId: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
+    const item = cart.find((cartItem) => cartItem.id === productId);
+    setCart((prevCart) => prevCart.filter((cartItem) => cartItem.id !== productId));
+
+    if (item) {
+      captureCartEvent("product_removed_from_cart", {
+        product_id: item.id,
+        product_category: item.category,
+        unit_price: item.price,
+        quantity: item.quantity,
+      });
+    }
   };
 
   const updateQuantity = (productId: number, quantity: number) => {
@@ -43,11 +69,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart(productId);
       return;
     }
+
+    const item = cart.find((cartItem) => cartItem.id === productId);
     setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
-      )
+      prevCart.map((cartItem) =>
+        cartItem.id === productId ? { ...cartItem, quantity } : cartItem,
+      ),
     );
+
+    if (item) {
+      captureCartEvent("cart_quantity_updated", {
+        product_id: item.id,
+        product_category: item.category,
+        unit_price: item.price,
+        quantity,
+      });
+    }
   };
 
   const clearCart = () => {

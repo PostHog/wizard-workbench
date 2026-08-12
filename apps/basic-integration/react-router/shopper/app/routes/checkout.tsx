@@ -42,7 +42,16 @@ export default function Checkout() {
     e.preventDefault();
     setIsProcessing(true);
 
+    const subtotal = getCartTotal();
+    const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
+
     setTimeout(() => {
+      void import("../posthog.client").then(({ default: posthog }) => {
+        posthog.capture("order_placed", {
+          item_count: itemCount,
+          order_value: subtotal * 1.1,
+        });
+      });
       clearCart();
       setIsProcessing(false);
       alert("Order placed successfully! Thank you for your purchase.");
