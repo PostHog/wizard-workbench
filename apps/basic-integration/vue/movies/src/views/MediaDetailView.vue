@@ -6,6 +6,11 @@ import { getMedia, getRecommendations } from '../composables/useTMDB'
 import { formatTime, formatVote, getTrailer } from '../composables/utils'
 import MediaCard from '../components/media/MediaCard.vue'
 import CarouselBase from '../components/carousel/CarouselBase.vue'
+import posthog from 'posthog-js'
+
+const posthogEnabled = Boolean(
+  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+)
 
 console.log('MediaDetailView component loaded')
 
@@ -102,6 +107,12 @@ watch(() => route.fullPath, () => {
 function playTrailer() {
   if (trailerUrl.value) {
     showModal.value = true
+    if (posthogEnabled) {
+      posthog.capture('trailer_played', {
+        media_id: id.value,
+        media_type: type.value,
+      })
+    }
   }
 }
 
