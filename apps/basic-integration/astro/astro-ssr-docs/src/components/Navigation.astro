@@ -5,14 +5,28 @@ const isDocs = currentPath.startsWith('/docs');
 
 <nav class="nav">
   <div class="nav-inner">
-    <a href="/" class="nav-logo">
+    <a href="/" class="nav-logo" data-posthog-navigation="home">
       <span>NeuralFlow</span> Docs
     </a>
     <ul class="nav-links">
-      <li><a href="/docs" class:list={["nav-link", { active: isDocs }]}>Documentation</a></li>
-      <li><a href="/docs/api" class="nav-link">API Reference</a></li>
-      <li><a href="https://github.com" class="nav-link" target="_blank">GitHub</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="/docs" class:list={["nav-link", { active: isDocs }]} data-posthog-navigation="documentation">Documentation</a></li>
+      <li><a href="/docs/api" class="nav-link" data-posthog-navigation="api_reference">API Reference</a></li>
+      <li><a href="https://github.com" class="nav-link" target="_blank" data-posthog-navigation="github">GitHub</a></li>
+      <li><a href="#" class="nav-cta" data-posthog-navigation="get_started">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const link = target.closest('[data-posthog-navigation]');
+    if (!link) return;
+
+    window.posthog?.capture('navigation_link_clicked', {
+      destination: link.getAttribute('data-posthog-navigation'),
+    });
+  });
+</script>
