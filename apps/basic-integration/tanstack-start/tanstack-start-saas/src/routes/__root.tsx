@@ -7,10 +7,12 @@ import {
   createRootRoute,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from 'posthog-js/react'
 import * as React from 'react'
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary'
 import { NotFound } from '~/components/NotFound'
 import appCss from '~/styles/app.css?url'
+import { posthog } from '~/utils/posthog-client'
 import { seo } from '~/utils/seo'
 
 export const Route = createRootRoute({
@@ -64,8 +66,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
-        <TanStackRouterDevtools position="bottom-right" />
+        <PostHogProvider client={posthog}>
+          {children}
+          <TanStackRouterDevtools position="bottom-right" />
+        </PostHogProvider>
         <Scripts />
       </body>
     </html>
