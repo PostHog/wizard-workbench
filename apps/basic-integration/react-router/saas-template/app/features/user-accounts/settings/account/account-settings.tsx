@@ -57,6 +57,11 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
     <Form
       encType="multipart/form-data"
       method="POST"
+      onSubmit={() => {
+        void import("posthog-js").then(({ default: posthog }) => {
+          posthog.capture("account_settings_saved");
+        });
+      }}
       {...form.props}
       aria-describedby={
         form.errors && form.errors.length > 0

@@ -39,6 +39,12 @@ export function NavUser({ user }: NavUserProps) {
   });
   const hydrated = useHydrated();
 
+  const handleLogout = () => {
+    void import("posthog-js").then(({ default: posthog }) => {
+      posthog.reset();
+    });
+  };
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -121,6 +127,7 @@ export function NavUser({ user }: NavUserProps) {
                   <button
                     className="w-full"
                     name="intent"
+                    onClick={handleLogout}
                     type="submit"
                     value="logout"
                   />

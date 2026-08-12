@@ -47,7 +47,15 @@ export function ContactSalesTeam({
         </CardDescription>
       </CardHeader>
 
-      <Form method="POST" {...form.props}>
+      <Form
+        method="POST"
+        onSubmit={() => {
+          void import("posthog-js").then(({ default: posthog }) => {
+            posthog.capture("sales_contact_requested");
+          });
+        }}
+        {...form.props}
+      >
         <FieldSet className="space-y-6" disabled={isContactingSales}>
           <CardContent className="space-y-6">
             <Field data-invalid={fields.firstName.ariaInvalid}>

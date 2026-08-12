@@ -137,6 +137,11 @@ function DeleteOrganizationDialogComponent({
             }
             form={form.props.id}
             name="intent"
+            onClick={() => {
+              void import("posthog-js").then(({ default: posthog }) => {
+                posthog.capture("organization_deletion_requested");
+              });
+            }}
             type="submit"
             value={DELETE_ORGANIZATION_INTENT}
             variant="destructive"

@@ -627,7 +627,15 @@ export function BillingPage({
                 {t("cancelSubscriptionModal.changePlan")}
               </Button>
 
-              <Form method="POST" replace>
+              <Form
+                method="POST"
+                onSubmit={() => {
+                  void import("posthog-js").then(({ default: posthog }) => {
+                    posthog.capture("subscription_cancellation_requested");
+                  });
+                }}
+                replace
+              >
                 <Button
                   disabled={isSubmitting}
                   name="intent"

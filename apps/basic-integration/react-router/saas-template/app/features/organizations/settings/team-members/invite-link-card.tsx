@@ -160,7 +160,16 @@ export function InviteLinkCard({
 
           <CardFooter className="flex-col items-stretch">
             <div className="flex items-center gap-2">
-              <Form className="grow" method="POST" replace>
+              <Form
+                className="grow"
+                method="POST"
+                onSubmit={() => {
+                  void import("posthog-js").then(({ default: posthog }) => {
+                    posthog.capture("invite_link_created");
+                  });
+                }}
+                replace
+              >
                 <Button
                   aria-describedby="link-regenerate-warning"
                   className="w-full"
@@ -215,7 +224,16 @@ export function InviteLinkCard({
         </>
       ) : (
         <CardFooter>
-          <Form className="w-full" method="POST" replace>
+          <Form
+            className="w-full"
+            method="POST"
+            onSubmit={() => {
+              void import("posthog-js").then(({ default: posthog }) => {
+                posthog.capture("invite_link_created");
+              });
+            }}
+            replace
+          >
             <Button
               className="w-full"
               disabled={disabled}

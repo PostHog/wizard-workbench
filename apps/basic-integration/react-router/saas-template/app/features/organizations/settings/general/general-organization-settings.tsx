@@ -85,6 +85,11 @@ export function GeneralOrganizationSettings({
     <Form
       encType="multipart/form-data"
       method="POST"
+      onSubmit={() => {
+        void import("posthog-js").then(({ default: posthog }) => {
+          posthog.capture("organization_settings_saved");
+        });
+      }}
       {...form.props}
       aria-describedby={
         form.errors && form.errors.length > 0

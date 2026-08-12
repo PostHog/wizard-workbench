@@ -93,6 +93,11 @@ export default function OrganizationOnboardingRoute({
     <Form
       encType="multipart/form-data"
       method="POST"
+      onSubmit={() => {
+        void import("posthog-js").then(({ default: posthog }) => {
+          posthog.capture("organization_created");
+        });
+      }}
       {...form.props}
       aria-describedby={
         form.errors && form.errors.length > 0
