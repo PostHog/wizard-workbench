@@ -1,5 +1,5 @@
 from flask import render_template, request
-from app import db
+from app import db, posthog_client
 from app.errors import bp
 from app.api.errors import error_response as api_error_response
 
@@ -18,6 +18,8 @@ def not_found_error(error):
 
 @bp.app_errorhandler(500)
 def internal_error(error):
+    if posthog_client:
+        posthog_client.capture_exception(error)
     db.session.rollback()
     if wants_json_response():
         return api_error_response(500)
