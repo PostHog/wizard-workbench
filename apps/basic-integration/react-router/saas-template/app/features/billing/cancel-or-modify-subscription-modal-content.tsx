@@ -29,6 +29,7 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { posthog } from "~/utils/posthog.client";
 
 export type CancelOrModifySubscriptionModalContentProps = {
   canCancelSubscription: boolean;
@@ -119,7 +120,11 @@ export function CancelOrModifySubscriptionModalContent({
 
   return (
     <>
-      <Form method="post" replace>
+      <Form
+        method="post"
+        onSubmit={() => posthog.capture("subscription_change_submitted")}
+        replace
+      >
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"

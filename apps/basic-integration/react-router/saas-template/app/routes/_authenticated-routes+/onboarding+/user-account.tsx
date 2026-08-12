@@ -30,6 +30,7 @@ import { onboardingUserAccountAction } from "~/features/onboarding/user-account/
 import { ONBOARDING_USER_ACCOUNT_INTENT } from "~/features/onboarding/user-account/onboarding-user-account-constants";
 import { onboardingUserAccountSchema } from "~/features/onboarding/user-account/onboarding-user-account-schemas";
 import { getPageTitle } from "~/utils/get-page-title.server";
+import { posthog } from "~/utils/posthog.client";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const auth = await requireUserNeedsOnboarding({
@@ -75,7 +76,12 @@ export default function UserAccountOnboardingRoute({
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <Form encType="multipart/form-data" method="POST" {...form.props}>
+    <Form
+      {...form.props}
+      encType="multipart/form-data"
+      method="POST"
+      onSubmit={() => posthog.capture("onboarding_profile_submitted")}
+    >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>
           <div className="flex flex-col gap-1">

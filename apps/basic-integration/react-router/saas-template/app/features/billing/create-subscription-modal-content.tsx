@@ -30,6 +30,7 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { posthog } from "~/utils/posthog.client";
 
 export type CreateSubscriptionModalContentProps = {
   /** how many seats your org is currently using */
@@ -107,7 +108,11 @@ export function CreateSubscriptionModalContent({
   );
 
   return (
-    <Form method="post" replace>
+    <Form
+      method="post"
+      onSubmit={() => posthog.capture("subscription_checkout_started")}
+      replace
+    >
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>

@@ -52,6 +52,9 @@ export function getEnv() {
   return {
     ALLOW_INDEXING: process.env.ALLOW_INDEXING,
     MODE: process.env.NODE_ENV,
+    VITE_PUBLIC_POSTHOG_HOST: process.env.VITE_PUBLIC_POSTHOG_HOST,
+    VITE_PUBLIC_POSTHOG_PROJECT_TOKEN:
+      process.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN,
   };
 }
 

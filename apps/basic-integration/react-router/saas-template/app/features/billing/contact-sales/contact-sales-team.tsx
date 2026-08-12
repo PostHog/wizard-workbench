@@ -19,6 +19,7 @@ import { Field, FieldError, FieldLabel, FieldSet } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import { Textarea } from "~/components/ui/textarea";
+import { posthog } from "~/utils/posthog.client";
 
 export type ContactSalesTeamProps = {
   isContactingSales?: boolean;
@@ -47,7 +48,11 @@ export function ContactSalesTeam({
         </CardDescription>
       </CardHeader>
 
-      <Form method="POST" {...form.props}>
+      <Form
+        {...form.props}
+        method="POST"
+        onSubmit={() => posthog.capture("contact_sales_submitted")}
+      >
         <FieldSet className="space-y-6" disabled={isContactingSales}>
           <CardContent className="space-y-6">
             <Field data-invalid={fields.firstName.ariaInvalid}>
