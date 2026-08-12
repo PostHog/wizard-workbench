@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { getPostHogClient } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -26,6 +27,16 @@ export const actions = {
     if (error) {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
+    }
+
+    const posthog = getPostHogClient()
+    if (posthog) {
+      posthog.capture({
+        distinctId: session.user.id,
+        event: "email_subscription_updated",
+        properties: { unsubscribed: newUnsubscribedStatus },
+      })
+      await posthog.flush()
     }
 
     return {
@@ -69,6 +80,15 @@ export const actions = {
         errorMessage: "Unknown error. If this persists please contact us.",
         email,
       })
+    }
+
+    const posthog = getPostHogClient()
+    if (posthog) {
+      posthog.capture({
+        distinctId: session.user.id,
+        event: "email_change_requested",
+      })
+      await posthog.flush()
     }
 
     return {
@@ -172,6 +192,16 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    if (posthog) {
+      posthog.capture({
+        distinctId: session.user.id,
+        event: "password_updated",
+        properties: { recovery_flow: Boolean(isRecoverySession) },
+      })
+      await posthog.flush()
+    }
+
     return {
       newPassword1,
       newPassword2,
@@ -219,6 +249,15 @@ export const actions = {
         errorMessage: "Unknown error. If this persists please contact us.",
         currentPassword,
       })
+    }
+
+    const posthog = getPostHogClient()
+    if (posthog) {
+      posthog.capture({
+        distinctId: user.id,
+        event: "account_deleted",
+      })
+      await posthog.flush()
     }
 
     await supabase.auth.signOut()
@@ -320,6 +359,16 @@ export const actions = {
           WebsiteBaseUrl: WebsiteBaseUrl,
         },
       })
+    }
+
+    const posthog = getPostHogClient()
+    if (posthog) {
+      posthog.capture({
+        distinctId: user.id,
+        event: "profile_saved",
+        properties: { created: newProfile },
+      })
+      await posthog.flush()
     }
 
     return {
