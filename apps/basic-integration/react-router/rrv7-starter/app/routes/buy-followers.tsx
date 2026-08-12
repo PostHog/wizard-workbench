@@ -34,6 +34,15 @@ export default function BuyFollowers() {
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+
+      void import('@/lib/posthog.client').then(({ initializePostHog }) => {
+        initializePostHog()?.capture('fake_followers_purchased', {
+          package_amount: pkg.amount,
+          bonus_followers: pkg.bonus,
+          total_followers: totalFollowers,
+          price: pkg.price,
+        })
+      })
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
@@ -75,7 +84,18 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => {
+                  setSelectedPackage(index)
+
+                  void import('@/lib/posthog.client').then(({ initializePostHog }) => {
+                    initializePostHog()?.capture('follower_package_selected', {
+                      package_amount: pkg.amount,
+                      bonus_followers: pkg.bonus,
+                      total_followers: totalFollowers,
+                      price: pkg.price,
+                    })
+                  })
+                }}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected
