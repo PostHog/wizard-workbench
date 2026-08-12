@@ -14,6 +14,7 @@ gunicorn
 langdetect
 PyJWT
 python-dotenv
+posthog==7.38.4
 redis
 requests
 rq
