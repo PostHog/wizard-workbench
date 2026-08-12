@@ -8,6 +8,7 @@
 import Combine
 import Domain
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 import UIKit
@@ -47,6 +48,7 @@ class NavigationStore: NavigationStoreProtocol {
     }
 
     func showPost(_ post: Domain.Post) {
+        PostHogSDK.shared.capture("post_opened", properties: ["post_type": post.postType.rawValue])
         embeddedBrowserURL = nil
         detailPath.removeAll()
         selectedPost = post
