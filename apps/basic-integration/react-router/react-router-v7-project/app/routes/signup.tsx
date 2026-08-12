@@ -3,6 +3,18 @@ import { useNavigate, Link } from 'react-router'
 import { useAuth } from '~/context/AuthContext'
 import type { Route } from './+types/signup'
 
+async function capturePostHog(event: string) {
+  if (
+    !import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+    !import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    return
+  }
+
+  const { default: posthog } = await import('posthog-js')
+  posthog.capture(event)
+}
+
 export default function Signup() {
   const navigate = useNavigate()
   const { signup } = useAuth()
@@ -18,12 +30,13 @@ export default function Signup() {
     setIsLoading(true)
 
     // Fake loading delay
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const newUser = signup(username, email, password)
         setIsLoading(false)
 
         if (newUser) {
+          await capturePostHog('user_signed_up')
           navigate('/profile')
         } else {
           setError('Signup failed! (But this is fake, so it should always work)')

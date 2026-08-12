@@ -3,6 +3,18 @@ import { useAuth } from '~/context/AuthContext'
 import { getCurrentUser, getAvatarUrl } from '~/lib/utils/auth'
 import type { Route } from './+types/profile'
 
+async function capturePostHog(event: string) {
+  if (
+    !import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+    !import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    return
+  }
+
+  const { default: posthog } = await import('posthog-js')
+  posthog.capture(event)
+}
+
 export default function Profile() {
   const { user, logout } = useAuth()
 
@@ -11,6 +23,11 @@ export default function Profile() {
   }
 
   const currentUser = getCurrentUser() || user
+
+  const handleLogout = async () => {
+    await capturePostHog('user_logged_out')
+    logout()
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
@@ -64,7 +81,7 @@ export default function Profile() {
                   View Stats
                 </Link>
                 <button
-                  onClick={logout}
+                  onClick={() => void handleLogout()}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
                 >
                   Logout

@@ -4,6 +4,18 @@ import { useAuth } from '~/context/AuthContext'
 import { getCurrentUser } from '~/lib/utils/auth'
 import type { Route } from './+types/login'
 
+async function capturePostHog(event: string) {
+  if (
+    !import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+    !import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    return
+  }
+
+  const { default: posthog } = await import('posthog-js')
+  posthog.capture(event)
+}
+
 export default function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
@@ -18,11 +30,12 @@ export default function Login() {
     setIsLoading(true)
 
     // Fake loading delay for realism
-    setTimeout(() => {
+    setTimeout(async () => {
       const success = login(username, password)
       setIsLoading(false)
 
       if (success) {
+        await capturePostHog('user_logged_in')
         navigate('/profile')
       } else {
         setError('Invalid credentials! (But this is fake, so any password works if the username exists)')
