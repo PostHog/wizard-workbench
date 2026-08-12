@@ -6,6 +6,7 @@ import {
   Scripts,
   createRootRoute,
 } from '@tanstack/react-router'
+import { PostHogProvider } from '@posthog/react'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import * as React from 'react'
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary'
@@ -58,14 +59,47 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const projectToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+  const host = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  const isConfigured = Boolean(projectToken && host)
+
+  if (!isConfigured && import.meta.env.DEV) {
+    const missingVariable = projectToken
+      ? 'VITE_PUBLIC_POSTHOG_HOST'
+      : 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN'
+    throw new Error(
+      `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+    )
+  }
+
+  const content = (
+    <>
+      {children}
+      <TanStackRouterDevtools position="bottom-right" />
+    </>
+  )
+
   return (
     <html>
       <head>
         <HeadContent />
       </head>
       <body>
-        {children}
-        <TanStackRouterDevtools position="bottom-right" />
+        {isConfigured ? (
+          <PostHogProvider
+            apiKey={projectToken}
+            options={{
+              api_host: host,
+              defaults: '2025-05-24',
+              capture_exceptions: true,
+              debug: import.meta.env.DEV,
+            }}
+          >
+            {content}
+          </PostHogProvider>
+        ) : (
+          content
+        )}
         <Scripts />
       </body>
     </html>
