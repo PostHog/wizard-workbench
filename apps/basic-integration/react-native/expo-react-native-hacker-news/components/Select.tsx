@@ -9,6 +9,7 @@ import Animated, {
 import { BlurView } from "expo-blur";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
+import { usePostHog } from "posthog-react-native";
 import { ListFilter, LucideIcon } from "lucide-react-native";
 
 import { Colors } from "@/constants/Colors";
@@ -38,6 +39,7 @@ export const StoriesSelect = ({
   defaultOpen = false,
 }: Props) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const posthog = usePostHog();
 
   const selectedOption = useMemo(
     () => options.find((option) => option.id === value),
@@ -86,6 +88,9 @@ export const StoriesSelect = ({
                 key={item.id}
                 style={[styles.option, isSelected && styles.optionSelected]}
                 onPress={() => {
+                  posthog.capture("story_feed_changed", {
+                    story_type: item.id,
+                  });
                   onChange(item.id);
                   setIsOpen(false);
                 }}
