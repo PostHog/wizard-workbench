@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
@@ -39,6 +40,12 @@ class SocialiteController extends Controller
         }
 
         Auth::login($user);
+
+        $posthog = app(PostHogService::class);
+        $posthog->identify((string) $user->getKey(), $user->getPostHogProperties());
+        $posthog->capture((string) $user->getKey(), 'user_authenticated_with_social_provider', [
+            'provider' => $provider,
+        ]);
 
         return redirect('/dashboard');
     }
