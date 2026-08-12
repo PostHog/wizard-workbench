@@ -32,6 +32,7 @@ import {
 import { useMutation } from './useMutation'
 import type { NotFoundRouteProps } from '@tanstack/react-router'
 import type { Invoice } from './mockTodos'
+import posthog from './posthog'
 import './styles.css'
 
 //
@@ -435,7 +436,10 @@ const invoicesIndexRoute = createRoute({
 function InvoicesIndexComponent() {
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: invoice }) => {
+      posthog?.capture('invoice_created', { invoice_id: invoice.id })
+      return router.invalidate()
+    },
   })
 
   return (
@@ -519,7 +523,10 @@ function InvoiceComponent() {
   const invoice = invoiceRoute.useLoaderData()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: invoice }) => {
+      posthog?.capture('invoice_updated', { invoice_id: invoice?.id })
+      return router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -1271,8 +1278,10 @@ const auth: Auth = {
   login: (username: string) => {
     auth.username = username
     auth.status = 'loggedIn'
+    posthog?.capture('user_logged_in')
   },
   logout: () => {
+    posthog?.capture('user_logged_out')
     auth.status = 'loggedOut'
     auth.username = undefined
   },
