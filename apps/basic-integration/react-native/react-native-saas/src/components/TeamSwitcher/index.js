@@ -27,7 +27,7 @@ export default function TeamSwitcher() {
             key={team.id}
             style={styles.teamContainer}
             onPress={() => {
-              dispatch(selectTeam(team));
+              dispatch(selectTeam(team, 'team_switcher'));
             }}
           >
             <Image

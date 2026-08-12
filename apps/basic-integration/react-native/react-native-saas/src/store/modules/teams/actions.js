@@ -11,10 +11,10 @@ export function getTeamsSuccess(data) {
   };
 }
 
-export function selectTeam(team) {
+export function selectTeam(team, source) {
   return {
     type: '@teams/SELECT_TEAM',
-    payload: { team },
+    payload: { team, source },
   };
 }
 

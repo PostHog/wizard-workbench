@@ -2,6 +2,7 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoMembers } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import { getMembersSuccess, inviteMemberSuccess } from './actions';
 
@@ -28,12 +29,22 @@ export function* updateMember({ payload }) {
   try {
     // Demo mode
     if (isDemoMode(token)) {
+      if (posthog) {
+        posthog.capture('member_roles_updated', {
+          update_method: 'demo',
+        });
+      }
       toast.showSuccess('Member updated');
       return;
     }
 
     yield call(api.put, `members/${id}`, { roles: roles.map(role => role.id) });
 
+    if (posthog) {
+      posthog.capture('member_roles_updated', {
+        update_method: 'api',
+      });
+    }
     toast.showSuccess('Member updated');
   } catch (err) {
     toast.showError('Error updating member');
@@ -54,12 +65,22 @@ export function* inviteMember({ payload }) {
         roles: [{ id: 3, name: 'Viewer' }],
       };
       yield put(inviteMemberSuccess(newMember));
+      if (posthog) {
+        posthog.capture('member_invited', {
+          invitation_method: 'demo',
+        });
+      }
       toast.showSuccess('Member added');
       return;
     }
 
     yield call(api.post, 'invites', { invites: [email] });
 
+    if (posthog) {
+      posthog.capture('member_invited', {
+        invitation_method: 'api',
+      });
+    }
     toast.showSuccess('Invite sent');
   } catch (err) {
     toast.showError('Error sending invite');
