@@ -7,6 +7,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -85,6 +86,14 @@ function PricingCard({
         });
 
         const result = await response.json();
+
+        if (response.ok) {
+          posthog.capture('checkout_started', {
+            plan_name: name,
+            billing_interval: interval,
+            trial_days: trialDays
+          });
+        }
 
         if (result.redirectTo) {
           router.push(result.redirectTo);

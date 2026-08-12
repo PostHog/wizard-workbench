@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
 
@@ -24,16 +25,21 @@ function UserMenu() {
 
   async function handleSignOut() {
     try {
-      // Call sign-out API to delete HttpOnly session cookie
-      await fetch('/api/auth/sign-out', {
+      const response = await fetch('/api/auth/sign-out', {
         method: 'POST'
       });
 
-      // Clear SWR cache
+      if (!response.ok) {
+        throw new Error('Failed to sign out');
+      }
+
+      posthog.capture('user_signed_out', {
+        $flush: () => posthog.reset()
+      });
+
       mutate('/api/user', null, false);
       mutate('/api/team', null, false);
 
-      // Redirect to home
       router.push('/');
     } catch (error) {
       console.error('Sign out error:', error);
