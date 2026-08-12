@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { posthog } from './posthog.js';
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -47,6 +48,12 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      if (posthog) {
+        posthog.capture({
+          event: 'group_created',
+          properties: { group_id: group.id },
+        });
+      }
       return json(res, 201, group);
     }
 
@@ -90,6 +97,12 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_created',
+          properties: { contact_id: contact.id, group_id: contact.group_id },
+        });
+      }
       return json(res, 201, contact);
     }
 
@@ -114,6 +127,12 @@ const server = createServer(async (req, res) => {
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_updated',
+          properties: { contact_id: contact.id, group_id: contact.group_id },
+        });
+      }
       return json(res, 200, contact);
     }
 
@@ -123,13 +142,22 @@ const server = createServer(async (req, res) => {
       const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
-      contacts.splice(index, 1);
+      const [contact] = contacts.splice(index, 1);
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_deleted',
+          properties: { contact_id: contact.id, group_id: contact.group_id },
+        });
+      }
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    if (posthog) {
+      posthog.captureException(err);
+    }
     json(res, 500, { error: 'Internal server error' });
   }
 });
@@ -139,3 +167,14 @@ const PORT = process.env.PORT || 3004;
 server.listen(PORT, () => {
   console.log(`Native HTTP contacts API running on http://localhost:${PORT}`);
 });
+
+async function shutdown() {
+  server.close(async () => {
+    if (posthog) {
+      await posthog.shutdown();
+    }
+  });
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
