@@ -5,6 +5,11 @@ class Boards::PublicationsController < ApplicationController
 
   def create
     @board.publish
+    PostHog.capture(
+      distinct_id: Current.identity.posthog_distinct_id,
+      event: "board_published",
+      properties: { board_id: @board.id }
+    )
   end
 
   def destroy
