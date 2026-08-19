@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute } from 'vue-router'
 import { searchShows } from '../composables/useTMDB'
 import type { Media } from '../types'
@@ -10,12 +11,15 @@ const query = ref('')
 const results = ref<Media[]>([])
 const loading = ref(false)
 
-const search = async () => {
+const search = async (isUserInitiated = false) => {
   if (!query.value.trim()) {
     results.value = []
     return
   }
 
+  if (isUserInitiated) {
+    posthog.capture('search_submitted')
+  }
   loading.value = true
   try {
     const response = await searchShows(query.value, 1)
@@ -33,7 +37,7 @@ const search = async () => {
 watch(() => route.query.q, (newQuery) => {
   if (newQuery) {
     query.value = String(newQuery)
-    search()
+    search(false)
   }
 }, { immediate: true })
 </script>
@@ -43,7 +47,7 @@ watch(() => route.query.q, (newQuery) => {
     <div class="max-w-6xl mx-auto">
       <h1 class="text-3xl font-bold mb-6">Search</h1>
       
-      <form @submit.prevent="search" class="mb-8">
+      <form @submit.prevent="search(true)" class="mb-8">
         <div class="flex gap-4">
           <input
             v-model="query"
