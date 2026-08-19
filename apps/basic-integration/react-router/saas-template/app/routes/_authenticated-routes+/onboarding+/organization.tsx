@@ -1,6 +1,7 @@
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconBuilding } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 import { data, Form, useNavigation } from "react-router";
 
@@ -100,6 +101,9 @@ export default function OrganizationOnboardingRoute({
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      onSubmit={() => {
+        posthog.capture("organization_onboarding_submitted");
+      }}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>

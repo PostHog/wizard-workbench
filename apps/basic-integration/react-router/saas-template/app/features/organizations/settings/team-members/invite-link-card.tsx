@@ -4,6 +4,7 @@ import {
   IconCopy,
 } from "@tabler/icons-react";
 import copyToClipboard from "copy-to-clipboard";
+import posthog from "posthog-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
@@ -112,6 +113,7 @@ export function InviteLinkCard({
                 )}
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
+                  posthog.capture("invite_link_copied");
                   setLinkCopied(true);
                 }}
                 size="icon"
@@ -166,6 +168,9 @@ export function InviteLinkCard({
                   className="w-full"
                   disabled={disabled}
                   name="intent"
+                  onClick={() => {
+                    posthog.capture("invite_link_regenerated");
+                  }}
                   type="submit"
                   value="createNewInviteLink"
                 >
@@ -184,6 +189,9 @@ export function InviteLinkCard({
                 <Button
                   disabled={isDeactivatingLink}
                   name="intent"
+                  onClick={() => {
+                    posthog.capture("invite_link_deactivated");
+                  }}
                   type="submit"
                   value="deactivateInviteLink"
                   variant="outline"
@@ -220,6 +228,9 @@ export function InviteLinkCard({
               className="w-full"
               disabled={disabled}
               name="intent"
+              onClick={() => {
+                posthog.capture("invite_link_regenerated");
+              }}
               type="submit"
               value="createNewInviteLink"
             >

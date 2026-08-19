@@ -1,4 +1,5 @@
 import { IconCheck } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -58,6 +59,18 @@ export function CancelOrModifySubscriptionModalContent({
   const isSubmitting =
     isSwitchingToLow || isSwitchingToMid || isSwitchingToHigh;
 
+  const captureSubscriptionChange = (
+    interval: "monthly" | "annual",
+    tier: "low" | "mid" | "high",
+  ) => {
+    posthog.capture("subscription_change_requested", {
+      current_billing_interval: currentTierInterval,
+      current_plan_tier: currentTier,
+      target_billing_interval: interval,
+      target_plan_tier: tier,
+    });
+  };
+
   // TODO: change to "Tier" - high, low, mid, enterprise
   const getFeatures = (key: string): string[] =>
     t(`plans.${key}.features`, "", { returnObjects: true }) as string[];
@@ -81,9 +94,13 @@ export function CancelOrModifySubscriptionModalContent({
     if (isCurrentTier) {
       if (interval !== currentTierInterval) {
         return interval === "annual"
-          ? { children: tModal("switchToAnnualButton") }
+          ? {
+              children: tModal("switchToAnnualButton"),
+              onClick: () => captureSubscriptionChange(interval, tier),
+            }
           : {
               children: tModal("switchToMonthlyButton"),
+              onClick: () => captureSubscriptionChange(interval, tier),
               variant: "outline",
             };
       }
@@ -112,9 +129,12 @@ export function CancelOrModifySubscriptionModalContent({
     }
 
     // 3. Default static buttons for upgrade vs downgrade
-    return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+    return {
+      children: isUpgrade ? tModal("upgradeButton") : tModal("downgradeButton"),
+      disabled: isUpgrade ? isSubmitting : undefined,
+      onClick: () => captureSubscriptionChange(interval, tier),
+      variant: isUpgrade ? undefined : "outline",
+    };
   };
 
   return (
@@ -515,7 +535,13 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={(event) => {
+                  posthog.capture("subscription_cancellation_requested", {
+                    current_billing_interval: currentTierInterval,
+                    current_plan_tier: currentTier,
+                  });
+                  onCancelSubscriptionClick?.(event);
+                }}
                 type="button"
                 variant="outline"
               >

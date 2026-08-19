@@ -1,4 +1,5 @@
 import { useForm } from "@conform-to/react/future";
+import posthog from "posthog-js";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
@@ -137,6 +138,9 @@ function DeleteOrganizationDialogComponent({
             }
             form={form.props.id}
             name="intent"
+            onClick={() => {
+              posthog.capture("organization_deletion_confirmed");
+            }}
             type="submit"
             value={DELETE_ORGANIZATION_INTENT}
             variant="destructive"

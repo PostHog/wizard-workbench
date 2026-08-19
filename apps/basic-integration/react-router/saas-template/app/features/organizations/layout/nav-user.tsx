@@ -3,6 +3,7 @@ import {
   IconRosetteDiscountCheck,
   IconSelector,
 } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 import { Form, href, Link } from "react-router";
 import { useHydrated } from "remix-utils/use-hydrated";
@@ -34,6 +35,9 @@ export type NavUserProps = {
 
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar();
+  const handleLogout = () => {
+    posthog.reset();
+  };
   const { t } = useTranslation("organizations", {
     keyPrefix: "layout.navUser",
   });
@@ -121,6 +125,7 @@ export function NavUser({ user }: NavUserProps) {
                   <button
                     className="w-full"
                     name="intent"
+                    onClick={handleLogout}
                     type="submit"
                     value="logout"
                   />

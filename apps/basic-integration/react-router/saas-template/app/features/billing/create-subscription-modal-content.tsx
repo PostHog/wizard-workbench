@@ -1,5 +1,6 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
 import { IconCheck } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import type { ComponentProps } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -97,6 +98,12 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () => {
+        posthog.capture("checkout_started", {
+          billing_interval: interval,
+          plan_tier: tier,
+        });
+      },
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };
