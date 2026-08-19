@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from app.config import get_settings
 from app.dependencies import CurrentUser, DbSession, RequiredUser, create_session_token
 from app.models import User
+from app.posthog import get_posthog_client
 
 router = APIRouter()
 settings = get_settings()
@@ -34,6 +35,17 @@ async def login(
     user = User.authenticate(db, email, password)
 
     if user:
+        posthog_client = get_posthog_client()
+        if posthog_client is not None:
+            with posthog_client.new_context(fresh=True):
+                posthog_client.identify_context(str(user.id))
+                posthog_client.set(
+                    properties={"email": user.email, "credits": user.credits}
+                )
+                posthog_client.capture(
+                    "user_logged_in", properties={"login_method": "password"}
+                )
+
         response = RedirectResponse(url="/dashboard", status_code=302)
         response.set_cookie(
             key="session_token",
@@ -71,6 +83,17 @@ async def signup(
 
     user = User.create(db, email=email, password=password, credits=settings.default_credits)
 
+    posthog_client = get_posthog_client()
+    if posthog_client is not None:
+        with posthog_client.new_context(fresh=True):
+            posthog_client.identify_context(str(user.id))
+            posthog_client.set(
+                properties={"email": user.email, "credits": user.credits}
+            )
+            posthog_client.capture(
+                "user_signed_up", properties={"signup_method": "form"}
+            )
+
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(
         key="session_token",
@@ -84,6 +107,10 @@ async def signup(
 @router.get("/logout")
 async def logout(current_user: RequiredUser):
     """Logout user."""
+    posthog_client = get_posthog_client()
+    if posthog_client is not None:
+        posthog_client.capture("user_logged_out")
+
     response = RedirectResponse(url="/", status_code=302)
     response.delete_cookie(key="session_token")
     return response
