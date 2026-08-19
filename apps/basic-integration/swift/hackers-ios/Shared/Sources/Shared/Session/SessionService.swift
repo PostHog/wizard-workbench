@@ -67,11 +67,16 @@ public final class SessionService: AuthenticationServiceProtocol {
         return .authenticated
     }
 
-    public func unauthenticate() {
+    public func unauthenticate(completion: @escaping @MainActor () -> Void = {}) {
         Task { [weak self] in
             guard let self else { return }
-            try? await authenticationUseCase.logout()
-            await MainActor.run { self.user = nil }
+            do {
+                try await authenticationUseCase.logout()
+                await MainActor.run {
+                    self.user = nil
+                    completion()
+                }
+            } catch {}
         }
     }
 

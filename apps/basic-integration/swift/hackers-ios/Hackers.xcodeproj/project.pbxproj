@@ -20,6 +20,7 @@
 		24F39F8B18AFB1150055F8DC /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 24F39F8A18AFB1150055F8DC /* CoreGraphics.framework */; };
 		24F39F8D18AFB1150055F8DC /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 24F39F8C18AFB1150055F8DC /* UIKit.framework */; };
 		DA78360FD99A4A1D9C1E759C /* Authentication in Frameworks */ = {isa = PBXBuildFile; productRef = B2F5BEA03AC34B9DB788D8E2 /* Authentication */; };
+		E3A21F019F8C4B4E8D7A6C10 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = E3A21F029F8C4B4E8D7A6C10 /* PostHog */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +54,7 @@
 		24F39F8818AFB1150055F8DC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		24F39F8A18AFB1150055F8DC /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		24F39F8C18AFB1150055F8DC /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		E3A21F049F8C4B4E8D7A6C10 /* posthog.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Hackers.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/configuration/posthog.xcconfig; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -90,6 +92,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E3A21F019F8C4B4E8D7A6C10 /* PostHog in Frameworks */,
 				248256FE2E59D2660068E91E /* Feed in Frameworks */,
 				248256F82E59D2460068E91E /* Domain in Frameworks */,
 				241E802E2E55B5F40013EEA1 /* Comments in Frameworks */,
@@ -111,6 +114,7 @@
 		24F39F7C18AFB1150055F8DC = {
 			isa = PBXGroup;
 			children = (
+				E3A21F049F8C4B4E8D7A6C10 /* posthog.xcconfig */,
 				241E7A262E4CB2830013EEA1 /* App */,
 				241E7A5C2E4CB28F0013EEA1 /* Extensions */,
 				2432F7502E7C2F5200BA0D54 /* Assets */,
@@ -183,6 +187,7 @@
 			);
 			name = Hackers;
 			packageProductDependencies = (
+				E3A21F029F8C4B4E8D7A6C10 /* PostHog */,
 				2406B38628AD083500CB396B /* SwiftSoup */,
 				241E7B402E511BC20013EEA1 /* Data */,
 				241E7B482E51D1C80013EEA1 /* Settings */,
@@ -227,6 +232,7 @@
 			);
 			mainGroup = 24F39F7C18AFB1150055F8DC;
 			packageReferences = (
+				E3A21F039F8C4B4E8D7A6C10 /* XCRemoteSwiftPackageReference "PostHog" */,
 				2406B38528AD083500CB396B /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 				241E7B3F2E511BC20013EEA1 /* XCLocalSwiftPackageReference "Data" */,
 				241E7B422E511BE50013EEA1 /* XCLocalSwiftPackageReference "DesignSystem" */,
@@ -492,6 +498,7 @@
 		};
 		24F39FB218AFB1150055F8DC /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E3A21F049F8C4B4E8D7A6C10 /* posthog.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon";
 				CLANG_ENABLE_MODULES = YES;
@@ -510,6 +517,8 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 5.2.3;
+				POSTHOG_HOST = "$(POSTHOG_HOST)";
+				POSTHOG_PROJECT_TOKEN = "$(POSTHOG_PROJECT_TOKEN)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.weiranzhang.Hackers;
 				PRODUCT_NAME = Hackers;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -523,6 +532,7 @@
 		};
 		24F39FB318AFB1150055F8DC /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E3A21F049F8C4B4E8D7A6C10 /* posthog.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon";
 				CLANG_ENABLE_MODULES = YES;
@@ -541,6 +551,8 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 5.2.3;
+				POSTHOG_HOST = "$(POSTHOG_HOST)";
+				POSTHOG_PROJECT_TOKEN = "$(POSTHOG_PROJECT_TOKEN)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.weiranzhang.Hackers;
 				PRODUCT_NAME = Hackers;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -623,6 +635,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		E3A21F039F8C4B4E8D7A6C10 /* XCRemoteSwiftPackageReference "PostHog" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.59.3;
+			};
+		};
 		2406B38528AD083500CB396B /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/scinfu/SwiftSoup.git";
@@ -634,6 +654,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		E3A21F029F8C4B4E8D7A6C10 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E3A21F039F8C4B4E8D7A6C10 /* XCRemoteSwiftPackageReference "PostHog" */;
+			productName = PostHog;
+		};
 		2406B38628AD083500CB396B /* SwiftSoup */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 2406B38528AD083500CB396B /* XCRemoteSwiftPackageReference "SwiftSoup" */;
