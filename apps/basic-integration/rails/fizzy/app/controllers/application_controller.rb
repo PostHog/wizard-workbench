@@ -10,4 +10,13 @@ class ApplicationController < ActionController::Base
   etag { "v1" }
   stale_when_importmap_changes
   allow_browser versions: :modern
+
+  private
+    def posthog_enabled?
+      Rails.application.config.x.posthog.enabled
+    end
+
+    def current_user
+      Current.user
+    end
 end

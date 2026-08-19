@@ -27,6 +27,13 @@ class BoardsController < ApplicationController
 
   def create
     @board = Board.create! board_params.with_defaults(all_access: true)
+    if posthog_enabled?
+      PostHog.capture(
+        distinct_id: Current.user.posthog_distinct_id,
+        event: "board_created",
+        properties: { board_id: @board.id, all_access: @board.all_access }
+      )
+    end
 
     respond_to do |format|
       format.html { redirect_to board_path(@board) }
