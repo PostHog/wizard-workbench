@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
 
+const posthogConfigured = Boolean(
+  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+);
+
 export async function clientLoader() {
   try {
     // REST Countries API v3.1 requires fields parameter
@@ -138,6 +142,9 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         claimCountry(countryName);
+                        if (posthogConfigured) {
+                          window.posthog.capture('country_claimed', { country_code: country.cca3, region: country.region });
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -151,6 +158,9 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         likeCountry(countryName);
+                        if (posthogConfigured) {
+                          window.posthog.capture('country_liked', { country_code: country.cca3, region: country.region });
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -164,6 +174,9 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         visitCountry(countryName);
+                        if (posthogConfigured) {
+                          window.posthog.capture('country_visited', { country_code: country.cca3, region: country.region });
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
