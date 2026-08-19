@@ -1,6 +1,21 @@
 import Fastify from 'fastify';
+import { posthog } from './posthog.js';
 
 const fastify = Fastify({ logger: true });
+
+fastify.addHook('onClose', async () => {
+  await posthog?.shutdown();
+});
+
+fastify.setErrorHandler((error, request, reply) => {
+  posthog?.captureException(error, undefined, {
+    endpoint: request.routeOptions?.url,
+    method: request.method,
+    status_code: error.statusCode ?? 500,
+  });
+
+  reply.send(error);
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +54,10 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+  posthog?.capture({
+    event: 'post_created',
+    properties: { published: post.published },
+  });
   return reply.status(201).send(post);
 });
 
@@ -67,6 +86,16 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  posthog?.capture({
+    event: 'post_updated',
+    properties: {
+      title_updated: title !== undefined,
+      body_updated: body !== undefined,
+      published_updated: published !== undefined,
+      published: post.published,
+    },
+  });
+
   return post;
 });
 
@@ -78,13 +107,19 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
     return reply.status(404).send({ error: 'Post not found' });
   }
 
-  const postId = posts[index].id;
+  const deletedPost = posts[index];
+  const postId = deletedPost.id;
   posts.splice(index, 1);
 
   // Remove associated comments
   for (let i = comments.length - 1; i >= 0; i--) {
     if (comments[i].post_id === postId) comments.splice(i, 1);
   }
+
+  posthog?.capture({
+    event: 'post_deleted',
+    properties: { published: deletedPost.published },
+  });
 
   return reply.status(204).send();
 });
@@ -111,6 +146,10 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+  posthog?.capture({
+    event: 'comment_created',
+    properties: { post_published: post.published },
+  });
   return reply.status(201).send(comment);
 });
 
