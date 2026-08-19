@@ -5,6 +5,7 @@
   import Fuse from "fuse.js"
   import { goto } from "$app/navigation"
   import { dev } from "$app/environment"
+  import posthog from "posthog-js"
 
   const fuseOptions = {
     keys: [
@@ -139,6 +140,10 @@
         href={result.item.path || "/"}
         id="search-result-{i + 1}"
         class="card my-6 bg-white shadow-xl flex-row overflow-hidden focus:mx-[-10px] focus:my-[-5px] focus:border-4 focus:border-secondary"
+        onclick={() =>
+          posthog.capture("search_result_selected", {
+            result_position: i + 1,
+          })}
       >
         <div class="flex-none w-6 md:w-32 bg-secondary"></div>
         <div class="py-6 px-6">

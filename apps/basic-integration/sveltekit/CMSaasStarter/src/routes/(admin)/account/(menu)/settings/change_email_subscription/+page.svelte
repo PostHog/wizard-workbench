@@ -21,6 +21,7 @@
   successBody={unsubscribed
     ? "You have been re-subscribed to emails"
     : "You have been unsubscribed from emails"}
+  analyticsEvent="email_subscription_changed"
   formTarget="/account/api?/toggleEmailSubscription"
   fields={[]}
 />

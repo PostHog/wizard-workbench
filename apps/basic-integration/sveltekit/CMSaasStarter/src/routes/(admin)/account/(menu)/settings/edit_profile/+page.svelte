@@ -21,6 +21,7 @@
   editable={true}
   title="Edit Profile"
   successTitle="Saved Profile"
+  analyticsEvent="profile_updated"
   formTarget="/account/api?/updateProfile"
   fields={[
     {
