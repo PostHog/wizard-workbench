@@ -13,6 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         //
     })
-    ->withExceptions(function (Exceptions $exceptions) {
-        //
+    ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->report(function (\Throwable $exception): void {
+            app(\App\Services\PostHogService::class)->captureException(
+                $exception,
+                auth()->id() !== null ? (string) auth()->id() : null,
+                [
+                    '$request_method' => request()->method(),
+                    '$request_path' => request()->getPathInfo(),
+                ]
+            );
+        });
     })->create();
