@@ -7,6 +7,7 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
+const { $posthog } = useNuxtApp()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
@@ -21,6 +22,7 @@ function search() {
   currentSearch.value = input.value.toString()
   count.value = undefined
   items.value = []
+  $posthog?.capture('search_performed')
   router.replace({ query: { s: input.value } })
 }
 
