@@ -31,6 +31,7 @@ import com.example.compose.jetchat.MainViewModel
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.android.PostHogAndroid
 
 class ConversationFragment : Fragment() {
 
@@ -45,7 +46,7 @@ class ConversationFragment : Fragment() {
                     ConversationContent(
                         uiState = exampleUiState,
                         navigateToProfile = { user ->
-                            // Click callback
+                            PostHogAndroid.getInstance().capture("profile_opened")
                             val bundle = bundleOf("userId" to user)
                             findNavController().navigate(
                                 R.id.nav_profile,
