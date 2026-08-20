@@ -15,6 +15,10 @@ const EVALUATION_CRITERIA_REVENUE = readFileSync(
   join(__dirname, "prompts/evaluation-revenue.md"),
   "utf-8",
 ).trim();
+const EVALUATION_CRITERIA_REPLAY_VISION = readFileSync(
+  join(__dirname, "prompts/evaluation-replay-vision.md"),
+  "utf-8",
+).trim();
 const EVALUATION_CRITERIA_AI_OBSERVABILITY = readFileSync(
   join(__dirname, "prompts/evaluation-ai-observability.md"),
   "utf-8",
@@ -32,6 +36,12 @@ const PROMPTS_BY_COMMAND: Record<string, { rubric: string; outputFormat: string 
   // dimensions, only the items differ.
   "ai-observability": {
     rubric: EVALUATION_CRITERIA_AI_OBSERVABILITY,
+    outputFormat: OUTPUT_FORMAT,
+  },
+  // Reuses the default output format - the replay-vision rubric keeps the same
+  // four dimensions, only the items differ.
+  "replay-vision": {
+    rubric: EVALUATION_CRITERIA_REPLAY_VISION,
     outputFormat: OUTPUT_FORMAT,
   },
 };
