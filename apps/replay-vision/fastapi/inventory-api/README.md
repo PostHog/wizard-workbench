@@ -1,10 +1,15 @@
 # Inventory API (FastAPI)
 
-A pure-backend JSON service with no web frontend. Negative test app for `wizard replay-vision`.
+A pure-backend JSON service with no web frontend.
+Test fixture for `wizard replay-vision` - the platform-gate abort (negative case).
 
-What this app exercises:
+Session replay cannot record a backend-only Python service, so there is nothing for
+Replay Vision to watch here.
 
-- **The platform gate**: session replay cannot record a backend-only Python service, so the run must abort at framework detection with the friendly "session replay isn't available for this platform" message - before any agent work, skill installs, or scanner calls.
+Expected wizard outcome:
+
+- aborts at framework detection with the "session replay isn't available for this platform" message
+- makes **no** code changes, installs no skills, and calls no scanner endpoints
 
 ## Getting started
 
