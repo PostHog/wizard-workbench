@@ -143,7 +143,7 @@ Write your review following this Markdown structure:
 }
 RUBRIC -->
 
-IMPORTANT: In the RUBRIC block above, replace each "yes or no" with exactly "yes", "no", or "n/a" (lowercase). These must match your evaluation of each criterion. Use "n/a" ONLY for items marked as N/A: ph_identify and ph_reverse_proxy for server-only apps, ph_screen_views where the SDK autocaptures them, and ph_all_targets_initialized for single-target apps.
+IMPORTANT: In the RUBRIC block above, replace each "yes or no" with exactly "yes", "no", or "n/a" (lowercase). These must match your evaluation of each criterion. Use "n/a" for items marked as N/A: ph_identify and ph_reverse_proxy for server-only apps; ph_screen_views for every web and server framework, since it applies only to Flutter, React Native, iOS, Android, and KMP; ph_all_targets_initialized for every single-target project, since it applies only to Flutter, React Native, and KMP.
 
 <!-- SCORES
 {
