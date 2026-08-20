@@ -111,7 +111,7 @@ export function findApps(appsDir: string): App[] {
       const isWizardRoot = existsSync(join(fullPath, ".wizard-root"));
 
       // Check for JS/TS projects (package.json), Python projects (manage.py for Django, requirements.txt),
-      // Android projects (build.gradle or build.gradle.kts), Go projects (go.mod), Rust projects (Cargo.toml), or Swift/Xcode projects
+      // Android projects (build.gradle or build.gradle.kts), Go projects (go.mod), Rust projects (Cargo.toml), Dart/Flutter projects (pubspec.yaml), or Swift/Xcode projects
       const isGoProject = existsSync(join(fullPath, "go.mod"));
       const isJsProject = existsSync(join(fullPath, "package.json"));
       const isDjangoProject = existsSync(join(fullPath, "manage.py"));
@@ -119,10 +119,14 @@ export function findApps(appsDir: string): App[] {
       const isAndroidProject = existsSync(join(fullPath, "build.gradle")) || existsSync(join(fullPath, "build.gradle.kts"));
       const isRailsProject = existsSync(join(fullPath, "Gemfile")) && existsSync(join(fullPath, "config.ru"));
       const isRustProject = existsSync(join(fullPath, "Cargo.toml"));
+      // Claims the pubspec root, which stops the scan descending into the
+      // android/ and ios/ subtrees `flutter create` scaffolds and registering
+      // those build.gradle / xcodeproj dirs as apps in their own right.
+      const isDartProject = existsSync(join(fullPath, "pubspec.yaml"));
       const isSwiftProject = existsSync(join(fullPath, "Package.swift")) ||
         readdirSync(fullPath).some(f => f.endsWith(".xcodeproj"));
 
-      if (isWizardRoot || isJsProject || isDjangoProject || isPythonProject || isAndroidProject || isRailsProject || isGoProject || isRustProject || isSwiftProject) {
+      if (isWizardRoot || isJsProject || isDjangoProject || isPythonProject || isAndroidProject || isRailsProject || isGoProject || isRustProject || isDartProject || isSwiftProject) {
         apps.push({ name: relativePath, path: fullPath });
       } else {
         scan(fullPath, relativePath);
