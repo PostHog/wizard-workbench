@@ -44,6 +44,13 @@
       "ciCapable": true
     },
     {
+      "id": "replay-vision",
+      "dir": "replay-vision",
+      "label": "Replay Vision",
+      "description": "Enable session replay and create Replay Vision scanners scoped to the app's key flows",
+      "ciCapable": true
+    },
+    {
       "id": "ai-observability",
       "dir": "ai-observability",
       "label": "AI Observability",
