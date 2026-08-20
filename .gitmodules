@@ -16,3 +16,6 @@
 [submodule "apps/self-driving/turbo-monorepo"]
 	path = apps/self-driving/turbo-monorepo
 	url = https://github.com/t3-oss/create-t3-turbo.git
+[submodule "apps/basic-integration/flutter/localsend"]
+	path = apps/basic-integration/flutter/localsend
+	url = https://github.com/localsend/localsend.git

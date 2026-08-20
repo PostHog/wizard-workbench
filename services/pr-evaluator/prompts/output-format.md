@@ -129,7 +129,9 @@ Write your review following this Markdown structure:
     "ph_capture_events": "yes or no",
     "ph_identify": "yes or no or n/a",
     "ph_error_tracking": "yes or no",
-    "ph_reverse_proxy": "yes or no or n/a"
+    "ph_reverse_proxy": "yes or no or n/a",
+    "ph_screen_views": "yes or no or n/a",
+    "ph_all_targets_initialized": "yes or no or n/a"
   },
   "event_quality": {
     "eq_real_actions": "yes or no",
@@ -141,7 +143,7 @@ Write your review following this Markdown structure:
 }
 RUBRIC -->
 
-IMPORTANT: In the RUBRIC block above, replace each "yes or no" with exactly "yes", "no", or "n/a" (lowercase). These must match your evaluation of each criterion. Use "n/a" ONLY for items marked as N/A for server-only apps (ph_identify, ph_reverse_proxy).
+IMPORTANT: In the RUBRIC block above, replace each "yes or no" with exactly "yes", "no", or "n/a" (lowercase). These must match your evaluation of each criterion. Use "n/a" for items marked as N/A: ph_identify and ph_reverse_proxy for server-only apps; ph_screen_views for every web and server framework, since it applies only to Flutter, React Native, iOS, Android, and KMP; ph_all_targets_initialized for every single-target project, since it applies only to Flutter, React Native, and KMP.
 
 <!-- SCORES
 {

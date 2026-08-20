@@ -59,12 +59,15 @@ For each item, answer YES/NO based on the changed files:
 - **ph_identify** — User identification implemented. **N/A for server-only apps.** Refer to the PostHog documentation reference section for the correct identify pattern for this framework. Also check that `distinct_id` values come from real session or auth context (e.g., session ID, authenticated user ID) — flag if the code uses fabricated values like random UUIDs, hardcoded strings, or raw email addresses as distinct IDs, as this causes fragmented data.
 - **ph_error_tracking** — Error/exception tracking set up. Refer to the PostHog documentation reference section for the correct error tracking methods for this framework. Do NOT flag valid SDK methods as invalid or nonexistent.
 - **ph_reverse_proxy** — Reverse proxy configured. **N/A for server-only apps.** Only `posthog-js` in the browser benefits from a reverse proxy to circumvent ad blockers. Server-side SDKs (posthog-node, Python, Ruby, PHP) do NOT need one.
+- **ph_screen_views** — Screen views registered. **This item applies ONLY to mobile and desktop SDKs that do not autocapture screen views: Flutter, React Native, iOS, Android, and KMP. Mark `n/a` for every web and server framework** — posthog-js autocaptures pageviews, and server SDKs have no screens, so those are never a NO on this item. Where it does apply, the SDK's observer or listener must be registered, such as `PosthogObserver` in a Flutter app's navigator observers. Refer to the documentation reference section for this framework. Missing registration means the app sends no screen events at all, so mark NO, not `n/a`.
+- **ph_all_targets_initialized** — Every platform target the project ships is initialized. **This item applies ONLY to projects that build for several platform targets from one codebase: Flutter, React Native, and KMP. Mark `n/a` for everything else, including every web and server framework** — a single-target project is never a NO on this item. Where it does apply, one init call often covers only some targets: a Flutter project with a `web/` directory needs the posthog-js snippet in `web/index.html` as well as the Dart setup, because the Dart call is a no-op on web. An uninitialized target builds and runs while capturing nothing.
 
 **Architecture-aware rules:**
 
-- **Server-only** apps (Django, Flask, FastAPI, Express, Koa, Fastify, Rails): `ph_identify` and `ph_reverse_proxy` are N/A. Evaluate server-side patterns only.
-- **Client-only** apps (React SPA, Angular, Svelte, Astro static): All items apply.
-- **Full-stack** apps (Next.js, TanStack Start): All items apply. Evaluate both client and server patterns.
+- **Server-only** apps (Django, Flask, FastAPI, Express, Koa, Fastify, Rails): `ph_identify`, `ph_reverse_proxy`, `ph_screen_views`, and `ph_all_targets_initialized` are N/A. Evaluate server-side patterns only.
+- **Client-only** apps (React SPA, Angular, Svelte, Astro static): `ph_screen_views` and `ph_all_targets_initialized` are N/A — posthog-js autocaptures pageviews, and there is one target. All other items apply.
+- **Full-stack** apps (Next.js, TanStack Start): `ph_screen_views` and `ph_all_targets_initialized` are N/A, for the same reasons. All other items apply. Evaluate both client and server patterns.
+- **Mobile and desktop** apps (Flutter, React Native, iOS, Android, KMP): `ph_screen_views` applies. `ph_all_targets_initialized` applies only when the project ships more than one platform target.
 
 **Note:** Python SDK v7+ uses a context-based API. Do not flag `new_context()`, `capture()`, `identify_context()`, `tag()` patterns as errors.
 
