@@ -10,3 +10,6 @@
 /apps/error-tracking-upload-source-maps/ @PostHog/team-error-tracking
 /apps/self-driving/                     @PostHog/team-self-driving
 /apps/basic-integration/                @PostHog/team-wizard-docs
+/apps/replay-vision/                    @PostHog/team-replay
+/apps/ai-observability/                 @PostHog/team-ai-observability
+/apps/mcp-analytics/                    @PostHog/mcp-analytics
