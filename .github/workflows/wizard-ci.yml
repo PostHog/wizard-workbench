@@ -606,9 +606,8 @@ jobs:
             echo "::warning::Context Mill server failed to start after 2 minutes"
           fi
 
-          # The posthog MCP is the hosted prod server — no local MCP process.
-          # MCP_URL overrides the wizard's local-mcp MCP half; skills stay local.
-          echo "MCP_URL=https://mcp.posthog.com/mcp" >> $GITHUB_ENV
+          # The posthog MCP is the hosted prod server — no local MCP process,
+          # and nothing to override: --local-context-mill switches skills only.
 
           echo "context_mill_pid=$CONTEXT_MILL_PID" >> $GITHUB_OUTPUT
         env:

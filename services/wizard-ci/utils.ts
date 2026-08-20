@@ -216,7 +216,9 @@ export function runWizard(appPath: string, options: WizardOptions = {}): Promise
   if (options.integrate) {
     args.push("--integrate");
   }
-  args.push("--local-mcp");
+  // Local skills, production MCP. `--local-mcp` used to switch both, so the
+  // workflow had to set MCP_URL back to prod to undo half of it.
+  args.push("--local-context-mill");
 
   if (options.ci) {
     // Validate CI mode requirements - read from options first, then env vars, with fallback
