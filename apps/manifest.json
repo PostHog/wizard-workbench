@@ -58,6 +58,13 @@
       "ciCapable": true
     },
     {
+      "id": "metrics",
+      "dir": "metrics",
+      "label": "Metrics",
+      "description": "Instrument a service with posthog.metrics counters, gauges, and histograms",
+      "ciCapable": true
+    },
+    {
       "id": "skill",
       "dir": "misc",
       "label": "Skill",
