@@ -27,7 +27,11 @@ procs:
 
   wizard-build:
     # Skip global link - just build and watch. Use wizard-run to execute.
-    shell: "source .env && cd $WIZARD_PATH && pnpm build && pnpm build:watch"
+    #
+    # build:ci, not plain build: `pnpm build` inlines NODE_ENV=production, and
+    # a production binary rejects --ci and the --local-* flags every runner here
+    # passes. Same build the CI action uses.
+    shell: "source .env && cd $WIZARD_PATH && pnpm build:ci && pnpm build:watch:ci"
     autostart: true
     stop_signal: SIGTERM
     env_file: .env

@@ -122,6 +122,11 @@ cp .env.example .env
 | `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key for wizard CI mode and PR evaluator |
 | `POSTHOG_REGION` | No | PostHog region (`us` or `eu`). Defaults to `us`. Can also be set via `--region` flag or workflow input. |
 
+These `*_PATH` vars say **where the repos live** — which binary and which
+servers get started. They're separate from the wizard's own `--local-*` flags,
+which say **where a wizard run points**. See
+[Pointing at prod vs. local backends](#pointing-at-prod-vs-local-backends).
+
 Make sure you've set up and installed dependencies for all required repos.
 
 ### Running
@@ -140,10 +145,13 @@ Use keyboard shortcuts in phrocs: `r` to run/restart, `s` to stop, `q` to quit.
 
 | Process | Port | Description |
 |---------|------|-------------|
-| `context-mill` | 8765 | Context Mill server with MCP resources ZIP |
-| `mcp` | 8787 | MCP server using local resources |
+| `context-mill` | 8765 | Context Mill server with MCP resources ZIP — the wizard reads these via `--local-context-mill` |
+| `mcp` | 8787 | MCP server using local resources (`autostart: false` — hogli owns this port; reach it with `--local-mcp`) |
 | `mcp-inspector` | 6274 | MCP Inspector UI for debugging |
 | `wizard-build` | - | Builds and watches Wizard for changes |
+
+A local PostHog (Django on **8010**) isn't started by any pane — run `./bin/start`
+in the `posthog/` repo yourself, then pass the wizard `--local-posthog`.
 
 #### Manual Processes (press `s` to start)
 
@@ -162,14 +170,30 @@ Use keyboard shortcuts in phrocs: `r` to run/restart, `s` to stop, `q` to quit.
 
 ## Pointing at prod vs. local backends
 
-Four knobs control where wizard traffic lands. Two are hardwired by the workbench, two are configurable:
+Five knobs control where wizard traffic lands. The wizard has one flag per
+service, so each is independently switchable:
 
-| Knob | Default | Configurable? |
-|------|---------|---------------|
-| Wizard → MCP worker | `localhost:8787` | No — `--local-mcp` is always passed (`services/wizard-ci/utils.ts`) |
-| Wizard → context-mill skills | `localhost:8765` | No — same flag |
-| MCP worker → PostHog backend | Prod US/EU | **Yes** — `$MCP_PATH/.dev.vars` |
-| Wizard → LLM gateway | `gateway.us.posthog.com/wizard` | No — baked in at wizard build time |
+| Knob | Default here | How to change it |
+|------|--------------|------------------|
+| Wizard → context-mill skills | `localhost:8765` | `--local-context-mill`, passed by `services/wizard-ci/utils.ts` |
+| Wizard → MCP worker | **Prod** `mcp.posthog.com` | add `--local-mcp` |
+| Wizard → PostHog API/app | **Prod** US/EU | add `--local-posthog` (or `--base-url`) |
+| MCP worker → PostHog backend | Prod US/EU | `$MCP_PATH/.dev.vars` |
+| Wizard → LLM gateway | `gateway.us.posthog.com/wizard` | baked in at wizard build time — see below |
+
+`--local-dev` turns on the first three at once. Full catalog:
+[`docs/local-dev.md`](https://github.com/PostHog/wizard/blob/main/docs/local-dev.md)
+in the wizard repo.
+
+> **Changed:** `--local-mcp` used to switch skills *and* MCP together, so this
+> workflow had to set `MCP_URL=https://mcp.posthog.com/mcp` to undo half of it.
+> That override is gone — the runner passes `--local-context-mill`, which
+> switches skills only. If you have `--local-mcp` in a personal script expecting
+> local skills, use `--local-context-mill` (or `--local-dev` for both).
+
+Note the local MCP worker on `:8787` is **not** running by default — the `mcp`
+mprocs pane is `autostart: false` because hogli's stack owns that port. So the
+default here is local skills against the production MCP.
 
 ### Point MCP worker at prod PostHog (default)
 

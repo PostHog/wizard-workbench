@@ -222,7 +222,8 @@ function runBenchmark(
   const args: string[] = [wizardBin];
   if (subcommand) args.push(...subcommand.split(' '));
   args.push(
-    "--local-mcp",
+    // Local skills, production MCP — same as the CI runner.
+    "--local-context-mill",
     "--benchmark",
     "--ci",
     "--region",
