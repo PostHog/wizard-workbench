@@ -3,36 +3,47 @@
 import os
 import time
 
+from dotenv import load_dotenv
 from flask import Flask, g, jsonify, request
 from posthog import Posthog
 
 from worker import JobQueue
 
+load_dotenv()
+
 app = Flask(__name__)
 
 posthog = Posthog(
-    os.environ.get("POSTHOG_API_KEY", "phc_test_dummy_key"),
-    host=os.environ.get("POSTHOG_HOST", "https://us.i.posthog.com"),
+    os.environ.get("POSTHOG_API_KEY"),
+    host=os.environ.get("POSTHOG_HOST"),
+    enable_exception_autocapture=True,
     metrics={"service_name": "flask-jobqueue"},
 )
 
-queue = JobQueue(posthog=posthog)
+queue = JobQueue()
 
 ORDERS: list[dict] = []
 
 
 @app.before_request
-def _record_start():
-    g.start_time = time.time()
+def start_request_metrics():
+    g.request_started_at = time.perf_counter()
 
 
 @app.after_request
-def _record_request(response):
-    duration_ms = (time.time() - g.start_time) * 1000
-    route = str(request.url_rule) if request.url_rule else "unknown"
-    attrs = {"route": route, "method": request.method, "status": str(response.status_code)}
-    posthog.metrics.count("http.requests", 1, attributes=attrs)
-    posthog.metrics.histogram("http.request.duration", duration_ms, unit="ms", attributes={"route": route})
+def record_request_metrics(response):
+    attributes = {
+        "method": request.method,
+        "route": request.url_rule.rule if request.url_rule else "unmatched",
+        "status_class": f"{response.status_code // 100}xx",
+    }
+    posthog.metrics.count("http.server.requests", attributes=attributes)
+    posthog.metrics.histogram(
+        "http.server.duration",
+        (time.perf_counter() - g.request_started_at) * 1000,
+        unit="ms",
+        attributes=attributes,
+    )
     return response
 
 
@@ -47,12 +58,12 @@ def create_order():
     }
     ORDERS.append(order)
     queue.submit(order)
+    posthog.metrics.count("orders.placed")
     posthog.capture(
         distinct_id=f"user_{order['id'] % 7}",
         event="order created",
         properties={"item": order["item"], "qty": order["qty"]},
     )
-    posthog.metrics.count("orders.placed", 1)
     return jsonify(order), 201
 
 

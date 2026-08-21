@@ -10,33 +10,52 @@ FULFILLMENT_URL = "https://httpbin.org/status/200"
 
 
 class JobQueue:
-    def __init__(self, posthog=None) -> None:
+    def __init__(self) -> None:
         self._queue: queue.Queue = queue.Queue()
         self._thread = threading.Thread(target=self._drain, daemon=True)
-        self._posthog = posthog
 
     def start(self) -> None:
         self._thread.start()
 
     def submit(self, order: dict) -> None:
         self._queue.put(order)
+        from app import posthog
+
+        posthog.metrics.gauge("queue.depth", self._queue.qsize())
 
     def depth(self) -> int:
         return self._queue.qsize()
 
     def _drain(self) -> None:
+        from app import posthog
+
         while True:
             order = self._queue.get()
-            started = time.time()
+            started = time.perf_counter()
             outcome = "success"
+            external_started = time.perf_counter()
             try:
-                requests.post(FULFILLMENT_URL, json=order, timeout=5)
+                response = requests.post(FULFILLMENT_URL, json=order, timeout=5)
+                if not response.ok:
+                    outcome = "error"
             except requests.RequestException:
                 outcome = "error"
-            elapsed_ms = (time.time() - started) * 1000
-            if self._posthog is not None:
-                self._posthog.metrics.count("job.processed", 1, attributes={"outcome": outcome})
-                self._posthog.metrics.histogram("job.duration", elapsed_ms, unit="ms")
-                self._posthog.metrics.gauge("queue.depth", self._queue.qsize())
-            time.sleep(max(0.0, 0.1 - (time.time() - started)))
+            posthog.metrics.count(
+                "fulfillment.requests", attributes={"outcome": outcome}
+            )
+            posthog.metrics.histogram(
+                "fulfillment.request.duration",
+                (time.perf_counter() - external_started) * 1000,
+                unit="ms",
+                attributes={"outcome": outcome},
+            )
+            time.sleep(max(0.0, 0.1 - (time.perf_counter() - started)))
             self._queue.task_done()
+            posthog.metrics.count("jobs.processed", attributes={"outcome": outcome})
+            posthog.metrics.histogram(
+                "job.duration",
+                (time.perf_counter() - started) * 1000,
+                unit="ms",
+                attributes={"outcome": outcome},
+            )
+            posthog.metrics.gauge("queue.depth", self._queue.qsize())
