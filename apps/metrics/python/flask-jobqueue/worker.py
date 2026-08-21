@@ -10,9 +10,10 @@ FULFILLMENT_URL = "https://httpbin.org/status/200"
 
 
 class JobQueue:
-    def __init__(self) -> None:
+    def __init__(self, posthog=None) -> None:
         self._queue: queue.Queue = queue.Queue()
         self._thread = threading.Thread(target=self._drain, daemon=True)
+        self._posthog = posthog
 
     def start(self) -> None:
         self._thread.start()
@@ -27,9 +28,15 @@ class JobQueue:
         while True:
             order = self._queue.get()
             started = time.time()
+            outcome = "success"
             try:
                 requests.post(FULFILLMENT_URL, json=order, timeout=5)
             except requests.RequestException:
-                pass
+                outcome = "error"
+            elapsed_ms = (time.time() - started) * 1000
+            if self._posthog is not None:
+                self._posthog.metrics.count("job.processed", 1, attributes={"outcome": outcome})
+                self._posthog.metrics.histogram("job.duration", elapsed_ms, unit="ms")
+                self._posthog.metrics.gauge("queue.depth", self._queue.qsize())
             time.sleep(max(0.0, 0.1 - (time.time() - started)))
             self._queue.task_done()
