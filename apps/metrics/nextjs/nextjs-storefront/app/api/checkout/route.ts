@@ -24,6 +24,7 @@ function createPostHogClient() {
 
 export async function POST(req: Request) {
   const posthog = createPostHogClient();
+  const requestStartedAt = performance.now();
   const payload = await req.json();
   orderCount += 1;
   const paymentStartedAt = performance.now();
@@ -42,6 +43,17 @@ export async function POST(req: Request) {
       performance.now() - paymentStartedAt,
       { unit: 'ms', attributes: { outcome: 'unreachable' } },
     );
+    posthog?.metrics.count('http.server.requests', 1, {
+      attributes: { method: 'POST', route: '/api/checkout', status: '502' },
+    });
+    posthog?.metrics.histogram(
+      'http.server.request.duration',
+      performance.now() - requestStartedAt,
+      {
+        unit: 'ms',
+        attributes: { method: 'POST', route: '/api/checkout', status: '502' },
+      },
+    );
     await posthog?.shutdown();
     return NextResponse.json(
       { id: orderCount, status: 'payment-unreachable' },
@@ -57,6 +69,17 @@ export async function POST(req: Request) {
     { unit: 'ms', attributes: { outcome: 'success' } },
   );
   posthog?.metrics.count('orders.placed');
+  posthog?.metrics.count('http.server.requests', 1, {
+    attributes: { method: 'POST', route: '/api/checkout', status: '200' },
+  });
+  posthog?.metrics.histogram(
+    'http.server.request.duration',
+    performance.now() - requestStartedAt,
+    {
+      unit: 'ms',
+      attributes: { method: 'POST', route: '/api/checkout', status: '200' },
+    },
+  );
   await posthog?.shutdown();
   return NextResponse.json({ id: orderCount, status: 'paid' });
 }
