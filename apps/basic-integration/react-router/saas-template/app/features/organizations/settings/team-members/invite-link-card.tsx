@@ -113,6 +113,9 @@ export function InviteLinkCard({
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
                   setLinkCopied(true);
+                  void import("posthog-js").then(({ default: posthog }) => {
+                    posthog.capture("invite_link_copied");
+                  });
                 }}
                 size="icon"
                 variant="ghost"

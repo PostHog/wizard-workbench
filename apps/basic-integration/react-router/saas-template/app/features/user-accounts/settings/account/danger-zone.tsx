@@ -109,6 +109,11 @@ function DeleteAccountDialogComponent({
             <Button
               disabled={isDeletingAccount}
               name="intent"
+              onClick={() => {
+                void import("posthog-js").then(({ default: posthog }) => {
+                  posthog.capture("account_deletion_requested");
+                });
+              }}
               type="submit"
               value={DELETE_USER_ACCOUNT_INTENT}
               variant="destructive"

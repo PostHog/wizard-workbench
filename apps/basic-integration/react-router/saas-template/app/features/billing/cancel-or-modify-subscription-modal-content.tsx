@@ -67,6 +67,15 @@ export function CancelOrModifySubscriptionModalContent({
     tier: "low" | "mid" | "high",
   ): Partial<ComponentProps<typeof Button>> => {
     const isCurrentTier = tier === currentTier;
+    const trackSubscriptionChange = () => {
+      void import("posthog-js").then(({ default: posthog }) => {
+        posthog.capture("subscription_change_requested", {
+          billing_interval: interval,
+          current_subscription_tier: currentTier,
+          subscription_tier: tier,
+        });
+      });
+    };
     const isUpgrade =
       (currentTier === "low" && (tier === "mid" || tier === "high")) ||
       (currentTier === "mid" && tier === "high");
@@ -81,9 +90,13 @@ export function CancelOrModifySubscriptionModalContent({
     if (isCurrentTier) {
       if (interval !== currentTierInterval) {
         return interval === "annual"
-          ? { children: tModal("switchToAnnualButton") }
+          ? {
+              children: tModal("switchToAnnualButton"),
+              onClick: trackSubscriptionChange,
+            }
           : {
               children: tModal("switchToMonthlyButton"),
+              onClick: trackSubscriptionChange,
               variant: "outline",
             };
       }
@@ -113,8 +126,16 @@ export function CancelOrModifySubscriptionModalContent({
 
     // 3. Default static buttons for upgrade vs downgrade
     return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+      ? {
+          children: tModal("upgradeButton"),
+          disabled: isSubmitting,
+          onClick: trackSubscriptionChange,
+        }
+      : {
+          children: tModal("downgradeButton"),
+          onClick: trackSubscriptionChange,
+          variant: "outline",
+        };
   };
 
   return (
@@ -515,7 +536,14 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={(event) => {
+                  void import("posthog-js").then(({ default: posthog }) => {
+                    posthog.capture("subscription_cancellation_requested", {
+                      subscription_tier: currentTier,
+                    });
+                  });
+                  onCancelSubscriptionClick?.(event);
+                }}
                 type="button"
                 variant="outline"
               >

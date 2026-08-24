@@ -97,6 +97,14 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () => {
+        void import("posthog-js").then(({ default: posthog }) => {
+          posthog.capture("subscription_checkout_started", {
+            billing_interval: interval,
+            subscription_tier: tier,
+          });
+        });
+      },
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };

@@ -1,9 +1,41 @@
+import { useEffect, useRef } from "react";
 import { Outlet } from "react-router";
 
-import { authMiddleware } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { Route } from "./+types/_authenticated-routes-layout";
+import {
+  authContext,
+  authMiddleware,
+} from "~/features/user-authentication/user-authentication-middleware.server";
 
 export const middleware = [authMiddleware];
 
-export default function AuthenticatedRoutesLayout() {
+export async function loader({ context }: Route.LoaderArgs) {
+  const { user } = context.get(authContext);
+
+  return {
+    user: {
+      email: user.email,
+      id: user.id,
+    },
+  };
+}
+
+export default function AuthenticatedRoutesLayout({
+  loaderData,
+}: Route.ComponentProps) {
+  const identifiedUserId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (identifiedUserId.current === loaderData.user.id) {
+      return;
+    }
+
+    identifiedUserId.current = loaderData.user.id;
+
+    void import("posthog-js").then(({ default: posthog }) => {
+      posthog.identify(loaderData.user.id, { email: loaderData.user.email });
+    });
+  }, [loaderData.user.email, loaderData.user.id]);
+
   return <Outlet />;
 }

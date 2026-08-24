@@ -100,6 +100,11 @@ export default function OrganizationOnboardingRoute({
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      onSubmit={() => {
+        void import("posthog-js").then(({ default: posthog }) => {
+          posthog.capture("onboarding_organization_submitted");
+        });
+      }}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>

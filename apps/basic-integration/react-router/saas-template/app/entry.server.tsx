@@ -107,6 +107,7 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    process.env.VITE_PUBLIC_POSTHOG_HOST,
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],
@@ -119,10 +120,12 @@ export default async function handleRequest(
                   "script-src": [
                     "'strict-dynamic'",
                     "'self'",
+                    process.env.VITE_PUBLIC_POSTHOG_HOST,
                     `'nonce-${nonce}'`,
                   ],
                   // Inline event handlers with nonce
                   "script-src-attr": [`'nonce-${nonce}'`],
+                  "worker-src": ["'self'", "blob:"],
                 },
               },
               // Report-only in dev/test, enforce in production
