@@ -6,6 +6,7 @@
  *   router.on('/projects/:id', renderProject)
  *   router.navigate('/dashboard')
  */
+import { posthog } from './posthog.js';
 
 const routes = [];
 let notFoundHandler = null;
@@ -50,6 +51,10 @@ function resolve() {
   } else if (notFoundHandler) {
     notFoundHandler();
   }
+
+  posthog?.capture('$pageview', {
+    $current_url: window.location.href,
+  });
 }
 
 export const router = {
