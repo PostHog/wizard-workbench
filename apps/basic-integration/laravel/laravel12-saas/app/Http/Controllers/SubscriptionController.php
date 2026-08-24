@@ -7,6 +7,7 @@ use App\Actions\Billing\GetSubscriptionSummary;
 use App\Actions\Billing\RedirectToBillingPortal;
 use App\Actions\Billing\SwapPlan;
 use App\Domains\Billing\PlanCatalog;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -27,6 +28,7 @@ class SubscriptionController extends Controller
     {
         $plan = $catalog->findOrFail($request->plan);
         $user = $request->user();
+        $posthog = app(PostHogService::class);
 
         // Stub out subscription if Stripe isn't configured (for demo/development)
         if (!CheckoutPlan::isStripeConfigured()) {
@@ -34,6 +36,12 @@ class SubscriptionController extends Controller
         }
 
         $checkoutSession = $checkoutPlan($user, $plan);
+
+        $posthog->capture($user, 'subscription_checkout_started', [
+            'plan_id' => $plan->getKey(),
+            'plan_name' => $plan->name,
+            'amount' => $plan->price,
+        ]);
 
         return redirect($checkoutSession->url);
     }
@@ -58,6 +66,13 @@ class SubscriptionController extends Controller
             'amount' => $plan->price ?? 0,
         ]);
 
+        app(PostHogService::class)->capture($user, 'subscription_created', [
+            'plan_id' => $plan->getKey(),
+            'plan_name' => $plan->name,
+            'amount' => $plan->price ?? 0,
+            'billing_mode' => 'demo',
+        ]);
+
         return redirect()->route('dashboard')->with('success', 'Demo subscription created for ' . $plan->name . '. (Stripe not configured)');
     }
 
@@ -70,6 +85,12 @@ class SubscriptionController extends Controller
             try {
                 $swapPlan($user, $plan);
 
+                app(PostHogService::class)->capture($user, 'subscription_plan_changed', [
+                    'plan_id' => $plan->getKey(),
+                    'plan_name' => $plan->name,
+                    'amount' => $plan->price,
+                ]);
+
                 return redirect()->route('subscribe')->with('success', 'Your subscription has been updated to '.$plan->name.'.');
             } catch (Exception $e) {
                 return redirect()->route('subscribe')->with('error', 'There was an error updating your subscription: '.$e->getMessage());
@@ -81,6 +102,11 @@ class SubscriptionController extends Controller
 
     public function redirectToBillingPortal(Request $request, RedirectToBillingPortal $billingPortal)
     {
-        return $billingPortal($request->user());
+        $user = $request->user();
+        $response = $billingPortal($user);
+
+        app(PostHogService::class)->capture($user, 'billing_portal_opened');
+
+        return $response;
     }
 }
