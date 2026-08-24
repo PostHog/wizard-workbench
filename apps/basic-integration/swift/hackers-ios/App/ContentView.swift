@@ -10,6 +10,7 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import PostHog
 import Settings
 import Shared
 import SwiftUI
@@ -66,6 +67,7 @@ struct MainContentView: View {
                         viewModel: feedViewModel,
                         isSidebar: false
                     )
+                    .postHogScreenView("Feed")
                     .navigationDestination(for: NavigationDestination.self) { destination in
                         switch destination {
                         case let .comments(postID):
@@ -74,21 +76,17 @@ struct MainContentView: View {
                                 return navigationStore.selectedPost
                             }()
                             CommentsView<NavigationStore>(postID: postID, initialPost: initialPost)
+                                .postHogScreenView("Post Comments")
                         case .settings:
                             SettingsView(
                                 viewModel: settingsViewModel,
                                 isAuthenticated: sessionService.authenticationState == .authenticated,
                                 currentUsername: sessionService.username,
-                                onLogin: { username, password in
-                                    _ = try await sessionService.authenticate(username: username, password: password)
-                                },
-                                onLogout: {
-                                    sessionService.unauthenticate()
-                                },
-                                onShowOnboarding: {
-                                    showOnboarding = true
-                                }
+                                onLogin: authenticate,
+                                onLogout: signOut,
+                                onShowOnboarding: showOnboardingFromSettings
                             )
+                            .postHogScreenView("Settings")
                         }
                     }
                 }
@@ -101,33 +99,25 @@ struct MainContentView: View {
             LoginView(
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
-                onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
-                },
-                onLogout: {
-                    sessionService.unauthenticate()
-                },
+                onLogin: authenticate,
+                onLogout: signOut,
                 textSize: settingsViewModel.textSize
             )
             .textScaling(for: settingsViewModel.textSize)
-                .toastOverlay(toastPresenter)
+            .postHogScreenView("Login")
+            .toastOverlay(toastPresenter)
         }
         .sheet(isPresented: showingSettingsBinding) {
             SettingsView(
                 viewModel: settingsViewModel,
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
-                onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
-                },
-                onLogout: {
-                    sessionService.unauthenticate()
-                },
-                onShowOnboarding: {
-                    showOnboarding = true
-                }
+                onLogin: authenticate,
+                onLogout: signOut,
+                onShowOnboarding: showOnboardingFromSettings
             )
             .textScaling(for: settingsViewModel.textSize)
+            .postHogScreenView("Settings")
             .toastOverlay(toastPresenter)
         }
         .sheet(isPresented: $showOnboarding) {
@@ -136,6 +126,7 @@ struct MainContentView: View {
                     showOnboarding = false
                 }
                 .textScaling(for: settingsViewModel.textSize)
+                .postHogScreenView("Onboarding")
                 .toastOverlay(toastPresenter)
         }
         .task {
@@ -143,6 +134,21 @@ struct MainContentView: View {
                 showOnboarding = true
             }
         }
+    }
+
+    private func authenticate(username: String, password: String) async throws {
+        _ = try await sessionService.authenticate(username: username, password: password)
+        PostHogSDK.shared.capture("login_succeeded")
+    }
+
+    private func signOut() {
+        PostHogSDK.shared.capture("logout_completed")
+        sessionService.unauthenticate()
+    }
+
+    private func showOnboardingFromSettings() {
+        PostHogSDK.shared.capture("onboarding_opened")
+        showOnboarding = true
     }
 
     private var isPresentingModal: Bool {
@@ -177,6 +183,7 @@ struct AdaptiveSplitView: View {
                 viewModel: feedViewModel,
                 isSidebar: true
             )
+            .postHogScreenView("Feed")
             .navigationSplitViewColumnWidth(min: 320, ideal: 375, max: 400)
         } detail: {
             // Detail - CommentsView or empty state
@@ -188,9 +195,11 @@ struct AdaptiveSplitView: View {
                         .id(embeddedURL.absoluteString)
                 } else if let selectedPost = navigationStore.selectedPost {
                     CommentsView<NavigationStore>(postID: selectedPost.id, initialPost: selectedPost)
+                        .postHogScreenView("Post Comments")
                         .id(selectedPost.id) // Add id to force re-render when post changes
                 } else if let selectedPostId = navigationStore.selectedPostId {
                     CommentsView<NavigationStore>(postID: selectedPostId, initialPost: nil)
+                        .postHogScreenView("Post Comments")
                         .id(selectedPostId)
                 } else {
                     EmptyDetailView()
