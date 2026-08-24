@@ -23,6 +23,7 @@ export class LogoutComponent implements OnInit {
     } else {
       this.authService.logout().subscribe({
         next: () => {
+          this.authService.resetAnalytics();
           this.credentialsService.setCredentials();
           this.router.navigate(['/login']).then(() => {
             window.location.reload();
