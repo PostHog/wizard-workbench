@@ -19,6 +19,12 @@ class SessionsController < ApplicationController
   end
 
   def destroy
+    if Rails.configuration.x.posthog.enabled
+      PostHog.capture(
+        distinct_id: Current.identity.posthog_distinct_id,
+        event: "session_ended"
+      )
+    end
     terminate_session
 
     respond_to do |format|

@@ -19,6 +19,13 @@ class CardsController < ApplicationController
 
       format.json do
         card = @board.cards.create! card_params.merge(creator: Current.user, status: "published")
+        if Rails.configuration.x.posthog.enabled
+          PostHog.capture(
+            distinct_id: Current.identity.posthog_distinct_id,
+            event: "card_created",
+            properties: { card_id: card.id, board_id: @board.id, creation_mode: "api" }
+          )
+        end
         head :created, location: card_path(card, format: :json)
       end
     end
