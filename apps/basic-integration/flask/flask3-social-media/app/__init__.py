@@ -1,7 +1,10 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+from flask import Flask, g, request, current_app
+from flask_login import current_user
+from posthog import Posthog
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -35,6 +38,24 @@ moment = Moment()
 babel = Babel()
 
 
+def identify_posthog_user(user, set_properties=False):
+    """Associate the active PostHog request context with an authenticated user."""
+    posthog_client = current_app.extensions.get('posthog')
+    if not posthog_client:
+        return
+
+    distinct_id = str(user.id)
+    posthog_client.identify_context(distinct_id)
+    if set_properties:
+        posthog_client.set(
+            distinct_id=distinct_id,
+            properties={
+                'email': user.email,
+                'username': user.username,
+            },
+        )
+
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -53,6 +74,53 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    posthog_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    if posthog_token and posthog_host:
+        posthog_client = Posthog(
+            posthog_token,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        app.extensions['posthog'] = posthog_client
+        atexit.register(posthog_client.shutdown)
+    elif app.debug:
+        missing_variable = (
+            'POSTHOG_PROJECT_TOKEN' if not posthog_token else 'POSTHOG_HOST'
+        )
+        raise RuntimeError(
+            f'{missing_variable} variable required by PostHog is missing or '
+            f'un-configured, this causes events to be silently missed. This '
+            f'error stops appearing once {missing_variable} is configured'
+        )
+
+    @app.before_request
+    def bind_posthog_request_context():
+        posthog_client = app.extensions.get('posthog')
+        if not posthog_client:
+            return
+
+        context = posthog_client.new_context(fresh=True)
+        context.__enter__()
+        g.posthog_context = context
+
+        if current_user.is_authenticated:
+            identify_posthog_user(current_user)
+        else:
+            distinct_id = request.headers.get('X-POSTHOG-DISTINCT-ID')
+            if distinct_id:
+                posthog_client.identify_context(distinct_id)
+
+        session_id = request.headers.get('X-POSTHOG-SESSION-ID')
+        if session_id:
+            posthog_client.set_context_session(session_id)
+
+    @app.teardown_request
+    def close_posthog_request_context(exception):
+        context = g.pop('posthog_context', None)
+        if context:
+            context.__exit__(None, None, None)
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)

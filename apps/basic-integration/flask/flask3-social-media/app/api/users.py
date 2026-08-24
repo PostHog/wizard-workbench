@@ -1,6 +1,6 @@
 import sqlalchemy as sa
-from flask import request, url_for, abort
-from app import db
+from flask import current_app, request, url_for, abort
+from app import db, identify_posthog_user
 from app.models import User
 from app.api import bp
 from app.api.auth import token_auth
@@ -57,6 +57,12 @@ def create_user():
     user.from_dict(data, new_user=True)
     db.session.add(user)
     db.session.commit()
+    identify_posthog_user(user, set_properties=True)
+    posthog_client = current_app.extensions.get('posthog')
+    if posthog_client:
+        posthog_client.capture('api_user_registered', properties={
+            'registration_method': 'api'
+        })
     return user.to_dict(), 201, {'Location': url_for('api.get_user',
                                                      id=user.id)}
 
