@@ -61,3 +61,9 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.querySelector('.btn-primary')?.addEventListener('click', () => {
+    window.posthog?.capture('free_trial_started', { location: 'homepage_hero' });
+  });
+</script>

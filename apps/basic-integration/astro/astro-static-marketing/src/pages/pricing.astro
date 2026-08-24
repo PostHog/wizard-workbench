@@ -63,3 +63,12 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.querySelectorAll('.pricing-card .btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const plan = button.closest('.pricing-card')?.querySelector('h3')?.textContent?.trim().toLowerCase();
+      window.posthog?.capture('pricing_plan_selected', { plan });
+    });
+  });
+</script>
