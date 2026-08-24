@@ -1,6 +1,43 @@
+import 'dotenv/config';
 import Fastify from 'fastify';
+import { PostHog } from 'posthog-node';
+
+const posthogApiKey = process.env.POSTHOG_API_KEY;
+const posthogHost = process.env.POSTHOG_HOST;
+
+function createPostHogClient() {
+  if (!posthogApiKey) {
+    if (process.env.NODE_ENV !== 'production') {
+      throw new Error(
+        'POSTHOG_API_KEY variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_API_KEY is configured',
+      );
+    }
+    return undefined;
+  }
+
+  if (!posthogHost) {
+    if (process.env.NODE_ENV !== 'production') {
+      throw new Error(
+        'POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured',
+      );
+    }
+    return undefined;
+  }
+
+  return new PostHog(posthogApiKey, {
+    host: posthogHost,
+    enableExceptionAutocapture: true,
+  });
+}
+
+export const posthog = createPostHogClient();
 
 const fastify = Fastify({ logger: true });
+
+fastify.setErrorHandler((error, request, reply) => {
+  posthog?.captureException(error);
+  reply.send(error);
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +76,13 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+  posthog?.capture({
+    event: 'post_created',
+    properties: {
+      post_id: post.id,
+      is_published: post.published,
+    },
+  });
   return reply.status(201).send(post);
 });
 
@@ -67,6 +111,19 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  posthog?.capture({
+    event: 'post_updated',
+    properties: {
+      post_id: post.id,
+      updated_fields: [
+        ...(title !== undefined ? ['title'] : []),
+        ...(body !== undefined ? ['body'] : []),
+        ...(published !== undefined ? ['published'] : []),
+      ],
+      is_published: post.published,
+    },
+  });
+
   return post;
 });
 
@@ -86,6 +143,10 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
     if (comments[i].post_id === postId) comments.splice(i, 1);
   }
 
+  posthog?.capture({
+    event: 'post_deleted',
+    properties: { post_id: postId },
+  });
   return reply.status(204).send();
 });
 
@@ -111,10 +172,24 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+  posthog?.capture({
+    event: 'comment_created',
+    properties: {
+      comment_id: comment.id,
+      post_id: comment.post_id,
+    },
+  });
   return reply.status(201).send(comment);
 });
 
 const PORT = process.env.PORT || 3001;
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, async () => {
+    await fastify.close();
+    await posthog?.shutdown();
+  });
+}
 
 fastify.listen({ port: PORT }, (err) => {
   if (err) {
