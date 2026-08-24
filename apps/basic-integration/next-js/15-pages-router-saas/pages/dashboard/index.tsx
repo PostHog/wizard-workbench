@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, PlusCircle } from 'lucide-react';
 import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -36,6 +37,10 @@ function ManageSubscription() {
       const result = await response.json();
 
       if (response.ok && result.url) {
+        posthog.capture('subscription_management_opened', {
+          plan_name: teamData?.planName || 'Free',
+          subscription_status: teamData?.subscriptionStatus || 'none'
+        });
         window.location.href = result.url;
       }
     } catch (err) {
@@ -101,6 +106,8 @@ function TeamMembers() {
           setError(result.error || 'Failed to remove member');
           return;
         }
+
+        posthog.capture('team_member_removed');
 
         // Refresh team data
         mutate('/api/team');
@@ -208,6 +215,7 @@ function InviteTeamMember() {
         }
 
         setSuccess(result.success);
+        posthog.capture('team_member_invited', { role: data.role });
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {
