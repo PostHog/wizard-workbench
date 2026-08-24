@@ -17,6 +17,7 @@
 package com.example.compose.jetchat
 
 import androidx.lifecycle.ViewModel
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -44,9 +45,17 @@ class MainViewModel : ViewModel() {
     fun login(username: String, password: String) {
         // Fake auth: accept anything; password intentionally unused.
         _loggedInUsername.value = username
+        capture("user_signed_in")
     }
 
     fun logout() {
+        capture("user_logged_out")
         _loggedInUsername.value = null
+    }
+
+    private fun capture(event: String) {
+        if (BuildConfig.POSTHOG_PROJECT_TOKEN.isNotBlank() && BuildConfig.POSTHOG_HOST.isNotBlank()) {
+            PostHogAndroid.getInstance().capture(event)
+        }
     }
 }
