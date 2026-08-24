@@ -18,6 +18,7 @@ import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { posthog } from "@/lib/posthog";
 
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
@@ -72,7 +73,15 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              onPress={() => {
+                posthog?.capture("user_profile_opened", {
+                  item_id: item.id,
+                  source: "item_author",
+                });
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -163,6 +172,10 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog?.capture("external_link_opened", {
+                    item_id: item.id,
+                    source: "item_detail",
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +207,13 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog?.capture("comment_thread_opened", {
+                  item_id: parentItem.id,
+                  source: "parent_item",
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
