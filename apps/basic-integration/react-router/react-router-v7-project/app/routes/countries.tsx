@@ -4,6 +4,22 @@ import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
 
+async function captureCountryAction(
+  event: "country_claimed" | "country_liked" | "country_visited",
+  countryCode: string,
+  region: string,
+) {
+  if (
+    !import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+    !import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    return;
+  }
+
+  const { default: posthog } = await import("posthog-js");
+  posthog.capture(event, { country_code: countryCode, region });
+}
+
 export async function clientLoader() {
   try {
     // REST Countries API v3.1 requires fields parameter
@@ -137,8 +153,14 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
-                        claimCountry(countryName);
-                        window.location.reload();
+                        if (!isClaimed) {
+                          claimCountry(countryName);
+                          void captureCountryAction(
+                            "country_claimed",
+                            country.cca3,
+                            country.region,
+                          ).then(() => window.location.reload());
+                        }
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isClaimed
@@ -150,8 +172,14 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
-                        likeCountry(countryName);
-                        window.location.reload();
+                        if (!isLiked) {
+                          likeCountry(countryName);
+                          void captureCountryAction(
+                            "country_liked",
+                            country.cca3,
+                            country.region,
+                          ).then(() => window.location.reload());
+                        }
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isLiked
@@ -163,8 +191,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
-                        visitCountry(countryName);
-                        window.location.reload();
+                        const hasVisited = user.visitedCountries.includes(countryName);
+                        if (!hasVisited) {
+                          visitCountry(countryName);
+                          void captureCountryAction(
+                            "country_visited",
+                            country.cca3,
+                            country.region,
+                          ).then(() => window.location.reload());
+                        }
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
                     >
