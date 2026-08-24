@@ -9,6 +9,7 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import posthog from "./posthog.client";
 import { CartProvider } from "./context/CartContext";
 import Navbar from "./components/Navbar";
 
@@ -55,6 +56,10 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  if (typeof window !== "undefined" && error instanceof Error) {
+    posthog.captureException(error);
+  }
+
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
