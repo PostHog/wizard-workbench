@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { z } from 'zod'
@@ -28,9 +29,13 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      posthog.capture('invoice_updated', { invoice_id: invoice.id })
+      return router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
 
