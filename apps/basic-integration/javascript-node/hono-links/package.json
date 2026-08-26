@@ -9,7 +9,9 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
+    "@hono/node-server": "^1.13.0",
+    "dotenv": "^17.4.2",
     "hono": "^4.6.0",
-    "@hono/node-server": "^1.13.0"
+    "posthog-node": "^5.51.2"
   }
 }
