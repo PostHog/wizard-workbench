@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
 from .models import Project, ActivityLog
+from accounts.apps import posthog_client
 from .forms import ProjectForm
 
 
@@ -53,6 +54,8 @@ def create_project(request):
             project = form.save(commit=False)
             project.owner = request.user
             project.save()
+            if posthog_client:
+                posthog_client.capture('project_created')
 
             ActivityLog.objects.create(
                 user=request.user,
@@ -76,6 +79,8 @@ def edit_project(request, pk):
         form = ProjectForm(request.POST, instance=project)
         if form.is_valid():
             form.save()
+            if posthog_client:
+                posthog_client.capture('project_updated')
 
             ActivityLog.objects.create(
                 user=request.user,
@@ -98,6 +103,8 @@ def delete_project(request, pk):
     if request.method == 'POST':
         name = project.name
         project.delete()
+        if posthog_client:
+            posthog_client.capture('project_deleted')
 
         ActivityLog.objects.create(
             user=request.user,
