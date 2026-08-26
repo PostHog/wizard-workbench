@@ -38,6 +38,12 @@ z.config({ jitless: true });
 export const LOGIN_WITH_EMAIL_INTENT = loginIntents.loginWithEmail;
 export const LOGIN_WITH_GOOGLE_INTENT = loginIntents.loginWithGoogle;
 
+function captureLoginSubmitted(method: "email" | "google") {
+  void import("posthog-js").then(({ default: posthog }) =>
+    posthog.capture("login_submitted", { method }),
+  );
+}
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   const i18n = getInstance(context);
   const linkData = await getInviteInfoForAuthRoutes(request);
@@ -116,7 +122,11 @@ export default function LoginRoute({
         </div>
 
         {/* Email Login Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmit={() => captureLoginSubmitted("email")}
+          {...form.props}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -160,7 +170,10 @@ export default function LoginRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Login Form */}
-        <Form method="POST">
+        <Form
+          method="POST"
+          onSubmit={() => captureLoginSubmitted("google")}
+        >
           <Field>
             <Button
               name="intent"

@@ -25,6 +25,10 @@ import { inputClassName } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import { cn } from "~/lib/utils";
 
+function captureInviteLinkEvent(event: "invite_link_copied" | "invite_link_created") {
+  void import("posthog-js").then(({ default: posthog }) => posthog.capture(event));
+}
+
 export type InviteLinkCardProps = {
   inviteLink?: { href: string; expiryDate: string };
   organizationIsFull?: boolean;
@@ -112,6 +116,7 @@ export function InviteLinkCard({
                 )}
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
+                  captureInviteLinkEvent("invite_link_copied");
                   setLinkCopied(true);
                 }}
                 size="icon"
@@ -166,6 +171,7 @@ export function InviteLinkCard({
                   className="w-full"
                   disabled={disabled}
                   name="intent"
+                  onClick={() => captureInviteLinkEvent("invite_link_created")}
                   type="submit"
                   value="createNewInviteLink"
                 >
@@ -220,6 +226,7 @@ export function InviteLinkCard({
               className="w-full"
               disabled={disabled}
               name="intent"
+              onClick={() => captureInviteLinkEvent("invite_link_created")}
               type="submit"
               value="createNewInviteLink"
             >

@@ -25,6 +25,12 @@ export type ContactSalesTeamProps = {
   lastResult?: SubmissionResult;
 };
 
+function captureContactSalesSubmitted() {
+  void import("posthog-js").then(({ default: posthog }) =>
+    posthog.capture("contact_sales_submitted"),
+  );
+}
+
 export function ContactSalesTeam({
   isContactingSales = false,
   lastResult,
@@ -47,7 +53,11 @@ export function ContactSalesTeam({
         </CardDescription>
       </CardHeader>
 
-      <Form method="POST" {...form.props}>
+      <Form
+        method="POST"
+        onSubmit={captureContactSalesSubmitted}
+        {...form.props}
+      >
         <FieldSet className="space-y-6" disabled={isContactingSales}>
           <CardContent className="space-y-6">
             <Field data-invalid={fields.firstName.ariaInvalid}>

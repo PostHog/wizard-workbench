@@ -38,6 +38,12 @@ z.config({ jitless: true });
 export const REGISTER_WITH_EMAIL_INTENT = registerIntents.registerWithEmail;
 export const REGISTER_WITH_GOOGLE_INTENT = registerIntents.registerWithGoogle;
 
+function captureRegistrationSubmitted(method: "email" | "google") {
+  void import("posthog-js").then(({ default: posthog }) =>
+    posthog.capture("registration_submitted", { method }),
+  );
+}
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   const i18n = getInstance(context);
   const linkData = await getInviteInfoForAuthRoutes(request);
@@ -117,7 +123,13 @@ export default function RegisterRoute({
         </div>
 
         {/* Email Registration Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmit={() =>
+            captureRegistrationSubmitted("email")
+          }
+          {...form.props}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -161,7 +173,12 @@ export default function RegisterRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Registration Form */}
-        <Form method="POST">
+        <Form
+          method="POST"
+          onSubmit={() =>
+            captureRegistrationSubmitted("google")
+          }
+        >
           <Field>
             <Button
               name="intent"

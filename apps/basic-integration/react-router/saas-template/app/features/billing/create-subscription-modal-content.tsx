@@ -31,6 +31,18 @@ import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
+function captureSubscriptionCheckoutStarted(
+  billingInterval: Interval,
+  subscriptionTier: Tier,
+) {
+  void import("posthog-js").then(({ default: posthog }) =>
+    posthog.capture("subscription_checkout_started", {
+      billing_interval: billingInterval,
+      subscription_tier: subscriptionTier,
+    }),
+  );
+}
+
 export type CreateSubscriptionModalContentProps = {
   /** how many seats your org is currently using */
   currentSeats: number;
@@ -97,6 +109,7 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () => captureSubscriptionCheckoutStarted(interval, tier),
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };
