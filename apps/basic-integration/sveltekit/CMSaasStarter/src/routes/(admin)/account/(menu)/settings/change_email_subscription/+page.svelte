@@ -18,6 +18,7 @@
     ? "You are currently unsubscribed from emails"
     : "You are currently subscribed to emails"}
   saveButtonTitle={unsubscribed ? "Re-subscribe" : "Unsubscribe"}
+  successEvent="email_subscription_changed"
   successBody={unsubscribed
     ? "You have been re-subscribed to emails"
     : "You have been unsubscribed from emails"}
