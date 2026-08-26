@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import { captureEvent } from '../posthog.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
 
@@ -100,6 +101,7 @@ export async function renderSettings() {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
         store.reset();
         store.login(user.email);
+        captureEvent('data_reset');
         renderSettings();
       }
     });
