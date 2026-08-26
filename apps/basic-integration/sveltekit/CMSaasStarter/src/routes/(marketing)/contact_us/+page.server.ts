@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { captureServerEvent } from "$lib/server/posthog"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -68,6 +69,11 @@ export const actions = {
       console.error("Error saving contact request", insertError)
       return fail(500, { errors: { _: "Error saving" } })
     }
+
+    await captureServerEvent("contact_request_submitted", {
+      has_company: company.length > 0,
+      has_phone: phone.length > 0,
+    })
 
     // Send email to admin
     await sendAdminEmail({

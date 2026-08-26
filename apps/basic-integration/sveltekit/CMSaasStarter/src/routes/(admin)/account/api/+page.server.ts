@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { captureServerEvent } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -27,6 +28,12 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    await captureServerEvent(
+      "email_subscription_updated",
+      { unsubscribed: newUnsubscribedStatus },
+      session.user.id,
+    )
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -70,6 +77,8 @@ export const actions = {
         email,
       })
     }
+
+    await captureServerEvent("email_update_requested", {}, session.user.id)
 
     return {
       email,
@@ -172,6 +181,8 @@ export const actions = {
       })
     }
 
+    await captureServerEvent("password_updated", {}, user?.id)
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +231,8 @@ export const actions = {
         currentPassword,
       })
     }
+
+    await captureServerEvent("account_deleted", {}, user.id)
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -321,6 +334,12 @@ export const actions = {
         },
       })
     }
+
+    await captureServerEvent(
+      "profile_updated",
+      { profile_created: newProfile },
+      user.id,
+    )
 
     return {
       fullName,
