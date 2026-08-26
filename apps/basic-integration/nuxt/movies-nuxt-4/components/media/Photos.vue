@@ -6,6 +6,12 @@ defineProps<{
 }>()
 
 const show = useImageModal()
+const { $posthog: posthog } = useNuxtApp()
+
+function viewImage(images: NonNullable<Media['images']>['backdrops'], index: number, imageCategory: 'backdrop' | 'poster') {
+  posthog?.capture('image_viewed', { image_category: imageCategory })
+  show(images, index)
+}
 </script>
 
 <template>
@@ -25,7 +31,7 @@ const show = useImageModal()
         :item="i"
         class="aspect-16/9"
         w-full
-        @click="show(item.images!.backdrops, idx)"
+        @click="viewImage(item.images!.backdrops, idx, 'backdrop')"
       />
     </div>
     <div flex mt-10 gap-2 items-baseline>
@@ -42,7 +48,7 @@ const show = useImageModal()
         :key="i.file_path"
         :item="i"
         class="aspect-9/16"
-        @click="show(item.images!.posters, idx)"
+        @click="viewImage(item.images!.posters, idx, 'poster')"
       />
     </div>
   </div>
