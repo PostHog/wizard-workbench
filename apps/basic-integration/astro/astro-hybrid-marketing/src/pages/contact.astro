@@ -65,6 +65,10 @@ import Layout from '../layouts/Layout.astro';
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
 
+    window.posthog?.capture('contact_form_submission_attempted', {
+      interest: formData.get('interest'),
+    });
+
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
@@ -77,6 +81,10 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        window.posthog?.capture('contact_form_submitted', {
+          interest: formData.get('interest'),
+        });
+
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
