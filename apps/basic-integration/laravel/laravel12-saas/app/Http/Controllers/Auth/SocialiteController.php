@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
@@ -15,7 +16,7 @@ class SocialiteController extends Controller
         return Socialite::driver($provider)->redirect();
     }
 
-    public function callback($provider)
+    public function callback($provider, PostHogService $posthog)
     {
         try {
             $socialUser = Socialite::driver($provider)->user();
@@ -39,6 +40,14 @@ class SocialiteController extends Controller
         }
 
         Auth::login($user);
+
+        $posthog->identify(
+            (string) $user->getKey(),
+            $user->getPostHogPersonProperties(),
+        );
+        $posthog->capture((string) $user->getKey(), 'user_logged_in', [
+            'login_method' => $provider,
+        ]);
 
         return redirect('/dashboard');
     }
