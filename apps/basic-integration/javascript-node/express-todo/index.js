@@ -1,4 +1,6 @@
 const express = require('express');
+const { setupExpressErrorHandler } = require('posthog-node');
+const posthog = require('./posthog');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +23,14 @@ app.post('/api/todos', (req, res) => {
 
   const todo = { id: nextId++, title, completed: false };
   todos.push(todo);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'todo_created',
+      properties: { completed: todo.completed },
+    });
+  }
+
   res.status(201).json(todo);
 });
 
@@ -31,8 +41,30 @@ app.patch('/api/todos/:id', (req, res) => {
     return res.status(404).json({ error: 'Not found' });
   }
 
-  if (req.body.title !== undefined) todo.title = req.body.title;
-  if (req.body.completed !== undefined) todo.completed = req.body.completed;
+  const titleChanged = req.body.title !== undefined;
+  const completedChanged = req.body.completed !== undefined;
+  const wasCompleted = todo.completed;
+
+  if (titleChanged) todo.title = req.body.title;
+  if (completedChanged) todo.completed = req.body.completed;
+
+  if (posthog) {
+    posthog.capture({
+      event: 'todo_updated',
+      properties: {
+        title_changed: titleChanged,
+        completed_changed: completedChanged,
+        completed: todo.completed,
+      },
+    });
+
+    if (completedChanged && !wasCompleted && todo.completed) {
+      posthog.capture({
+        event: 'todo_completed',
+        properties: { completed: true },
+      });
+    }
+  }
 
   res.json(todo);
 });
@@ -45,9 +77,28 @@ app.delete('/api/todos/:id', (req, res) => {
   }
 
   todos.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({ event: 'todo_deleted' });
+  }
+
   res.status(204).send();
 });
+
+if (posthog) {
+  setupExpressErrorHandler(posthog, app);
+}
 
 app.listen(PORT, () => {
   console.log(`Express todo API running on http://localhost:${PORT}`);
 });
+
+if (posthog) {
+  const shutdown = async () => {
+    await posthog.shutdown();
+    process.exit(0);
+  };
+
+  process.once('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
+}
