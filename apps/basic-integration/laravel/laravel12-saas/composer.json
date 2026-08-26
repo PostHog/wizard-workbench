@@ -24,7 +24,8 @@
         "spatie/laravel-activitylog": "^4.8",
         "spatie/laravel-cookie-consent": "^3.3",
         "spatie/laravel-sitemap": "^7.2",
-        "stechstudio/filament-impersonate": "^4.0"
+        "stechstudio/filament-impersonate": "^4.0",
+        "posthog/posthog-php": "^4.12.1"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
