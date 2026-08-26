@@ -18,11 +18,15 @@ export default function Login() {
     setIsLoading(true)
 
     // Fake loading delay for realism
-    setTimeout(() => {
-      const success = login(username, password)
+    setTimeout(async () => {
+      const success = await login(username, password)
       setIsLoading(false)
 
       if (success) {
+        if (import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+          const { default: posthog } = await import('posthog-js')
+          posthog.capture('user_logged_in')
+        }
         navigate('/profile')
       } else {
         setError('Invalid credentials! (But this is fake, so any password works if the username exists)')

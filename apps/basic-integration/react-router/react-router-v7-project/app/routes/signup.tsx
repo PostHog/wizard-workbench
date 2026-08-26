@@ -18,12 +18,16 @@ export default function Signup() {
     setIsLoading(true)
 
     // Fake loading delay
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        const newUser = signup(username, email, password)
+        const newUser = await signup(username, email, password)
         setIsLoading(false)
 
         if (newUser) {
+          if (import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+            const { default: posthog } = await import('posthog-js')
+            posthog.capture('user_signed_up')
+          }
           navigate('/profile')
         } else {
           setError('Signup failed! (But this is fake, so it should always work)')

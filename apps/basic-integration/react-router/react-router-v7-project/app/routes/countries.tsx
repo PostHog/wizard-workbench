@@ -136,9 +136,19 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
-                        claimCountry(countryName);
-                        window.location.reload();
+                      onClick={async () => {
+                        if (!isClaimed) {
+                          claimCountry(countryName);
+                          if (import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+                            const { default: posthog } = await import('posthog-js');
+                            posthog.capture('country_claimed', {
+                              country_code: country.cca3,
+                              country_region: country.region,
+                              total_claimed_countries: user.claimedCountries.length + 1,
+                            });
+                          }
+                          window.location.reload();
+                        }
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isClaimed
@@ -149,9 +159,19 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
-                        likeCountry(countryName);
-                        window.location.reload();
+                      onClick={async () => {
+                        if (!isLiked) {
+                          likeCountry(countryName);
+                          if (import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+                            const { default: posthog } = await import('posthog-js');
+                            posthog.capture('country_liked', {
+                              country_code: country.cca3,
+                              country_region: country.region,
+                              total_liked_countries: user.likedCountries.length + 1,
+                            });
+                          }
+                          window.location.reload();
+                        }
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isLiked
@@ -162,9 +182,19 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
-                        visitCountry(countryName);
-                        window.location.reload();
+                      onClick={async () => {
+                        if (!user.visitedCountries.includes(countryName)) {
+                          visitCountry(countryName);
+                          if (import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+                            const { default: posthog } = await import('posthog-js');
+                            posthog.capture('country_visited', {
+                              country_code: country.cca3,
+                              country_region: country.region,
+                              total_visited_countries: user.visitedCountries.length + 1,
+                            });
+                          }
+                          window.location.reload();
+                        }
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
                     >
