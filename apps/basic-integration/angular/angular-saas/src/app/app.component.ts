@@ -8,6 +8,8 @@ import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppUpdateService, Logger } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
+import { CredentialsService } from '@app/auth/services/credentials.service';
+import { PostHogService } from '@core/services/posthog.service';
 
 @Component({
   selector: 'app-root',
@@ -24,10 +26,21 @@ export class AppComponent implements OnInit {
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PostHogService);
 
   title = 'angular-boilerplate';
 
   ngOnInit() {
+    this.posthogService.init(environment.posthogProjectToken, environment.posthogHost, !environment.production, {
+      capture_exceptions: {
+        capture_unhandled_errors: true,
+        capture_unhandled_rejections: true,
+        capture_console_errors: false,
+      },
+    });
+    this.identifyAuthenticatedUser();
+
     // Setup logger
     if (environment.production) {
       Logger.enableProductionMode();
@@ -62,6 +75,21 @@ export class AppComponent implements OnInit {
 
     // update service
     this.updateService.subscribeForUpdates();
+  }
+
+  private identifyAuthenticatedUser(): void {
+    const credentials = this.credentialsService.credentials();
+
+    if (!credentials?.id) {
+      return;
+    }
+
+    this.posthogService.posthog.identify(credentials.id, {
+      email: credentials.email,
+      $name: credentials.fullName.trim(),
+      username: credentials.username,
+      roles: credentials.roles,
+    });
   }
 
   getTitle(state: any, parent: any): any[] {
