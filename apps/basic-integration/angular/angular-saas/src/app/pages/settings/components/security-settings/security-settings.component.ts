@@ -1,5 +1,6 @@
 import { Component, inject, ChangeDetectionStrategy, signal } from '@angular/core';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { PostHogService } from '@core/services';
 
 interface Session {
   id: number;
@@ -282,6 +283,7 @@ interface LoginEntry {
 })
 export class SecuritySettingsComponent {
   private readonly toast = inject(HotToastService);
+  private readonly posthogService = inject(PostHogService);
 
   readonly tfaEnabled = signal(false);
 
@@ -301,15 +303,20 @@ export class SecuritySettingsComponent {
   toggleTfa() {
     this.tfaEnabled.update((v) => !v);
     this.toast.success(this.tfaEnabled() ? '2FA enabled' : '2FA disabled');
+    this.posthogService.client?.capture('two_factor_authentication_toggled', {
+      enabled: this.tfaEnabled(),
+    });
   }
 
   revokeSession(session: Session) {
     this.sessions.update((current) => current.filter((s) => s.id !== session.id));
     this.toast.success('Session revoked');
+    this.posthogService.client?.capture('session_revoked');
   }
 
   revokeAllSessions() {
     this.sessions.update((current) => current.filter((s) => s.current));
     this.toast.success('All other sessions revoked');
+    this.posthogService.client?.capture('other_sessions_revoked');
   }
 }

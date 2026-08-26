@@ -6,8 +6,9 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AppUpdateService, Logger } from '@core/services';
+import { AppUpdateService, Logger, PostHogService } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
+import { CredentialsService } from '@app/auth/services/credentials.service';
 
 @Component({
   selector: 'app-root',
@@ -23,6 +24,8 @@ export class AppComponent implements OnInit {
   private readonly i18nService = inject(I18nService);
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly credentialsService = inject(CredentialsService);
   private readonly destroyRef = inject(DestroyRef);
 
   title = 'angular-boilerplate';
@@ -32,6 +35,9 @@ export class AppComponent implements OnInit {
     if (environment.production) {
       Logger.enableProductionMode();
     }
+
+    this.posthogService.init(environment.posthogKey, environment.posthogHost, environment.production);
+    this.identifyAuthenticatedUser();
 
     // Initialize i18nService with default language and supported languages
     this.i18nService.init(environment.defaultLanguage, environment.supportedLanguages);
@@ -62,6 +68,20 @@ export class AppComponent implements OnInit {
 
     // update service
     this.updateService.subscribeForUpdates();
+  }
+
+  private identifyAuthenticatedUser(): void {
+    const credentials = this.credentialsService.credentials();
+
+    if (!credentials?.id) {
+      return;
+    }
+
+    this.posthogService.client?.identify(credentials.id, {
+      email: credentials.email,
+      name: credentials.fullName.trim(),
+      role: credentials.roles[0],
+    });
   }
 
   getTitle(state: any, parent: any): any[] {
