@@ -1,5 +1,6 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
+import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
 import { HoneypotInputs } from "remix-utils/honeypot/react";
@@ -47,7 +48,11 @@ export function ContactSalesTeam({
         </CardDescription>
       </CardHeader>
 
-      <Form method="POST" {...form.props}>
+      <Form
+        method="POST"
+        onSubmit={() => posthog.capture("contact_sales_submitted")}
+        {...form.props}
+      >
         <FieldSet className="space-y-6" disabled={isContactingSales}>
           <CardContent className="space-y-6">
             <Field data-invalid={fields.firstName.ariaInvalid}>

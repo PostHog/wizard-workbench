@@ -1,5 +1,6 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
+import posthog from "posthog-js";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
@@ -70,7 +71,11 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmit={() => posthog.capture("team_invite_submitted")}
+          {...form.props}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

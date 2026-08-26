@@ -1,6 +1,7 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import posthog from "posthog-js";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
 
@@ -92,6 +93,7 @@ export function GeneralOrganizationSettings({
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      onSubmit={() => posthog.capture("organization_settings_saved")}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldLegend>

@@ -2,6 +2,7 @@ import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconUser } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
 
@@ -64,6 +65,7 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      onSubmit={() => posthog.capture("account_settings_saved")}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldLegend>

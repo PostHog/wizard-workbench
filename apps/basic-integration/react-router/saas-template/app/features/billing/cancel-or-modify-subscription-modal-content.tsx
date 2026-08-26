@@ -1,4 +1,5 @@
 import { IconCheck } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -119,7 +120,11 @@ export function CancelOrModifySubscriptionModalContent({
 
   return (
     <>
-      <Form method="post" replace>
+      <Form
+        method="post"
+        onSubmit={() => posthog.capture("subscription_change_requested")}
+        replace
+      >
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"

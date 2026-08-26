@@ -1,5 +1,6 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
 import { IconCheck } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import type { ComponentProps } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -107,7 +108,11 @@ export function CreateSubscriptionModalContent({
   );
 
   return (
-    <Form method="post" replace>
+    <Form
+      method="post"
+      onSubmit={() => posthog.capture("subscription_checkout_started")}
+      replace
+    >
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>

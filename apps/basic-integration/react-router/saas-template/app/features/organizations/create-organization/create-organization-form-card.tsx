@@ -2,6 +2,7 @@ import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconBuilding } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, href, Link } from "react-router";
 
@@ -61,7 +62,12 @@ export function CreateOrganizationFormCard({
         </CardHeader>
 
         <CardContent>
-          <Form encType="multipart/form-data" method="POST" {...form.props}>
+          <Form
+            encType="multipart/form-data"
+            method="POST"
+            onSubmit={() => posthog.capture("organization_created")}
+            {...form.props}
+          >
             <FieldSet
               className="flex flex-col gap-6"
               disabled={isCreatingOrganization}
