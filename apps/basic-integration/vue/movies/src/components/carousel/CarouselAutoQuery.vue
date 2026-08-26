@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import posthog from 'posthog-js'
 import type { QueryItem } from '../../types'
 import { listMedia } from '../../composables/useTMDB'
 import MediaCard from '../media/MediaCard.vue'
@@ -11,6 +12,13 @@ const props = defineProps<{
 
 const items = ref<any[]>([])
 const loading = ref(true)
+
+function trackCategoryExploreSelection() {
+  posthog.capture('category_explore_selected', {
+    category: props.query.query,
+    media_type: props.query.type,
+  })
+}
 
 onMounted(async () => {
   try {
@@ -30,7 +38,11 @@ onMounted(async () => {
       {{ query.title }}
     </template>
     <template #more>
-      <router-link :to="`/${query.type}/category/${query.query}`" class="n-link">
+      <router-link
+        :to="`/${query.type}/category/${query.query}`"
+        class="n-link"
+        @click="trackCategoryExploreSelection"
+      >
         Explore more
       </router-link>
     </template>

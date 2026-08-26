@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import posthog from 'posthog-js'
 import type { MediaType } from '../types'
 import { QUERY_LIST } from '../constants/lists'
 import { listMedia, getMedia } from '../composables/useTMDB'
@@ -32,6 +33,16 @@ const heroItem = ref<any>({
 })
 const queries = computed(() => QUERY_LIST[mediaType.value] || [])
 
+function trackFeaturedMediaSelection(event: MouseEvent) {
+  if ((event.target as Element).closest('button')) return
+
+  posthog.capture('featured_media_selected', {
+    media_id: heroItem.value.id,
+    media_type: mediaType.value,
+    page: 'media_list',
+  })
+}
+
 onMounted(async () => {
   try {
     if (queries.value.length > 0) {
@@ -50,7 +61,7 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen bg-black text-white">
     <div v-if="heroItem">
-      <router-link :to="`/${mediaType}/${heroItem.id}`">
+      <router-link :to="`/${mediaType}/${heroItem.id}`" @click="trackFeaturedMediaSelection">
         <MediaHero :item="heroItem" />
       </router-link>
     </div>
