@@ -8,6 +8,8 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.database import init_db
+from app.middleware import PostHogMiddleware
+from app.posthog import get_posthog_client, initialize_posthog, shutdown_posthog
 from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
 
 settings = get_settings()
@@ -20,7 +22,26 @@ async def lifespan(app: FastAPI):
     # Initialize database
     init_db()
 
+    if not settings.posthog_project_token:
+        if settings.debug:
+            raise RuntimeError(
+                "POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or "
+                "un-configured, this causes events to be silently missed. This error "
+                "stops appearing once POSTHOG_PROJECT_TOKEN is configured"
+            )
+    elif not settings.posthog_host:
+        if settings.debug:
+            raise RuntimeError(
+                "POSTHOG_HOST variable required by PostHog is missing or un-configured, "
+                "this causes events to be silently missed. This error stops appearing "
+                "once POSTHOG_HOST is configured"
+            )
+    else:
+        initialize_posthog(settings.posthog_project_token, settings.posthog_host)
+
     yield
+
+    shutdown_posthog()
 
 
 app = FastAPI(
@@ -28,6 +49,7 @@ app = FastAPI(
     description="AI content generation platform",
     lifespan=lifespan,
 )
+app.add_middleware(PostHogMiddleware)
 
 # Include routers
 app.include_router(auth.router)
@@ -48,7 +70,11 @@ async def not_found_handler(request: Request, exc):
 
 @app.exception_handler(500)
 async def internal_error_handler(request: Request, exc):
-    """Handle 500 errors."""
+    """Capture and handle unhandled server errors."""
+    posthog_client = get_posthog_client()
+    if posthog_client is not None:
+        posthog_client.capture_exception(exc)
+
     if request.url.path.startswith("/api/"):
         return JSONResponse({"error": "Internal server error"}, status_code=500)
     return templates.TemplateResponse(request, "500.html", status_code=500)
