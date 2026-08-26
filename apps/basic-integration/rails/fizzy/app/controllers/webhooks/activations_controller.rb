@@ -7,6 +7,13 @@ class Webhooks::ActivationsController < ApplicationController
     webhook = @board.webhooks.find(params[:webhook_id])
     webhook.activate
 
+    if PostHog.instance
+      PostHog.capture(
+        distinct_id: Current.identity.posthog_distinct_id,
+        event: "webhook_activated"
+      )
+    end
+
     redirect_to webhook
   end
 end
