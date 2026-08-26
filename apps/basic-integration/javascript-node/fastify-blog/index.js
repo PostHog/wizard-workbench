@@ -1,6 +1,20 @@
 import Fastify from 'fastify';
+import { posthog } from './posthog.js';
 
 const fastify = Fastify({ logger: true });
+
+fastify.setErrorHandler((error, request, reply) => {
+  posthog?.captureException(error);
+  reply.send(error);
+});
+
+fastify.addHook('onClose', async () => {
+  await posthog?.shutdown();
+});
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => fastify.close());
+}
 
 const posts = [];
 const comments = [];
@@ -39,6 +53,13 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+  posthog?.capture({
+    event: 'post_created',
+    properties: {
+      post_id: post.id,
+      published: post.published,
+    },
+  });
   return reply.status(201).send(post);
 });
 
@@ -67,6 +88,17 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  posthog?.capture({
+    event: 'post_updated',
+    properties: {
+      post_id: post.id,
+      title_updated: title !== undefined,
+      body_updated: body !== undefined,
+      published_updated: published !== undefined,
+      published: post.published,
+    },
+  });
+
   return post;
 });
 
@@ -81,10 +113,22 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   const postId = posts[index].id;
   posts.splice(index, 1);
 
+  let deletedCommentCount = 0;
   // Remove associated comments
   for (let i = comments.length - 1; i >= 0; i--) {
-    if (comments[i].post_id === postId) comments.splice(i, 1);
+    if (comments[i].post_id === postId) {
+      comments.splice(i, 1);
+      deletedCommentCount++;
+    }
   }
+
+  posthog?.capture({
+    event: 'post_deleted',
+    properties: {
+      post_id: postId,
+      deleted_comment_count: deletedCommentCount,
+    },
+  });
 
   return reply.status(204).send();
 });
@@ -111,6 +155,13 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+  posthog?.capture({
+    event: 'comment_created',
+    properties: {
+      comment_id: comment.id,
+      post_id: comment.post_id,
+    },
+  });
   return reply.status(201).send(comment);
 });
 
