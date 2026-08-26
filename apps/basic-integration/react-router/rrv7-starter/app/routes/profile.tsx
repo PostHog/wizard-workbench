@@ -4,16 +4,23 @@ import { fakeFollowers } from '@/lib/data/fake-data'
 import type { Route } from './+types/profile'
 import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
-import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
+import { getFollowers, getFollowing, getPosts } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import posthog, { posthogEnabled } from '@/lib/posthog.client'
 
-function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
+function FollowButton({ onFollow }: { onFollow: () => void }) {
   const [isFollowing, setIsFollowing] = useState(false)
 
   const handleClick = () => {
-    setIsFollowing(!isFollowing)
-    if (!isFollowing) {
+    const nextIsFollowing = !isFollowing
+    setIsFollowing(nextIsFollowing)
+    if (nextIsFollowing) {
       onFollow()
+    }
+    if (posthogEnabled) {
+      posthog.capture('follow_back_toggled', {
+        is_following: nextIsFollowing,
+      })
     }
   }
 
@@ -142,7 +149,6 @@ export default function Profile() {
                   <span className="text-sm text-primary/50">Followed you 2 minutes ago</span>
                 </div>
                 <FollowButton 
-                  username={follower.username}
                   onFollow={() => {
                     const newFollowing = getFollowing() + 1
                     setFollowing(newFollowing)
