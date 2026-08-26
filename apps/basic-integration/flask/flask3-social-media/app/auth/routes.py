@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash, request
+from flask import current_app, render_template, redirect, url_for, flash, request
 from urllib.parse import urlsplit
 from flask_login import login_user, logout_user, current_user
 from flask_babel import _
@@ -23,6 +23,15 @@ def login():
             flash(_('Invalid username or password'))
             return redirect(url_for('auth.login'))
         login_user(user, remember=form.remember_me.data)
+        posthog_client = current_app.extensions.get('posthog')
+        if posthog_client:
+            posthog_client.identify_context(str(user.id))
+            posthog_client.set(
+                distinct_id=str(user.id),
+                properties={'email': user.email, 'username': user.username})
+            posthog_client.capture(
+                'user_logged_in',
+                properties={'remember_me': form.remember_me.data})
         next_page = request.args.get('next')
         if not next_page or urlsplit(next_page).netloc != '':
             next_page = url_for('main.index')
@@ -32,6 +41,9 @@ def login():
 
 @bp.route('/logout')
 def logout():
+    posthog_client = current_app.extensions.get('posthog')
+    if posthog_client:
+        posthog_client.capture('user_logged_out')
     logout_user()
     return redirect(url_for('main.index'))
 
@@ -46,6 +58,13 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
+        posthog_client = current_app.extensions.get('posthog')
+        if posthog_client:
+            posthog_client.identify_context(str(user.id))
+            posthog_client.set(
+                distinct_id=str(user.id),
+                properties={'email': user.email, 'username': user.username})
+            posthog_client.capture('user_registered')
         flash(_('Congratulations, your registration is complete!'))
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html', title=_('Register'),
@@ -80,6 +99,10 @@ def reset_password(token):
     if form.validate_on_submit():
         user.set_password(form.password.data)
         db.session.commit()
+        posthog_client = current_app.extensions.get('posthog')
+        if posthog_client:
+            posthog_client.identify_context(str(user.id))
+            posthog_client.capture('password_reset_completed')
         flash(_('Your password has been reset.'))
         return redirect(url_for('auth.login'))
     return render_template('auth/reset_password.html', form=form)

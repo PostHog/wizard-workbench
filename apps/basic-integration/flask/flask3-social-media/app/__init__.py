@@ -1,10 +1,13 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+
+from posthog import Posthog
+from flask import Flask, g, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
@@ -45,6 +48,53 @@ def create_app(config_class=Config):
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
+
+    posthog_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    for name, value in (
+            ('POSTHOG_PROJECT_TOKEN', posthog_token),
+            ('POSTHOG_HOST', posthog_host)):
+        if not value:
+            if app.debug:
+                raise RuntimeError(
+                    f'{name} variable required by PostHog is missing or '
+                    f'un-configured, this causes events to be silently missed. '
+                    f'This error stops appearing once {name} is configured')
+            break
+    else:
+        posthog_client = Posthog(
+            posthog_token,
+            host=posthog_host,
+            enable_exception_autocapture=True)
+        app.extensions['posthog'] = posthog_client
+        atexit.register(posthog_client.shutdown)
+
+    @app.before_request
+    def bind_posthog_request_context():
+        posthog_client = app.extensions.get('posthog')
+        if not posthog_client:
+            return
+        context = posthog_client.new_context(fresh=True)
+        context.__enter__()
+        g.posthog_context = context
+
+        if current_user.is_authenticated:
+            posthog_client.identify_context(str(current_user.id))
+        else:
+            distinct_id = request.headers.get('X-POSTHOG-DISTINCT-ID')
+            if distinct_id:
+                posthog_client.identify_context(distinct_id)
+
+        session_id = request.headers.get('X-POSTHOG-SESSION-ID')
+        if session_id:
+            posthog_client.set_context_session(session_id)
+
+    @app.teardown_request
+    def close_posthog_request_context(error=None):
+        context = g.pop('posthog_context', None)
+        if context:
+            context.__exit__(type(error), error, error.__traceback__ if error else None)
+
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if Elasticsearch and app.config['ELASTICSEARCH_URL'] else None
     if Redis and rq:
