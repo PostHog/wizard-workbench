@@ -9,6 +9,15 @@ from pydantic import BaseModel, EmailStr
 
 from app.dependencies import DbSession, RequiredUser
 
+
+def capture_event(event: str, properties: dict) -> None:
+    """Capture an event when the shared PostHog client is configured."""
+    from app.main import posthog_client
+
+    if posthog_client:
+        posthog_client.capture(event, properties=properties)
+
+
 router = APIRouter(prefix="/settings", tags=["settings"])
 templates = Jinja2Templates(directory="app/templates")
 
@@ -66,6 +75,7 @@ async def update_settings(
         else:
             current_user.email = email
             db.commit()
+            capture_event("email_updated", {})
             success = "Settings updated successfully"
     else:
         success = "No changes made"
@@ -108,6 +118,7 @@ async def change_password(
     else:
         current_user.set_password(new_password)
         db.commit()
+        capture_event("password_changed", {})
         success = "Password changed successfully"
 
     api_key_count = db.query(APIKey).filter(

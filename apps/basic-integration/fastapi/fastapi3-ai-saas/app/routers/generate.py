@@ -8,6 +8,15 @@ from pydantic import BaseModel, Field
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
 
+
+def capture_event(event: str, properties: dict) -> None:
+    """Capture an event when the shared PostHog client is configured."""
+    from app.main import posthog_client
+
+    if posthog_client:
+        posthog_client.capture(event, properties=properties)
+
+
 router = APIRouter(prefix="/api")
 
 
@@ -54,6 +63,14 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        capture_event(
+            "content_generation_blocked",
+            {
+                "generation_type": request.generation_type,
+                "credits_required": credits_needed,
+                "credits_available": current_user.credits,
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -74,6 +91,15 @@ async def generate_content(
         prompt=request.prompt,
         result=mock_content,
         credits_used=credits_needed,
+    )
+    capture_event(
+        "content_generated",
+        {
+            "generation_type": generation.generation_type,
+            "credits_used": generation.credits_used,
+            "credits_remaining": current_user.credits,
+            "prompt_length": len(request.prompt),
+        },
     )
 
     return GenerateResponse(

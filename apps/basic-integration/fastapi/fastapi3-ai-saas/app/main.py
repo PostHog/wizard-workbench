@@ -1,26 +1,54 @@
 """Acme AI - FastAPI SaaS Application."""
 
+import atexit
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+from posthog import Posthog
 from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
+from app.middleware import PostHogMiddleware
+from app.routers import api_keys, auth, generate, pages, settings as settings_router, usage
 
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
+posthog_client: Posthog | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events for startup/shutdown."""
+    global posthog_client
+
+    if settings.posthog_project_token and settings.posthog_host:
+        posthog_client = Posthog(
+            settings.posthog_project_token,
+            host=settings.posthog_host,
+            enable_exception_autocapture=True,
+        )
+        atexit.register(posthog_client.shutdown)
+    elif settings.debug:
+        missing_var = (
+            "POSTHOG_PROJECT_TOKEN"
+            if not settings.posthog_project_token
+            else "POSTHOG_HOST"
+        )
+        raise RuntimeError(
+            f"{missing_var} variable required by PostHog is missing or un-configured, "
+            f"this causes events to be silently missed. This error stops appearing "
+            f"once {missing_var} is configured"
+        )
+
     # Initialize database
     init_db()
 
     yield
+
+    if posthog_client:
+        posthog_client.flush()
 
 
 app = FastAPI(
@@ -28,6 +56,8 @@ app = FastAPI(
     description="AI content generation platform",
     lifespan=lifespan,
 )
+
+app.add_middleware(PostHogMiddleware)
 
 # Include routers
 app.include_router(auth.router)
