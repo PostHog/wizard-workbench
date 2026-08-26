@@ -14,6 +14,7 @@ import { Loader2 } from 'lucide-react';
 import useSWR from 'swr';
 import { User } from '@/lib/db/schema';
 import { useState, useTransition } from 'react';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -52,6 +53,14 @@ export default function GeneralPage() {
           return;
         }
 
+        if (user?.id !== undefined && user?.id !== null) {
+          posthog.identify(String(user.id), {
+            email: data.email,
+            name: data.name,
+            role: user.role
+          });
+        }
+        posthog.capture('account_details_updated');
         setSuccess(result.success);
         setName(result.name);
       } catch (err) {
