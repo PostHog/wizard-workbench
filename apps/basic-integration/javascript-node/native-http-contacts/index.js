@@ -1,4 +1,23 @@
 import { createServer } from 'node:http';
+import { PostHog } from 'posthog-node';
+
+const posthogProjectToken = process.env.POSTHOG_PROJECT_TOKEN;
+const posthogHost = process.env.POSTHOG_HOST;
+
+if ((!posthogProjectToken || !posthogHost) && process.env.NODE_ENV !== 'production') {
+  const missingVariable = posthogProjectToken ? 'POSTHOG_HOST' : 'POSTHOG_PROJECT_TOKEN';
+  throw new Error(
+    `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`
+  );
+}
+
+export const posthog =
+  posthogProjectToken && posthogHost
+    ? new PostHog(posthogProjectToken, {
+        host: posthogHost,
+        enableExceptionAutocapture: true,
+      })
+    : null;
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -47,6 +66,12 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      posthog?.capture({
+        event: 'group_created',
+        properties: {
+          initial_contact_count: 0,
+        },
+      });
       return json(res, 201, group);
     }
 
@@ -90,6 +115,14 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      posthog?.capture({
+        event: 'contact_created',
+        properties: {
+          has_company: Boolean(contact.company),
+          has_phone: Boolean(contact.phone),
+          has_group: Boolean(contact.group_id),
+        },
+      });
       return json(res, 201, contact);
     }
 
@@ -108,12 +141,34 @@ const server = createServer(async (req, res) => {
       if (!contact) return json(res, 404, { error: 'Contact not found' });
 
       const body = await parseBody(req);
-      if (body.name !== undefined) contact.name = body.name;
-      if (body.email !== undefined) contact.email = body.email;
-      if (body.phone !== undefined) contact.phone = body.phone;
-      if (body.company !== undefined) contact.company = body.company;
-      if (body.group_id !== undefined) contact.group_id = body.group_id;
+      const updatedFields = [];
+      if (body.name !== undefined) {
+        contact.name = body.name;
+        updatedFields.push('name');
+      }
+      if (body.email !== undefined) {
+        contact.email = body.email;
+        updatedFields.push('email');
+      }
+      if (body.phone !== undefined) {
+        contact.phone = body.phone;
+        updatedFields.push('phone');
+      }
+      if (body.company !== undefined) {
+        contact.company = body.company;
+        updatedFields.push('company');
+      }
+      if (body.group_id !== undefined) {
+        contact.group_id = body.group_id;
+        updatedFields.push('group_id');
+      }
 
+      posthog?.capture({
+        event: 'contact_updated',
+        properties: {
+          updated_fields: updatedFields,
+        },
+      });
       return json(res, 200, contact);
     }
 
@@ -124,12 +179,18 @@ const server = createServer(async (req, res) => {
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
       contacts.splice(index, 1);
+      posthog?.capture({ event: 'contact_deleted' });
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    posthog?.captureException(err, undefined, {
+      request_method: method,
+      request_path: path,
+      status_code: 500,
+    });
     json(res, 500, { error: 'Internal server error' });
   }
 });
@@ -139,3 +200,12 @@ const PORT = process.env.PORT || 3004;
 server.listen(PORT, () => {
   console.log(`Native HTTP contacts API running on http://localhost:${PORT}`);
 });
+
+function shutdown() {
+  server.close(async () => {
+    await posthog?.shutdown();
+  });
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
