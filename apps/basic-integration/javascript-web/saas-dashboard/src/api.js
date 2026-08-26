@@ -5,6 +5,7 @@
  * to mimic real network calls. In a real app, these would be
  * fetch() calls to a backend.
  */
+import { captureEvent, identifyUser, resetPosthog } from './posthog.js';
 import { store } from './store.js';
 
 const DELAY_MS = 150;
@@ -21,11 +22,17 @@ export const api = {
     if (!success) {
       throw new Error('Invalid credentials. Use a team member email.');
     }
-    return store.state.currentUser;
+
+    const user = store.state.currentUser;
+    identifyUser(user);
+    captureEvent('user_logged_in');
+    return user;
   },
 
   async logout() {
     await delay(50);
+    captureEvent('user_logged_out');
+    resetPosthog();
     store.logout();
   },
 
@@ -45,34 +52,67 @@ export const api = {
     await delay();
 
     if (!name.trim()) throw new Error('Project name is required');
-    return store.createProject(name.trim(), description.trim());
+    const project = store.createProject(name.trim(), description.trim());
+    captureEvent('project_created', { project_id: project.id });
+    return project;
   },
 
   async deleteProject(id) {
     await delay();
     store.deleteProject(id);
+    captureEvent('project_deleted', { project_id: id });
   },
 
   async addTask(projectId, title, priority) {
     await delay();
 
     if (!title.trim()) throw new Error('Task title is required');
-    return store.addTask(projectId, title.trim(), priority);
+    const task = store.addTask(projectId, title.trim(), priority);
+    if (task) {
+      captureEvent('task_created', {
+        project_id: projectId,
+        task_id: task.id,
+        priority: task.priority,
+      });
+    }
+    return task;
   },
 
   async updateTaskStatus(projectId, taskId, status) {
     await delay(50);
+    const task = store.getProject(projectId)?.tasks.find((item) => item.id === taskId);
+    if (!task || task.status === status) return;
+
+    const previous_status = task.status;
     store.updateTaskStatus(projectId, taskId, status);
+    captureEvent('task_status_changed', {
+      project_id: projectId,
+      task_id: taskId,
+      previous_status,
+      status,
+    });
   },
 
   async deleteTask(projectId, taskId) {
     await delay(50);
+    const task = store.getProject(projectId)?.tasks.find((item) => item.id === taskId);
+    if (!task) return;
+
     store.deleteTask(projectId, taskId);
+    captureEvent('task_deleted', { project_id: projectId, task_id: taskId });
   },
 
   async assignTask(projectId, taskId, assigneeId) {
     await delay(50);
+    const task = store.getProject(projectId)?.tasks.find((item) => item.id === taskId);
+    if (!task || task.assignee === assigneeId) return;
+
     store.assignTask(projectId, taskId, assigneeId);
+    captureEvent('task_assignee_changed', {
+      project_id: projectId,
+      task_id: taskId,
+      is_assigned: Boolean(assigneeId),
+    });
   },
 
   async getStats() {
@@ -88,6 +128,7 @@ export const api = {
   async updateSettings(updates) {
     await delay();
     store.updateSettings(updates);
+    captureEvent('settings_updated', { setting_keys: Object.keys(updates) });
     return store.state.settings;
   },
 
