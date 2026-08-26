@@ -7,11 +7,15 @@ import {
   createRootRoute,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from 'posthog-js/react'
 import * as React from 'react'
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary'
 import { NotFound } from '~/components/NotFound'
 import appCss from '~/styles/app.css?url'
+import { initializePostHog, posthog } from '~/utils/posthog-client'
 import { seo } from '~/utils/seo'
+
+initializePostHog()
 
 export const Route = createRootRoute({
   head: () => ({
@@ -74,7 +78,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <PostHogProvider client={posthog}>
+      <div className="min-h-screen flex flex-col">
       <div className="flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm">
         <div className="flex items-center gap-2 p-3">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
@@ -114,10 +119,11 @@ function RootComponent() {
             </Link>
           </nav>
         </div>
-        <div className="flex-1 bg-white dark:bg-gray-900">
-          <Outlet />
+          <div className="flex-1 bg-white dark:bg-gray-900">
+            <Outlet />
+          </div>
         </div>
       </div>
-    </div>
+    </PostHogProvider>
   )
 }
