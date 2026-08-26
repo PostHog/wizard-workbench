@@ -27,6 +27,13 @@ class BoardsController < ApplicationController
 
   def create
     @board = Board.create! board_params.with_defaults(all_access: true)
+    if Rails.configuration.x.posthog.enabled
+      PostHog.capture(
+        distinct_id: Current.identity.posthog_distinct_id,
+        event: "board_created",
+        properties: { access: @board.all_access? ? "all" : "restricted" }
+      )
+    end
 
     respond_to do |format|
       format.html { redirect_to board_path(@board) }
@@ -58,6 +65,12 @@ class BoardsController < ApplicationController
 
   def destroy
     @board.destroy
+    if Rails.configuration.x.posthog.enabled
+      PostHog.capture(
+        distinct_id: Current.identity.posthog_distinct_id,
+        event: "board_deleted"
+      )
+    end
 
     respond_to do |format|
       format.html { redirect_to root_path }
