@@ -665,6 +665,8 @@ jobs:
           POSTHOG_REGION: ${{ needs.discover.outputs.input_posthog_region }}
           POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
           POSTHOG_WIZARD_PROJECT_ID: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_TARGET_PROJECT_ID }}
+          # The existing CI key, now with error_tracking:write, doubles as the source-maps upload key.
+          SOURCE_MAPS_CLI_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
           WIZARD_PATH: ${{ env.WIZARD_PATH }}
           CONTEXT_MILL_PATH: ${{ env.CONTEXT_MILL_PATH }}
           WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}

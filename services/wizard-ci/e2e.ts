@@ -152,6 +152,8 @@ export function runE2e(opts: E2eOptions): number {
   for (const k of Object.keys(childEnv))
     if (STRIP_HOST_AUTH.test(k)) delete childEnv[k];
   childEnv.POSTHOG_PERSONAL_API_KEY = apiKey;
+  // The source-maps upload key defaults to the CI key (which has error_tracking:write); SOURCE_MAPS_CLI_KEY overrides it locally.
+  childEnv.SOURCE_MAPS_CLI_KEY = process.env.SOURCE_MAPS_CLI_KEY ?? apiKey;
   childEnv.APP_DIR = appDir;
   childEnv.PROJECT_ID = projectId;
   childEnv.POSTHOG_REGION = region;
@@ -176,10 +178,12 @@ export function runE2e(opts: E2eOptions): number {
     /* harness crashed before writing */
   }
 
-  // The integration flow ends at keep-skills/skillsComplete; other programs
-  // (e.g. self-driving) end at their own outro, so assert against that instead.
-  const isIntegration = !opts.program || opts.program === "posthog-integration";
-  const programChecks: Array<[string, boolean]> = isIntegration
+  // Integration and source-maps end at keep-skills; terminal-outro programs (self-driving) assert the outro.
+  const endsAtKeepSkills =
+    !opts.program ||
+    opts.program === "posthog-integration" ||
+    opts.program === "error-tracking-upload-source-maps";
+  const programChecks: Array<[string, boolean]> = endsAtKeepSkills
     ? [
         ["full interactive flow reached keep-skills", !!result?.screenPath?.includes("keep-skills")],
         ["skillsComplete", result?.skillsComplete === true],
