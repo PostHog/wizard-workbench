@@ -23,11 +23,23 @@ apps/
 │   └── stripe/
 │       ├── stripe-next-js-saas-starter
 │       └── stripe-saas-demo
+├── warehouse/            # Data warehouse sources (e2e-only, mocked backend)
+│   ├── stripe-node
+│   ├── multi-source-next
+│   ├── monorepo-env
+│   └── zero-source
 └── misc/                 # Misc apps for skill runs
     └── quack-quack
 ```
 
 To add a new test app, create a directory under the appropriate workflow folder in `/apps`.
+
+The `warehouse` category is marked `e2eOnly` in `apps/manifest.json`. Its apps
+run only under `pnpm wizard-ci <app> --e2e`, against the stub MCP server in
+`services/mcp-stub` — a warehouse run creates PostHog resources rather than
+editing the app, so there is no diff to grade. The diff-mode runners
+(`wizard-run`, `wizard-benchmark`) hide the category. See
+[`apps/warehouse/README.md`](apps/warehouse/README.md).
 
 ## Workbench ownership
 
@@ -56,6 +68,7 @@ services/
 ├── pr-evaluator/     # AI-powered code evaluation for PRs and branches
 ├── wizard-ci/        # Automated wizard runs with PR creation
 ├── wizard-run/       # Interactive wizard runner
+├── mcp-stub/         # Stub PostHog MCP server for warehouse e2e runs
 ├── wizard-commands.ts # Registry of wizard commands (integration, revenue, …)
 └── github/           # GitHub/git utilities
 ```
