@@ -1,0 +1,15 @@
+{
+  "program": "warehouse-source",
+  "minKinds": ["Postgres", "Stripe"],
+  "optionalKinds": [],
+  "forbidKinds": ["Supabase", "MySQL", "Hubspot"],
+  "created": ["Postgres", "Stripe"],
+  "attemptedFailOk": [],
+  "deepLink": [],
+  "askBatches": [1, 3],
+  "askMaxPerBatch": 8,
+  "expectAbort": null,
+  "seeded": false,
+  "expectNotices": 0,
+  "expectSkipReason": null
+}

@@ -1,0 +1,14 @@
+{
+  "name": "zero-source",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Markdown link checker with no external data of any kind",
+  "bin": { "linkcheck": "src/cli.js" },
+  "scripts": {
+    "start": "node src/cli.js"
+  },
+  "dependencies": {
+    "commander": "^13.1.0"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "multi-source-next",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Next.js support desk that reads from Postgres, Supabase, Stripe, HubSpot and Hugging Face",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@huggingface/inference": "^3.3.4",
+    "@hubspot/api-client": "^12.0.1",
+    "@supabase/supabase-js": "^2.48.1",
+    "next": "^15.1.6",
+    "pg": "^8.13.1",
+    "posthog-js": "^1.215.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "stripe": "^17.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.7.3"
+  }
+}
