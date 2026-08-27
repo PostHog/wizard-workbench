@@ -18,6 +18,12 @@ export interface WizardCommand {
   description: string;
   /** Whether this command supports the --ci flag for non-interactive runs. */
   ciCapable?: boolean;
+  /**
+   * Whether this command only runs under `--e2e`. An e2eOnly command drives a
+   * mocked, assertion-graded run, so the normal diff-mode runners (wizard-run,
+   * wizard-benchmark) hide it — they would produce a diff nobody grades.
+   */
+  e2eOnly?: boolean;
   /** Subdirectory under apps/ to scan for test apps. */
   appsDir: string;
   /** Whether the wizard repo ships an e2e.json flow definition for this command. */
@@ -30,6 +36,7 @@ interface ManifestEntry {
   label: string;
   description: string;
   ciCapable?: boolean;
+  e2eOnly?: boolean;
 }
 
 interface Manifest {
@@ -48,6 +55,7 @@ const COMMAND_PROGRAM: Record<string, string> = {
   default: "posthog-integration",
   migrate: "migration",
   skill: "agent-skill",
+  warehouse: "warehouse-source",
   "upload-sourcemaps": "error-tracking-upload-source-maps",
 };
 
@@ -74,6 +82,7 @@ function loadManifest(): WizardCommand[] {
     label: w.label,
     description: w.description,
     ciCapable: w.ciCapable ?? false,
+    e2eOnly: w.e2eOnly ?? false,
     appsDir: w.dir,
     hasE2e: hasE2eDefinition(w.id),
   }));

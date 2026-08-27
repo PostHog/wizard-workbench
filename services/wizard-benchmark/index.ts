@@ -104,7 +104,7 @@ Usage:
   pnpm benchmark --region <us|eu>    Specify PostHog region (default: us)
 
 Available commands:
-${WIZARD_COMMANDS.filter((c) => c.ciCapable)
+${WIZARD_COMMANDS.filter((c) => c.ciCapable && !c.e2eOnly)
   .map((c) => `  ${commandToInvocation(c.id).padEnd(28)}  ${c.description}`)
   .join("\n")}
 
@@ -152,8 +152,9 @@ async function selectApp(apps: App[]): Promise<App> {
 }
 
 async function selectCommand(): Promise<WizardCommand> {
-  // Benchmark always uses --ci, so only CI-capable commands are valid.
-  const available = WIZARD_COMMANDS.filter((c) => c.ciCapable);
+  // Benchmark always uses --ci and grades a real diff, so only CI-capable
+  // commands that are not e2eOnly are valid.
+  const available = WIZARD_COMMANDS.filter((c) => c.ciCapable && !c.e2eOnly);
   if (available.length === 0) {
     console.error("No CI-capable wizard commands available.");
     process.exit(1);
@@ -279,6 +280,12 @@ async function main(): Promise<void> {
     if (!found.ciCapable) {
       console.error(
         `Command "${found.id}" does not support CI mode (benchmark requires --ci).`,
+      );
+      process.exit(1);
+    }
+    if (found.e2eOnly) {
+      console.error(
+        `Command "${found.id}" only runs under wizard-ci --e2e, so there is no diff to benchmark.`,
       );
       process.exit(1);
     }

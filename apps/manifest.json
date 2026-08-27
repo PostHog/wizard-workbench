@@ -58,6 +58,14 @@
       "ciCapable": true
     },
     {
+      "id": "warehouse",
+      "dir": "warehouse",
+      "label": "Data Warehouse",
+      "description": "Detect and connect a data warehouse source (Postgres, Stripe, …)",
+      "ciCapable": true,
+      "e2eOnly": true
+    },
+    {
       "id": "skill",
       "dir": "misc",
       "label": "Skill",
