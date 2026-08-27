@@ -10,6 +10,11 @@ function App() {
       <button onClick={() => posthog?.capture('button_clicked')}>
         Capture event
       </button>
+      {/* POSTHOG TEST - REMOVE AFTER TESTING */}
+      <button onClick={() => posthog?.captureException(new Error('PostHog source maps test'))}>
+        Test PostHog Error Tracking
+      </button>
+      {/* END POSTHOG TEST */}
     </main>
   )
 }
