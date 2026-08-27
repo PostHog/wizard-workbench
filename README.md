@@ -28,18 +28,32 @@ apps/
 │   ├── multi-source-next
 │   ├── monorepo-env
 │   └── zero-source
+├── warehouse-seeded/     # Warehouse task inside the install run (e2e-only)
+│   ├── next-stripe
+│   └── next-stripe-declined
 └── misc/                 # Misc apps for skill runs
     └── quack-quack
 ```
 
 To add a new test app, create a directory under the appropriate workflow folder in `/apps`.
 
-The `warehouse` category is marked `e2eOnly` in `apps/manifest.json`. Its apps
-run only under `pnpm wizard-ci <app> --e2e`, against the stub MCP server in
-`services/mcp-stub` — a warehouse run creates PostHog resources rather than
-editing the app, so there is no diff to grade. The diff-mode runners
-(`wizard-run`, `wizard-benchmark`) hide the category. See
-[`apps/warehouse/README.md`](apps/warehouse/README.md).
+The `warehouse` and `warehouse-seeded` categories are marked `e2eOnly` in
+`apps/manifest.json`. Their apps run only under `pnpm wizard-ci <app> --e2e`,
+against the stub MCP server in `services/mcp-stub` — a warehouse run creates
+PostHog resources rather than editing the app, so there is no diff to grade.
+The diff-mode runners (`wizard-run`, `wizard-benchmark`) hide both categories,
+and `wizard-ci` routes them to the `--e2e` path instead of the PR pipeline.
+
+Each app carries a `.wizard-ci/expect.json`, and the run is graded against it:
+what was detected, what the stub MCP was really asked to create, what the report
+claims, and whether the two agree. The runner prints one `E2E_RESULT` line and
+one `E2E_CHECK` line per assertion, and CI turns the leg red when one fails.
+
+`warehouse/` covers the standalone `wizard warehouse` command.
+`warehouse-seeded/` covers the same step offered as a task inside the default
+install run — different code, and where the recent regressions were. See
+[`apps/warehouse/README.md`](apps/warehouse/README.md) and
+[`apps/warehouse-seeded/README.md`](apps/warehouse-seeded/README.md).
 
 ## Workbench ownership
 
