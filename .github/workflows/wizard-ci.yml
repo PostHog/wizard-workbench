@@ -383,18 +383,34 @@ jobs:
 
       - name: Create initial PR comment
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        # Read the dispatch values through env, never by interpolating them into
+        # the script body. They arrive in a repository_dispatch payload that
+        # originates from a PR comment, so a value containing a quote would
+        # otherwise close the string literal and run as code in a step holding
+        # the App token. Same shape as "Update source PR comment" below.
+        env:
+          SOURCE_REPO: ${{ needs.discover.outputs.input_source_repo }}
+          SOURCE_PR_NUMBER: ${{ needs.discover.outputs.input_source_pr_number }}
+          TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
+          ALL_APPS: ${{ needs.discover.outputs.apps }}
+          WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
+          CONTEXT_MILL_REF: ${{ needs.discover.outputs.input_context_mill_ref }}
+          POSTHOG_REF: ${{ needs.discover.outputs.input_posthog_ref }}
+          SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const owner = 'PostHog';
-            const repo = '${{ needs.discover.outputs.input_source_repo }}';
-            const issueNumber = ${{ needs.discover.outputs.input_source_pr_number }};
-            const triggerId = '${{ needs.discover.outputs.trigger_id }}';
-            const allApps = ${{ needs.discover.outputs.apps }};
-            const workflowUrl = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}';
-            const wizardRef = '${{ needs.discover.outputs.input_wizard_ref }}';
-            const contextMillRef = '${{ needs.discover.outputs.input_context_mill_ref }}';
-            const posthogRef = '${{ needs.discover.outputs.input_posthog_ref }}';
+            const repo = process.env.SOURCE_REPO;
+            const issueNumber = parseInt(process.env.SOURCE_PR_NUMBER, 10);
+            const triggerId = process.env.TRIGGER_ID;
+            const allApps = JSON.parse(process.env.ALL_APPS);
+            const workflowUrl = `${process.env.SERVER_URL}/${process.env.GITHUB_REPO}/actions/runs/${process.env.RUN_ID}`;
+            const wizardRef = process.env.WIZARD_REF;
+            const contextMillRef = process.env.CONTEXT_MILL_REF;
+            const posthogRef = process.env.POSTHOG_REF;
             const prsUrl = workflowUrl.replace('/actions/runs/', '/pulls?q=') + triggerId;
 
             const marker = '<!-- wizard-ci-results:' + triggerId + ' -->';
