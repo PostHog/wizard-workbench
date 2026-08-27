@@ -56,6 +56,9 @@ const COMMAND_PROGRAM: Record<string, string> = {
   migrate: "migration",
   skill: "agent-skill",
   warehouse: "warehouse-source",
+  // The seeded scenario drives the *integration* program: the warehouse step is
+  // a task that run offers, not a program of its own.
+  "warehouse-seeded": "posthog-integration",
   "upload-sourcemaps": "error-tracking-upload-source-maps",
 };
 
