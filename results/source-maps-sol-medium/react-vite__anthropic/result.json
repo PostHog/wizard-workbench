@@ -1,0 +1,24 @@
+{
+  "runPhase": "completed",
+  "hasPosthogDep": true,
+  "newDeps": [
+    "@posthog/rollup-plugin",
+    "posthog-js"
+  ],
+  "envFile": "/tmp/sm-run-react-vite__anthropic/.env",
+  "screenPath": [
+    "source-maps-intro",
+    "auth",
+    "source-maps-detect",
+    "run",
+    "wizard-ask",
+    "run",
+    "wizard-ask",
+    "run",
+    "wizard-ask",
+    "run",
+    "source-maps-outro",
+    "keep-skills"
+  ],
+  "skillsComplete": true
+}

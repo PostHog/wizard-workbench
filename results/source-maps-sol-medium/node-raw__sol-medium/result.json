@@ -1,0 +1,24 @@
+{
+  "runPhase": "completed",
+  "hasPosthogDep": true,
+  "newDeps": [
+    "posthog-node",
+    "@posthog/cli"
+  ],
+  "envFile": "/tmp/sm-run-node-raw__sol-medium/.env",
+  "screenPath": [
+    "source-maps-intro",
+    "auth",
+    "source-maps-detect",
+    "run",
+    "wizard-ask",
+    "run",
+    "wizard-ask",
+    "run",
+    "wizard-ask",
+    "run",
+    "source-maps-outro",
+    "keep-skills"
+  ],
+  "skillsComplete": true
+}

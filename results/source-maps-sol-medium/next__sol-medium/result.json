@@ -1,0 +1,24 @@
+{
+  "runPhase": "completed",
+  "hasPosthogDep": true,
+  "newDeps": [
+    "@posthog/nextjs-config",
+    "posthog-js"
+  ],
+  "envFile": "/tmp/sm-run-next__sol-medium/.env.local",
+  "screenPath": [
+    "source-maps-intro",
+    "auth",
+    "source-maps-detect",
+    "run",
+    "wizard-ask",
+    "run",
+    "wizard-ask",
+    "run",
+    "wizard-ask",
+    "run",
+    "source-maps-outro",
+    "keep-skills"
+  ],
+  "skillsComplete": true
+}

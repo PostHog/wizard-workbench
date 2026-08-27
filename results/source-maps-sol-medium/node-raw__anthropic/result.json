@@ -1,0 +1,23 @@
+{
+  "runPhase": "completed",
+  "hasPosthogDep": true,
+  "newDeps": [
+    "posthog-node"
+  ],
+  "envFile": "/tmp/sm-run-node-raw__anthropic/.env",
+  "screenPath": [
+    "source-maps-intro",
+    "auth",
+    "source-maps-detect",
+    "run",
+    "wizard-ask",
+    "run",
+    "wizard-ask",
+    "run",
+    "wizard-ask",
+    "run",
+    "source-maps-outro",
+    "keep-skills"
+  ],
+  "skillsComplete": true
+}

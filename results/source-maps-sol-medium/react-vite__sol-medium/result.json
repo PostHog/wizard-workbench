@@ -1,0 +1,24 @@
+{
+  "runPhase": "completed",
+  "hasPosthogDep": true,
+  "newDeps": [
+    "posthog-js",
+    "@posthog/rollup-plugin"
+  ],
+  "envFile": "/tmp/sm-run-react-vite__sol-medium/.env",
+  "screenPath": [
+    "source-maps-intro",
+    "auth",
+    "source-maps-detect",
+    "run",
+    "wizard-ask",
+    "run",
+    "wizard-ask",
+    "run",
+    "wizard-ask",
+    "run",
+    "source-maps-outro",
+    "keep-skills"
+  ],
+  "skillsComplete": true
+}
