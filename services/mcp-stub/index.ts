@@ -201,13 +201,17 @@ export async function startMcpStub(
         await server.connect(transport);
         await transport.handleRequest(req, res, await readBody(req));
       } catch (error) {
+        // The detail goes to the runner's own log, where whoever is debugging
+        // the stub will actually look, rather than over the wire. Tool errors
+        // are unaffected — those carry real text back through `runExec`.
+        console.error("mcp-stub: request failed —", error);
         if (!res.headersSent) {
           res.writeHead(500, { "content-type": "application/json" });
         }
         res.end(
           JSON.stringify({
             jsonrpc: "2.0",
-            error: { code: -32603, message: String(error) },
+            error: { code: -32603, message: "Internal server error" },
             id: null,
           }),
         );

@@ -1,2 +1,8 @@
+# This fixture is never installed — it exists so the detector sees a real pnpm
+# monorepo and walks into `apps/*`. It is still scanned like production code,
+# and the supply-chain lint requires a release-age floor on any pnpm workspace,
+# so the floor is set here too rather than carving out an exception.
 packages:
   - 'apps/*'
+
+minimumReleaseAge: 1440

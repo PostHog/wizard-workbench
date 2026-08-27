@@ -21,8 +21,8 @@ app.post(
         req.headers['stripe-signature'],
         process.env.STRIPE_WEBHOOK_SECRET,
       );
-    } catch (error) {
-      return res.status(400).send(`Webhook signature failed: ${error.message}`);
+    } catch {
+      return res.status(400).json({ error: 'Webhook signature failed' });
     }
 
     if (event.type === 'checkout.session.completed') {
