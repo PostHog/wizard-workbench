@@ -33,18 +33,30 @@ runs:
         APP_TOKEN: ${{ inputs.app_token }}
       run: |
         # Resolve each ref to a concrete commit SHA so the cache key busts when a
-        # branch (e.g. main/master) moves. A ref that is already a full SHA is
-        # used verbatim.
+        # branch (e.g. main/master) moves.
+        #
+        # Every ref must resolve through a PostHog-owned branch or tag. These
+        # refs arrive from PR comments on public repos, and the checkout below
+        # fetches by SHA — which GitHub serves for any commit in the fork
+        # network, not just ours. A SHA taken on trust would let a commenter
+        # point CI at a commit pushed to a fork and run its install/build/dev
+        # scripts next to the App token and PostHog credentials. So a full SHA
+        # is honoured only when it is the tip of one of our own refs.
         resolve_sha() {
-          local repo="$1" ref="$2" sha
+          local repo="$1" ref="$2" sha url
+          url="https://x-access-token:${APP_TOKEN}@github.com/PostHog/${repo}.git"
           if printf '%s' "$ref" | grep -Eq '^[0-9a-f]{40}$'; then
-            printf '%s' "$ref"
-            return
+            if git ls-remote --heads --tags "$url" | awk '{print $1}' | grep -qxF "$ref"; then
+              printf '%s' "$ref"
+              return
+            fi
+            echo "::error::Ref '$ref' for PostHog/$repo is not the tip of a branch or tag. Pass a branch or tag name instead." >&2
+            return 1
           fi
           # Query the fully qualified refs only. A bare pattern like "master"
           # also matches any branch whose tail is /master (e.g.
           # refs/heads/codebeaver/master), which sorts first and wins.
-          sha=$(git ls-remote "https://x-access-token:${APP_TOKEN}@github.com/PostHog/${repo}.git" \
+          sha=$(git ls-remote "$url" \
             "refs/heads/$ref" "refs/tags/$ref" \
             | awk 'NR==1{print $1}')
           if [ -z "$sha" ]; then
