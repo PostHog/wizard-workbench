@@ -121,6 +121,12 @@ pnpm mcp-stub --help
 | `MCP_STUB_FAIL_KINDS` | comma-separated kinds that must reject credentials |
 | `MCP_STUB_REQUIRE_INFO` | `true` ⇒ refuse a `call` to a tool never `info`d |
 | `MCP_STUB_REDACT` | `false` ⇒ keep secret values in the journal (debug only) |
+| `PROJECT_ID` | project named in replayed error paths, default `0` |
+
+`PROJECT_ID` is read only when nothing is passed to `startMcpStub`. The e2e
+runner always passes it — the stub lives in the runner's process, while
+`PROJECT_ID` is exported onto the *wizard subprocess'* environment, so reading
+it here would never see the real one.
 
 ## Fixtures
 

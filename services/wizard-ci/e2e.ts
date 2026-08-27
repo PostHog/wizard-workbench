@@ -282,7 +282,7 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   if (expect) {
     // Ephemeral port: matrix legs run in parallel, and a fixed 8799 would make
     // two runs fight over the same socket.
-    stub = await startMcpStub({ port: 0, journalPath });
+    stub = await startMcpStub({ port: 0, journalPath, projectId });
     childEnv.MCP_URL = stub.url;
     childEnv.MCP_STUB_JOURNAL = journalPath;
     // The stub cannot judge a placeholder credential, so the fixture names the

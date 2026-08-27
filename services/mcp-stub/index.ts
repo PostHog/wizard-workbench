@@ -73,6 +73,14 @@ export interface McpStubOptions {
   journalPath?: string;
   /** Truncate the journal on start. Default true — a stale file must not pass. */
   resetJournalOnStart?: boolean;
+  /**
+   * Project the run is scoped to, substituted into recorded error text.
+   *
+   * The runner exports the project id onto the *wizard subprocess'* env, not
+   * its own, and the stub lives in the runner's process — so this has to be
+   * handed over explicitly rather than read from `process.env`.
+   */
+  projectId?: string;
   fixtures?: Fixtures;
 }
 
@@ -154,7 +162,9 @@ export async function startMcpStub(
   options: McpStubOptions = {},
 ): Promise<McpStub> {
   const fixtures = options.fixtures ?? loadFixtures();
-  const state = new StubState();
+  const state = new StubState(
+    options.projectId ?? process.env.PROJECT_ID ?? "0",
+  );
 
   const journal = options.journalPath ?? process.env.MCP_STUB_JOURNAL;
   if (journal) {

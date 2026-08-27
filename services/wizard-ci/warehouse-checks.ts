@@ -39,7 +39,14 @@ export interface WarehouseExpect {
   forbidKinds: string[];
   /** Kinds the stub must have created. */
   created: string[];
-  /** Kinds whose create may fail, as long as the report says so. */
+  /**
+   * Kinds whose connection attempt may fail, as long as the report says so.
+   *
+   * "Attempt" is any call that carries a credential payload — production
+   * rejects a bad key during schema discovery, before create is ever reached,
+   * and the stub reproduces that. So an agent that stops at the first
+   * rejection has still attempted the source. See {@link CREDENTIAL_TOOLS}.
+   */
   attemptedFailOk: string[];
   /** Kinds that must produce a deep link, and no ask batch and no create. */
   deepLink: string[];
@@ -147,6 +154,20 @@ export interface Check {
 }
 
 export const CREATE_TOOL = "external-data-sources-create";
+export const SCHEMA_TOOL = "external-data-sources-db-schema";
+
+/**
+ * Tools whose input carries the credentials a person just typed, and which can
+ * therefore reject them.
+ *
+ * Both count as a connection attempt. `external-data-sources-wizard` does not —
+ * it is a config lookup for every kind at once, so counting it would make every
+ * kind look attempted.
+ */
+export const CREDENTIAL_TOOLS: ReadonlySet<string> = new Set([
+  SCHEMA_TOOL,
+  CREATE_TOOL,
+]);
 
 /** Deep-link shape the data-warehouse-source-setup skill emits. */
 const DEEP_LINK = /data-warehouse\/new-source\?kind=([A-Za-z0-9_%.-]+)/gi;
@@ -204,6 +225,27 @@ export function attemptedCreates(journal: JournalEntry[]): Array<{
       const input = (e.input ?? {}) as Record<string, unknown>;
       return { kind: String(input.source_type ?? ""), input };
     });
+}
+
+/**
+ * Every kind the run put real credentials behind, at any stage.
+ *
+ * Broader than {@link attemptedCreates} on purpose. Production validates a
+ * credential during schema discovery and returns a 400 there, so a rejected key
+ * never reaches create — an agent that stops at that first rejection and
+ * reports it has done the right thing, and must not be graded as if it never
+ * tried.
+ */
+export function credentialAttempts(journal: JournalEntry[]): Set<string> {
+  const kinds = new Set<string>();
+  for (const entry of journal) {
+    if (!CREDENTIAL_TOOLS.has(entry.tool)) continue;
+    const input = (entry.input ?? {}) as Record<string, unknown>;
+    if (typeof input.source_type === "string" && input.source_type) {
+      kinds.add(input.source_type);
+    }
+  }
+  return kinds;
 }
 
 /** The report text, or an empty string when no report was written. */
@@ -403,8 +445,9 @@ export function warehouseChecks(evidence: WarehouseEvidence): Check[] {
   // ── honest failure ───────────────────────────────────────────────────
   {
     const problems: string[] = [];
+    const tried = credentialAttempts(journal);
     for (const kind of expect.attemptedFailOk) {
-      if (!attemptedKinds.has(kind)) {
+      if (!tried.has(kind)) {
         problems.push(`${kind}: never attempted`);
         continue;
       }

@@ -297,6 +297,28 @@ describe("db-schema", () => {
     assert.match(result.text, /400 \(Bad Request\)/);
   });
 
+  it("substitutes the project it was handed into the recorded API path", () => {
+    // The stub lives in the runner's process, while the project id is exported
+    // onto the wizard subprocess' env — so it has to be passed in, not read
+    // from `process.env`, or every replayed error names project 0.
+    const state = new StubState("98765");
+    const result = call(state, "external-data-sources-db-schema", {
+      source_type: "Postgres",
+      payload: { host: "db.example.com" },
+    });
+    assert.match(result.text, /\/api\/projects\/98765\//);
+    assert.doesNotMatch(result.text, /\{project_id\}/);
+  });
+
+  it("falls back to project 0 when no project was handed over", () => {
+    const state = new StubState();
+    const result = call(state, "external-data-sources-db-schema", {
+      source_type: "Postgres",
+      payload: { host: "db.example.com" },
+    });
+    assert.match(result.text, /\/api\/projects\/0\//);
+  });
+
   it("returns the recorded 400 for a kind PostHog does not have", () => {
     const state = new StubState();
     const result = call(state, "external-data-sources-db-schema", {

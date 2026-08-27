@@ -1152,7 +1152,13 @@ jobs:
           # git do the comparison — the checkout is thrown away either way.
           pnpm mcp-stub:record
 
-          if git diff --quiet -- services/mcp-stub/fixtures; then
+          # Every fixture carries a provenance header stamped with the time it
+          # was recorded, so a plain `git diff` is never quiet and this job
+          # would cry drift every week. Ignore that one line and compare the
+          # bodies, which are what the stub actually answers from.
+          IGNORE_VOLATILE='"recordedAt"'
+
+          if git diff --quiet -I "$IGNORE_VOLATILE" -- services/mcp-stub/fixtures; then
             echo "✓ fixtures match production"
             exit 0
           fi
@@ -1170,7 +1176,7 @@ jobs:
             echo '```'
             echo ""
             echo '```diff'
-            git diff -- services/mcp-stub/fixtures | head -300
+            git diff -I "$IGNORE_VOLATILE" -- services/mcp-stub/fixtures | head -300
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 

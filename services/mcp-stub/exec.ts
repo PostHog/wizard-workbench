@@ -51,6 +51,15 @@ export class StubState {
   private seq = 0;
 
   /**
+   * The project the run is scoped to, substituted into recorded error text.
+   *
+   * Passed in rather than read from the environment: the stub runs inside the
+   * *runner's* process, while the project id is exported onto the environment
+   * of the wizard subprocess. Reading `process.env` here would always miss it.
+   */
+  constructor(readonly projectId: string = "0") {}
+
+  /**
    * A synthetic source id shaped like the UUIDv7 prod returns, but with a
    * `5747` marker in the middle so a real id can never be confused for one.
    */
@@ -272,7 +281,7 @@ function handleCall(
     case "external-data-sources-wizard":
       return callWizard(input, fixtures);
     case "external-data-sources-db-schema":
-      return callDbSchema(input, fixtures);
+      return callDbSchema(input, state, fixtures);
     case "external-data-sources-create":
       return callCreate(input, state, fixtures);
     case "external-data-sources-list":
@@ -351,12 +360,13 @@ function callWizard(
  */
 function callDbSchema(
   input: Record<string, unknown>,
+  state: StubState,
   fixtures: Fixtures,
 ): ExecResult {
   const kind = String(input.source_type ?? "");
   const payload = (input.payload ?? {}) as Record<string, unknown>;
 
-  const failure = validate(kind, payload, fixtures);
+  const failure = validate(kind, payload, fixtures, state.projectId);
   if (failure) return error(failure);
 
   const tables = fixtures.dbSchema.tables[kind];
@@ -377,7 +387,7 @@ function callCreate(
   const kind = String(input.source_type ?? "");
   const payload = (input.payload ?? {}) as Record<string, unknown>;
 
-  const failure = validate(kind, payload, fixtures);
+  const failure = validate(kind, payload, fixtures, state.projectId);
   if (failure) return error(failure);
 
   const declared = Array.isArray(payload.schemas)
@@ -438,14 +448,17 @@ function validate(
   kind: string,
   payload: Record<string, unknown>,
   fixtures: Fixtures,
+  projectId: string,
 ): string | null {
   const entry: SourceWizardEntry | undefined =
     fixtures.sourcesWizard.sources[kind];
 
   if (!entry) {
-    return fill(fixtures.dbSchema.errors["unknown-source-type"], {
-      source_type: kind || "(missing)",
-    });
+    return fill(
+      fixtures.dbSchema.errors["unknown-source-type"],
+      { source_type: kind || "(missing)" },
+      projectId,
+    );
   }
 
   if (failKinds().has(kind)) {
@@ -453,7 +466,7 @@ function validate(
     // key-authenticated SaaS gets the rejected-key one.
     const hasHost = flattenFields(entry.fields).some((f) => f.name === "host");
     const key = hasHost ? "unresolvable-host" : "rejected-api-key";
-    return fill(fixtures.dbSchema.errors[key], {});
+    return fill(fixtures.dbSchema.errors[key], {}, projectId);
   }
 
   const missing = requiredFieldNames(entry, payload).filter((name) => {
@@ -461,10 +474,11 @@ function validate(
     return value === undefined || value === null || value === "";
   });
   if (missing.length > 0) {
-    return fill(fixtures.dbSchema.errors["missing-field"], {
-      source_type: kind,
-      fields: missing.join(", "),
-    });
+    return fill(
+      fixtures.dbSchema.errors["missing-field"],
+      { source_type: kind, fields: missing.join(", ") },
+      projectId,
+    );
   }
 
   return null;
@@ -474,13 +488,14 @@ function validate(
 function fill(
   recorded: DbSchemaError | undefined,
   values: Record<string, string>,
+  projectId: string,
 ): string {
   if (!recorded) return "mcp-stub: no recorded error for this case.";
   let text = recorded.text;
   for (const [key, value] of Object.entries(values)) {
     text = text.replaceAll(`{${key}}`, value);
   }
-  return text.replaceAll("{project_id}", process.env.PROJECT_ID ?? "0");
+  return text.replaceAll("{project_id}", projectId);
 }
 
 function journal(tool: string, input: unknown): void {
