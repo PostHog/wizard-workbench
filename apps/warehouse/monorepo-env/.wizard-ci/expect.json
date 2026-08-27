@@ -11,5 +11,10 @@
   "expectAbort": null,
   "seeded": false,
   "expectNotices": 0,
-  "expectSkipReason": null
+  "expectSkipReason": null,
+  "expectSignalPath": {
+    "Postgres": "apps/web/.env.local",
+    "Stripe": "apps/api/.env"
+  },
+  "advisory": []
 }

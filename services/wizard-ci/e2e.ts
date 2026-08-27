@@ -24,8 +24,51 @@ import {
 } from "fs";
 import { spawnSync } from "child_process";
 
+import { loadFixtures } from "../mcp-stub/fixtures.js";
+import { startMcpStub, type McpStub } from "../mcp-stub/index.js";
+import { readJournal } from "../mcp-stub/journal.js";
+import {
+  checksPassed,
+  formatCheck,
+  formatResultLine,
+  loadExpect,
+  warehouseChecks,
+  type Check,
+  type E2eResult,
+  type WarehouseExpect,
+} from "./warehouse-checks.js";
+
 const WORKBENCH = join(import.meta.dirname, "..", "..");
 export const APPS_DIR = join(WORKBENCH, "apps");
+
+/**
+ * Placeholder credentials the runner injects for the wizard e2e profile's
+ * `askAnswers` rules to route to each credential question.
+ *
+ * Every value is fake and unroutable. The MCP is the stub, so nothing here is
+ * ever checked against a real service — the point is that *a* value arrives,
+ * so a run is graded on whether it asked and created, not on whether it had a
+ * working database. A var whose name reads as a secret is also scanned for: it
+ * must not appear in the report, the result payload, the journal, or a frame.
+ */
+const INJECTED_CREDENTIALS: Record<string, string> = {
+  E2E_PG_HOST: "e2e-warehouse-fixture.invalid",
+  E2E_PG_PORT: "5432",
+  E2E_PG_DATABASE: "e2e_fixture_db",
+  E2E_PG_USER: "e2e_fixture_user",
+  E2E_PG_PASSWORD: "e2e-fixture-placeholder-password",
+  E2E_STRIPE_API_KEY: "sk_test_e2efixtureplaceholder000000",
+};
+
+/** Which injected values must never be echoed back. */
+const SECRET_VAR = /PASSWORD|SECRET|API_KEY|TOKEN/;
+
+/** Flags a seeded-orchestrator scenario needs on top of whatever CI already sets. */
+const SEEDED_FLAG_OVERRIDES: Record<string, string> = {
+  "wizard-orchestrator": "true",
+  "wizard-use-pi-harness": "true",
+  "wizard-orchestrator-seeded-tasks": "true",
+};
 
 // Host Claude Code / Anthropic auth vars: when the wizard's agent subprocess is
 // spawned from inside a Claude Code session it defers auth to the host
@@ -42,6 +85,8 @@ export interface E2eOptions {
   keepSkills?: boolean;
   /** Wizard program id to drive (e.g. 'self-driving'); default integration. */
   program?: string;
+  /** CI trigger id — makes the run's source prefix unique per trigger. */
+  triggerId?: string;
 }
 
 function wizardRepo(): string {
@@ -58,6 +103,14 @@ function wizardRepo(): string {
 /** Where a run drops its real-TUI snapshots — shared with the snapshots flow. */
 export function snapsDirFor(app: string): string {
   return `/tmp/wizard-e2e-${basename(app)}-snaps`;
+}
+
+/**
+ * Where the stub MCP writes the run's journal — the evidence that a source was
+ * really created. The workflow uploads this file, so keep the path derivable.
+ */
+export function journalPathFor(app: string): string {
+  return `/tmp/wizard-e2e-${basename(app)}-mcp-journal.json`;
 }
 
 /** Root for rendered reports + screenshots (the snapshots / review flow). */
@@ -98,8 +151,59 @@ export interface Shot {
   file: string;
 }
 
+/**
+ * Merge extra feature-flag overrides into whatever the caller already set.
+ *
+ * CI exports `WIZARD_CI_FLAG_OVERRIDES` for every leg. A seeded scenario needs
+ * one more flag on top, so this merges rather than replaces — clobbering it
+ * would silently drop the orchestrator flags the rest of the run depends on.
+ */
+export function mergeFlagOverrides(
+  current: string | undefined,
+  extra: Record<string, string>,
+): string {
+  let base: Record<string, string> = {};
+  if (current) {
+    try {
+      const parsed: unknown = JSON.parse(current);
+      if (parsed && typeof parsed === "object") {
+        base = parsed as Record<string, string>;
+      }
+    } catch {
+      console.warn(
+        `⚠ WIZARD_CI_FLAG_OVERRIDES is not valid JSON; replacing it: ${current}`,
+      );
+    }
+  }
+  return JSON.stringify({ ...base, ...extra });
+}
+
+/** Every captured frame's text, concatenated — the leakage scan reads this. */
+function readFrames(dir: string): string {
+  if (!existsSync(dir)) return "";
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".txt") || f.endsWith(".ans"))
+    .map((f) => {
+      try {
+        return readFileSync(join(dir, f), "utf8");
+      } catch {
+        return "";
+      }
+    })
+    .join("\n");
+}
+
+/** Read a file, returning "" rather than throwing. */
+function readOrEmpty(file: string): string {
+  try {
+    return readFileSync(file, "utf8");
+  } catch {
+    return "";
+  }
+}
+
 /** Run a single app through the real-TUI e2e and assert. Returns exit code. */
-export function runE2e(opts: E2eOptions): number {
+export async function runE2e(opts: E2eOptions): Promise<number> {
   const app = opts.app;
   const region = opts.region || process.env.POSTHOG_REGION || "us";
   const projectId = opts.projectId || process.env.POSTHOG_WIZARD_PROJECT_ID || "";
@@ -118,15 +222,20 @@ export function runE2e(opts: E2eOptions): number {
     return 2;
   }
 
-  const appSrc = join(APPS_DIR, app);
+  // A scenario may run against a sibling app's source tree (`sourceApp`), so a
+  // run variation gets its own matrix leg without a second copy of the fixture.
+  const expect = loadExpect(APPS_DIR, app);
+  const sourceApp = expect?.sourceApp ?? app;
+  const appSrc = join(APPS_DIR, sourceApp);
   if (!existsSync(appSrc)) {
-    console.error(`✖ app not found: apps/${app}`);
+    console.error(`✖ app not found: apps/${sourceApp}`);
     return 2;
   }
 
   const name = basename(app);
   const appDir = `/tmp/wizard-e2e-${name}`;
   const resultJson = `/tmp/wizard-e2e-${name}.json`;
+  const journalPath = journalPathFor(app);
   const snapsDir = snapsDirFor(app);
 
   // Always a /tmp copy — never the real fixture.
@@ -137,6 +246,7 @@ export function runE2e(opts: E2eOptions): number {
   });
   rmSync(snapsDir, { recursive: true, force: true });
   mkdirSync(snapsDir, { recursive: true });
+  rmSync(resultJson, { force: true });
 
   const repo = wizardRepo();
   const harness = join(repo, "scripts", "tui-snapshots.no-jest.ts");
@@ -146,7 +256,11 @@ export function runE2e(opts: E2eOptions): number {
   }
 
   console.log(`\n=== wizard-ci --e2e: ${app}  (project ${projectId}, ${region}) ===`);
-  console.log(`    policy: skip mcp · skip slack · ${opts.keepSkills ? "keep" : "delete"} skills · continue past health issues\n`);
+  console.log(`    policy: skip mcp · skip slack · ${opts.keepSkills ? "keep" : "delete"} skills · continue past health issues`);
+  if (expect) {
+    console.log(`    expectations: apps/${app}/.wizard-ci/expect.json${sourceApp === app ? "" : `  (source: apps/${sourceApp})`}`);
+  }
+  console.log("");
 
   const childEnv: NodeJS.ProcessEnv = { ...process.env };
   for (const k of Object.keys(childEnv))
@@ -161,41 +275,95 @@ export function runE2e(opts: E2eOptions): number {
   // Which program the real-TUI host drives — defaults to integration.
   if (opts.program) childEnv.PROGRAM = opts.program;
 
-  const run = spawnSync("npx", ["tsx", harness], {
-    cwd: repo,
-    stdio: "inherit",
-    env: childEnv,
-  });
+  // ── Warehouse wiring: the stub MCP, the answers, the run variation ────
+  let stub: McpStub | null = null;
+  const injectedSecrets: string[] = [];
+
+  if (expect) {
+    // Ephemeral port: matrix legs run in parallel, and a fixed 8799 would make
+    // two runs fight over the same socket.
+    stub = await startMcpStub({ port: 0, journalPath });
+    childEnv.MCP_URL = stub.url;
+    childEnv.MCP_STUB_JOURNAL = journalPath;
+    // The stub cannot judge a placeholder credential, so the fixture names the
+    // kinds whose create must fail and the stub replays the recorded prod error.
+    childEnv.MCP_STUB_FAIL_KINDS = expect.attemptedFailOk.join(",");
+    // Keep the wizard_ask bridge alive in a `ci` session — without it the
+    // agent-in-the-loop layer this whole tier exists to test is switched off.
+    childEnv.E2E_ASK = "true";
+    childEnv.E2E_SOURCE_PREFIX = `e2e_${opts.triggerId || Date.now()}_`;
+    if (expect.notice) childEnv.E2E_NOTICE = expect.notice;
+    for (const [key, value] of Object.entries(INJECTED_CREDENTIALS)) {
+      childEnv[key] = value;
+      if (SECRET_VAR.test(key)) injectedSecrets.push(value);
+    }
+    if (expect.seeded) {
+      childEnv.WIZARD_CI_FLAG_OVERRIDES = mergeFlagOverrides(
+        childEnv.WIZARD_CI_FLAG_OVERRIDES,
+        SEEDED_FLAG_OVERRIDES,
+      );
+    }
+    console.log(`    stub mcp: ${stub.url}  journal: ${journalPath}`);
+    if (expect.attemptedFailOk.length) {
+      console.log(`    forced create failures: ${expect.attemptedFailOk.join(", ")}`);
+    }
+    console.log("");
+  }
+
+  let run: ReturnType<typeof spawnSync>;
+  try {
+    run = spawnSync("npx", ["tsx", harness], {
+      cwd: repo,
+      stdio: "inherit",
+      env: childEnv,
+    });
+  } finally {
+    await stub?.stop();
+  }
 
   // Structured assertions — the control plane's payoff over stdout-grepping.
-  let result: { runPhase?: string; hasPosthogDep?: boolean; envFile?: string | null;
-    screenPath?: string[]; skillsComplete?: boolean; newDeps?: string[] } | null = null;
+  const resultText = readOrEmpty(resultJson);
+  let result:
+    | (E2eResult & {
+        hasPosthogDep?: boolean;
+        envFile?: string | null;
+        skillsComplete?: boolean;
+        newDeps?: string[];
+      })
+    | null = null;
   try {
-    result = JSON.parse(readFileSync(resultJson, "utf8"));
+    result = JSON.parse(resultText);
   } catch {
     /* harness crashed before writing */
   }
 
-  // The integration flow ends at keep-skills/skillsComplete; other programs
-  // (e.g. self-driving) end at their own outro, so assert against that instead.
-  const isIntegration = !opts.program || opts.program === "posthog-integration";
-  const programChecks: Array<[string, boolean]> = isIntegration
-    ? [
-        ["full interactive flow reached keep-skills", !!result?.screenPath?.includes("keep-skills")],
-        ["skillsComplete", result?.skillsComplete === true],
-      ]
-    : [["reached the outro", !!result?.screenPath?.includes("outro")]];
   const checks: Array<[string, boolean]> = result
-    ? [
-        ["agent run completed", result.runPhase === "completed"],
-        ["posthog dependency added or .env written", !!result.hasPosthogDep || !!result.envFile],
-        ...programChecks,
-      ]
+    ? genericChecks(result, opts, expect)
     : [["harness produced a structured result", false]];
 
   console.log("\n--- assertions ---");
   for (const [label, ok] of checks) console.log(`  ${ok ? "✔" : "✖"} ${label}`);
-  const passed = run.status === 0 && checks.every(([, ok]) => ok);
+
+  // ── Warehouse assertions ─────────────────────────────────────────────
+  let warehouse: Check[] = [];
+  if (expect) {
+    warehouse = warehouseChecks({
+      expect,
+      result,
+      resultText,
+      journal: readJournal(journalPath),
+      journalText: readOrEmpty(journalPath),
+      createdKinds: (stub?.state.created ?? []).map((s) => s.source_type),
+      registryKinds: Object.keys(loadFixtures().sourcesWizard.sources),
+      injectedSecrets,
+      frameText: readFrames(snapsDir),
+    });
+  }
+
+  const passed =
+    (!!expect || run.status === 0) &&
+    checks.every(([, ok]) => ok) &&
+    checksPassed(warehouse);
 
   if (result) {
     writeFileSync(resultJson, JSON.stringify({ ...result, app, passed }, null, 2));
@@ -205,6 +373,71 @@ export function runE2e(opts: E2eOptions): number {
     console.log(`snapshots  : ${snapsDir}`);
   }
 
+  if (expect) {
+    // Contract §7: one machine-readable summary line, then one line per check.
+    console.log("");
+    console.log(
+      formatResultLine({
+        app,
+        checks: warehouse,
+        created: stub?.state.created.length ?? 0,
+        asks: result?.asks?.length ?? 0,
+        passed,
+      }),
+    );
+    for (const c of warehouse) console.log(formatCheck(c));
+    console.log(`journal    : ${journalPath}`);
+  }
+
   console.log(`\n${passed ? "✓ E2E PASS" : "✗ E2E FAIL"} — ${app}\n`);
   return passed ? 0 : 1;
+}
+
+/**
+ * The run-shape checks that apply to every program, before the warehouse block.
+ *
+ * A plain integration run ends at keep-skills with PostHog installed. A
+ * warehouse run installs nothing — it creates PostHog resources and writes a
+ * report — so the dependency check would fail it for doing its job correctly.
+ * A run that is *meant* to abort has no end screen at all, and the warehouse
+ * `abort` check grades it instead.
+ */
+function genericChecks(
+  result: {
+    runPhase?: string;
+    hasPosthogDep?: boolean;
+    envFile?: string | null;
+    screenPath?: string[];
+    skillsComplete?: boolean;
+  },
+  opts: E2eOptions,
+  expect: WarehouseExpect | null,
+): Array<[string, boolean]> {
+  if (expect?.expectAbort) return [];
+
+  const reachedOutro = !!result.screenPath?.includes("outro");
+  const completed = result.runPhase === "completed";
+
+  if (expect && !expect.seeded) {
+    return [
+      ["agent run completed", completed],
+      ["reached the outro", reachedOutro],
+    ];
+  }
+
+  // The integration flow ends at keep-skills/skillsComplete; other programs
+  // (e.g. self-driving) end at their own outro, so assert against that instead.
+  const isIntegration = !opts.program || opts.program === "posthog-integration";
+  const programChecks: Array<[string, boolean]> = isIntegration
+    ? [
+        ["full interactive flow reached keep-skills", !!result.screenPath?.includes("keep-skills")],
+        ["skillsComplete", result.skillsComplete === true],
+      ]
+    : [["reached the outro", reachedOutro]];
+
+  return [
+    ["agent run completed", completed],
+    ["posthog dependency added or .env written", !!result.hasPosthogDep || !!result.envFile],
+    ...programChecks,
+  ];
 }

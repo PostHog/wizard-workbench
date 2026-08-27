@@ -11,5 +11,7 @@
   "expectAbort": "No data source detected",
   "seeded": false,
   "expectNotices": 0,
-  "expectSkipReason": null
+  "expectSkipReason": null,
+  "expectSignalPath": {},
+  "advisory": []
 }

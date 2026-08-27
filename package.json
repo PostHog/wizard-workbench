@@ -13,7 +13,8 @@
     "mcp-stub": "tsx services/mcp-stub/cli.ts",
     "mcp-stub:record": "tsx services/mcp-stub/record.ts",
     "test:evaluator": "tsx --test services/pr-evaluator/evaluator.test.ts",
-    "test:mcp-stub": "tsx --test services/mcp-stub/mcp-stub.test.ts"
+    "test:mcp-stub": "tsx --test services/mcp-stub/mcp-stub.test.ts",
+    "test:warehouse-checks": "tsx --test services/wizard-ci/warehouse-checks.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.2.73",

@@ -38,6 +38,16 @@ this file — see the cross-repo contract for the field list.
 holds kinds that only detect on an unmerged branch: they are reported, and
 they never fail the run.
 
+`expectSignalPath` names the file each signal must point at. `monorepo-env` is
+the app it matters for: the agent treats `matchedSignal` as a path and looks
+there for the key.
+
+`advisory` lists checks that report but never fail the leg. Use it for an
+expectation that only holds on an unmerged wizard branch, so the wizard's
+`main` stays green while the check still gains teeth on the branch. An advisory
+check that passes prints `PASS`, not `ADVISORY` — that is the signal to take
+the marking off. Nothing is advisory today.
+
 ## Conventions
 
 - Static fixtures. Nothing is installed, nothing runs, there are no lockfiles.
