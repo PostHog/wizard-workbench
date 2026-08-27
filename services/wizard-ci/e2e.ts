@@ -170,12 +170,10 @@ export function mergeFlagOverrides(
         base = parsed as Record<string, string>;
       }
     } catch {
-      // Length, not content: the value comes from the environment, and this
-      // line lands in a CI log. Same trade the journal's `redact` makes —
-      // enough to tell an empty var from a truncated one, without echoing it.
-      console.warn(
-        `⚠ WIZARD_CI_FLAG_OVERRIDES is not valid JSON (${current.length} chars); replacing it.`,
-      );
+      // Nothing environment-derived goes in this message — not the value, not
+      // its length. This lands in a CI log, and the `if (current)` guard above
+      // already means the only reachable case is "set, and malformed".
+      console.warn("⚠ WIZARD_CI_FLAG_OVERRIDES is not valid JSON; replacing it.");
     }
   }
   return JSON.stringify({ ...base, ...extra });
