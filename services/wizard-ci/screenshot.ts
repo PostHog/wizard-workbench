@@ -32,6 +32,11 @@ async function main(): Promise<number> {
   });
   await page.goto(`file://${report}`);
   await page.waitForLoadState("networkidle");
+  // The report renders each frame into an xterm terminal; wait until they've
+  // all painted before screenshotting.
+  await page.waitForFunction(() => (window as { __ready?: boolean }).__ready === true, {
+    timeout: 30_000,
+  });
 
   const rows = page.locator("section.row[data-frame]");
   const count = await rows.count();

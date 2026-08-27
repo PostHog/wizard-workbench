@@ -21,6 +21,7 @@
  */
 import "dotenv/config";
 import { join, basename } from "path";
+import { createRequire } from "module";
 import {
   existsSync,
   mkdirSync,
@@ -39,6 +40,14 @@ import {
 import { findApps } from "./utils.js";
 import { commandToProgram, findCommandByAppPath } from "../wizard-commands.js";
 import { selectApp } from "../wizard-run/picker.js";
+
+// xterm.js is the terminal emulator; the browser build renders the captured
+// ANSI to a real colored terminal that Playwright then screenshots. Inline its
+// script + CSS so the report is self-contained.
+const require = createRequire(import.meta.url);
+const XTERM_JS = readFileSync(require.resolve("@xterm/xterm/lib/xterm.js"), "utf8");
+const XTERM_CSS = readFileSync(require.resolve("@xterm/xterm/css/xterm.css"), "utf8");
+const RUNTIME_JS = readFileSync(require.resolve("./report-runtime.js"), "utf8");
 
 /** A CI-e2e test definition: which flow runs against which app. */
 interface TestDef {
@@ -67,36 +76,33 @@ function readFrames(dir: string): Frame[] {
     .map((file) => ({ file, text: readFileSync(join(dir, file), "utf8") }));
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
 function reportHtml(
   name: string,
   frames: Frame[],
   timings: Record<string, number>,
 ): string {
-  const rows = frames
-    .map(
-      (f) => `
-    <section class="row" data-frame="${f.file}">
-      <h2>${f.file} <span class="t">(${fmtElapsed(timings[f.file] ?? 0)})</span></h2>
-      <pre>${escapeHtml(f.text)}</pre>
-    </section>`,
-    )
-    .join("");
+  const data = JSON.stringify(
+    frames.map((f) => ({
+      file: f.file,
+      elapsed: fmtElapsed(timings[f.file] ?? 0),
+      ansi: f.text,
+    })),
+  );
   return `<!doctype html><html><head><meta charset="utf-8"><title>wizard-ci snapshots — ${name}</title>
-<style>
+<style>${XTERM_CSS}
   body{background:#0d1117;color:#c9d1d9;font:14px/1.2 ui-monospace,SFMono-Regular,Menlo,"DejaVu Sans Mono","Liberation Mono",Consolas,monospace;margin:0;padding:24px}
   h1{font-size:18px} .summary{margin:8px 0 24px;color:#8b949e}
-  .row{background:#0d1117;border:1px solid #21262d;border-radius:8px;margin:16px 0;padding:12px 16px}
+  .row{background:#010409;border:1px solid #21262d;border-radius:8px;margin:16px 0;padding:12px 16px}
   h2{font-size:14px;margin:0 0 10px;font-weight:600}
   .t{color:#8b949e;font-weight:400}
-  pre{background:#010409;border:1px solid #21262d;border-radius:6px;padding:10px;margin:0;overflow:auto;white-space:pre}
+  .term{display:inline-block}
 </style></head><body>
 <h1>wizard-ci TUI snapshots — ${name}</h1>
 <div class="summary">${frames.length} key-moment frames from the current run</div>
-${rows}
+<div id="rows"></div>
+<script>window.__FRAMES__ = ${data};</script>
+<script>${XTERM_JS}</script>
+<script>${RUNTIME_JS}</script>
 </body></html>`;
 }
 
