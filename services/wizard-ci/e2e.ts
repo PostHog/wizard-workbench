@@ -117,14 +117,6 @@ export function runE2e(opts: E2eOptions): number {
     console.error("✖ project id required: --project-id or POSTHOG_WIZARD_PROJECT_ID.");
     return 2;
   }
-  // The source-maps upload key; without it the host would write a junk sentinel key — fail fast instead.
-  if (opts.program === "error-tracking-upload-source-maps" && !process.env.SOURCE_MAPS_CLI_KEY) {
-    console.error(
-      "✖ SOURCE_MAPS_CLI_KEY is required for the upload-source-maps e2e " +
-        "(a personal API key created with the 'Source map upload' preset).",
-    );
-    return 2;
-  }
 
   const appSrc = join(APPS_DIR, app);
   if (!existsSync(appSrc)) {
@@ -160,6 +152,8 @@ export function runE2e(opts: E2eOptions): number {
   for (const k of Object.keys(childEnv))
     if (STRIP_HOST_AUTH.test(k)) delete childEnv[k];
   childEnv.POSTHOG_PERSONAL_API_KEY = apiKey;
+  // The source-maps upload key defaults to the CI key (which has error_tracking:write); SOURCE_MAPS_CLI_KEY overrides it locally.
+  childEnv.SOURCE_MAPS_CLI_KEY = process.env.SOURCE_MAPS_CLI_KEY ?? apiKey;
   childEnv.APP_DIR = appDir;
   childEnv.PROJECT_ID = projectId;
   childEnv.POSTHOG_REGION = region;
