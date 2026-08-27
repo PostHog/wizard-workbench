@@ -43,6 +43,7 @@ import {
 } from "./utils.js";
 import {
   WIZARD_COMMANDS,
+  commandToProgram,
   commandToSubcommand,
   commandToInvocation,
   findCommand,
@@ -763,20 +764,46 @@ async function runCI(
 // Main
 // ============================================================================
 
+/**
+ * Start the e2e runner for a command whose apps are graded by assertions.
+ *
+ * The wizard program id comes from the command registry, not from the app
+ * path's leading segment — the two differ (`warehouse` drives
+ * `warehouse-source`, `warehouse-seeded` drives `posthog-integration`), and
+ * only `commandToProgram` knows the mapping. `snapshots.ts` resolves the
+ * program the same way, so the two `--e2e` entry points stay in step.
+ */
+async function startE2e(opts: Options): Promise<number> {
+  const command = opts.command
+    ? findCommand(opts.command)
+    : opts.app
+      ? findCommandByAppPath(opts.app)
+      : undefined;
+
+  if (command?.e2eOnly && !opts.app) {
+    console.error(
+      `Command "${command.id}" runs one app at a time: pnpm wizard-ci ${command.appsDir}/<app> --e2e`,
+    );
+    return 2;
+  }
+
+  return runE2e({
+    app: opts.app,
+    region: process.env.POSTHOG_REGION,
+    projectId: opts.projectId,
+    keepSkills: opts.keepSkills,
+    triggerId: opts.triggerId,
+    program: command ? commandToProgram(command.id) : undefined,
+  });
+}
+
 async function main(): Promise<void> {
   const opts = parseArgs();
 
   // Control-plane e2e: drive the full interactive flow via the real TUI and
   // assert on structured state.
   if (opts.e2e) {
-    process.exit(
-      runE2e({
-        app: opts.app,
-        region: process.env.POSTHOG_REGION,
-        projectId: opts.projectId,
-        keepSkills: opts.keepSkills,
-      }),
-    );
+    process.exit(await startE2e(opts));
   }
 
   // Handle --clean command
@@ -826,6 +853,22 @@ async function main(): Promise<void> {
     }
   } else {
     command = await selectCommand(true);
+  }
+
+  // An e2eOnly category is graded by assertions over a mocked run, not by a
+  // code diff, so the diff pipeline below would push a PR nobody can grade.
+  // `selectCommand` already hides these from the interactive picker, but
+  // neither `--command <id>` nor an `--app <dir>/…` from the CI matrix goes
+  // through the picker — so route them here instead of rejecting them.
+  if (command.e2eOnly) {
+    // `--command warehouse --app zero-source` and `--app warehouse/zero-source`
+    // must both reach the same fixture, so re-attach the category prefix when
+    // the caller left it off (or it was stripped during command inference).
+    const full =
+      appArg && !appArg.startsWith(`${command.appsDir}/`)
+        ? `${command.appsDir}/${appArg}`
+        : appArg;
+    process.exit(await startE2e({ ...opts, app: full, command: command.id }));
   }
 
   if (command.id === "migrate" && !opts.product) {

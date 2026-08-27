@@ -58,6 +58,22 @@
       "ciCapable": true
     },
     {
+      "id": "warehouse",
+      "dir": "warehouse",
+      "label": "Data Warehouse",
+      "description": "Detect and connect a data warehouse source (Postgres, Stripe, …)",
+      "ciCapable": true,
+      "e2eOnly": true
+    },
+    {
+      "id": "warehouse-seeded",
+      "dir": "warehouse-seeded",
+      "label": "Data Warehouse (seeded)",
+      "description": "Connect a data warehouse source from the task the default install run offers",
+      "ciCapable": true,
+      "e2eOnly": true
+    },
+    {
       "id": "skill",
       "dir": "misc",
       "label": "Skill",

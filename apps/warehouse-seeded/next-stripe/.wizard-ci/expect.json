@@ -1,0 +1,18 @@
+{
+  "program": "posthog-integration",
+  "seeded": true,
+  "notice": "keep",
+  "minKinds": ["Stripe"],
+  "optionalKinds": [],
+  "forbidKinds": ["Postgres", "MySQL", "Supabase", "Hubspot"],
+  "created": ["Stripe"],
+  "attemptedFailOk": [],
+  "deepLink": [],
+  "askBatches": [1, 2],
+  "askMaxPerBatch": 8,
+  "expectAbort": null,
+  "expectNotices": 1,
+  "expectSkipReason": null,
+  "expectSignalPath": {},
+  "advisory": []
+}

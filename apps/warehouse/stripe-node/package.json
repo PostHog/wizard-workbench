@@ -1,0 +1,16 @@
+{
+  "name": "stripe-node",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Express billing service backed by Stripe",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "posthog-node": "^4.10.2",
+    "stripe": "^17.7.0"
+  }
+}

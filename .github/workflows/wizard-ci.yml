@@ -73,6 +73,7 @@ jobs:
       apps: ${{ steps.select-apps.outputs.apps }}
       app_count: ${{ steps.select-apps.outputs.app_count }}
       first_app: ${{ steps.select-apps.outputs.first_app }}
+      e2e_apps: ${{ steps.select-apps.outputs.e2e_apps }}
       trigger_id: ${{ steps.generate-id.outputs.trigger_id }}
       # Resolved inputs (from workflow_dispatch, repository_dispatch, or schedule)
       input_app: ${{ steps.resolve-inputs.outputs.app }}
@@ -316,6 +317,17 @@ jobs:
           FIRST_APP=$(echo "$SELECTED" | jq -r '.[0]')
           echo "first_app=$FIRST_APP" >> $GITHUB_OUTPUT
           echo "Selected $APP_COUNT app(s) to run"
+
+          # Which of the selected apps run under --e2e rather than the diff
+          # pipeline. Read from the manifest's e2eOnly flag, not from the app
+          # path, so a new e2e category needs no edit here. The scheduled sweep
+          # runs "all", so these categories join it as soon as they exist.
+          E2E_DIRS=$(jq -r '.workflows[] | select(.e2eOnly == true) | .dir' apps/manifest.json \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          E2E_APPS=$(echo "$SELECTED" | jq -c --argjson dirs "$E2E_DIRS" \
+            '[.[] | select(. as $a | $dirs | any(. as $d | $a | startswith($d + "/")))]')
+          echo "e2e_apps=$E2E_APPS" >> $GITHUB_OUTPUT
+          echo "Assertion-graded (e2e) apps: $E2E_APPS"
 
   # ============================================================================
   # NOTIFY-START: Post initial Slack notification (if enabled)
@@ -649,8 +661,25 @@ jobs:
         if: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
         run: pnpm exec playwright install --with-deps chromium
 
+      # Which pipeline this leg runs: the diff pipeline, or the assertion-graded
+      # --e2e path. Derived in `discover` from the manifest.
+      - name: Classify this leg
+        id: leg
+        env:
+          MATRIX_APP: ${{ matrix.app }}
+          E2E_APPS: ${{ needs.discover.outputs.e2e_apps }}
+        run: |
+          if echo "$E2E_APPS" | jq -e --arg app "$MATRIX_APP" 'index($app) != null' > /dev/null; then
+            echo "is_e2e=true" >> $GITHUB_OUTPUT
+            echo "$MATRIX_APP is assertion-graded (--e2e)"
+          else
+            echo "is_e2e=false" >> $GITHUB_OUTPUT
+            echo "$MATRIX_APP runs the diff pipeline"
+          fi
+
       - name: Execute wizard
         id: execute-wizard
+        if: steps.leg.outputs.is_e2e != 'true'
         continue-on-error: true
         run: |
           if [ "$SNAPSHOTS" = "true" ]; then
@@ -689,6 +718,67 @@ jobs:
           CI_SOURCE: ${{ needs.discover.outputs.input_source }}
           POSTHOG_WIZARD_YARA_REPORT: 'true'
           POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
+
+      # ── Assertion-graded legs (e2eOnly categories) ──────────────────────
+      # No PR, no evaluator, no diff. The runner drives the real TUI against a
+      # stub PostHog MCP and grades the run against the app's expect.json. It
+      # needs no new secret: the MCP is mocked and nothing real is created.
+      - name: Execute wizard (e2e assertions)
+        id: execute-e2e
+        if: steps.leg.outputs.is_e2e == 'true'
+        continue-on-error: true
+        run: |
+          pnpm wizard-ci "$MATRIX_APP" --e2e --trigger-id "$TRIGGER_ID" 2>&1 | tee wizard-output.log
+        env:
+          # Same overrides the diff legs get. The runner merges the seeded-task
+          # flag on top for an app whose expect.json says `seeded`.
+          WIZARD_CI_FLAG_OVERRIDES: '{"wizard-orchestrator":"true","wizard-use-pi-harness":"true"}'
+          MATRIX_APP: ${{ matrix.app }}
+          TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
+          POSTHOG_REGION: ${{ needs.discover.outputs.input_posthog_region }}
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
+          POSTHOG_WIZARD_PROJECT_ID: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_TARGET_PROJECT_ID }}
+          WIZARD_PATH: ${{ env.WIZARD_PATH }}
+          CONTEXT_MILL_PATH: ${{ env.CONTEXT_MILL_PATH }}
+          POSTHOG_WIZARD_YARA_REPORT: 'true'
+          POSTHOG_PROJECT_TOKEN: ${{ secrets.POSTHOG_PROJECT_TOKEN }}
+
+      - name: Parse e2e result
+        id: e2e-result
+        if: always() && steps.leg.outputs.is_e2e == 'true'
+        env:
+          MATRIX_APP: ${{ matrix.app }}
+        run: |
+          LINE=$(grep -m1 '^E2E_RESULT ' wizard-output.log || true)
+          if [ -z "$LINE" ]; then
+            echo "::warning::No E2E_RESULT line for $MATRIX_APP — the runner did not finish"
+            echo "status=NO-RESULT" >> $GITHUB_OUTPUT
+            echo "confidence=NO-RESULT" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          field() { echo "$LINE" | sed -n "s/.* $1=\([^ ]*\).*/\1/p"; }
+          STATUS=$(field status)
+          CHECKS=$(field checks)
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "checks=$CHECKS" >> $GITHUB_OUTPUT
+          echo "created=$(field created)" >> $GITHUB_OUTPUT
+          echo "asks=$(field asks)" >> $GITHUB_OUTPUT
+          # The results-table cell. The table is column-agnostic, so a verdict
+          # goes in the confidence column exactly where a score would.
+          echo "confidence=$STATUS $CHECKS" >> $GITHUB_OUTPUT
+          echo "$LINE"
+
+          # Every check, in the job summary, so a reviewer sees which one broke
+          # without opening the log.
+          {
+            echo "### Warehouse e2e: \`$MATRIX_APP\`"
+            echo ""
+            echo '```'
+            echo "$LINE"
+            grep '^E2E_CHECK ' wizard-output.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Process results
         id: process-results
@@ -790,10 +880,28 @@ jobs:
           if [ -f "$YARA_JSON" ]; then
             aws s3 cp "$YARA_JSON" "${S3_PREFIX}/posthog-wizard-yara-report.json" || true
           fi
+
+          # An assertion-graded leg leaves no PR, so its evidence is the only
+          # record of what happened. Same prefix as everything else.
+          if [ "$IS_E2E" = "true" ]; then
+            BASE="${MATRIX_APP##*/}"
+            aws s3 cp "/tmp/wizard-e2e-${BASE}.json" "${S3_PREFIX}/e2e-result.json" || true
+            aws s3 cp "/tmp/wizard-e2e-${BASE}-mcp-journal.json" "${S3_PREFIX}/mcp-journal.json" || true
+            aws s3 cp wizard-output.log "${S3_PREFIX}/e2e-output.log" || true
+            if [ -d "/tmp/wizard-e2e-${BASE}-snaps" ]; then
+              aws s3 cp --recursive "/tmp/wizard-e2e-${BASE}-snaps" "${S3_PREFIX}/snapshots" || true
+            fi
+            for report in posthog-warehouse-report.md posthog-setup-report.md; do
+              if [ -f "/tmp/wizard-e2e-${BASE}/${report}" ]; then
+                aws s3 cp "/tmp/wizard-e2e-${BASE}/${report}" "${S3_PREFIX}/${report}" || true
+              fi
+            done
+          fi
         env:
           MATRIX_APP: ${{ matrix.app }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
           AWS_BUCKET: ${{ secrets.AWS_WIZARD_ARTIFACTS_BUCKET }}
+          IS_E2E: ${{ steps.leg.outputs.is_e2e }}
 
       - name: Label and close PR
         if: steps.process-results.outputs.pr_number
@@ -896,7 +1004,7 @@ jobs:
               ]
             }"
         env:
-          WIZARD_CONFIDENCE: ${{ steps.process-results.outputs.confidence_score }}
+          WIZARD_CONFIDENCE: ${{ steps.e2e-result.outputs.confidence || steps.process-results.outputs.confidence_score }}
           PR_URL: ${{ steps.process-results.outputs.pr_url }}
           PR_NUMBER: ${{ steps.process-results.outputs.pr_number }}
           JOB_ID: ${{ steps.job-id.outputs.job_id }}
@@ -926,7 +1034,7 @@ jobs:
           SOURCE_PR_NUMBER: ${{ needs.discover.outputs.input_source_pr_number }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
           APP: ${{ matrix.app }}
-          WIZARD_CONFIDENCE: ${{ steps.process-results.outputs.confidence_score }}
+          WIZARD_CONFIDENCE: ${{ steps.e2e-result.outputs.confidence || steps.process-results.outputs.confidence_score }}
           WIZARD_PR_URL: ${{ steps.process-results.outputs.pr_url }}
           WIZARD_PR_NUMBER: ${{ steps.process-results.outputs.pr_number }}
           JOB_ID: ${{ steps.job-id.outputs.job_id }}
@@ -999,6 +1107,101 @@ jobs:
               body: body
             });
             console.log('Updated comment for ' + app);
+
+      # The only step in this job that is allowed to fail the leg.
+      #
+      # A diff leg has no pass/fail to report — it opens a PR and a human or the
+      # evaluator grades it — so `continue-on-error` is right there. An
+      # assertion-graded leg does have one, and swallowing it would make this
+      # whole tier decorative. Runs last so the PR comment, the artifacts and
+      # the summary are all written before the leg goes red.
+      - name: Fail the leg on a failed assertion
+        if: always() && steps.leg.outputs.is_e2e == 'true'
+        env:
+          APP: ${{ matrix.app }}
+          STATUS: ${{ steps.e2e-result.outputs.status }}
+          CHECKS: ${{ steps.e2e-result.outputs.checks }}
+        run: |
+          if [ "$STATUS" = "PASS" ]; then
+            echo "✓ $APP — $CHECKS checks passed"
+            exit 0
+          fi
+          echo "::error title=Warehouse e2e failed::$APP — status=$STATUS checks=$CHECKS. See the job summary for the failing check."
+          exit 1
+
+  # ============================================================================
+  # MCP-STUB-DRIFT: Re-record the stub's fixtures against prod and fail if they
+  # moved. The stub answers the warehouse e2e runs from fixtures recorded off
+  # production, so PostHog can change a credential field or reword a validation
+  # error and every one of those runs keeps passing against yesterday's API.
+  # This job is what stops the stub rotting.
+  #
+  # Weekly only — it talks to prod, and the fixtures change rarely.
+  # ============================================================================
+  mcp-stub-drift:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Re-record the fixtures and diff them
+        id: drift
+        env:
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
+        run: |
+          # `--dry-run` prints what it would write but does not compare, so it
+          # cannot detect drift. Record for real into the working tree and let
+          # git do the comparison — the checkout is thrown away either way.
+          pnpm mcp-stub:record
+
+          # Every fixture carries a provenance header stamped with the time it
+          # was recorded, so a plain `git diff` is never quiet and this job
+          # would cry drift every week. Ignore that one line and compare the
+          # bodies, which are what the stub actually answers from.
+          IGNORE_VOLATILE='"recordedAt"'
+
+          if git diff --quiet -I "$IGNORE_VOLATILE" -- services/mcp-stub/fixtures; then
+            echo "✓ fixtures match production"
+            exit 0
+          fi
+
+          {
+            echo "## MCP stub fixtures have drifted from production"
+            echo ""
+            echo "The warehouse e2e runs answer from these fixtures, so they are"
+            echo "now testing against an API PostHog no longer serves."
+            echo ""
+            echo "Refresh them:"
+            echo ""
+            echo '```'
+            echo "POSTHOG_PERSONAL_API_KEY=phx_... pnpm mcp-stub:record"
+            echo '```'
+            echo ""
+            echo '```diff'
+            git diff -I "$IGNORE_VOLATILE" -- services/mcp-stub/fixtures | head -300
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::error title=MCP stub fixtures drifted::Run pnpm mcp-stub:record and commit the diff."
+          exit 1
+
+      - name: Check the stub still answers its own tests
+        if: always()
+        run: pnpm test:mcp-stub
 
   # ============================================================================
   # SUMMARY: Final summary of all triggered workflows
