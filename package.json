@@ -10,10 +10,14 @@
     "benchmark": "tsx services/wizard-benchmark/index.ts",
     "framework-detect": "tsx services/framework-detect/index.ts",
     "yara-scan": "tsx services/yara-scan/index.ts",
-    "test:evaluator": "tsx --test services/pr-evaluator/evaluator.test.ts"
+    "mcp-stub": "tsx services/mcp-stub/cli.ts",
+    "mcp-stub:record": "tsx services/mcp-stub/record.ts",
+    "test:evaluator": "tsx --test services/pr-evaluator/evaluator.test.ts",
+    "test:mcp-stub": "tsx --test services/mcp-stub/mcp-stub.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.2.73",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@octokit/rest": "^21.0.0",
     "dotenv": "^16.4.0",
     "posthog-node": "^5.28.1",

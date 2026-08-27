@@ -1,0 +1,181 @@
+{
+  "_recorded": {
+    "recordedAt": "2026-08-27T10:05:00.000Z",
+    "recordedFrom": "https://mcp.posthog.com/mcp",
+    "recordedBy": "services/mcp-stub/record.ts",
+    "note": "Recorded from production. Do not hand-edit — run `pnpm mcp-stub:record`.",
+    "command": "exec info <tool>"
+  },
+  "tools": {
+    "external-data-sources-wizard": {
+      "name": "external-data-sources-wizard",
+      "title": "List data warehouse source types you can import",
+      "description": "Use this whenever the user needs data PostHog doesn't capture natively — revenue and payments (Stripe, Chargebee), CRM contacts and deals (Hubspot, Salesforce), support tickets (Zendesk), e-commerce orders (Shopify), ad spend, or their own application/production database (Postgres, MySQL, BigQuery, Snowflake) — or when a HogQL query fails because the table doesn't exist yet. Importing turns that data into queryable warehouse tables you can JOIN against product events. Returns the configuration metadata for every supported source type: the required fields (host, port, database, credentials, etc.), field types, and OAuth flows, so you know what a connection needs. ALWAYS pass 'source_type' with the specific kind(s) you need (comma-separated, e.g. 'Postgres,Stripe') — the unfiltered response describes every source and is very large (hundreds of KB). Only omit 'source_type' if you genuinely need to enumerate every available type — and when enumerating, pass fields: ['*.name', '*.caption'] to skip the large per-source field definitions. To actually connect a source, prefer 'data-warehouse-source-setup'.",
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "source_type": {
+            "description": "Comma-separated source type(s) to return config for, e.g. 'Postgres' or 'Postgres,Stripe'. Strongly recommended: the unfiltered response describes every supported source and is very large. Omit only to enumerate the available types.",
+            "type": "string"
+          },
+          "fields": {
+            "description": "Optional subset of response fields to return, each a dot-path from the allowlist. Omit to return all fields. Request only the fields your task needs to keep responses small.",
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "*.name",
+                "*.caption",
+                "*.docsUrl",
+                "*.featured",
+                "*.unreleasedSource",
+                "*.fields"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "external-data-sources-db-schema": {
+      "name": "external-data-sources-db-schema",
+      "title": "Discover tables and sync methods for a source",
+      "description": "Validate credentials against a remote source and return the list of tables available to sync (works for database sources like Postgres/MySQL and SaaS sources like Stripe/Hubspot alike). Pass source_type and credential fields in the payload object. Each table entry includes: table name, incremental_available, append_available, cdc_available, supports_webhooks, detected_primary_keys, available_columns (name/type/nullable), rows estimate, and incremental_fields (candidate timestamp/integer columns for incremental sync). Use this BEFORE external-data-sources-create so the user can pick a sync_type per table. Returns 400 with a message if credentials are invalid.",
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "source_type": {
+            "type": "string",
+            "description": "The source type name (e.g. \"Postgres\", \"MySQL\", \"Stripe\"). Use external-data-sources-wizard to see available types and their required fields."
+          },
+          "payload": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {},
+            "description": "Connection credentials for the source. Keys depend on source_type. For database sources: host, port, database, user, password, schema. For SaaS sources: api_key or OAuth fields. Use external-data-sources-wizard (pass source_type) to see required fields per source type."
+          }
+        },
+        "required": [
+          "source_type",
+          "payload"
+        ]
+      }
+    },
+    "external-data-sources-create": {
+      "name": "external-data-sources-create",
+      "title": "Create data warehouse source (advanced; prefer source setup)",
+      "description": "Low-level create for a data warehouse import source when you need to hand-pick tables and sync types. If you only have credentials and want every table, call 'data-warehouse-source-setup' instead — one call, fewer ways to get it wrong. Use this path when the user asked for specific tables or sync types. The 'schemas' array is NOT a top-level argument — it goes INSIDE 'payload', alongside the credential fields: payload = {<credential fields…>, \"schemas\": [...]}. Each schemas entry has: name, should_sync (bool), sync_type (incremental/full_refresh/append), and optionally incremental_field, incremental_field_type, and primary_key_columns. Build the entries from the rows returned by 'external-data-sources-db-schema' first. Omit 'schemas' entirely and every discovered table syncs with default settings. Sources back queryable warehouse tables for revenue (Stripe), CRM (Hubspot, Salesforce), support (Zendesk), and your own databases (Postgres, MySQL, BigQuery).",
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "source_type": {
+            "type": "string",
+            "description": "The source type name (e.g. \"Postgres\", \"MySQL\", \"Stripe\"). Use external-data-sources-wizard to see available types and their required fields."
+          },
+          "payload": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {},
+            "description": "Connection credentials for the source. Keys depend on source_type. For database sources: host, port, database, user, password, schema. For SaaS sources: api_key or OAuth fields. The optional per-table 'schemas' array (built from external-data-sources-db-schema) also goes in here."
+          },
+          "prefix": {
+            "description": "Prefix added to the table names PostHog creates in HogQL. Does not filter which tables are imported.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "description": "Human-readable description.",
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 400
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "access_method": {
+            "default": "warehouse",
+            "description": "Connection mode: 'warehouse' (import) or 'direct' (live query).\n\n* `warehouse` - warehouse\n* `direct` - direct",
+            "type": "string",
+            "enum": [
+              "warehouse",
+              "direct"
+            ]
+          },
+          "direct_query_enabled": {
+            "default": false,
+            "description": "Whether a synced source should also be live-queryable via direct connection. Defaults to false; ignored for pure direct-query sources.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source_type",
+          "payload"
+        ]
+      }
+    },
+    "external-data-sources-list": {
+      "name": "external-data-sources-list",
+      "title": "List data warehouse sources",
+      "description": "Check what external data is already connected before answering any revenue, billing, subscription, CRM, support-ticket, or product-database question — call this first so you JOIN against an existing source instead of telling the user the data isn't available. Lists every configured import source with its type (Postgres, Stripe, Hubspot, etc.), connection status, prefix, schemas, latest error, and last sync timestamp.",
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "limit": {
+            "description": "Number of results to return per page.",
+            "type": "number"
+          },
+          "offset": {
+            "description": "The initial index from which to return the results.",
+            "type": "number"
+          },
+          "search": {
+            "description": "A search term.",
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
