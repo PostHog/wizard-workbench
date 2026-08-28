@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute } from 'vue-router'
 import type { Media } from '../types'
 import { getMedia, getRecommendations } from '../composables/useTMDB'
@@ -100,8 +101,14 @@ watch(() => route.fullPath, () => {
 }, { immediate: false })
 
 function playTrailer() {
-  if (trailerUrl.value) {
+  if (trailerUrl.value && item.value) {
     showModal.value = true
+    if (import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST) {
+      posthog.capture('trailer_played', {
+        media_id: item.value.id,
+        media_type: type.value,
+      })
+    }
   }
 }
 

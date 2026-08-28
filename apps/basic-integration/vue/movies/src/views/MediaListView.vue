@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute } from 'vue-router'
 import type { MediaType } from '../types'
 import { QUERY_LIST } from '../constants/lists'
@@ -18,6 +19,16 @@ const mediaType = computed(() => {
   if (route.path.startsWith('/tv')) return 'tv'
   return 'movie'
 })
+
+const trackHeroSelection = () => {
+  if (import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST) {
+    posthog.capture('media_selected', {
+      media_id: heroItem.value.id,
+      media_type: mediaType.value,
+      source: 'category_hero',
+    })
+  }
+}
 
 const heroItem = ref<any>({
   id: '123',
@@ -50,7 +61,7 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen bg-black text-white">
     <div v-if="heroItem">
-      <router-link :to="`/${mediaType}/${heroItem.id}`">
+      <router-link :to="`/${mediaType}/${heroItem.id}`" @click="trackHeroSelection">
         <MediaHero :item="heroItem" />
       </router-link>
     </div>

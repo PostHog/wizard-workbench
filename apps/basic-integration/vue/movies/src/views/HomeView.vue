@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import posthog from 'posthog-js'
 import type { MediaType } from '../types'
 import { QUERY_LIST } from '../constants/lists'
 import { listMedia, getMedia } from '../composables/useTMDB'
@@ -7,6 +8,16 @@ import MediaHero from '../components/media/MediaHero.vue'
 import CarouselAutoQuery from '../components/carousel/CarouselAutoQuery.vue'
 
 const type = ref<MediaType>('movie')
+const trackHeroSelection = () => {
+  if (import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST) {
+    posthog.capture('media_selected', {
+      media_id: heroItem.value.id,
+      media_type: type.value,
+      source: 'home_hero',
+    })
+  }
+}
+
 const heroItem = ref<any>({
   id: '123',
   title: 'Welcome to Vue Movies',
@@ -35,7 +46,7 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen bg-black text-white">
     <div v-if="heroItem" class="mb-10">
-      <router-link :to="`/${type}/${heroItem.id}`">
+      <router-link :to="`/${type}/${heroItem.id}`" @click="trackHeroSelection">
         <MediaHero :item="heroItem" />
       </router-link>
     </div>
