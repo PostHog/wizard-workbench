@@ -1,6 +1,19 @@
 import Fastify from 'fastify';
+import { posthog } from './posthog.js';
 
 const fastify = Fastify({ logger: true });
+
+fastify.setErrorHandler((error, request, reply) => {
+  if (posthog) {
+    posthog.captureException(error, undefined, {
+      endpoint: request.routeOptions?.url,
+      method: request.method,
+      status_code: error.statusCode || 500,
+    });
+  }
+
+  reply.send(error);
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +52,17 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'post_created',
+      properties: {
+        post_id: post.id,
+        published: post.published,
+      },
+    });
+  }
+
   return reply.status(201).send(post);
 });
 
@@ -67,6 +91,18 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  if (posthog) {
+    posthog.capture({
+      event: 'post_updated',
+      properties: {
+        post_id: post.id,
+        title_updated: title !== undefined,
+        body_updated: body !== undefined,
+        published: post.published,
+      },
+    });
+  }
+
   return post;
 });
 
@@ -84,6 +120,13 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   // Remove associated comments
   for (let i = comments.length - 1; i >= 0; i--) {
     if (comments[i].post_id === postId) comments.splice(i, 1);
+  }
+
+  if (posthog) {
+    posthog.capture({
+      event: 'post_deleted',
+      properties: { post_id: postId },
+    });
   }
 
   return reply.status(204).send();
@@ -111,10 +154,34 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'comment_created',
+      properties: {
+        comment_id: comment.id,
+        post_id: comment.post_id,
+      },
+    });
+  }
+
   return reply.status(201).send(comment);
 });
 
 const PORT = process.env.PORT || 3001;
+
+async function shutdown() {
+  try {
+    await fastify.close();
+  } finally {
+    if (posthog) {
+      await posthog.shutdown();
+    }
+  }
+}
+
+process.once('SIGINT', () => void shutdown());
+process.once('SIGTERM', () => void shutdown());
 
 fastify.listen({ port: PORT }, (err) => {
   if (err) {
