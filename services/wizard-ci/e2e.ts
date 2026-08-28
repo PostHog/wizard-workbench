@@ -58,6 +58,10 @@ const INJECTED_CREDENTIALS: Record<string, string> = {
   E2E_PG_USER: "e2e_fixture_user",
   E2E_PG_PASSWORD: "e2e-fixture-placeholder-password",
   E2E_STRIPE_API_KEY: "sk_test_e2efixtureplaceholder000000",
+  // The catch-all the wizard profile routes every other credential-shaped
+  // question to — a Hugging Face access token, a bare `api_key`. Without it
+  // those questions reach the `e2e` sentinel, and the create they feed fails.
+  E2E_API_TOKEN: "e2e-fixture-placeholder-token",
 };
 
 /** Which injected values must never be echoed back. */
