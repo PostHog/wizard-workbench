@@ -43,6 +43,15 @@ class Sessions::MagicLinksController < ApplicationController
     def sign_in(magic_link)
       clear_pending_authentication_token
       start_new_session_for magic_link.identity
+      posthog_identify(
+        distinct_id: magic_link.identity.posthog_distinct_id,
+        properties: magic_link.identity.posthog_properties
+      )
+      posthog_capture(
+        distinct_id: magic_link.identity.posthog_distinct_id,
+        event: "magic_link_authenticated",
+        properties: { signup_required: requires_signup_completion?(magic_link) }
+      )
 
       respond_to do |format|
         format.html { redirect_to after_sign_in_url(magic_link) }

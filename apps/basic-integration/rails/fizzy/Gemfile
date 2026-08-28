@@ -37,6 +37,9 @@ gem "zip_kit"
 gem "mittens"
 gem "useragent", bc: "useragent"
 
+gem "posthog-ruby", "~> 3.0"
+gem "posthog-rails"
+
 # Operations
 gem "autotuner"
 gem "mission_control-jobs"

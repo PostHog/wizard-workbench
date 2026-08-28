@@ -28,6 +28,14 @@ class Identity < ApplicationRecord
     end
   end
 
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  def posthog_properties
+    { email: email_address, is_staff: staff, date_joined: created_at&.iso8601 }
+  end
+
   private
     def deactivate_users
       users.find_each(&:deactivate)
