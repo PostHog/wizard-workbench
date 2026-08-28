@@ -21,6 +21,7 @@ import {
 } from "~/components/ui/item";
 import { Spinner } from "~/components/ui/spinner";
 import type { Organization } from "~/generated/browser";
+import posthog from "~/lib/posthog.client";
 import { cn } from "~/lib/utils";
 
 export const DELETE_USER_ACCOUNT_INTENT = "delete-user-account";
@@ -109,6 +110,7 @@ function DeleteAccountDialogComponent({
             <Button
               disabled={isDeletingAccount}
               name="intent"
+              onClick={() => posthog.capture("account_deleted")}
               type="submit"
               value={DELETE_USER_ACCOUNT_INTENT}
               variant="destructive"

@@ -23,6 +23,7 @@ import {
 } from "~/components/ui/card";
 import { inputClassName } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
+import posthog from "~/lib/posthog.client";
 import { cn } from "~/lib/utils";
 
 export type InviteLinkCardProps = {
@@ -113,6 +114,7 @@ export function InviteLinkCard({
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
                   setLinkCopied(true);
+                  posthog.capture("invite_link_copied");
                 }}
                 size="icon"
                 variant="ghost"
@@ -160,7 +162,12 @@ export function InviteLinkCard({
 
           <CardFooter className="flex-col items-stretch">
             <div className="flex items-center gap-2">
-              <Form className="grow" method="POST" replace>
+              <Form
+                className="grow"
+                method="POST"
+                onSubmit={() => posthog.capture("invite_link_created")}
+                replace
+              >
                 <Button
                   aria-describedby="link-regenerate-warning"
                   className="w-full"
@@ -215,7 +222,12 @@ export function InviteLinkCard({
         </>
       ) : (
         <CardFooter>
-          <Form className="w-full" method="POST" replace>
+          <Form
+            className="w-full"
+            method="POST"
+            onSubmit={() => posthog.capture("invite_link_created")}
+            replace
+          >
             <Button
               className="w-full"
               disabled={disabled}

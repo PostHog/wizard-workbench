@@ -29,6 +29,7 @@ import { requireUserNeedsOnboarding } from "~/features/onboarding/onboarding-hel
 import { onboardingUserAccountAction } from "~/features/onboarding/user-account/onboarding-user-account-action.server";
 import { ONBOARDING_USER_ACCOUNT_INTENT } from "~/features/onboarding/user-account/onboarding-user-account-constants";
 import { onboardingUserAccountSchema } from "~/features/onboarding/user-account/onboarding-user-account-schemas";
+import posthog from "~/lib/posthog.client";
 import { getPageTitle } from "~/utils/get-page-title.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -75,7 +76,12 @@ export default function UserAccountOnboardingRoute({
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <Form encType="multipart/form-data" method="POST" {...form.props}>
+    <Form
+      encType="multipart/form-data"
+      method="POST"
+      onSubmit={() => posthog.capture("onboarding_user_account_submitted")}
+      {...form.props}
+    >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>
           <div className="flex flex-col gap-1">

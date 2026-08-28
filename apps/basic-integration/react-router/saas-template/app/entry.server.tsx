@@ -106,6 +106,7 @@ export default async function handleRequest(
                   // Allow WebSocket connections in development for HMR
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
+                    process.env.VITE_PUBLIC_POSTHOG_HOST,
                     "'self'",
                   ],
                   "font-src": ["'self'"],
@@ -119,10 +120,12 @@ export default async function handleRequest(
                   "script-src": [
                     "'strict-dynamic'",
                     "'self'",
+                    "https://*.posthog.com",
                     `'nonce-${nonce}'`,
                   ],
                   // Inline event handlers with nonce
                   "script-src-attr": [`'nonce-${nonce}'`],
+                  "worker-src": ["blob:", "'self'"],
                 },
               },
               // Report-only in dev/test, enforce in production

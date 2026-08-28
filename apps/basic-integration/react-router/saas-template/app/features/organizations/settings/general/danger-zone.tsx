@@ -28,6 +28,7 @@ import {
   ItemTitle,
 } from "~/components/ui/item";
 import { Spinner } from "~/components/ui/spinner";
+import posthog from "~/lib/posthog.client";
 
 export type DangerZoneProps = {
   organizationName: string;
@@ -137,6 +138,7 @@ function DeleteOrganizationDialogComponent({
             }
             form={form.props.id}
             name="intent"
+            onClick={() => posthog.capture("organization_deleted")}
             type="submit"
             value={DELETE_ORGANIZATION_INTENT}
             variant="destructive"
