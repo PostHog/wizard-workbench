@@ -12,10 +12,19 @@ const currentPath = Astro.url.pathname;
       <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
       <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
       <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="#" class="nav-cta" data-posthog-event="trial_cta_clicked" data-cta-location="navigation">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.querySelector('.nav-cta')?.addEventListener('click', (event) => {
+    const cta = event.currentTarget;
+    window.posthog?.capture(cta.dataset.posthogEvent, {
+      cta_location: cta.dataset.ctaLocation,
+    });
+  });
+</script>
 
 <style>
   .nav-link.active {
