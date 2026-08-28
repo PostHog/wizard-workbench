@@ -2,6 +2,7 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { Spinner } from '../components/Spinner'
 import { useMutation } from '../hooks/useMutation'
+import { posthog } from '../posthog'
 import { postInvoice } from '../utils/mockTodos'
 import type { Invoice } from '../utils/mockTodos'
 
@@ -14,7 +15,10 @@ function InvoicesIndexComponent() {
 
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: invoice }) => {
+      posthog.capture('invoice_created', { invoice_id: invoice.id })
+      return router.invalidate()
+    },
   })
 
   return (

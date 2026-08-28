@@ -6,9 +6,11 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from '@posthog/react'
 import { Spinner } from '../components/Spinner'
 import { Breadcrumbs } from '../components/Breadcrumbs'
 import type { Auth } from '../utils/auth'
+import { isPostHogConfigured, posthog } from '../posthog'
 
 function RouterSpinner() {
   const isLoading = useRouterState({ select: (s) => s.status === 'pending' })
@@ -22,7 +24,7 @@ export const Route = createRootRouteWithContext<{
 })
 
 function RootComponent() {
-  return (
+  const content = (
     <>
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
@@ -72,4 +74,8 @@ function RootComponent() {
       <TanStackRouterDevtools position="bottom-right" />
     </>
   )
+
+  return isPostHogConfigured ? (
+    <PostHogProvider client={posthog}>{content}</PostHogProvider>
+  ) : content
 }

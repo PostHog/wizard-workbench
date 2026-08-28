@@ -3,6 +3,7 @@ import * as React from 'react'
 import { z } from 'zod'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
+import { posthog } from '../posthog'
 import { fetchInvoiceById, patchInvoice } from '../utils/mockTodos'
 
 export const Route = createFileRoute('/dashboard/invoices/$invoiceId')({
@@ -30,7 +31,12 @@ function InvoiceComponent() {
   const router = useRouter()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: updatedInvoice }) => {
+      if (updatedInvoice) {
+        posthog.capture('invoice_updated', { invoice_id: updatedInvoice.id })
+      }
+      return router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
 
