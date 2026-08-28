@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCustomerPortalSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,6 +26,9 @@ export default async function handler(
     }
 
     const portalSession = await createCustomerPortalSession(team);
+
+    await captureServerEvent(user.id, 'subscription_management_opened');
+
     return res.status(200).json({ url: portalSession.url });
   } catch (error) {
     console.error('Customer portal error:', error);

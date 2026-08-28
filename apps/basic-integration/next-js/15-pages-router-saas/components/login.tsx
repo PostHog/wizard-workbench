@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,14 @@ export function Login({
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
           return;
+        }
+
+        if (result.user?.id) {
+          posthog.identify(String(result.user.id), {
+            email: result.user.email,
+            name: result.user.name || undefined,
+            role: result.user.role
+          });
         }
 
         if (result.success && result.redirectTo) {
