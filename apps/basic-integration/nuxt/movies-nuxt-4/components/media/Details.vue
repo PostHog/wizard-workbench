@@ -7,17 +7,23 @@ defineProps<{
 }>()
 
 const tab = ref<'overview' | 'videos' | 'photos'>('overview')
+const { $posthog } = useNuxtApp()
+
+function selectSection(section: typeof tab.value) {
+  tab.value = section
+  $posthog?.capture('media_section_selected', { section })
+}
 </script>
 
 <template>
   <div flex items-center justify-center gap8 py6>
-    <button n-tab :class="{ 'n-tab-active': tab === 'overview' }" @click="tab = 'overview'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'overview' }" @click="selectSection('overview')">
       {{ $t('Overview') }}
     </button>
-    <button n-tab :class="{ 'n-tab-active': tab === 'videos' }" @click="tab = 'videos'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'videos' }" @click="selectSection('videos')">
       {{ $t('Videos') }}
     </button>
-    <button n-tab :class="{ 'n-tab-active': tab === 'photos' }" @click="tab = 'photos'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'photos' }" @click="selectSection('photos')">
       {{ $t('Media Photos') }}
     </button>
   </div>
