@@ -44,9 +44,11 @@ class MainViewModel : ViewModel() {
     fun login(username: String, password: String) {
         // Fake auth: accept anything; password intentionally unused.
         _loggedInUsername.value = username
+        PostHogAnalytics.capture("user_logged_in")
     }
 
     fun logout() {
+        PostHogAnalytics.capture("user_logged_out")
         _loggedInUsername.value = null
     }
 }
