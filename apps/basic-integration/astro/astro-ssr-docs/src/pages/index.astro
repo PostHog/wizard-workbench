@@ -54,3 +54,15 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </footer>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('.hero-buttons a, .feature-card');
+    if (!(link instanceof HTMLAnchorElement)) return;
+
+    window.posthog?.capture('home_documentation_link_clicked', {
+      destination: link.pathname,
+      link_type: link.classList.contains('feature-card') ? 'feature_card' : 'hero_action',
+    });
+  });
+</script>

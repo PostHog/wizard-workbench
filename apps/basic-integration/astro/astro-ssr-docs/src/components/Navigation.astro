@@ -16,3 +16,15 @@ const isDocs = currentPath.startsWith('/docs');
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('.nav-link, .nav-cta');
+    if (!(link instanceof HTMLAnchorElement)) return;
+
+    window.posthog?.capture('documentation_navigation_clicked', {
+      destination: link.href.startsWith(window.location.origin) ? link.pathname : 'external',
+      link_type: link.classList.contains('nav-cta') ? 'get_started' : 'primary_navigation',
+    });
+  });
+</script>
