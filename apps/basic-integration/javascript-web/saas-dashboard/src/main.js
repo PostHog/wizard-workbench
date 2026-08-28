@@ -1,3 +1,4 @@
+import { isPostHogConfigured, posthog } from './posthog.js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -18,6 +19,11 @@ function requireAuth(handler) {
     }
     handler(params);
   };
+}
+
+if (isPostHogConfigured && store.state.currentUser) {
+  const { id, email, name, role } = store.state.currentUser;
+  posthog.identify(id, { email, name, role });
 }
 
 // --- Routes ---
