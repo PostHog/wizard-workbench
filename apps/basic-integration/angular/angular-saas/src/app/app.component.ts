@@ -6,7 +6,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AppUpdateService, Logger } from '@core/services';
+import { AppUpdateService, Logger, PosthogService } from '@core/services';
+import { AuthenticationService } from '@app/auth/services/authentication.service';
 import { SocketIoService } from '@core/socket-io';
 
 @Component({
@@ -23,11 +24,27 @@ export class AppComponent implements OnInit {
   private readonly i18nService = inject(I18nService);
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
+  private readonly posthogService = inject(PosthogService);
+  private readonly authenticationService = inject(AuthenticationService);
   private readonly destroyRef = inject(DestroyRef);
 
   title = 'angular-boilerplate';
 
   ngOnInit() {
+    this.posthogService.init(
+      environment.posthogProjectToken,
+      {
+        api_host: environment.posthogHost,
+        capture_exceptions: {
+          capture_unhandled_errors: true,
+          capture_unhandled_rejections: true,
+          capture_console_errors: false,
+        },
+      },
+      environment.production,
+    );
+    this.authenticationService.identifyCurrentUser();
+
     // Setup logger
     if (environment.production) {
       Logger.enableProductionMode();
