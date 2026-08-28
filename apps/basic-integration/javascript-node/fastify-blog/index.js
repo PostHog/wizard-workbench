@@ -1,6 +1,25 @@
 import Fastify from 'fastify';
+import posthog from './posthog.js';
 
 const fastify = Fastify({ logger: true });
+
+fastify.setErrorHandler((error, request, reply) => {
+  if (posthog) {
+    posthog.captureException(error, undefined, {
+      request_method: request.method,
+      route: request.routeOptions?.url,
+      status_code: error.statusCode || 500,
+    });
+  }
+
+  reply.send(error);
+});
+
+fastify.addHook('onClose', async () => {
+  if (posthog) {
+    await posthog.shutdown();
+  }
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +58,17 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'post_created',
+      properties: {
+        post_id: post.id,
+        initial_published: post.published,
+      },
+    });
+  }
+
   return reply.status(201).send(post);
 });
 
@@ -63,9 +93,30 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   }
 
   const { title, body, published } = request.body || {};
-  if (title !== undefined) post.title = title;
-  if (body !== undefined) post.body = body;
-  if (published !== undefined) post.published = published;
+  const updatedFields = [];
+  if (title !== undefined) {
+    post.title = title;
+    updatedFields.push('title');
+  }
+  if (body !== undefined) {
+    post.body = body;
+    updatedFields.push('body');
+  }
+  if (published !== undefined) {
+    post.published = published;
+    updatedFields.push('published');
+  }
+
+  if (posthog) {
+    posthog.capture({
+      event: 'post_updated',
+      properties: {
+        post_id: post.id,
+        updated_fields: updatedFields,
+        published: post.published,
+      },
+    });
+  }
 
   return post;
 });
@@ -82,8 +133,22 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   posts.splice(index, 1);
 
   // Remove associated comments
+  let removedCommentCount = 0;
   for (let i = comments.length - 1; i >= 0; i--) {
-    if (comments[i].post_id === postId) comments.splice(i, 1);
+    if (comments[i].post_id === postId) {
+      comments.splice(i, 1);
+      removedCommentCount++;
+    }
+  }
+
+  if (posthog) {
+    posthog.capture({
+      event: 'post_deleted',
+      properties: {
+        post_id: postId,
+        removed_comment_count: removedCommentCount,
+      },
+    });
   }
 
   return reply.status(204).send();
@@ -111,6 +176,17 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'comment_created',
+      properties: {
+        comment_id: comment.id,
+        post_id: comment.post_id,
+      },
+    });
+  }
+
   return reply.status(201).send(comment);
 });
 
