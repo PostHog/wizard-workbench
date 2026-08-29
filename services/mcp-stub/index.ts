@@ -7,12 +7,21 @@
  * fixtures recorded off prod — while creating nothing real and consuming no
  * real credential.
  *
- * Transport: Streamable HTTP, stateless. That is what the wizard's client
- * speaks (`StreamableHTTPClientTransport` in the wizard's
- * `src/lib/agent/runner/harness/pi/mcp.ts`, and the same URL + bearer config
- * for `pi-mcp-adapter`). Stateless means a fresh `Server` + transport per
- * request and no `Mcp-Session-Id` bookkeeping; the run's state lives in
- * `StubState`, which outlives the requests.
+ * Transport: Streamable HTTP, stateless. That is what both of the wizard's
+ * clients speak — `StreamableHTTPClientTransport` in the wizard's
+ * `src/lib/agent/runner/harness/pi/mcp.ts` (and the same URL + bearer config
+ * for `pi-mcp-adapter`), and the Claude Agent SDK's own CLI on the anthropic
+ * harness. Stateless means a fresh `Server` + transport per request and no
+ * `Mcp-Session-Id` bookkeeping; the run's state lives in `StubState`, which
+ * outlives the requests.
+ *
+ * This server answers from the event loop of the process that started it. A
+ * synchronous call in that process — `spawnSync` above all — stops it answering
+ * for as long as the call runs, and a client that gets no answer reports the
+ * server as `pending` or `failed` and loses the tool. Start children with
+ * `runChild` from `../wizard-ci/run-child.js`.
+ *
+ * Set `MCP_STUB_WIRE_LOG` to see every exchange — see `wire-log.ts`.
  *
  * Usage:
  *
@@ -35,6 +44,7 @@ import {
 import { loadFixtures, type Fixtures } from "./fixtures.js";
 import { resetJournal } from "./journal.js";
 import { runExec, StubState } from "./exec.js";
+import { createWireLog } from "./wire-log.js";
 
 export const DEFAULT_PORT = 8799;
 export const MCP_PATH = "/mcp";
@@ -175,10 +185,14 @@ export async function startMcpStub(
   const port =
     options.port ?? Number(process.env.MCP_STUB_PORT ?? DEFAULT_PORT);
 
+  const wire = createWireLog();
+
   const http: HttpServer = createServer((req, res) => {
     void (async () => {
+      const logRequest = wire.record(req, res);
       const path = (req.url ?? "").split("?")[0];
       if (path !== MCP_PATH) {
+        logRequest(undefined);
         res.writeHead(404, { "content-type": "application/json" });
         res.end(JSON.stringify({ error: `not found: ${path}` }));
         return;
@@ -199,7 +213,9 @@ export async function startMcpStub(
 
       try {
         await server.connect(transport);
-        await transport.handleRequest(req, res, await readBody(req));
+        const body = await readBody(req);
+        logRequest(body);
+        await transport.handleRequest(req, res, body);
       } catch (error) {
         // The detail goes to the runner's own log, where whoever is debugging
         // the stub will actually look, rather than over the wire. Tool errors

@@ -11,7 +11,8 @@
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { after, before, beforeEach, describe, it } from "node:test";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -27,6 +28,13 @@ import {
 } from "./fixtures.js";
 import { readJournal } from "./journal.js";
 import { startMcpStub, type McpStub } from "./index.js";
+import { PROBE_TOOL_PREFIX, type ProbeResult } from "./handshake-probe.js";
+import { runChild } from "../wizard-ci/run-child.js";
+
+/** Repo root, for the paths the child-process tests at the end need. */
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const TSX_BIN = join(REPO_ROOT, "node_modules", ".bin", "tsx");
+const PROBE_SCRIPT = join("services", "mcp-stub", "handshake-probe.ts");
 
 let fixtures: Fixtures;
 let tmp: string;
@@ -533,5 +541,94 @@ describe("over the wire", () => {
   it("reports an unknown MCP tool as an error rather than a lie", async () => {
     const result = await client.callTool({ name: "not-exec", arguments: {} });
     assert.equal(result.isError, true);
+  });
+});
+
+// ============================================================================
+
+/**
+ * The tests above drive the stub from inside the test process, over
+ * `StreamableHTTPClientTransport`. That is the pi harness' client. The
+ * warehouse tier runs the *anthropic* harness, whose client is the Claude Agent
+ * SDK's own CLI — a grandchild process of whatever hosts the stub.
+ *
+ * That gap hid a total outage. `services/wizard-ci/e2e.ts` started the wizard
+ * with `spawnSync`, which blocks the Node event loop of the process that serves
+ * the stub. The kernel accepted the SDK's connections and the stub answered
+ * none of them, so the SDK reported `posthog-wizard` as `pending`, registered
+ * no `mcp__posthog-wizard__exec`, and every warehouse run created nothing.
+ * Every test here passed throughout.
+ *
+ * So these two run the client from a child of the stub's host, the way the real
+ * chain does.
+ */
+describe("as the anthropic harness sees it", () => {
+  let stub: McpStub;
+
+  before(async () => {
+    stub = await startMcpStub({ port: 0, journalPath: journal });
+  });
+
+  after(async () => {
+    await stub.stop();
+  });
+
+  it("answers a child process while the host waits for it", async () => {
+    // Deliberately not the SDK — this is the cheap, exact guard against a
+    // blocking spawn. One HTTP round trip, and a host that cannot serve it
+    // fails here in seconds rather than at the SDK's connect timeout.
+    const probe = `
+      const res = await fetch(${JSON.stringify(stub.url)}, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 0,
+          method: "initialize",
+          params: {
+            protocolVersion: "2025-06-18",
+            capabilities: {},
+            clientInfo: { name: "child-probe", version: "1.0.0" },
+          },
+        }),
+        signal: AbortSignal.timeout(5000),
+      });
+      process.exit(res.ok ? 0 : 1);
+    `;
+    const { status } = await runChild(process.execPath, [
+      "--input-type=module",
+      "-e",
+      probe,
+    ]);
+    assert.equal(
+      status,
+      0,
+      "the stub did not answer a child process — the host is blocking its event loop",
+    );
+  });
+
+  it("reaches connected and registers exec for the Claude Agent SDK", async () => {
+    // The probe spawns the SDK, which spawns its own CLI: the same distance
+    // from the stub as a real run. Its verdict is the SDK's own, on the
+    // `system/init` message the wizard reads.
+    const output: string[] = [];
+    const { status } = await runChild(TSX_BIN, [PROBE_SCRIPT], {
+      cwd: REPO_ROOT,
+      stdio: ["ignore", "pipe", "inherit"],
+      env: { ...process.env, MCP_STUB_PROBE_URL: stub.url },
+      onStdout: (chunk) => output.push(chunk),
+    });
+    const verdict = output.join("").trim().split("\n").pop() ?? "";
+    assert.equal(
+      status,
+      0,
+      `the SDK did not reach the stub — ${verdict || "no verdict"}`,
+    );
+    const result = JSON.parse(verdict) as ProbeResult;
+    assert.equal(result.status, "connected");
+    assert.deepEqual(result.tools, [`${PROBE_TOOL_PREFIX}exec`]);
   });
 });
