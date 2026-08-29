@@ -85,6 +85,15 @@ export interface AskRecord {
   prompts: string[];
   answeredIds: string[];
   sentinelIds: string[];
+  /**
+   * Ids a `secret` askAnswers rule refused, because the question claimed a
+   * credential field without being sensitive free text.
+   *
+   * Counted in `unansweredAsks` alongside `sentinelIds`, but it is a different
+   * failure: the profile *had* a value and withheld it, rather than having none
+   * to give. Optional — a wizard from before the split omits the key.
+   */
+  refusedIds?: string[];
   at: string;
 }
 
@@ -110,6 +119,8 @@ export interface E2eResult {
   screenPath?: string[];
   asks?: AskRecord[];
   unansweredAsks?: number;
+  /** Of `unansweredAsks`, how many a `secret` rule refused. */
+  refusedAsks?: number;
   notices?: NoticeRecord[];
   tasks?: Array<{ label: string; status: string }>;
   detectedSources?: DetectedSource[];
@@ -279,18 +290,108 @@ export function claimedConnected(
   result: E2eResult | null,
   kinds: string[],
 ): string[] {
+  return claimedConnectedLines(result, kinds).map((c) => c.kind);
+}
+
+/**
+ * The same claims, each with the report line that produced it.
+ *
+ * The check is blunt by design, so a reviewer has to be able to tell a real
+ * false claim ("Stripe was connected — Source ID …") from a line the reading
+ * over-claimed on ("Set up Stripe webhooks —"). Naming the line is what makes
+ * that call possible from the CI output alone.
+ */
+export function claimedConnectedLines(
+  result: E2eResult | null,
+  kinds: string[],
+): Array<{ kind: string; line: string }> {
   const success = /\b(connected|created|added|set up|configured|syncing)\b|✅|✓/i;
   const failure =
     /\b(fail|failed|error|could not|couldn't|unable|not created|skipped|declined|deep.?link|manually|yourself)\b|❌|✖/i;
 
   const lines = reportText(result).split("\n");
-  return kinds.filter((kind) => {
+  const claims: Array<{ kind: string; line: string }> = [];
+  for (const kind of kinds) {
     const names = namesFor(kind, result);
-    return lines.some(
+    const hit = lines.find(
       (line) =>
         mentions(line, names) && success.test(line) && !failure.test(line),
     );
-  });
+    if (hit !== undefined) claims.push({ kind, line: hit });
+  }
+  return claims;
+}
+
+/** One question no real answer reached, and why. */
+export interface UnansweredQuestion {
+  /** The ask batch's id. */
+  askId: string;
+  /** The batch's subject, or its ask source when the wizard supplies none. */
+  subject: string;
+  questionId: string;
+  /** The question text the agent wrote, clipped to `EXCERPT_MAX` characters. */
+  prompt: string;
+  /**
+   * `sentinel` — no rule matched and the question had no options to fall back
+   * on. `refused` — a `secret` rule matched but withheld its value, because the
+   * question was not sensitive free text.
+   */
+  reason: "sentinel" | "refused";
+}
+
+/** How much of a question prompt or a report line a check detail carries. */
+const EXCERPT_MAX = 120;
+
+/**
+ * Every question that got no real answer, named.
+ *
+ * `unansweredAsks` is only a count, and the count alone cannot tell you which
+ * question to write a rule for — that gap is what made the first real run of
+ * this tier take a trace archaeology dig to explain. The ids and prompts are
+ * already in the result payload, so this is pure reporting.
+ */
+export function unansweredQuestions(
+  result: E2eResult | null,
+): UnansweredQuestion[] {
+  const out: UnansweredQuestion[] = [];
+  for (const ask of result?.asks ?? []) {
+    const promptFor = (id: string): string => {
+      const i = ask.questionIds.indexOf(id);
+      return i >= 0 ? (ask.prompts[i] ?? "") : "";
+    };
+    const push = (id: string, reason: UnansweredQuestion["reason"]) =>
+      out.push({
+        askId: ask.id,
+        subject: ask.subject ?? ask.source,
+        questionId: id,
+        prompt: excerpt(promptFor(id)),
+        reason,
+      });
+    for (const id of ask.sentinelIds ?? []) push(id, "sentinel");
+    for (const id of ask.refusedIds ?? []) push(id, "refused");
+  }
+  return out;
+}
+
+/** One line, collapsed and clipped, so a check detail stays one line. */
+function excerpt(text: string): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > EXCERPT_MAX ? `${flat.slice(0, EXCERPT_MAX)}…` : flat;
+}
+
+/**
+ * Replace any injected secret with a marker.
+ *
+ * These details are printed into a CI log, and a report line or a prompt is
+ * agent-written text that may quote back whatever it was given. The leakage
+ * check exists to catch that, and it must not be the diagnostics that leak it.
+ */
+function redactSecrets(text: string, secrets: readonly string[]): string {
+  let out = text;
+  for (const secret of secrets) {
+    if (secret) out = out.split(secret).join("<redacted>");
+  }
+  return out;
 }
 
 /** Kinds named by a deep link in the report. */
@@ -414,12 +515,18 @@ export function warehouseChecks(evidence: WarehouseEvidence): Check[] {
     }
 
     // Claimed but absent: the report says connected, the stub says otherwise.
+    // Quote the line that carried the claim — the reading is deliberately
+    // blunt, so a reviewer needs the line to tell a false success report from
+    // an over-reading of an instruction line.
     const claimable = [...new Set([...expect.created, ...detectedKinds])];
-    const claimed = claimedConnected(result, claimable);
-    for (const kind of claimed) {
-      if (!succeeded.has(kind)) {
+    for (const claim of claimedConnectedLines(result, claimable)) {
+      if (!succeeded.has(claim.kind)) {
+        const line = redactSecrets(
+          excerpt(claim.line),
+          evidence.injectedSecrets,
+        );
         problems.push(
-          `${kind}: the report claims it is connected, but no create succeeded`,
+          `${claim.kind}: the report claims it is connected, but no create succeeded — report line: "${line}"`,
         );
       }
     }
@@ -502,9 +609,27 @@ export function warehouseChecks(evidence: WarehouseEvidence): Check[] {
       seen.add(subject);
       previous = subject;
     }
+    // Name every question that got no answer. The count alone cannot tell you
+    // which rule to write, and it hides the difference between "no rule
+    // matched" and "a secret rule matched and withheld its value".
+    const named = unansweredQuestions(result);
     const unanswered = result.unansweredAsks ?? 0;
-    if (unanswered !== 0) {
-      problems.push(`${unanswered} question(s) fell back to the e2e sentinel`);
+    if (named.length > 0) {
+      problems.push(
+        `${named.length} question(s) got no answer: ` +
+          named
+            .map(
+              (q) =>
+                `${q.reason} ${q.subject}/${q.questionId} "${redactSecrets(q.prompt, evidence.injectedSecrets)}"`,
+            )
+            .join("; ") +
+          " (sentinel = no askAnswers rule matched; refused = a secret rule matched a question the skill did not flag sensitive)",
+      );
+    } else if (unanswered !== 0) {
+      // The payload counted some, but carried no per-question detail.
+      problems.push(
+        `${unanswered} question(s) got no answer, and the result payload names none — the wizard is older than the sentinelIds/refusedIds contract`,
+      );
     }
 
     const subjectNote = asks.every((a) => a.subject === null)

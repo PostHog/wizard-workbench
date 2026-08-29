@@ -25,11 +25,13 @@ import { mergeFlagOverrides } from "./e2e.js";
 import {
   checksPassed,
   claimedConnected,
+  claimedConnectedLines,
   deepLinkedKinds,
   formatCheck,
   formatResultLine,
   loadExpect,
   skipReasons,
+  unansweredQuestions,
   warehouseChecks,
   type Check,
   type E2eResult,
@@ -332,6 +334,55 @@ describe("no silent no-op", () => {
     assert.match(c.detail, /Stripe/);
   });
 
+  it("quotes the report line that carried the unbacked claim", () => {
+    const { state, journal } = driveCreates([]);
+    const checks = grade(
+      expectation({ minKinds: ["Stripe"], created: ["Stripe"] }),
+      result({
+        detectedSources: [detect("Stripe")],
+        reportFile: {
+          path: "/tmp/r.md",
+          exists: true,
+          text: [
+            "# Report",
+            "**Stripe** was connected using a restricted API key.",
+            "- Source ID: 00000000-0000-7000-5747-000000000001",
+          ].join("\n"),
+        },
+      }),
+      { createdKinds: state.created.map((s) => s.source_type), journal },
+    );
+    const c = named(checks, "no silent no-op");
+    assert.equal(c.ok, false);
+    assert.match(
+      c.detail,
+      /report line: "\*\*Stripe\*\* was connected using a restricted API key\."/,
+    );
+  });
+
+  it("keeps an injected secret out of the report line it quotes", () => {
+    const { state, journal } = driveCreates([]);
+    const checks = grade(
+      expectation({ minKinds: ["Stripe"], created: ["Stripe"] }),
+      result({
+        detectedSources: [detect("Stripe")],
+        reportFile: {
+          path: "/tmp/r.md",
+          exists: true,
+          text: "Stripe connected with key sk_live_realsecret\n",
+        },
+      }),
+      {
+        createdKinds: state.created.map((s) => s.source_type),
+        journal,
+        injectedSecrets: ["sk_live_realsecret"],
+      },
+    );
+    const c = named(checks, "no silent no-op");
+    assert.doesNotMatch(c.detail, /sk_live_realsecret/);
+    assert.match(c.detail, /<redacted>/);
+  });
+
   it("fails when a source was created but the report never names it", () => {
     const { state, journal } = driveCreates(["Postgres", "Stripe"]);
     const checks = grade(
@@ -527,6 +578,95 @@ describe("ask contract", () => {
     const c = named(checks, "ask contract");
     assert.equal(c.ok, false);
     assert.match(c.detail, /sentinel/);
+  });
+
+  it("names the unanswered question, its subject and its prompt", () => {
+    const checks = grade(
+      expectation({ askBatches: [1, 1] }),
+      result({
+        asks: [
+          ask({
+            subject: "Stripe",
+            questionIds: ["api_key", "table_prefix"],
+            prompts: ["Paste your restricted Stripe API key here:", "Prefix"],
+            answeredIds: ["table_prefix"],
+            sentinelIds: ["api_key"],
+          }),
+        ],
+        unansweredAsks: 1,
+      }),
+    );
+    const c = named(checks, "ask contract");
+    assert.equal(c.ok, false);
+    assert.match(c.detail, /sentinel Stripe\/api_key/);
+    assert.match(c.detail, /Paste your restricted Stripe API key here/);
+  });
+
+  it("tells a secret-rule refusal apart from a sentinel fallback", () => {
+    const checks = grade(
+      expectation({ askBatches: [1, 1] }),
+      result({
+        asks: [
+          ask({
+            subject: "Postgres",
+            questionIds: ["host", "password"],
+            prompts: ["Postgres host", "Database password"],
+            answeredIds: ["host"],
+            sentinelIds: [],
+            refusedIds: ["password"],
+          }),
+        ],
+        unansweredAsks: 1,
+        refusedAsks: 1,
+      }),
+    );
+    const c = named(checks, "ask contract");
+    assert.equal(c.ok, false);
+    assert.match(c.detail, /refused Postgres\/password/);
+    assert.doesNotMatch(c.detail, /sentinel Postgres/);
+  });
+
+  it("falls back to the ask source when the batch has no subject", () => {
+    const checks = grade(
+      expectation({ askBatches: [1, 1] }),
+      result({ asks: [ask({ sentinelIds: ["port"] })], unansweredAsks: 1 }),
+    );
+    assert.match(
+      named(checks, "ask contract").detail,
+      /sentinel integration-v2-warehouse\/port/,
+    );
+  });
+
+  it("keeps an injected secret out of the prompt it prints", () => {
+    const checks = grade(
+      expectation({ askBatches: [1, 1] }),
+      result({
+        asks: [
+          ask({
+            subject: "Stripe",
+            questionIds: ["api_key"],
+            prompts: ["Your key sk_live_realsecret was rejected — try again"],
+            answeredIds: [],
+            sentinelIds: ["api_key"],
+          }),
+        ],
+        unansweredAsks: 1,
+      }),
+      { injectedSecrets: ["sk_live_realsecret"] },
+    );
+    const c = named(checks, "ask contract");
+    assert.doesNotMatch(c.detail, /sk_live_realsecret/);
+    assert.match(c.detail, /<redacted>/);
+  });
+
+  it("says so when the payload counts unanswered questions but names none", () => {
+    const checks = grade(
+      expectation({ askBatches: [1, 1] }),
+      result({ asks: [ask()], unansweredAsks: 2 }),
+    );
+    const c = named(checks, "ask contract");
+    assert.equal(c.ok, false);
+    assert.match(c.detail, /names none/);
   });
 
   it("fails when two batches for one subject are split by a third", () => {
@@ -853,6 +993,121 @@ describe("claim reading", () => {
       },
     });
     assert.deepEqual(claimedConnected(res, ["Hubspot"]), []);
+  });
+
+  it("hands back the line behind each claim", () => {
+    const res = result({
+      detectedSources: [detect("Stripe")],
+      reportFile: {
+        path: "/tmp/r.md",
+        exists: true,
+        text: "# Report\n**Stripe** was connected to the warehouse.\n",
+      },
+    });
+    assert.deepEqual(claimedConnectedLines(res, ["Stripe"]), [
+      { kind: "Stripe", line: "**Stripe** was connected to the warehouse." },
+    ]);
+  });
+
+  /**
+   * The known over-read. An instruction line about *finishing* a setup carries
+   * "set up" and names the source, so the blunt reading calls it a claim. The
+   * line is quoted into the check detail precisely so a reviewer can spot this
+   * shape and dismiss it, instead of taking it for a false success report.
+   */
+  it("over-reads a next-step instruction, and says which line it read", () => {
+    const res = result({
+      detectedSources: [detect("Stripe")],
+      reportFile: {
+        path: "/tmp/r.md",
+        exists: true,
+        text: "## Next steps\n2. **Set up Stripe webhooks** — open the Webhook tab.\n",
+      },
+    });
+    assert.deepEqual(claimedConnectedLines(res, ["Stripe"]), [
+      {
+        kind: "Stripe",
+        line: "2. **Set up Stripe webhooks** — open the Webhook tab.",
+      },
+    ]);
+  });
+});
+
+describe("unansweredQuestions", () => {
+  const ask = (over: Record<string, unknown> = {}) => ({
+    id: "ask_1",
+    source: "integration-v2-warehouse",
+    subject: "Stripe",
+    questionCount: 2,
+    questionIds: ["api_key", "account_id"],
+    prompts: ["Paste your restricted API key", "Account id (optional)"],
+    answeredIds: [],
+    sentinelIds: ["api_key"],
+    refusedIds: ["account_id"],
+    at: "2026-08-28T00:12:39.000Z",
+    ...over,
+  });
+
+  it("pairs each id with its own prompt and its reason", () => {
+    assert.deepEqual(unansweredQuestions(result({ asks: [ask()] })), [
+      {
+        askId: "ask_1",
+        subject: "Stripe",
+        questionId: "api_key",
+        prompt: "Paste your restricted API key",
+        reason: "sentinel",
+      },
+      {
+        askId: "ask_1",
+        subject: "Stripe",
+        questionId: "account_id",
+        prompt: "Account id (optional)",
+        reason: "refused",
+      },
+    ]);
+  });
+
+  it("reports an empty prompt rather than the wrong one when ids misalign", () => {
+    const [q] = unansweredQuestions(
+      result({ asks: [ask({ sentinelIds: ["ghost"], refusedIds: [] })] }),
+    );
+    assert.equal(q.questionId, "ghost");
+    assert.equal(q.prompt, "");
+  });
+
+  it("collapses a multi-line prompt onto one line and clips it", () => {
+    const [q] = unansweredQuestions(
+      result({
+        asks: [
+          ask({
+            questionIds: ["api_key"],
+            prompts: [`Paste the key\n\n${"x".repeat(300)}`],
+            sentinelIds: ["api_key"],
+            refusedIds: [],
+          }),
+        ],
+      }),
+    );
+    assert.doesNotMatch(q.prompt, /\n/);
+    assert.ok(q.prompt.length <= 121, `prompt was ${q.prompt.length} chars`);
+    assert.ok(q.prompt.endsWith("…"));
+  });
+
+  it("is empty for a run that answered everything", () => {
+    assert.deepEqual(
+      unansweredQuestions(
+        result({ asks: [ask({ sentinelIds: [], refusedIds: [] })] }),
+      ),
+      [],
+    );
+  });
+
+  it("survives a payload from a wizard that predates refusedIds", () => {
+    const { refusedIds: _drop, ...older } = ask();
+    assert.deepEqual(
+      unansweredQuestions(result({ asks: [older] })).map((q) => q.reason),
+      ["sentinel"],
+    );
   });
 });
 
