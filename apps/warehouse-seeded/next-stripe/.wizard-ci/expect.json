@@ -10,6 +10,7 @@
   "deepLink": [],
   "askBatches": [1, 2],
   "askMaxPerBatch": 8,
+  "askMaxBatchesPerSubject": 2,
   "expectAbort": null,
   "expectNotices": 1,
   "expectSkipReason": null,

@@ -36,10 +36,16 @@ already had PostHog would skip most of the run and never reach the task.
 
 ## Flags
 
-The runner sets `wizard-orchestrator`, `wizard-use-pi-harness` and
-`wizard-orchestrator-seeded-tasks` for any app whose `expect.json` says
-`seeded`. It merges them into whatever `WIZARD_CI_FLAG_OVERRIDES` CI already
-exported, so the orchestrator flags the rest of the leg needs stay set.
+The runner sets `wizard-orchestrator` and `wizard-orchestrator-seeded-tasks`
+for any app whose `expect.json` says `seeded`. It merges them into whatever
+`WIZARD_CI_FLAG_OVERRIDES` CI already exported, so the orchestrator flags the
+rest of the leg needs stay set.
+
+Every key here must be one the wizard reads — its `WIZARD_FLAG_KEYS` closed
+set. A key outside that set is inert, and the wizard reports no error for it.
+`wizard-use-pi-harness` sat in this list and did nothing: the real pi key is
+`wizard-self-driving-use-pi-harness`, and it routes only the `self-driving`
+program. A test now pins the runner's keys and the workflow's keys to that set.
 
 ## Conventions
 

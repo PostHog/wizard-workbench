@@ -7,12 +7,22 @@
  * fixtures recorded off prod — while creating nothing real and consuming no
  * real credential.
  *
- * Transport: Streamable HTTP, stateless. That is what the wizard's client
- * speaks (`StreamableHTTPClientTransport` in the wizard's
- * `src/lib/agent/runner/harness/pi/mcp.ts`, and the same URL + bearer config
- * for `pi-mcp-adapter`). Stateless means a fresh `Server` + transport per
- * request and no `Mcp-Session-Id` bookkeeping; the run's state lives in
- * `StubState`, which outlives the requests.
+ * Transport: Streamable HTTP, stateless. Stateless means a fresh `Server` plus
+ * transport per request and no `Mcp-Session-Id` bookkeeping; the run's state
+ * lives in `StubState`, which outlives the requests.
+ *
+ * TWO clients reach this server, and the tests cover both:
+ *
+ * - pi — `StreamableHTTPClientTransport` (the wizard's
+ *   `src/lib/agent/runner/harness/pi/mcp.ts`, and the same URL + bearer config
+ *   for `pi-mcp-adapter`).
+ * - anthropic — the Claude Agent SDK's own `{ type: 'http' }` MCP client. A
+ *   warehouse e2e run uses this one: `warehouse-source` has no flag route onto
+ *   pi, so it runs the anthropic harness from its binding default.
+ *
+ * The anthropic client is the one the graded runs depend on. Do not read "it
+ * works with the MCP SDK client" as cover for it — see the transport suite in
+ * `mcp-stub.test.ts`, which replays that client's requests byte for byte.
  *
  * Usage:
  *

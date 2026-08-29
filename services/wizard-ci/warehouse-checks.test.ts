@@ -13,7 +13,7 @@
  */
 
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
@@ -21,7 +21,11 @@ import { after, before, beforeEach, describe, it } from "node:test";
 import { runExec, StubState } from "../mcp-stub/exec.js";
 import { loadFixtures, type Fixtures } from "../mcp-stub/fixtures.js";
 import { readJournal } from "../mcp-stub/journal.js";
-import { mergeFlagOverrides } from "./e2e.js";
+import {
+  mergeFlagOverrides,
+  SEEDED_FLAG_OVERRIDES,
+  WIZARD_FLAG_KEYS,
+} from "./e2e.js";
 import {
   checksPassed,
   claimedConnected,
@@ -107,6 +111,7 @@ function expectation(over: Partial<WarehouseExpect> = {}): WarehouseExpect {
     deepLink: [],
     askBatches: [0, 99],
     askMaxPerBatch: 99,
+    askMaxBatchesPerSubject: 99,
     expectAbort: null,
     seeded: false,
     expectNotices: 0,
@@ -560,6 +565,81 @@ describe("ask contract", () => {
     assert.match(c.detail, /want 1\.\.1/);
   });
 
+  /**
+   * The batching contract, per subject.
+   *
+   * The total batch count cannot express it. Two consecutive runs of
+   * `warehouse/multi-source-next` — same app, same config — opened 8 batches
+   * and then 4, because the model groups five sources differently each time.
+   * Per subject the shape is stable: a source is either batched or drip-fed.
+   */
+  describe("batches per subject", () => {
+    const four = (over: Record<string, unknown> = {}) => ({
+      ...ask(over),
+      questionCount: 1,
+    });
+    const CASES: Array<{
+      name: string;
+      subjects: string[];
+      limit: number;
+      ok: boolean;
+    }> = [
+      {
+        name: "eight batches spread two apiece over four sources",
+        subjects: ["Postgres", "Postgres", "Supabase", "Supabase", "Stripe", "Stripe", "HuggingFace", "HuggingFace"],
+        limit: 2,
+        ok: true,
+      },
+      {
+        name: "the same four sources collected in one batch each",
+        subjects: ["Postgres", "Supabase", "Stripe", "HuggingFace"],
+        limit: 2,
+        ok: true,
+      },
+      {
+        name: "one source drip-fed over four batches",
+        subjects: ["Postgres", "Postgres", "Postgres", "Postgres"],
+        limit: 2,
+        ok: false,
+      },
+      {
+        name: "one drip-fed source hidden among well-batched ones",
+        subjects: ["Postgres", "Stripe", "Stripe", "Stripe"],
+        limit: 2,
+        ok: false,
+      },
+    ];
+
+    for (const c of CASES) {
+      it(`${c.ok ? "passes" : "fails"} on ${c.name}`, () => {
+        const checks = grade(
+          expectation({
+            askBatches: [1, 99],
+            askMaxBatchesPerSubject: c.limit,
+          }),
+          result({
+            asks: c.subjects.map((subject, i) =>
+              four({ id: `ask_${i}`, subject }),
+            ),
+          }),
+        );
+        const check = named(checks, "ask contract");
+        assert.equal(check.ok, c.ok, check.detail);
+        if (!c.ok) assert.match(check.detail, /more than 2 batches/);
+      });
+    }
+
+    it("is not enforced when the wizard names no subject", () => {
+      const checks = grade(
+        expectation({ askBatches: [1, 99], askMaxBatchesPerSubject: 2 }),
+        result({
+          asks: [0, 1, 2, 3].map((i) => four({ id: `ask_${i}`, subject: null })),
+        }),
+      );
+      assert.equal(named(checks, "ask contract").ok, true);
+    });
+  });
+
   it("fails when a batch is bigger than the per-batch limit", () => {
     const checks = grade(
       expectation({ askBatches: [1, 1], askMaxPerBatch: 3 }),
@@ -1010,24 +1090,135 @@ describe("claim reading", () => {
   });
 
   /**
-   * The known over-read. An instruction line about *finishing* a setup carries
-   * "set up" and names the source, so the blunt reading calls it a claim. The
-   * line is quoted into the check detail precisely so a reviewer can spot this
-   * shape and dismiss it, instead of taking it for a false success report.
+   * The claim reading, line shape by line shape.
+   *
+   * Every "instruction" row below is a shape a real run produced and the blunt
+   * reading called a claim. Every "claim" row must keep firing — narrowing the
+   * reading until it misses a genuine false report would defeat the check.
    */
-  it("over-reads a next-step instruction, and says which line it read", () => {
+  const CLAIM_CASES: Array<{
+    name: string;
+    kind: string;
+    label?: string;
+    text: string;
+    claim: boolean;
+  }> = [
+    // ── instructions the reading used to over-read ────────────────────
+    {
+      // Verbatim from the run that scored 9/11 with created=0. The key is one
+      // the *user* must make at Stripe's dashboard.
+      name: "a vendor-dashboard link telling the user to make a key",
+      kind: "Stripe",
+      text:
+        "3. **Stripe** — a restricted API key (`rk_live_...`) created at " +
+        "https://dashboard.stripe.com/apikeys/create\n",
+      claim: false,
+    },
+    {
+      name: "an imperative under a next-steps heading",
+      kind: "Stripe",
+      text: "## Next steps\n2. **Set up Stripe webhooks** — open the Webhook tab.\n",
+      claim: false,
+    },
+    {
+      // The earlier Hubspot false positive: it fired while the deep-link check
+      // passed for the same source in the same run.
+      name: "a deep-link handoff for a source",
+      kind: "Hubspot",
+      text: "- Hubspot: open the deep link to finish setting it up\n",
+      claim: false,
+    },
+    {
+      name: "a plain imperative bullet with no heading",
+      kind: "Hubspot",
+      text: "- Connect Hubspot from the sources page once you have a token.\n",
+      claim: false,
+    },
+    {
+      name: "a directive addressed to the reader",
+      kind: "Stripe",
+      text: "**Stripe** — you will need to add the key before it is configured.\n",
+      claim: false,
+    },
+    {
+      name: "an ordinary bullet under a next-steps heading",
+      kind: "Postgres",
+      text: "## Remaining work\n- Postgres is configured once the host resolves.\n",
+      claim: false,
+    },
+    // ── claims that must keep firing ──────────────────────────────────
+    {
+      // Verbatim from a run that really did report a source it never created.
+      name: "a source reported as connected with an id and a status",
+      kind: "Stripe",
+      text:
+        "**Stripe** was connected to the PostHog data warehouse using a restricted API key.\n" +
+        "- **Source ID:** 00000000-0000-7000-5747-000000000001 · **Status:** Running\n",
+      claim: true,
+    },
+    {
+      name: "a plain success sentence",
+      kind: "Stripe",
+      text: "# Report\n**Stripe** was connected to the warehouse.\n",
+      claim: true,
+    },
+    {
+      name: "a second-person possessive, which is not a command",
+      kind: "Stripe",
+      text: "Your Stripe source is now connected and syncing.\n",
+      claim: true,
+    },
+    {
+      name: "a claim carrying a PostHog link",
+      kind: "Hubspot",
+      text:
+        "- Hubspot was created — view it at " +
+        "https://us.posthog.com/project/123/pipeline/sources\n",
+      claim: true,
+    },
+    {
+      name: "a claim under a heading that is not a next-steps heading",
+      kind: "Postgres",
+      text: "## Connected sources\n- Postgres was added and is syncing.\n",
+      claim: true,
+    },
+    {
+      name: "a claim written against the detected label, not the kind",
+      kind: "Postgres",
+      label: "PostgreSQL",
+      text: "PostgreSQL was connected to the warehouse.\n",
+      claim: true,
+    },
+  ];
+
+  for (const c of CLAIM_CASES) {
+    it(`${c.claim ? "reads" : "does not read"} ${c.name} as a claim`, () => {
+      const res = result({
+        detectedSources: [detect(c.kind, c.label)],
+        reportFile: { path: "/tmp/r.md", exists: true, text: c.text },
+      });
+      assert.deepEqual(
+        claimedConnected(res, [c.kind]),
+        c.claim ? [c.kind] : [],
+      );
+    });
+  }
+
+  it("hands back the exact line behind a claim", () => {
     const res = result({
       detectedSources: [detect("Stripe")],
       reportFile: {
         path: "/tmp/r.md",
         exists: true,
-        text: "## Next steps\n2. **Set up Stripe webhooks** — open the Webhook tab.\n",
+        text:
+          "## Next steps\n- Create a Stripe key.\n\n## Result\n" +
+          "**Stripe** was connected to the PostHog data warehouse.\n",
       },
     });
     assert.deepEqual(claimedConnectedLines(res, ["Stripe"]), [
       {
         kind: "Stripe",
-        line: "2. **Set up Stripe webhooks** — open the Webhook tab.",
+        line: "**Stripe** was connected to the PostHog data warehouse.",
       },
     ]);
   });
@@ -1139,15 +1330,53 @@ describe("output lines (contract §7)", () => {
 describe("flag overrides", () => {
   it("merges the seeded flag into whatever CI already set", () => {
     const merged = JSON.parse(
-      mergeFlagOverrides('{"wizard-orchestrator":"true","wizard-use-pi-harness":"true"}', {
+      mergeFlagOverrides('{"wizard-orchestrator":"true"}', {
         "wizard-orchestrator-seeded-tasks": "true",
       }),
     );
     assert.deepEqual(merged, {
       "wizard-orchestrator": "true",
-      "wizard-use-pi-harness": "true",
       "wizard-orchestrator-seeded-tasks": "true",
     });
+  });
+
+  /**
+   * A flag key outside the wizard's closed set routes nothing. It is not an
+   * error either — the wizard merges it and ignores it — so a typo sits there
+   * looking load-bearing. `wizard-use-pi-harness` did exactly that: it was in
+   * this file and in the workflow, and pinned nothing, while the runs it was
+   * meant to steer went to the binding default.
+   */
+  it("sets no flag the wizard does not read", () => {
+    for (const key of Object.keys(SEEDED_FLAG_OVERRIDES)) {
+      assert.ok(
+        WIZARD_FLAG_KEYS.includes(key),
+        `"${key}" is not in the wizard's WIZARD_FLAG_KEYS — it would be a no-op`,
+      );
+    }
+  });
+
+  it("pins every flag the workflow exports to that same set", () => {
+    const workflow = readFileSync(
+      new URL("../../.github/workflows/wizard-ci.yml", import.meta.url),
+      "utf8",
+    );
+    const exported = new Set<string>();
+    for (const line of workflow.split("\n")) {
+      const match = /WIZARD_CI_FLAG_OVERRIDES:\s*'(\{.*\})'/.exec(line);
+      if (match?.[1]) {
+        for (const key of Object.keys(JSON.parse(match[1]) as object)) {
+          exported.add(key);
+        }
+      }
+    }
+    assert.ok(exported.size > 0, "found no flag overrides in the workflow");
+    for (const key of exported) {
+      assert.ok(
+        WIZARD_FLAG_KEYS.includes(key),
+        `the workflow exports "${key}", which the wizard never reads`,
+      );
+    }
   });
 
   it("works from nothing at all", () => {

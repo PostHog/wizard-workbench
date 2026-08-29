@@ -24,9 +24,15 @@ Every source here is deliberate. Each one breaks a different part of the flow:
   credential path. The run must hand over a pre-filled new-source URL and must
   **not** open an ask batch for it.
 - **Ask batching and subjects.** Four in-CLI sources means four credential
-  sets. `askBatches` bounds how many batches the run may open, and
-  `askMaxPerBatch` bounds how many questions one screen may carry. A run that
-  asks one question per batch is as wrong as one that asks twenty at once.
+  sets. `askMaxBatchesPerSubject` carries the contract: one source's questions
+  go out together, not one at a time. `askMaxPerBatch` bounds how many
+  questions one screen may carry. A run that asks one question per batch is as
+  wrong as one that asks twenty at once.
+
+  `askBatches` is only a sanity bound on the total, set at two per in-CLI
+  source. Do not tighten it. The model does not group five sources the same way
+  twice — two consecutive runs of this app opened 8 batches and then 4 — so a
+  tight total fails honest runs at random. Count per subject instead.
 
 ## What must be detected
 
