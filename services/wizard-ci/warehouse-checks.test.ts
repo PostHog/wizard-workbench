@@ -1051,6 +1051,46 @@ describe("a missing result payload", () => {
 });
 
 describe("claim reading", () => {
+  // Verbatim from CI run 33259755837. The heading says the source *cannot* be
+  // connected, and the check called it a success claim: the failure words were
+  // "could not" and "couldn't", never "cannot".
+  it("does not read a cannot-be-connected heading as a success claim", () => {
+    const res = result({
+      detectedSources: [detect("Hubspot")],
+      reportFile: {
+        path: "/tmp/r.md",
+        exists: true,
+        text: "### HubSpot (OAuth — cannot be connected from the CLI)\n",
+      },
+    });
+    assert.deepEqual(claimedConnected(res, ["Hubspot"]), []);
+  });
+
+  it("does not read a can't line as a success claim", () => {
+    for (const line of [
+      "- Stripe: can't be configured without a restricted key",
+      "- Stripe: can not be created without a restricted key",
+    ]) {
+      const res = result({
+        detectedSources: [detect("Stripe")],
+        reportFile: { path: "/tmp/r.md", exists: true, text: `${line}\n` },
+      });
+      assert.deepEqual(claimedConnected(res, ["Stripe"]), []);
+    }
+  });
+
+  it("still reads a genuine connection claim", () => {
+    const res = result({
+      detectedSources: [detect("Stripe")],
+      reportFile: {
+        path: "/tmp/r.md",
+        exists: true,
+        text: "**Stripe** was connected to the PostHog data warehouse.\n",
+      },
+    });
+    assert.deepEqual(claimedConnected(res, ["Stripe"]), ["Stripe"]);
+  });
+
   it("does not read a failure line as a success claim", () => {
     const res = result({
       detectedSources: [detect("Stripe")],

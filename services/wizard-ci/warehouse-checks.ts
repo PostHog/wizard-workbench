@@ -331,7 +331,7 @@ export function claimedConnectedLines(
 ): Array<{ kind: string; line: string }> {
   const success = /\b(connected|created|added|set up|configured|syncing)\b|✅|✓/i;
   const failure =
-    /\b(fail|failed|error|could not|couldn't|unable|not created|skipped|declined|deep.?link|manually|yourself)\b|❌|✖/i;
+    /\b(fail|failed|error|could not|couldn't|cannot|can not|can't|unable|not created|skipped|declined|deep.?link|manually|yourself)\b|❌|✖/i;
 
   const lines = reportText(result).split("\n");
   const instruction = instructionLines(lines);
