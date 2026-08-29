@@ -399,8 +399,14 @@ function instructionLines(lines: string[]): boolean[] {
   return lines.map((line) => {
     const isHeading = heading.exec(line);
     if (isHeading) {
+      // A `#` heading opens a new section either way, so it can also close an
+      // instruction one. A bold-only line cannot: the agent uses it for a
+      // per-source sub-heading, and "**Stripe**" under "## Next steps" is
+      // still inside those next steps.
+      const hashHeading = isHeading[1] !== undefined;
       const text = isHeading[1] ?? isHeading[2] ?? "";
-      inInstructionSection = instructionHeading.test(text);
+      if (instructionHeading.test(text)) inInstructionSection = true;
+      else if (hashHeading) inInstructionSection = false;
       return true;
     }
     if (inInstructionSection) return true;

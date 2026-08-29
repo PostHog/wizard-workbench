@@ -1146,6 +1146,14 @@ describe("claim reading", () => {
       text: "## Remaining work\n- Postgres is configured once the host resolves.\n",
       claim: false,
     },
+    {
+      // A bold sub-heading must not be read as closing the section it sits in.
+      name: "a bullet under a bold sub-heading inside next steps",
+      kind: "Postgres",
+      text:
+        "## Next steps\n**Postgres**\n- Postgres is configured once the host resolves.\n",
+      claim: false,
+    },
     // ── claims that must keep firing ──────────────────────────────────
     {
       // Verbatim from a run that really did report a source it never created.
