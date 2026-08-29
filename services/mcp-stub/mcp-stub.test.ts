@@ -547,6 +547,56 @@ describe("over the wire", () => {
 // ============================================================================
 
 /**
+ * `startMcpStub` reads its own process' environment, and the runner sets the
+ * stub variables on the *wizard subprocess'* environment. Anything the runner
+ * only exports there never reaches the stub. `projectId` already had to be
+ * handed over for that reason; `failKinds` did not, so no create ever failed
+ * and the `honest failure` check could not pass.
+ */
+describe("options the runner has to hand over", () => {
+  /** A create the stub accepts unless the kind is told to fail. */
+  const HF_CREATE = `call --json external-data-sources-create ${JSON.stringify({
+    source_type: "HuggingFace",
+    payload: { api_token: "placeholder-token", author: "acme" },
+    prefix: "e2e_failkinds_",
+  })}`;
+
+  async function createHuggingFace(
+    options: Parameters<typeof startMcpStub>[0],
+  ): Promise<{ isError: boolean; text: string }> {
+    delete process.env.MCP_STUB_FAIL_KINDS;
+    const stub = await startMcpStub({ port: 0, journalPath: journal, ...options });
+    const client = new Client({ name: "mcp-stub-test", version: "1.0.0" });
+    try {
+      await client.connect(new StreamableHTTPClientTransport(new URL(stub.url)));
+      const result = await client.callTool({
+        name: "exec",
+        arguments: { command: HF_CREATE },
+      });
+      const content = (result.content ?? []) as Array<{ text?: string }>;
+      return { isError: result.isError === true, text: content[0]?.text ?? "" };
+    } finally {
+      await client.close().catch(() => undefined);
+      await stub.stop();
+      delete process.env.MCP_STUB_FAIL_KINDS;
+    }
+  }
+
+  it("accepts the create when no kind is told to fail", async () => {
+    const result = await createHuggingFace({});
+    assert.equal(result.isError, false);
+  });
+
+  it("fails the same create for a kind named in failKinds", async () => {
+    const result = await createHuggingFace({ failKinds: ["HuggingFace"] });
+    assert.equal(result.isError, true);
+    assert.match(result.text, /rejected the API key/);
+  });
+});
+
+// ============================================================================
+
+/**
  * The tests above drive the stub from inside the test process, over
  * `StreamableHTTPClientTransport`. That is the pi harness' client. The
  * warehouse tier runs the *anthropic* harness, whose client is the Claude Agent

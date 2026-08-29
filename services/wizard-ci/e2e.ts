@@ -287,12 +287,19 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   if (expect) {
     // Ephemeral port: matrix legs run in parallel, and a fixed 8799 would make
     // two runs fight over the same socket.
-    stub = await startMcpStub({ port: 0, journalPath, projectId });
+    //
+    // The stub cannot judge a placeholder credential, so the fixture names the
+    // kinds whose create must fail and the stub replays the recorded prod
+    // error. Handed to the stub directly — it runs in this process, and the
+    // environment below belongs to the wizard subprocess.
+    stub = await startMcpStub({
+      port: 0,
+      journalPath,
+      projectId,
+      failKinds: expect.attemptedFailOk,
+    });
     childEnv.MCP_URL = stub.url;
     childEnv.MCP_STUB_JOURNAL = journalPath;
-    // The stub cannot judge a placeholder credential, so the fixture names the
-    // kinds whose create must fail and the stub replays the recorded prod error.
-    childEnv.MCP_STUB_FAIL_KINDS = expect.attemptedFailOk.join(",");
     // Keep the wizard_ask bridge alive in a `ci` session — without it the
     // agent-in-the-loop layer this whole tier exists to test is switched off.
     childEnv.E2E_ASK = "true";

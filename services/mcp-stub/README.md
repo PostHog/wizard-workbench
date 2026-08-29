@@ -163,10 +163,11 @@ pnpm mcp-stub --help
 | `MCP_STUB_PROBE_URL` | the stub `handshake-probe.ts` should check |
 | `PROJECT_ID` | project named in replayed error paths, default `0` |
 
-`PROJECT_ID` is read only when nothing is passed to `startMcpStub`. The e2e
-runner always passes it — the stub lives in the runner's process, while
-`PROJECT_ID` is exported onto the *wizard subprocess'* environment, so reading
-it here would never see the real one.
+`PROJECT_ID` and `MCP_STUB_FAIL_KINDS` are read only when nothing is passed to
+`startMcpStub`. The e2e runner always passes both, as `projectId` and
+`failKinds` — the stub lives in the runner's process, while those variables are
+exported onto the *wizard subprocess'* environment, so reading them here would
+never see the real ones.
 
 ## Fixtures
 

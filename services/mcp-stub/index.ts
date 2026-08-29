@@ -91,6 +91,14 @@ export interface McpStubOptions {
    * handed over explicitly rather than read from `process.env`.
    */
   projectId?: string;
+  /**
+   * Source kinds whose create must fail, as `MCP_STUB_FAIL_KINDS` names them.
+   *
+   * Handed over for the same reason `projectId` is. The runner sets the
+   * variable on the *wizard subprocess'* environment, and the stub reads it in
+   * the runner's own process, so the two never met and no create ever failed.
+   */
+  failKinds?: string[];
   fixtures?: Fixtures;
 }
 
@@ -175,6 +183,10 @@ export async function startMcpStub(
   const state = new StubState(
     options.projectId ?? process.env.PROJECT_ID ?? "0",
   );
+
+  if (options.failKinds) {
+    process.env.MCP_STUB_FAIL_KINDS = options.failKinds.join(",");
+  }
 
   const journal = options.journalPath ?? process.env.MCP_STUB_JOURNAL;
   if (journal) {
