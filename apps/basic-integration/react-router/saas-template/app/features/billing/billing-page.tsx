@@ -43,6 +43,7 @@ import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import type { Organization } from "~/generated/browser";
 import { cn } from "~/lib/utils";
+import posthog from "posthog-js";
 
 type PendingDowngradeBannerProps = {
   pendingTier: Tier;
@@ -295,6 +296,9 @@ export function BillingPage({
                 size="sm"
                 type="submit"
                 value={RESUME_SUBSCRIPTION_INTENT}
+                onClick={() => {
+                  posthog.capture("subscription_resume_requested");
+                }}
               >
                 {isResumingSubscription ? (
                   <>
@@ -633,6 +637,9 @@ export function BillingPage({
                   name="intent"
                   type="submit"
                   value={CANCEL_SUBSCRIPTION_INTENT}
+                  onClick={() => {
+                    posthog.capture("subscription_cancellation_requested");
+                  }}
                   variant="destructive"
                 >
                   {isCancellingSubscription ? (

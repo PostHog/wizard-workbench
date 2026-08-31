@@ -6,6 +6,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { Form, href, Link } from "react-router";
 import { useHydrated } from "remix-utils/use-hydrated";
+import posthog from "posthog-js";
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import {
@@ -38,6 +39,11 @@ export function NavUser({ user }: NavUserProps) {
     keyPrefix: "layout.navUser",
   });
   const hydrated = useHydrated();
+
+  const handleLogout = () => {
+    posthog.capture("user_logged_out");
+    posthog.reset();
+  };
 
   return (
     <SidebarMenu>
@@ -121,6 +127,7 @@ export function NavUser({ user }: NavUserProps) {
                   <button
                     className="w-full"
                     name="intent"
+                    onClick={handleLogout}
                     type="submit"
                     value="logout"
                   />

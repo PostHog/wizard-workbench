@@ -28,6 +28,7 @@ import {
   ItemTitle,
 } from "~/components/ui/item";
 import { Spinner } from "~/components/ui/spinner";
+import posthog from "posthog-js";
 
 export type DangerZoneProps = {
   organizationName: string;
@@ -97,7 +98,13 @@ function DeleteOrganizationDialogComponent({
           <DialogDescription>{t("dialogDescription")}</DialogDescription>
         </DialogHeader>
 
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmitCapture={() => {
+            posthog.capture("organization_deletion_requested");
+          }}
+        >
           <FieldSet disabled={isSubmitting}>
             <Field data-invalid={fields.confirmation.ariaInvalid}>
               <FieldLabel htmlFor={fields.confirmation.id}>

@@ -32,6 +32,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import type { Organization } from "~/generated/browser";
+import posthog from "posthog-js";
 
 const ONE_MB = 1_000_000;
 
@@ -92,6 +93,9 @@ export function GeneralOrganizationSettings({
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      onSubmitCapture={() => {
+        posthog.capture("organization_settings_submitted");
+      }}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldLegend>

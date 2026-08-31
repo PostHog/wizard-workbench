@@ -32,6 +32,7 @@ import {
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
+import posthog from "posthog-js";
 
 const ONE_MB = 1_000_000;
 
@@ -61,7 +62,14 @@ export function CreateOrganizationFormCard({
         </CardHeader>
 
         <CardContent>
-          <Form encType="multipart/form-data" method="POST" {...form.props}>
+          <Form
+            encType="multipart/form-data"
+            method="POST"
+            {...form.props}
+            onSubmitCapture={() => {
+              posthog.capture("organization_creation_submitted");
+            }}
+          >
             <FieldSet
               className="flex flex-col gap-6"
               disabled={isCreatingOrganization}

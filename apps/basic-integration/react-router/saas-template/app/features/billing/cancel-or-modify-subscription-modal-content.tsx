@@ -29,6 +29,7 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import posthog from "posthog-js";
 
 export type CancelOrModifySubscriptionModalContentProps = {
   canCancelSubscription: boolean;
@@ -80,12 +81,20 @@ export function CancelOrModifySubscriptionModalContent({
     // 1. If this is the current tier but only the billing interval is different
     if (isCurrentTier) {
       if (interval !== currentTierInterval) {
-        return interval === "annual"
-          ? { children: tModal("switchToAnnualButton") }
-          : {
-              children: tModal("switchToMonthlyButton"),
-              variant: "outline",
-            };
+        return {
+          children:
+            interval === "annual"
+              ? tModal("switchToAnnualButton")
+              : tModal("switchToMonthlyButton"),
+          onClick: () => {
+            posthog.capture("subscription_change_requested", {
+              billing_interval: interval,
+              current_tier: currentTier,
+              target_tier: tier,
+            });
+          },
+          variant: interval === "annual" ? undefined : "outline",
+        };
       }
       return {
         children: tModal("currentPlan"),
@@ -112,9 +121,20 @@ export function CancelOrModifySubscriptionModalContent({
     }
 
     // 3. Default static buttons for upgrade vs downgrade
-    return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+    return {
+      children: isUpgrade
+        ? tModal("upgradeButton")
+        : tModal("downgradeButton"),
+      disabled: isUpgrade ? isSubmitting : undefined,
+      onClick: () => {
+        posthog.capture("subscription_change_requested", {
+          billing_interval: interval,
+          current_tier: currentTier,
+          target_tier: tier,
+        });
+      },
+      variant: isUpgrade ? undefined : "outline",
+    };
   };
 
   return (
