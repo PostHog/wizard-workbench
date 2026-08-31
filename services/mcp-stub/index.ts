@@ -24,6 +24,14 @@
  * works with the MCP SDK client" as cover for it — see the transport suite in
  * `mcp-stub.test.ts`, which replays that client's requests byte for byte.
  *
+ * This server answers from the event loop of the process that started it. A
+ * synchronous call in that process — `spawnSync` above all — stops it answering
+ * for as long as the call runs, and a client that gets no answer reports the
+ * server as `pending` or `failed` and loses the tool. Start children with
+ * `runChild` from `../wizard-ci/run-child.js`.
+ *
+ * Set `MCP_STUB_WIRE_LOG` to see every exchange — see `wire-log.ts`.
+ *
  * Usage:
  *
  *   const stub = await startMcpStub();
@@ -45,6 +53,7 @@ import {
 import { loadFixtures, type Fixtures } from "./fixtures.js";
 import { resetJournal } from "./journal.js";
 import { runExec, StubState } from "./exec.js";
+import { createWireLog } from "./wire-log.js";
 
 export const DEFAULT_PORT = 8799;
 export const MCP_PATH = "/mcp";
@@ -91,6 +100,14 @@ export interface McpStubOptions {
    * handed over explicitly rather than read from `process.env`.
    */
   projectId?: string;
+  /**
+   * Source kinds whose create must fail, as `MCP_STUB_FAIL_KINDS` names them.
+   *
+   * Handed over for the same reason `projectId` is. The runner sets the
+   * variable on the *wizard subprocess'* environment, and the stub reads it in
+   * the runner's own process, so the two never met and no create ever failed.
+   */
+  failKinds?: string[];
   fixtures?: Fixtures;
 }
 
@@ -176,6 +193,10 @@ export async function startMcpStub(
     options.projectId ?? process.env.PROJECT_ID ?? "0",
   );
 
+  if (options.failKinds) {
+    process.env.MCP_STUB_FAIL_KINDS = options.failKinds.join(",");
+  }
+
   const journal = options.journalPath ?? process.env.MCP_STUB_JOURNAL;
   if (journal) {
     process.env.MCP_STUB_JOURNAL = journal;
@@ -185,10 +206,14 @@ export async function startMcpStub(
   const port =
     options.port ?? Number(process.env.MCP_STUB_PORT ?? DEFAULT_PORT);
 
+  const wire = createWireLog();
+
   const http: HttpServer = createServer((req, res) => {
     void (async () => {
+      const logRequest = wire.record(req, res);
       const path = (req.url ?? "").split("?")[0];
       if (path !== MCP_PATH) {
+        logRequest(undefined);
         res.writeHead(404, { "content-type": "application/json" });
         res.end(JSON.stringify({ error: `not found: ${path}` }));
         return;
@@ -209,7 +234,9 @@ export async function startMcpStub(
 
       try {
         await server.connect(transport);
-        await transport.handleRequest(req, res, await readBody(req));
+        const body = await readBody(req);
+        logRequest(body);
+        await transport.handleRequest(req, res, body);
       } catch (error) {
         // The detail goes to the runner's own log, where whoever is debugging
         // the stub will actually look, rather than over the wire. Tool errors

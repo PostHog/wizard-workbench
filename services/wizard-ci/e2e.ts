@@ -22,11 +22,10 @@ import {
   readdirSync,
   statSync,
 } from "fs";
-import { spawnSync } from "child_process";
-
 import { loadFixtures } from "../mcp-stub/fixtures.js";
 import { startMcpStub, type McpStub } from "../mcp-stub/index.js";
 import { readJournal } from "../mcp-stub/journal.js";
+import { runChild } from "./run-child.js";
 import {
   checksPassed,
   formatCheck,
@@ -267,9 +266,10 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   // Always a /tmp copy — never the real fixture.
   rmSync(appDir, { recursive: true, force: true });
   mkdirSync(appDir, { recursive: true });
-  spawnSync("rsync", ["-a", "--exclude", "node_modules", "--exclude", ".git", `${appSrc}/`, `${appDir}/`], {
-    stdio: "inherit",
-  });
+  await runChild(
+    "rsync",
+    ["-a", "--exclude", "node_modules", "--exclude", ".git", `${appSrc}/`, `${appDir}/`],
+  );
   rmSync(snapsDir, { recursive: true, force: true });
   mkdirSync(snapsDir, { recursive: true });
   rmSync(resultJson, { force: true });
@@ -308,12 +308,19 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   if (expect) {
     // Ephemeral port: matrix legs run in parallel, and a fixed 8799 would make
     // two runs fight over the same socket.
-    stub = await startMcpStub({ port: 0, journalPath, projectId });
+    //
+    // The stub cannot judge a placeholder credential, so the fixture names the
+    // kinds whose create must fail and the stub replays the recorded prod
+    // error. Handed to the stub directly — it runs in this process, and the
+    // environment below belongs to the wizard subprocess.
+    stub = await startMcpStub({
+      port: 0,
+      journalPath,
+      projectId,
+      failKinds: expect.attemptedFailOk,
+    });
     childEnv.MCP_URL = stub.url;
     childEnv.MCP_STUB_JOURNAL = journalPath;
-    // The stub cannot judge a placeholder credential, so the fixture names the
-    // kinds whose create must fail and the stub replays the recorded prod error.
-    childEnv.MCP_STUB_FAIL_KINDS = expect.attemptedFailOk.join(",");
     // Keep the wizard_ask bridge alive in a `ci` session — without it the
     // agent-in-the-loop layer this whole tier exists to test is switched off.
     childEnv.E2E_ASK = "true";
@@ -336,11 +343,13 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
     console.log("");
   }
 
-  let run: ReturnType<typeof spawnSync>;
+  // Never `spawnSync` here. The stub MCP server lives in this process, and a
+  // synchronous spawn blocks the event loop that serves it — the wizard's MCP
+  // client then gets no answer and the agent runs with no PostHog tool.
+  let run: { status: number | null };
   try {
-    run = spawnSync("npx", ["tsx", harness], {
+    run = await runChild("npx", ["tsx", harness], {
       cwd: repo,
-      stdio: "inherit",
       env: childEnv,
     });
   } finally {

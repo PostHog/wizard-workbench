@@ -48,14 +48,52 @@ answer would hide the drift these tests exist to find.
 
 Streamable HTTP, stateless, on `$MCP_STUB_PORT` (default 8799) at `/mcp`.
 
-That matches the wizard's client: `StreamableHTTPClientTransport` in
-`src/lib/agent/runner/harness/pi/mcp.ts`, and the same URL-plus-bearer config
-it hands to `pi-mcp-adapter`. Stateless means a fresh `Server` and transport per
-request and no `Mcp-Session-Id` bookkeeping. The run's state lives in
-`StubState`, which outlives the requests, so `-list` still sees what `-create`
-recorded.
+That matches both of the wizard's clients. The pi harness uses
+`StreamableHTTPClientTransport` in `src/lib/agent/runner/harness/pi/mcp.ts`,
+with the same URL-plus-bearer config it hands to `pi-mcp-adapter`. The anthropic
+harness hands that config to the Claude Agent SDK, which connects from the CLI
+it spawns. Stateless means a fresh `Server` and transport per request and no
+`Mcp-Session-Id` bookkeeping. The run's state lives in `StubState`, which
+outlives the requests, so `-list` still sees what `-create` recorded.
+
+Both clients open a server-to-client SSE stream with a `GET` after they
+initialize, and hold it open for the whole run. The stub answers it and keeps it
+open — see the wire log below.
 
 The stub ignores the bearer token. Anything authenticates.
+
+## Never block the host process
+
+The stub serves HTTP from the event loop of whatever process started it. A
+synchronous call in that process — `spawnSync`, `execSync`, a long synchronous
+read — stops it answering anything. The client sees a connection the kernel
+accepted and a server that never replies, so it reports the server as `pending`
+or `failed` and the agent runs with no PostHog tool.
+
+That is not hypothetical: `services/wizard-ci/e2e.ts` started the wizard with
+`spawnSync` and every warehouse run created nothing for it. Use
+`runChild` from `services/wizard-ci/run-child.ts` for children instead.
+
+## Wire log
+
+Set `MCP_STUB_WIRE_LOG` to record every HTTP exchange — method, path, the
+headers that route a Streamable HTTP request, and how it ended. Use it when a
+client says the server never came up.
+
+```bash
+MCP_STUB_WIRE_LOG=stderr pnpm mcp-stub          # to stderr
+MCP_STUB_WIRE_LOG=/tmp/mcp-wire.log pnpm ...    # appended to a file
+```
+
+```
+mcp-wire #3 -> GET /mcp
+  accept=text/event-stream protocol-version=2025-11-25 auth=bearer(64) body=none
+mcp-wire #3 open 200 text/event-stream 250ms
+mcp-wire #3 <- 200 text/event-stream 41200ms aborted
+```
+
+The log names JSON-RPC methods and ids. It never prints a body or a token — the
+bodies carry the credentials the run injected.
 
 ## The journal
 
@@ -121,12 +159,15 @@ pnpm mcp-stub --help
 | `MCP_STUB_FAIL_KINDS` | comma-separated kinds that must reject credentials |
 | `MCP_STUB_REQUIRE_INFO` | `true` ⇒ refuse a `call` to a tool never `info`d |
 | `MCP_STUB_REDACT` | `false` ⇒ keep secret values in the journal (debug only) |
+| `MCP_STUB_WIRE_LOG` | `stderr` or a file path ⇒ log every HTTP exchange |
+| `MCP_STUB_PROBE_URL` | the stub `handshake-probe.ts` should check |
 | `PROJECT_ID` | project named in replayed error paths, default `0` |
 
-`PROJECT_ID` is read only when nothing is passed to `startMcpStub`. The e2e
-runner always passes it — the stub lives in the runner's process, while
-`PROJECT_ID` is exported onto the *wizard subprocess'* environment, so reading
-it here would never see the real one.
+`PROJECT_ID` and `MCP_STUB_FAIL_KINDS` are read only when nothing is passed to
+`startMcpStub`. The e2e runner always passes both, as `projectId` and
+`failKinds` — the stub lives in the runner's process, while those variables are
+exported onto the *wizard subprocess'* environment, so reading them here would
+never see the real ones.
 
 ## Fixtures
 
@@ -149,4 +190,16 @@ its redactions.
 
 ```bash
 pnpm test:mcp-stub
+```
+
+Most of them drive the stub in-process. Two do not: they run the client from a
+child process, because that is where the real clients run and an in-process test
+cannot see a host that has stopped serving. One of the two drives the Claude
+Agent SDK through `handshake-probe.ts` and asserts the SDK reports
+`posthog-wizard` as `connected` with `mcp__posthog-wizard__exec` registered.
+
+Run that probe by hand against any stub:
+
+```bash
+MCP_STUB_PROBE_URL=http://127.0.0.1:8799/mcp tsx services/mcp-stub/handshake-probe.ts
 ```
