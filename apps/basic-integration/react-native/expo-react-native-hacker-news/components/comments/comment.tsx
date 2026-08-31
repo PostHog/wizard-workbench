@@ -16,6 +16,7 @@ import { MessageSquareText } from "lucide-react-native";
 import type { Item } from "@/shared/types";
 import { Colors } from "@/constants/Colors";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { posthog } from "@/lib/posthog";
 
 export const Comment = (item: Item) => {
   const QC = useQueryClient();
@@ -99,6 +100,10 @@ export const Comment = (item: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog?.capture("comments_opened", {
+              item_id: item.id,
+              item_type: "comment",
+            });
             await QC.prefetchQuery({
               queryKey: getItemDetailsQueryKey(item.id),
               queryFn: getItemQueryFn,
