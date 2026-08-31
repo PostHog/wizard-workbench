@@ -17,6 +17,7 @@ python-dotenv
 redis
 requests
 rq
+posthog
 SQLAlchemy
 Werkzeug
 WTForms
