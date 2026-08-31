@@ -12,17 +12,41 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function identifyPostHogUser(user: FakeUser) {
+  window.dispatchEvent(
+    new CustomEvent('posthog_identify_user', {
+      detail: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+      },
+    }),
+  )
+}
+
+function resetPostHogUser() {
+  window.dispatchEvent(new Event('posthog_reset_user'))
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
 
   useEffect(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
+
+    if (currentUser) {
+      identifyPostHogUser(currentUser)
+    }
   }, [])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      if (user && user.id !== loggedInUser.id) {
+        resetPostHogUser()
+      }
+      identifyPostHogUser(loggedInUser)
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      if (user && user.id !== newUser.id) {
+        resetPostHogUser()
+      }
+      identifyPostHogUser(newUser)
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    resetPostHogUser()
     fakeLogout()
     setUser(null)
   }
@@ -49,12 +78,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleStorageChange = () => {
       const currentUser = getCurrentUser()
-      setUser(currentUser)
+      if (currentUser?.id !== user?.id) {
+        if (user) {
+          resetPostHogUser()
+        }
+        if (currentUser) {
+          identifyPostHogUser(currentUser)
+        }
+        setUser(currentUser)
+      }
     }
     window.addEventListener('storage', handleStorageChange)
     const interval = setInterval(() => {
       const currentUser = getCurrentUser()
       if (currentUser?.id !== user?.id) {
+        if (user) {
+          resetPostHogUser()
+        }
+        if (currentUser) {
+          identifyPostHogUser(currentUser)
+        }
         setUser(currentUser)
       }
     }, 1000)
