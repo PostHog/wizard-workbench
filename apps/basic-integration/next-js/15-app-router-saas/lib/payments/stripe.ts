@@ -7,6 +7,7 @@ import {
   updateTeamSubscription
 } from '@/lib/db/queries';
 import { stripeStub } from './stripe-stub';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 // Use stub if STRIPE_MODE=stub or if STRIPE_SECRET_KEY is missing/invalid
 const useStub =
@@ -37,6 +38,8 @@ export async function createCheckoutSession({
     redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
   }
 
+  await captureServerEvent(String(user.id), 'checkout_started');
+
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [
@@ -60,8 +63,14 @@ export async function createCheckoutSession({
 }
 
 export async function createCustomerPortalSession(team: Team) {
+  const user = await getUser();
+
   if (!team.stripeCustomerId || !team.stripeProductId) {
     redirect('/pricing');
+  }
+
+  if (user) {
+    await captureServerEvent(String(user.id), 'customer_portal_opened');
   }
 
   let configuration: Stripe.BillingPortal.Configuration;
