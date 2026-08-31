@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
+import { usePostHog } from '@posthog/react'
 import { followerPackages } from '@/lib/data/fake-data'
 import type { Route } from './+types/buy-followers'
 import { generateMeta } from '@/lib/utils/meta'
@@ -22,6 +23,17 @@ export default function BuyFollowers() {
   const navigate = useNavigate()
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
+  const posthog = usePostHog()
+
+  const handlePackageSelection = (index: number) => {
+    const pkg = followerPackages[index]
+    setSelectedPackage(index)
+    posthog?.capture('follower_package_selected', {
+      follower_count: pkg.amount + pkg.bonus,
+      bonus_follower_count: pkg.bonus,
+      package_price: pkg.price,
+    })
+  }
 
   const handlePurchase = () => {
     if (selectedPackage === null) return
@@ -34,6 +46,11 @@ export default function BuyFollowers() {
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+      posthog?.capture('follower_purchase_completed', {
+        follower_count: totalFollowers,
+        bonus_follower_count: pkg.bonus,
+        package_price: pkg.price,
+      })
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
@@ -75,7 +92,7 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => handlePackageSelection(index)}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected
