@@ -1,7 +1,31 @@
+import 'dotenv/config';
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { PostHog } from 'posthog-node';
+
+const posthogProjectToken = process.env.POSTHOG_PROJECT_TOKEN;
+const posthogHost = process.env.POSTHOG_HOST;
+
+if ((!posthogProjectToken || !posthogHost) && process.env.NODE_ENV !== 'production') {
+  const missingVariable = !posthogProjectToken ? 'POSTHOG_PROJECT_TOKEN' : 'POSTHOG_HOST';
+  throw new Error(
+    `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`
+  );
+}
+
+export const posthog = posthogProjectToken && posthogHost
+  ? new PostHog(posthogProjectToken, {
+      host: posthogHost,
+      enableExceptionAutocapture: true,
+    })
+  : null;
 
 const app = new Hono();
+
+app.onError((error, c) => {
+  posthog?.captureException(error);
+  return c.json({ error: 'Internal server error' }, 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +71,13 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+  posthog?.capture({
+    event: 'link_created',
+    properties: {
+      tag_count: tags.length,
+      has_description: Boolean(description),
+    },
+  });
   return c.json(link, 201);
 });
 
@@ -76,6 +107,15 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  posthog?.capture({
+    event: 'link_updated',
+    properties: {
+      updated_fields: Object.keys(body).filter((field) =>
+        ['url', 'title', 'description', 'tags', 'favorite'].includes(field)
+      ),
+      is_favorite: link.favorite,
+    },
+  });
   return c.json(link);
 });
 
@@ -88,6 +128,7 @@ app.delete('/api/links/:id', (c) => {
   }
 
   links.splice(index, 1);
+  posthog?.capture({ event: 'link_deleted' });
   return c.body(null, 204);
 });
 
