@@ -696,9 +696,17 @@ jobs:
             "${CMD_ARGS[@]}" 2>&1 | tee wizard-output.log
           fi
         env:
-          # SCRATCH BRANCH — force the orchestrator + pi-harness path so this run
-          # exercises the gpt-5.6 orchestrator regardless of server-side flags.
-          WIZARD_CI_FLAG_OVERRIDES: '{"wizard-orchestrator":"true","wizard-use-pi-harness":"true"}'
+          # Force the orchestrator path, so this run exercises the orchestrator
+          # whatever the server-side flags say. `wizard-orchestrator` routes the
+          # `posthog-integration` program to the orchestrator sequence on the pi
+          # harness (the wizard's switchboard/flags/orchestrator.ts).
+          #
+          # There is deliberately no pi override here. `wizard-use-pi-harness`
+          # sat alongside this key and was never a real flag: the wizard's
+          # closed set is WIZARD_FLAG_KEYS, and the pi key in it is
+          # `wizard-self-driving-use-pi-harness`, scoped to `self-driving`. The
+          # override did nothing.
+          WIZARD_CI_FLAG_OVERRIDES: '{"wizard-orchestrator":"true"}'
           # workflow_dispatch sets inputs.snapshots; a /wizard-ci-snapshots comment
           # arrives as a repository_dispatch carrying client_payload.snapshots.
           SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
@@ -730,9 +738,16 @@ jobs:
         run: |
           pnpm wizard-ci "$MATRIX_APP" --e2e --trigger-id "$TRIGGER_ID" 2>&1 | tee wizard-output.log
         env:
-          # Same overrides the diff legs get. The runner merges the seeded-task
+          # Same override the diff legs get. The runner merges the seeded-task
           # flag on top for an app whose expect.json says `seeded`.
-          WIZARD_CI_FLAG_OVERRIDES: '{"wizard-orchestrator":"true","wizard-use-pi-harness":"true"}'
+          #
+          # This matters only for `warehouse-seeded/*`, which drives the
+          # `posthog-integration` program. An `apps/warehouse/*` leg drives
+          # `warehouse-source`, and no harness experiment covers that program —
+          # so it runs the anthropic harness from its binding default whatever
+          # is set here. That is intended: anthropic is what warehouse-source
+          # ships on, so the e2e tier grades the harness real users get.
+          WIZARD_CI_FLAG_OVERRIDES: '{"wizard-orchestrator":"true"}'
           MATRIX_APP: ${{ matrix.app }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
           POSTHOG_REGION: ${{ needs.discover.outputs.input_posthog_region }}

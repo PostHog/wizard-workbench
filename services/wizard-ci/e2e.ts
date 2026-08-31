@@ -66,12 +66,33 @@ const INJECTED_CREDENTIALS: Record<string, string> = {
 /** Which injected values must never be echoed back. */
 const SECRET_VAR = /PASSWORD|SECRET|API_KEY|TOKEN/;
 
-/** Flags a seeded-orchestrator scenario needs on top of whatever CI already sets. */
-const SEEDED_FLAG_OVERRIDES: Record<string, string> = {
+/**
+ * Flags a seeded-orchestrator scenario needs on top of whatever CI already sets.
+ *
+ * Both keys are real — they are in the wizard's `WIZARD_FLAG_KEYS`. A key that
+ * is not in that closed set never routes anything, so it must not be listed
+ * here: `wizard-use-pi-harness` used to be, and was a no-op the whole time.
+ */
+export const SEEDED_FLAG_OVERRIDES: Record<string, string> = {
   "wizard-orchestrator": "true",
-  "wizard-use-pi-harness": "true",
   "wizard-orchestrator-seeded-tasks": "true",
 };
+
+/**
+ * The wizard's closed set of flag keys — `WIZARD_FLAG_KEYS` in its
+ * `src/lib/constants.ts`, mirrored here because this repo cannot import from
+ * it. Reading a flag enrols the run in that flag's experiment, so the wizard
+ * only ever reads these; anything else is inert however it is spelled.
+ *
+ * Kept honest by a test. If the wizard adds a key, add it here too.
+ */
+export const WIZARD_FLAG_KEYS: readonly string[] = [
+  "wizard-orchestrator",
+  "wizard-orchestrator-override",
+  "wizard-orchestrator-seeded-tasks",
+  "wizard-self-driving-use-pi-harness",
+  "wizard-basic-integration-agentic-detection",
+];
 
 // Host Claude Code / Anthropic auth vars: when the wizard's agent subprocess is
 // spawned from inside a Claude Code session it defers auth to the host

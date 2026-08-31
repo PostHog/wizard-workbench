@@ -50,9 +50,29 @@ export interface WarehouseExpect {
   attemptedFailOk: string[];
   /** Kinds that must produce a deep link, and no ask batch and no create. */
   deepLink: string[];
-  /** Inclusive [min, max] number of `wizard_ask` batches. */
+  /**
+   * Inclusive [min, max] number of `wizard_ask` batches.
+   *
+   * A loose sanity bound, not the batching contract. How the model groups a
+   * multi-source collection is not stable run to run — the same app and the
+   * same config produced 8 batches and then 4 — so a tight total is a coin
+   * flip, not a check. Set the ceiling from the in-CLI source count (see
+   * {@link askMaxBatchesPerSubject}, which carries the real teeth).
+   */
   askBatches: [number, number];
   askMaxPerBatch: number;
+  /**
+   * Most `wizard_ask` batches one subject may open.
+   *
+   * This is the credential-batching contract (wizard#1146 / context-mill#360):
+   * a source's questions go out together, not one at a time. Per-subject, so
+   * it holds however the model spreads the sources across the run, which the
+   * total batch count cannot. Two allows one collect plus one follow-up.
+   *
+   * Only enforced when the wizard supplies batch subjects. An older wizard
+   * groups every batch under one ask source, where the count means nothing.
+   */
+  askMaxBatchesPerSubject: number;
   /** Substring of the expected abort reason, or null for "must not abort". */
   expectAbort: string | null;
   /** True ⇒ the orchestrator seeded-task scenario. */
@@ -199,6 +219,7 @@ const EXPECT_DEFAULTS: WarehouseExpect = {
   deepLink: [],
   askBatches: [0, 99],
   askMaxPerBatch: 99,
+  askMaxBatchesPerSubject: 99,
   expectAbort: null,
   seeded: false,
   expectNotices: 0,
@@ -298,8 +319,11 @@ export function claimedConnected(
  *
  * The check is blunt by design, so a reviewer has to be able to tell a real
  * false claim ("Stripe was connected — Source ID …") from a line the reading
- * over-claimed on ("Set up Stripe webhooks —"). Naming the line is what makes
- * that call possible from the CI output alone.
+ * over-claimed on. Naming the line is what makes that call possible from the
+ * CI output alone.
+ *
+ * Instruction lines are dropped before the reading — see
+ * {@link instructionLines}.
  */
 export function claimedConnectedLines(
   result: E2eResult | null,
@@ -307,19 +331,88 @@ export function claimedConnectedLines(
 ): Array<{ kind: string; line: string }> {
   const success = /\b(connected|created|added|set up|configured|syncing)\b|✅|✓/i;
   const failure =
-    /\b(fail|failed|error|could not|couldn't|unable|not created|skipped|declined|deep.?link|manually|yourself)\b|❌|✖/i;
+    /\b(fail|failed|error|could not|couldn't|cannot|can not|can't|unable|not created|skipped|declined|deep.?link|manually|yourself)\b|❌|✖/i;
 
   const lines = reportText(result).split("\n");
+  const instruction = instructionLines(lines);
   const claims: Array<{ kind: string; line: string }> = [];
   for (const kind of kinds) {
     const names = namesFor(kind, result);
-    const hit = lines.find(
-      (line) =>
-        mentions(line, names) && success.test(line) && !failure.test(line),
+    const index = lines.findIndex(
+      (line, i) =>
+        !instruction[i] &&
+        mentions(line, names) &&
+        success.test(line) &&
+        !failure.test(line),
     );
-    if (hit !== undefined) claims.push({ kind, line: hit });
+    if (index >= 0) claims.push({ kind, line: lines[index] as string });
   }
   return claims;
+}
+
+/**
+ * Which report lines are instructions rather than claims, by index.
+ *
+ * The success reading stays blunt; this only removes three shapes that are
+ * always the agent telling the user to go and do something. Each was a real
+ * false positive: a run failed "no silent no-op" on a line telling the user to
+ * make a Stripe key, while the deep-link check passed for that same source in
+ * the same run — the check contradicted itself.
+ *
+ * Deliberately narrow. A claim wrongly dropped here weakens the check, and a
+ * missed claim is still safer than an invented one, so every rule has to name
+ * a shape a genuine "I connected it" line does not take.
+ */
+function instructionLines(lines: string[]): boolean[] {
+  // A heading that opens a section of work left for the user. Everything under
+  // it is an instruction, until the next heading.
+  const instructionHeading =
+    /\b(next steps?|to.?dos?|remaining|manual|action required|what you need|follow.?ups?|before you|still to do|outstanding)\b/i;
+  // `## Heading`, or a line that is nothing but bold text — the agent's two
+  // usual ways of opening a section.
+  const heading = /^\s{0,3}(?:#{1,6}\s+(.*)|\*\*([^*]+)\*\*:?)\s*$/;
+
+  // A line that opens by telling the user to act. List markers, numbering and
+  // bold come off first, because an instruction is nearly always a bullet.
+  const marker = /^[\s>]*(?:[-*+]|\d+[.)])?\s*\**\s*/;
+  const imperative =
+    /^(add|create|connect|configure|set up|open|go|visit|navigate|copy|paste|generate|enable|run|click|follow|finish|complete|log ?in|sign ?in|head|make|get|install|provide|enter|choose|select)\b/i;
+  // Second person only where it commands. Bare "your" stays a claim — "Your
+  // Stripe source is now connected" is a genuine one.
+  const directive = /\b(you(?:'ll)? (?:must|need|should|can|will)|please)\b/i;
+
+  // Any http(s) host that is not PostHog's. A line that sends the reader to a
+  // vendor dashboard is telling them to do something there, so the success
+  // word on it belongs to the credential they must make — not to a source this
+  // run connected. PostHog links are exempt: a real claim often carries one.
+  const url = /https?:\/\/([^\s/)\]"'<>]+)/gi;
+  const posthogHost = /(?:^|\.)posthog\.com$/i;
+  const hasVendorUrl = (line: string): boolean => {
+    for (const match of line.matchAll(url)) {
+      const host = (match[1] ?? "").split(":")[0] ?? "";
+      if (!posthogHost.test(host)) return true;
+    }
+    return false;
+  };
+
+  let inInstructionSection = false;
+  return lines.map((line) => {
+    const isHeading = heading.exec(line);
+    if (isHeading) {
+      // A `#` heading opens a new section either way, so it can also close an
+      // instruction one. A bold-only line cannot: the agent uses it for a
+      // per-source sub-heading, and "**Stripe**" under "## Next steps" is
+      // still inside those next steps.
+      const hashHeading = isHeading[1] !== undefined;
+      const text = isHeading[1] ?? isHeading[2] ?? "";
+      if (instructionHeading.test(text)) inInstructionSection = true;
+      else if (hashHeading) inInstructionSection = false;
+      return true;
+    }
+    if (inInstructionSection) return true;
+    if (hasVendorUrl(line)) return true;
+    return imperative.test(line.replace(marker, "")) || directive.test(line);
+  });
 }
 
 /** One question no real answer reached, and why. */
@@ -596,6 +689,26 @@ export function warehouseChecks(evidence: WarehouseEvidence): Check[] {
       problems.push(
         `batches over ${expect.askMaxPerBatch} questions: ${oversized.map((a) => `${a.id}(${a.questionCount})`).join(", ")}`,
       );
+    }
+    // The batching contract itself: one source's questions go out together.
+    // Counted per subject, because the total says nothing — a run that opens
+    // eight batches over four sources batched fine, and a run that opens four
+    // over one source did not. Skipped when the wizard names no subject: every
+    // batch then falls back to the same ask source and the count is noise.
+    if (!asks.every((a) => a.subject === null)) {
+      const perSubject = new Map<string, number>();
+      for (const ask of asks) {
+        const subject = ask.subject ?? ask.source;
+        perSubject.set(subject, (perSubject.get(subject) ?? 0) + 1);
+      }
+      const drip = [...perSubject]
+        .filter(([, n]) => n > expect.askMaxBatchesPerSubject)
+        .map(([subject, n]) => `${subject}(${n})`);
+      if (drip.length) {
+        problems.push(
+          `subjects asked in more than ${expect.askMaxBatchesPerSubject} batches: ${drip.join(", ")}`,
+        );
+      }
     }
     // Batches about one subject must sit together, so a person answers one
     // source at a time instead of being bounced between two.

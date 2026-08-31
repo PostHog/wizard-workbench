@@ -547,6 +547,151 @@ describe("over the wire", () => {
 // ============================================================================
 
 /**
+ * The transport the wizard's *anthropic* harness actually speaks.
+ *
+ * The suite above drives the stub with `StreamableHTTPClientTransport`, which
+ * is the pi harness's client (`harness/pi/mcp.ts`). The warehouse e2e tier does
+ * not run on pi: `warehouse-source` has no flag route onto it, so it takes its
+ * binding default and runs on anthropic, where the PostHog MCP is handed to the
+ * Claude Agent SDK as `{ type: 'http' }` and connected by the SDK's own client.
+ *
+ * That is a different client, and nothing here covered it. When a warehouse run
+ * came back with no PostHog tool, "the stub does not speak to this client" cost
+ * an investigation to rule out. These cases pin the shape so it never has to be
+ * ruled out again.
+ *
+ * The requests below are a verbatim replay of what
+ * `claude-code/2.1.169 (sdk-ts, agent-sdk/0.3.169)` puts on the wire, captured
+ * from a real `query()` against this stub. Raw `fetch`, not a client library,
+ * so the assertions are about bytes and not about an SDK's own abstraction —
+ * and so the test needs no model call, no API key and no network.
+ */
+describe("the anthropic harness's http MCP client", () => {
+  let stub: McpStub;
+
+  /** Exactly the headers the Agent SDK sends on a POST. */
+  const POST_HEADERS = {
+    accept: "application/json, text/event-stream",
+    "accept-encoding": "identity",
+    authorization: "Bearer phx_test_token",
+    "content-type": "application/json",
+    "user-agent": "claude-code/2.1.169 (sdk-ts, agent-sdk/0.3.169)",
+  };
+
+  const PROTOCOL_VERSION = "2025-11-25";
+
+  async function rpc(
+    body: unknown,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<{ status: number; json: any }> {
+    const res = await fetch(stub.url, {
+      method: "POST",
+      headers: { ...POST_HEADERS, ...extraHeaders },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    return { status: res.status, json: text ? JSON.parse(text) : null };
+  }
+
+  before(async () => {
+    stub = await startMcpStub({ port: 0, journalPath: journal });
+  });
+
+  after(async () => {
+    await stub.stop();
+  });
+
+  it("answers initialize with no session id, on a stateless POST", async () => {
+    const { status, json } = await rpc({
+      method: "initialize",
+      params: {
+        protocolVersion: PROTOCOL_VERSION,
+        capabilities: { roots: {}, elicitation: {} },
+        clientInfo: { name: "claude-code", version: "2.1.169" },
+      },
+      jsonrpc: "2.0",
+      id: 0,
+    });
+    assert.equal(status, 200);
+    assert.equal(json.result.protocolVersion, PROTOCOL_VERSION);
+    assert.ok(json.result.capabilities.tools, "server must advertise tools");
+    // The instructions ride the initialize result — this is how the wizard gets
+    // them into the agent's system prompt on the anthropic path.
+    assert.match(json.result.instructions, /call <tool> <json_input>/);
+  });
+
+  it("accepts the initialized notification", async () => {
+    const { status } = await rpc(
+      { method: "notifications/initialized", jsonrpc: "2.0" },
+      { "mcp-protocol-version": PROTOCOL_VERSION },
+    );
+    // A notification carries no id, so 202 with an empty body is correct.
+    assert.equal(status, 202);
+  });
+
+  it("lists the exec tool to a client that sent no session id", async () => {
+    const { status, json } = await rpc(
+      { method: "tools/list", params: {}, jsonrpc: "2.0", id: 1 },
+      { "mcp-protocol-version": PROTOCOL_VERSION },
+    );
+    assert.equal(status, 200);
+    assert.deepEqual(
+      json.result.tools.map((t: { name: string }) => t.name),
+      ["exec"],
+    );
+    // `exec` is useless to the agent without its command grammar on the schema.
+    assert.match(json.result.tools[0].inputSchema.properties.command.description, /call <tool>/);
+  });
+
+  it("runs a create through the same client", async () => {
+    const { status, json } = await rpc(
+      {
+        method: "tools/call",
+        params: {
+          name: "exec",
+          arguments: {
+            command: `call --json external-data-sources-create ${JSON.stringify({
+              source_type: "Postgres",
+              payload: PG_PAYLOAD,
+              prefix: "e2e_http_",
+            })}`,
+          },
+        },
+        jsonrpc: "2.0",
+        id: 2,
+      },
+      { "mcp-protocol-version": PROTOCOL_VERSION },
+    );
+    assert.equal(status, 200);
+    assert.notEqual(json.result.isError, true);
+    assert.equal(stub.state.created.at(-1)?.prefix, "e2e_http_");
+  });
+
+  /**
+   * The SDK opens a GET alongside the POSTs to listen for server-pushed
+   * messages. A stateless server has no stream to give it. The run must not
+   * depend on that GET succeeding — the connection above is what carries the
+   * tools — so this only pins that the stub answers rather than hangs.
+   */
+  it("answers the SDK's server-stream GET rather than hanging", async () => {
+    const res = await fetch(stub.url, {
+      method: "GET",
+      headers: {
+        accept: "text/event-stream",
+        authorization: POST_HEADERS.authorization,
+        "mcp-protocol-version": PROTOCOL_VERSION,
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    // 405 (no stream offered) is correct and expected for a stateless server.
+    assert.ok(res.status >= 200, `unexpected status ${res.status}`);
+    res.body?.cancel();
+  });
+});
+
+// ============================================================================
+
+/**
  * `startMcpStub` reads its own process' environment, and the runner sets the
  * stub variables on the *wizard subprocess'* environment. Anything the runner
  * only exports there never reaches the stub. `projectId` already had to be
@@ -597,17 +742,17 @@ describe("options the runner has to hand over", () => {
 // ============================================================================
 
 /**
- * The tests above drive the stub from inside the test process, over
- * `StreamableHTTPClientTransport`. That is the pi harness' client. The
- * warehouse tier runs the *anthropic* harness, whose client is the Claude Agent
- * SDK's own CLI — a grandchild process of whatever hosts the stub.
+ * Every test above drives the stub from inside the test process — over
+ * `StreamableHTTPClientTransport`, or by replaying the SDK's requests with
+ * `fetch`. The warehouse tier runs the *anthropic* harness, whose client is the
+ * Claude Agent SDK's own CLI — a grandchild process of whatever hosts the stub.
  *
  * That gap hid a total outage. `services/wizard-ci/e2e.ts` started the wizard
  * with `spawnSync`, which blocks the Node event loop of the process that serves
  * the stub. The kernel accepted the SDK's connections and the stub answered
  * none of them, so the SDK reported `posthog-wizard` as `pending`, registered
  * no `mcp__posthog-wizard__exec`, and every warehouse run created nothing.
- * Every test here passed throughout.
+ * Every test here passed throughout — the bytes were right, the host was not.
  *
  * So these two run the client from a child of the stub's host, the way the real
  * chain does.
