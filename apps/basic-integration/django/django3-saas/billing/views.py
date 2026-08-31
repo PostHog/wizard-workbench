@@ -1,4 +1,5 @@
 import uuid
+import posthog
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -55,6 +56,11 @@ def subscribe(request, plan_slug):
                     },
                     allow_promotion_codes=True,
                 )
+                posthog.capture('checkout_started', properties={
+                    'billing_provider': 'stripe',
+                    'plan_interval': plan.interval,
+                    'plan_is_free': plan.price == 0,
+                })
                 return redirect(checkout_session.url)
             except Exception as e:
                 messages.error(request, f'Payment error: {str(e)}')
@@ -70,6 +76,11 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            posthog.capture('subscription_activated', properties={
+                'billing_provider': 'demo',
+                'plan_interval': plan.interval,
+                'plan_is_free': plan.price == 0,
+            })
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -130,6 +141,11 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+                posthog.capture('subscription_plan_changed', properties={
+                    'billing_provider': 'stripe',
+                    'plan_interval': plan.interval,
+                    'plan_is_free': plan.price == 0,
+                })
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
                 messages.error(request, f'Error changing plan: {str(e)}')
@@ -137,6 +153,11 @@ def change_plan(request, plan_slug):
             # Demo mode
             subscription.plan = plan
             subscription.save()
+            posthog.capture('subscription_plan_changed', properties={
+                'billing_provider': 'demo',
+                'plan_interval': plan.interval,
+                'plan_is_free': plan.price == 0,
+            })
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -171,6 +192,9 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        posthog.capture('subscription_canceled', properties={
+            'billing_provider': 'stripe' if STRIPE_CONFIGURED else 'demo',
+        })
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -269,6 +293,11 @@ def _handle_checkout_completed(session):
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
     )
+    posthog.capture('subscription_activated', distinct_id=str(user.pk), properties={
+        'billing_provider': 'stripe',
+        'plan_interval': plan.interval,
+        'plan_is_free': plan.price == 0,
+    })
 
 
 def _handle_subscription_updated(subscription_data):

@@ -1,3 +1,4 @@
+import posthog
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -53,6 +54,10 @@ def create_project(request):
             project = form.save(commit=False)
             project.owner = request.user
             project.save()
+            posthog.capture('project_created', properties={
+                'is_active': project.is_active,
+                'has_description': bool(project.description),
+            })
 
             ActivityLog.objects.create(
                 user=request.user,
@@ -76,6 +81,10 @@ def edit_project(request, pk):
         form = ProjectForm(request.POST, instance=project)
         if form.is_valid():
             form.save()
+            posthog.capture('project_updated', properties={
+                'is_active': project.is_active,
+                'has_description': bool(project.description),
+            })
 
             ActivityLog.objects.create(
                 user=request.user,
@@ -98,6 +107,7 @@ def delete_project(request, pk):
     if request.method == 'POST':
         name = project.name
         project.delete()
+        posthog.capture('project_deleted')
 
         ActivityLog.objects.create(
             user=request.user,
