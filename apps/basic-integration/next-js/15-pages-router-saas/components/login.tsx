@@ -57,6 +57,18 @@ export function Login({
           return;
         }
 
+        if (result.user && typeof result.user.id === 'number') {
+          const { default: posthog } = await import('posthog-js');
+          posthog.identify(String(result.user.id), {
+            email: result.user.email,
+            name: result.user.name || undefined,
+            role: result.user.role
+          });
+          posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up', {
+            checkout_started: redirect === 'checkout'
+          });
+        }
+
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {

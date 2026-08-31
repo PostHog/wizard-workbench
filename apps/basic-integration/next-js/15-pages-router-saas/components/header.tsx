@@ -25,9 +25,17 @@ function UserMenu() {
   async function handleSignOut() {
     try {
       // Call sign-out API to delete HttpOnly session cookie
-      await fetch('/api/auth/sign-out', {
+      const response = await fetch('/api/auth/sign-out', {
         method: 'POST'
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to sign out');
+      }
+
+      const { default: posthog } = await import('posthog-js');
+      posthog.capture('user_signed_out');
+      posthog.reset();
 
       // Clear SWR cache
       mutate('/api/user', null, false);
