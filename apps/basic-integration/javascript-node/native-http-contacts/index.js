@@ -1,4 +1,32 @@
 import { createServer } from 'node:http';
+import { PostHog } from 'posthog-node';
+
+process.loadEnvFile?.();
+
+const posthogProjectToken = process.env.POSTHOG_PROJECT_TOKEN;
+const posthogHost = process.env.POSTHOG_HOST;
+
+if (process.env.NODE_ENV !== 'production') {
+  if (!posthogProjectToken) {
+    throw new Error(
+      'POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_PROJECT_TOKEN is configured'
+    );
+  }
+
+  if (!posthogHost) {
+    throw new Error(
+      'POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured'
+    );
+  }
+}
+
+const posthog =
+  posthogProjectToken && posthogHost
+    ? new PostHog(posthogProjectToken, {
+        host: posthogHost,
+        enableExceptionAutocapture: true,
+      })
+    : null;
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -26,11 +54,10 @@ function json(res, statusCode, data) {
 }
 
 const server = createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const path = url.pathname;
-  const method = req.method;
-
   try {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const path = url.pathname;
+    const method = req.method;
     // --- Groups ---
 
     if (method === 'GET' && path === '/api/groups') {
@@ -47,6 +74,12 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      if (posthog) {
+        posthog.capture({
+          event: 'group_created',
+          properties: { group_id: group.id },
+        });
+      }
       return json(res, 201, group);
     }
 
@@ -90,6 +123,17 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_created',
+          properties: {
+            contact_id: contact.id,
+            group_id: contact.group_id,
+            has_company: Boolean(contact.company),
+            has_phone: Boolean(contact.phone),
+          },
+        });
+      }
       return json(res, 201, contact);
     }
 
@@ -114,6 +158,17 @@ const server = createServer(async (req, res) => {
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_updated',
+          properties: {
+            contact_id: contact.id,
+            changed_fields: Object.keys(body).filter((field) =>
+              ['name', 'email', 'phone', 'company', 'group_id'].includes(field)
+            ),
+          },
+        });
+      }
       return json(res, 200, contact);
     }
 
@@ -123,13 +178,22 @@ const server = createServer(async (req, res) => {
       const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
-      contacts.splice(index, 1);
+      const [contact] = contacts.splice(index, 1);
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_deleted',
+          properties: { contact_id: contact.id, group_id: contact.group_id },
+        });
+      }
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    if (posthog) {
+      posthog.captureException(err);
+    }
     json(res, 500, { error: 'Internal server error' });
   }
 });
@@ -139,3 +203,13 @@ const PORT = process.env.PORT || 3004;
 server.listen(PORT, () => {
   console.log(`Native HTTP contacts API running on http://localhost:${PORT}`);
 });
+
+async function shutdown() {
+  await new Promise((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+  await posthog?.shutdown();
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
