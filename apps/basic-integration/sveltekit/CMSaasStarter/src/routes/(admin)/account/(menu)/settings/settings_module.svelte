@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance, applyAction } from "$app/forms"
+  import posthog from "posthog-js"
   import { page } from "$app/stores"
   import type { SubmitFunction } from "@sveltejs/kit"
 
@@ -34,6 +35,7 @@
     editButtonTitle?: string | null
     editLink?: string | null
     saveButtonTitle?: string
+    successEvent?: string
   }
 
   let {
@@ -48,6 +50,7 @@
     editButtonTitle = null,
     editLink = null,
     saveButtonTitle = "Save",
+    successEvent,
   }: Props = $props()
 
   const handleSubmit: SubmitFunction = () => {
@@ -57,6 +60,9 @@
       await applyAction(result)
       loading = false
       if (result.type === "success") {
+        if (successEvent) {
+          posthog.capture(successEvent)
+        }
         showSuccess = true
       }
     }
