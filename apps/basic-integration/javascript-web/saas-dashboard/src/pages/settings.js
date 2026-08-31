@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
+import { captureEvent } from '../posthog.js';
 
 export async function renderSettings() {
   renderShell('settings');
@@ -83,16 +84,25 @@ export async function renderSettings() {
     // Theme
     document.getElementById('theme-select').addEventListener('change', async (e) => {
       await api.updateSettings({ theme: e.target.value });
+      captureEvent('theme_updated', { theme: e.target.value });
       document.body.dataset.theme = e.target.value;
     });
 
     // Notifications
     document.getElementById('email-notif').addEventListener('change', async (e) => {
       await api.updateSettings({ emailNotifications: e.target.checked });
+      captureEvent('notification_preference_updated', {
+        preference: 'email_notifications',
+        enabled: e.target.checked,
+      });
     });
 
     document.getElementById('weekly-digest').addEventListener('change', async (e) => {
       await api.updateSettings({ weeklyDigest: e.target.checked });
+      captureEvent('notification_preference_updated', {
+        preference: 'weekly_digest',
+        enabled: e.target.checked,
+      });
     });
 
     // Reset
@@ -100,6 +110,7 @@ export async function renderSettings() {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
         store.reset();
         store.login(user.email);
+        captureEvent('data_reset');
         renderSettings();
       }
     });

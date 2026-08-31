@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { router } from '../router.js';
 import { store } from '../store.js';
+import { captureEvent, resetUser } from '../posthog.js';
 
 /**
  * Renders the app shell: sidebar + header + content area.
@@ -54,6 +55,8 @@ export function renderShell(activeSection) {
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
     await api.logout();
+    captureEvent('user_signed_out');
+    resetUser();
     router.navigate('/login');
   });
 }
