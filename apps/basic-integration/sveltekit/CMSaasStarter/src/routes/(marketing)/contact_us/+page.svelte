@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance, applyAction } from "$app/forms"
+  import posthog from "posthog-js"
   import type { SubmitFunction } from "@sveltejs/kit"
   import type { FullAutoFill } from "svelte/elements"
 
@@ -61,6 +62,7 @@
       await applyAction(result)
       loading = false
       if (result.type === "success") {
+        posthog.capture("contact_request_submitted")
         showSuccess = true
       } else if (result.type === "failure") {
         errors = result.data?.errors ?? {}

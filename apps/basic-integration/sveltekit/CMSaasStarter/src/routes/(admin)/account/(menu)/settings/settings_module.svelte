@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance, applyAction } from "$app/forms"
+  import posthog from "posthog-js"
   import { page } from "$app/stores"
   import type { SubmitFunction } from "@sveltejs/kit"
 
@@ -50,6 +51,14 @@
     saveButtonTitle = "Save",
   }: Props = $props()
 
+  const eventForFormTarget: Record<string, string> = {
+    "/account/api?/updateProfile": "profile_updated",
+    "/account/api?/updateEmail": "email_change_requested",
+    "/account/api?/updatePassword": "password_changed",
+    "/account/api?/toggleEmailSubscription": "email_subscription_changed",
+    "/account/api?/deleteAccount": "account_deletion_requested",
+  }
+
   const handleSubmit: SubmitFunction = () => {
     loading = true
     return async ({ update, result }) => {
@@ -57,6 +66,10 @@
       await applyAction(result)
       loading = false
       if (result.type === "success") {
+        const event = eventForFormTarget[formTarget]
+        if (event) {
+          posthog.capture(event)
+        }
         showSuccess = true
       }
     }
