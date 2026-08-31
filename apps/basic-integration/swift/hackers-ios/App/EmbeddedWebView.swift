@@ -7,6 +7,7 @@
 
 import Combine
 import Foundation
+import PostHog
 import Shared
 import SwiftUI
 import WebKit
@@ -74,6 +75,7 @@ struct EmbeddedWebView: View {
         Button {
             Task { @MainActor in
                 let targetURL = model.currentURL ?? url
+                PostHogSDK.shared.capture("external_link_shared", properties: ["link_host": targetURL.host ?? "unknown"])
                 ContentSharePresenter.shared.shareURL(targetURL, title: model.currentTitle)
             }
         } label: {
@@ -86,6 +88,7 @@ struct EmbeddedWebView: View {
         Button {
             Task { @MainActor in
                 let targetURL = model.currentURL ?? url
+                PostHogSDK.shared.capture("external_link_opened_in_safari", properties: ["link_host": targetURL.host ?? "unknown"])
                 LinkOpener.openURL(targetURL)
             }
         } label: {

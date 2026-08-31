@@ -10,11 +10,12 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import Foundation
+import PostHog
 import Settings
 import Shared
 import SwiftUI
 import UIKit
-import Foundation
 
 @MainActor
 struct MainContentView: View {
@@ -81,8 +82,10 @@ struct MainContentView: View {
                                 currentUsername: sessionService.username,
                                 onLogin: { username, password in
                                     _ = try await sessionService.authenticate(username: username, password: password)
+                                    PostHogSDK.shared.capture("authentication_succeeded")
                                 },
                                 onLogout: {
+                                    PostHogSDK.shared.capture("logout_completed")
                                     sessionService.unauthenticate()
                                 },
                                 onShowOnboarding: {
@@ -103,8 +106,10 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    PostHogSDK.shared.capture("authentication_succeeded")
                 },
                 onLogout: {
+                    PostHogSDK.shared.capture("logout_completed")
                     sessionService.unauthenticate()
                 },
                 textSize: settingsViewModel.textSize
@@ -119,8 +124,10 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    PostHogSDK.shared.capture("authentication_succeeded")
                 },
                 onLogout: {
+                    PostHogSDK.shared.capture("logout_completed")
                     sessionService.unauthenticate()
                 },
                 onShowOnboarding: {
