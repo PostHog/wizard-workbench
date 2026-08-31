@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -6,11 +7,14 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
-
 import type { Route } from "./+types/root";
 import "./app.css";
 import { CartProvider } from "./context/CartContext";
 import Navbar from "./components/Navbar";
+import {
+  capturePostHogException,
+  initializePostHog,
+} from "./posthog.client";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -44,6 +48,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    void initializePostHog();
+  }, []);
+
   return (
     <CartProvider>
       <div className="min-h-screen bg-gray-50">
@@ -55,6 +63,12 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  useEffect(() => {
+    if (error instanceof Error) {
+      void capturePostHogException(error);
+    }
+  }, [error]);
+
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
