@@ -12,6 +12,11 @@ class Cards::CommentsController < ApplicationController
   def create
     @comment = @card.comments.create!(comment_params)
 
+    capture_posthog_event(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_comment_created"
+    )
+
     respond_to do |format|
       format.turbo_stream
       format.json { head :created, location: card_comment_path(@card, @comment, format: :json) }
@@ -35,6 +40,11 @@ class Cards::CommentsController < ApplicationController
 
   def destroy
     @comment.destroy
+
+    capture_posthog_event(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_comment_deleted"
+    )
 
     respond_to do |format|
       format.turbo_stream

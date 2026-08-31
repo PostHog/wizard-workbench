@@ -14,11 +14,25 @@ class CardsController < ApplicationController
     respond_to do |format|
       format.html do
         card = Current.user.draft_new_card_in(@board)
+
+        capture_posthog_event(
+          distinct_id: Current.user.posthog_distinct_id,
+          event: "card_created",
+          properties: { creation_method: "draft" }
+        )
+
         redirect_to card_draft_path(card)
       end
 
       format.json do
         card = @board.cards.create! card_params.merge(creator: Current.user, status: "published")
+
+        capture_posthog_event(
+          distinct_id: Current.user.posthog_distinct_id,
+          event: "card_created",
+          properties: { creation_method: "api" }
+        )
+
         head :created, location: card_path(card, format: :json)
       end
     end
@@ -33,6 +47,11 @@ class CardsController < ApplicationController
   def update
     @card.update! card_params
 
+    capture_posthog_event(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_updated"
+    )
+
     respond_to do |format|
       format.turbo_stream
       format.json { render :show }
@@ -41,6 +60,11 @@ class CardsController < ApplicationController
 
   def destroy
     @card.destroy!
+
+    capture_posthog_event(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_deleted"
+    )
 
     respond_to do |format|
       format.html { redirect_to @card.board, notice: "Card deleted" }

@@ -13,7 +13,7 @@ class Account::ImportsController < ApplicationController
     signup = Signup.new(identity: Current.identity, full_name: "Import", skip_account_seeding: true)
 
     if signup.complete
-      start_import(signup.account)
+      start_import(signup.account, signup.user)
     else
       render :new, alert: "Couldn't create account."
     end
@@ -31,12 +31,17 @@ class Account::ImportsController < ApplicationController
       head :forbidden unless @import.identity == Current.identity
     end
 
-    def start_import(account)
+    def start_import(account, user)
       import = nil
 
       Current.set(account: account) do
         import = account.imports.create!(identity: Current.identity, file: params[:file])
         import.process_later
+
+        capture_posthog_event(
+          distinct_id: user.posthog_distinct_id,
+          event: "account_import_started"
+        )
       end
 
       redirect_to account_import_path(import, script_name: account.slug)
