@@ -3,6 +3,7 @@ import type { Image } from '~/types'
 
 const images = ref<Image[] | null>(null)
 const index = ref(0)
+const { $posthog } = useNuxtApp()
 
 const current = computed(() => images.value?.[index.value])
 
@@ -15,12 +16,18 @@ function prev() {
   if (!images.value)
     return
   index.value = (index.value - 1 + images.value.length) % images.value.length
+  $posthog?.capture('image_gallery_navigated', {
+    direction: 'previous',
+  })
 }
 
 function next() {
   if (!images.value)
     return
   index.value = (index.value + 1) % images.value.length
+  $posthog?.capture('image_gallery_navigated', {
+    direction: 'next',
+  })
 }
 
 useEventListener('keydown', (e) => {
