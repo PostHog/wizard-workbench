@@ -1,0 +1,51 @@
+# Typecheck and unit tests on every pull request.
+#
+# `wizard-ci.yml` runs the stub's tests too, but only on its weekly schedule. A
+# regression test that runs once a week does not stop a regression from being
+# merged, and the MCP handshake outage this repo just fixed is exactly the kind
+# these catch. They take about a minute in total, so they run per PR.
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: ./node_modules/.bin/tsc --noEmit
+
+      # Includes the two cases that drive an MCP client from a child process of
+      # the stub's host — the pair that catches a runner which stops serving.
+      - name: Test the MCP stub
+        run: pnpm test:mcp-stub
+
+      - name: Test the warehouse checks
+        run: pnpm test:warehouse-checks
+
+      - name: Test the PR evaluator
+        run: pnpm test:evaluator
