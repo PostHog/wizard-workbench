@@ -1,6 +1,7 @@
 import { Component, inject, ChangeDetectionStrategy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ThemeService } from '@app/shell/services/theme.service';
+import { PosthogService } from '@core/services';
 import { HotToastService } from '@ngxpert/hot-toast';
 
 interface Preferences {
@@ -213,6 +214,7 @@ interface Preferences {
 })
 export class PreferencesSettingsComponent {
   private readonly themeService = inject(ThemeService);
+  private readonly posthogService = inject(PosthogService);
   private readonly toast = inject(HotToastService);
 
   readonly preferences = signal<Preferences>({
@@ -244,6 +246,7 @@ export class PreferencesSettingsComponent {
   }
 
   savePreferences() {
+    this.posthogService.client.capture('preferences_saved');
     this.toast.success('Preferences saved');
   }
 }
