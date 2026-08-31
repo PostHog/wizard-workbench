@@ -8,6 +8,8 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.database import init_db
+from app.middleware import PostHogMiddleware
+from app.posthog import get_posthog_client, initialize_posthog
 from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
 
 settings = get_settings()
@@ -17,10 +19,13 @@ templates = Jinja2Templates(directory="app/templates")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events for startup/shutdown."""
-    # Initialize database
+    posthog_client = initialize_posthog(settings)
     init_db()
 
     yield
+
+    if posthog_client:
+        posthog_client.flush()
 
 
 app = FastAPI(
@@ -28,6 +33,7 @@ app = FastAPI(
     description="AI content generation platform",
     lifespan=lifespan,
 )
+app.add_middleware(PostHogMiddleware)
 
 # Include routers
 app.include_router(auth.router)
@@ -48,7 +54,11 @@ async def not_found_handler(request: Request, exc):
 
 @app.exception_handler(500)
 async def internal_error_handler(request: Request, exc):
-    """Handle 500 errors."""
+    """Capture and handle unhandled server errors."""
+    posthog_client = get_posthog_client()
+    if posthog_client:
+        posthog_client.capture_exception(exc)
+
     if request.url.path.startswith("/api/"):
         return JSONResponse({"error": "Internal server error"}, status_code=500)
     return templates.TemplateResponse(request, "500.html", status_code=500)
