@@ -29,3 +29,19 @@ class User(AbstractUser):
 
     def is_email_verified(self):
         return self.email_verified_at is not None
+
+
+def identify_posthog_user(sender, request, user, **kwargs):
+    """Identify the ambient PostHog context after login or registration."""
+    from marketing.apps import posthog_client
+
+    user_id = str(user.pk)
+    posthog_client.identify_context(user_id)
+    posthog_client.set(
+        distinct_id=user_id,
+        properties={
+            'email': user.email,
+            'name': user.get_full_name() or user.username,
+            'company_name': user.company_name,
+        },
+    )
