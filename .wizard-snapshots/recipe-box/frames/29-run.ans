@@ -1,0 +1,49 @@
+                              [0m[38;5;58;48;5;178m PostHog Wizard v2.71.0                                                                    Feedback: wizard@posthog.com [0m                              
+                                                                                                                                                                                    
+                                [0m[1;38;5;178mTips[0m                                                       [0m[1mTasks[0m                                                                                    
+                                                                                                                                                                                    
+                                [0m[38;5;178m◆ [0m[1mSignal source[0m                                            [0m[38;5;2m◼[0m Analyze project                                                                        
+                                [0m[2mA stream PostHog watches: errors, replays, support, [0m       [0m[38;5;2m◼[0m Install SDK                                                                            
+                                [0m[2mGitHub or Linear issues.[0m                                   [0m[38;5;2m◼[0m Configure PostHog module                                                               
+                                                                                           [0m[38;5;2m◼[0m Set env vars                                                                           
+                                [0m[38;5;178m◆ [0m[1mScout[0m                                                    [0m[38;5;2m◼[0m Instrument events                                                                      
+                                [0m[2mAn agent on a schedule, watching your sources for [0m         [0m[38;5;2m◼[0m Verify integration                                                                     
+                                [0m[2manomalies and patterns. Your project gets up to 100 [0m       [0m[38;5;2m◼[0m Create dashboard                                                                       
+                                [0m[2mscout runs a day by default.[0m                                                                                                                        
+                                                                                           [0m[38;5;4m⠋[0m [0m[2mCleaning up...[0m                                                                         
+                                [0m[38;5;178m◆ [0m[1mScanner[0m                                                                                                                                           
+                                [0m[2mWhere a scout reads your data, a scanner watches session[0m                                                                                            
+                                [0m[2m recordings — an LLM spotting what broke on screen. It [0m                                                                                             
+                                [0m[2mspends Replay Vision quota, so it stays scoped to your [0m                                                                                             
+                                [0m[2mkey flows.[0m                                                                                                                                          
+                                                                                                                                                                                    
+                                [0m[38;5;178m◆ [0m[1mSignal → report[0m                                                                                                                                   
+                                [0m[2mOne finding with evidence and a suggested action. [0m                                                                                                  
+                                [0m[2mSignals group into prioritized reports in your inbox.[0m                                                                                               
+                                                                                                                                                                                    
+                                [0m[38;5;178m◆ [0m[1mThe loop[0m                                                                                                                                          
+                                [0m[2mAfter a fix ships, PostHog measures the result. If the [0m                                                                                             
+                                [0m[2mpattern persists, a new signal reopens the work.[0m                                                                                                    
+                                                                                                                                                                                    
+                                [0m[38;5;178m◆ [0m[1mWhat it costs[0m                                                                                                                                     
+                                [0m[2mA report that ships a pull request costs a flat $15. [0m                                                                                               
+                                [0m[2mEverything else follows your usual PostHog usage-based [0m                                                                                             
+                                [0m[2mpricing. A paid plan has no monthly cap until you set [0m                                                                                              
+                                [0m[2mone. Add a PR limit in your inbox sidebar, and agents [0m                                                                                              
+                                [0m[2mpause when they hit it.[0m                                                                                                                             
+                                                                                                                                                                                    
+                                [0m[38;5;178m◆ [0m[1mWork anywhere[0m                                                                                                                                     
+                                [0m[2mYour inbox is in the PostHog app, Slack (tag @PostHog), [0m                                                                                            
+                                [0m[2mand MCP. You can work from anywhere.[0m                                                                                                                
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                               [0m[38;5;8m──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m                               
+                                [0m[2;38;5;8m┊ Adding build approval to pnpm lockfile settings[0m                                                                                                   
+                                [0m[38;5;8m◆ Trying fresh install approach to run build scripts[0m                                                                                                
+                                                                                                                                                                                    
+                                [0m[1;7;38;5;178m Status [0m [0m[38;5;8m Tail logs [0m [0m[38;5;8m Visualizer [0m [0m[38;5;8m HN [0m                                                                                                              
+                                                                                                                                                                                    
+                                [0m[1;38;5;8m←→[0m[2m switch tab[0m  [0m[1;38;5;8ms[0m[2m toggle status[0m                                                                                                                      
