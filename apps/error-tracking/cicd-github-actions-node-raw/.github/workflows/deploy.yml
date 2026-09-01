@@ -1,0 +1,63 @@
+name: Deploy
+
+# Deploy pipeline: no Docker. The app is built directly on the GitHub Actions
+# runner, the built output is copied to the server, and the app is restarted
+# over SSH — the server itself never builds anything.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build on the runner, deploy over SSH
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Copy the built app to the server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: 'dist/*,package.json,package-lock.json'
+          target: /srv/cicd-github-actions-node-raw
+
+      - name: Restart the app on the server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /srv/cicd-github-actions-node-raw
+            npm ci --omit=dev
+
+            # Replace the running instance with the freshly copied build.
+            pkill -f "node dist/index.js" || true
+            POSTHOG_KEY="${{ secrets.POSTHOG_KEY }}" \
+            POSTHOG_HOST="${{ secrets.POSTHOG_HOST }}" \
+              nohup node dist/index.js > app.log 2>&1 &
