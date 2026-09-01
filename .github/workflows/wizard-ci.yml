@@ -562,6 +562,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Expo react-native apps live outside the pnpm workspace, so the root
+      # install above never installs their dependencies — including the local
+      # Expo CLI the wizard shells out to. Install them in-app for just the
+      # Expo matrix jobs so the Expo environment is available on ubuntu.
+      - name: Install Expo app dependencies
+        if: contains(matrix.app, 'react-native/expo')
+        run: npm ci
+        working-directory: apps/${{ matrix.app }}
+
       - name: Install GitHub CLI
         run: |
           if command -v gh > /dev/null 2>&1; then
