@@ -71,6 +71,67 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function paletteCss(n: number): string {
+  const BASIC = [
+    "#000000", "#cd3131", "#0dbc79", "#e5e510", "#2472c8", "#bc3fbc",
+    "#11a8cd", "#e5e5e5", "#666666", "#f14c4c", "#23d18b", "#f5f543",
+    "#3b8eea", "#d670d6", "#29b8db", "#ffffff",
+  ];
+  if (n < 16) return BASIC[n];
+  if (n < 232) {
+    const i = n - 16;
+    const step = (v: number) => (v === 0 ? 0 : 55 + v * 40);
+    return `rgb(${step(Math.floor(i / 36))},${step(Math.floor(i / 6) % 6)},${step(i % 6)})`;
+  }
+  const g = 8 + (n - 232) * 10;
+  return `rgb(${g},${g},${g})`;
+}
+
+function ansiToHtml(s: string): string {
+  let out = "";
+  let open = false;
+  let last = 0;
+  const SGR = /\x1b\[([0-9;]*)m/g;
+  const close = () => {
+    if (open) out += "</span>";
+    open = false;
+  };
+  for (let m = SGR.exec(s); m; m = SGR.exec(s)) {
+    out += escapeHtml(s.slice(last, m.index));
+    last = m.index + m[0].length;
+    close();
+    const codes = m[1].split(";").filter(Boolean).map(Number);
+    if (!codes.length) continue;
+    const style: string[] = [];
+    for (let i = 0; i < codes.length; i++) {
+      const c = codes[i];
+      if (c === 1) style.push("font-weight:bold");
+      else if (c === 2) style.push("opacity:.6");
+      else if (c === 3) style.push("font-style:italic");
+      else if (c === 4) style.push("text-decoration:underline");
+      else if (c === 8) style.push("visibility:hidden");
+      else if (c === 9) style.push("text-decoration:line-through");
+      else if (c === 38 || c === 48) {
+        const prop = c === 38 ? "color" : "background";
+        if (codes[i + 1] === 5) {
+          style.push(`${prop}:${paletteCss(codes[i + 2])}`);
+          i += 2;
+        } else if (codes[i + 1] === 2) {
+          style.push(`${prop}:rgb(${codes[i + 2]},${codes[i + 3]},${codes[i + 4]})`);
+          i += 4;
+        }
+      }
+    }
+    if (style.length) {
+      out += `<span style="${style.join(";")}">`;
+      open = true;
+    }
+  }
+  out += escapeHtml(s.slice(last));
+  close();
+  return out;
+}
+
 function reportHtml(
   name: string,
   frames: Frame[],
@@ -81,7 +142,7 @@ function reportHtml(
       (f) => `
     <section class="row" data-frame="${f.file}">
       <h2>${f.file} <span class="t">(${fmtElapsed(timings[f.file] ?? 0)})</span></h2>
-      <pre>${escapeHtml(f.text)}</pre>
+      <pre>${ansiToHtml(f.text)}</pre>
     </section>`,
     )
     .join("");
@@ -112,6 +173,8 @@ async function main(): Promise<number> {
   // self-driving/<app>` drives self-driving without passing the flag.
   const programIdx = args.indexOf("--program");
   const explicitProgram = programIdx !== -1 ? args[programIdx + 1] : undefined;
+
+  const renderOnly = args.includes("--render-only");
 
   // Resolve which app(s) to snapshot:
   //  - explicit positional <app>           → that app
@@ -147,7 +210,7 @@ async function main(): Promise<number> {
     // A non-zero run (e.g. self-driving aborting at GitHub-connect) is still
     // worth a report — render whatever frames were captured, and reflect the
     // failure in the exit code rather than bailing before the report.
-    const code = runE2e({ app: def.app, projectId, program });
+    const code = renderOnly ? 0 : runE2e({ app: def.app, projectId, program });
     if (code !== 0) {
       console.error(`✖ e2e run failed for ${def.name} (exit ${code}) — rendering captured frames anyway`);
       failed = true;

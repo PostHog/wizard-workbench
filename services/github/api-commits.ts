@@ -192,12 +192,16 @@ export async function createSignedCommit(opts: ApiCommitOptions): Promise<ApiCom
   const octokit = new Octokit({ auth: token });
 
   // 1. Create the remote branch ref pointing at baseSha.
-  await octokit.rest.git.createRef({
-    owner: repoOwner,
-    repo: repoName,
-    ref: `refs/heads/${branch}`,
-    sha: baseSha,
-  });
+  try {
+    await octokit.rest.git.createRef({
+      owner: repoOwner,
+      repo: repoName,
+      ref: `refs/heads/${branch}`,
+      sha: baseSha,
+    });
+  } catch (e) {
+    if (!String(e).includes("Reference already exists")) throw e;
+  }
 
   // 2. Create the signed commit on that branch.
   const response = await octokit.graphql<CreateCommitResponse>(CREATE_COMMIT_MUTATION, {

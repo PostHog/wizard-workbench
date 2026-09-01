@@ -100,7 +100,8 @@ async function main(): Promise<number> {
   const reportDir = reportDirFor(app);
 
   // 1. a real run → report.html (the current real-TUI frames).
-  run("npx", ["tsx", "services/wizard-ci/snapshots.ts", app]);
+  const renderArgs = args.includes("--render-only") ? ["--render-only"] : [];
+  run("npx", ["tsx", "services/wizard-ci/snapshots.ts", app, ...renderArgs]);
   const report = join(reportDir, "report.html");
   if (!existsSync(report)) {
     console.error(`✖ no report at ${report}`);
@@ -164,7 +165,7 @@ async function main(): Promise<number> {
   const baseSha = git("rev-parse HEAD", repoRoot);
   console.log(`Opening snapshots-review PR on branch ${branch}…`);
   try {
-    const r = (await commitAndCreatePR({
+    const r = await commitAndCreatePR({
       repoOwner,
       repoName,
       repoRoot,
@@ -177,8 +178,12 @@ async function main(): Promise<number> {
       body,
       draft: false,
       token,
-    })) as { prUrl?: string };
-    console.log(`✓ review PR: ${r.prUrl ?? "(created)"}`);
+    });
+    if (!r.success) {
+      console.error(`✖ ${r.error ?? "review PR not created"}`);
+      return 1;
+    }
+    console.log(`✓ review PR: ${r.prUrl}`);
 
     // When triggered by a /wizard-ci PR comment, report back on that PR with a
     // link to the full review.

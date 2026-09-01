@@ -184,7 +184,7 @@ export function runE2e(opts: E2eOptions): number {
         ["full interactive flow reached keep-skills", !!result?.screenPath?.includes("keep-skills")],
         ["skillsComplete", result?.skillsComplete === true],
       ]
-    : [["reached the outro", !!result?.screenPath?.includes("outro")]];
+    : [["reached the outro", !!result?.screenPath?.some((s) => s.endsWith("outro"))]];
   const checks: Array<[string, boolean]> = result
     ? [
         ["agent run completed", result.runPhase === "completed"],
