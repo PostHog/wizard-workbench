@@ -22,5 +22,6 @@
     ? "You have been re-subscribed to emails"
     : "You have been unsubscribed from emails"}
   formTarget="/account/api?/toggleEmailSubscription"
+  analyticsEvent="email_subscription_changed"
   fields={[]}
 />

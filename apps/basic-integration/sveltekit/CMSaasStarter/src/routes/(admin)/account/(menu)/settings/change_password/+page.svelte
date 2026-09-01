@@ -2,6 +2,7 @@
   import { page } from "$app/stores"
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
+  import posthog from "posthog-js"
   import SettingsModule from "../settings_module.svelte"
 
   let adminSection: Writable<string> = getContext("adminSection")
@@ -36,6 +37,9 @@
         })
         .then((d) => {
           sentEmail = d.error ? false : true
+          if (!d.error) {
+            posthog.capture("password_reset_requested")
+          }
           sendBtnDisabled = false
           sendBtnText = "Send Forgot Password Email"
         })
@@ -57,6 +61,7 @@
     successTitle="Password Changed"
     successBody="On next sign in, use your new password."
     formTarget="/account/api?/updatePassword"
+    analyticsEvent="password_changed"
     fields={[
       {
         id: "newPassword1",

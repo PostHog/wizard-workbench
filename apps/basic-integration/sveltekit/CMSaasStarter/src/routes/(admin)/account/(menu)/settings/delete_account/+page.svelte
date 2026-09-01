@@ -26,6 +26,7 @@
   successTitle="Account queued for deletion"
   successBody="Your account will be deleted shortly."
   formTarget="/account/api?/deleteAccount"
+  analyticsEvent="account_deletion_requested"
   fields={[
     {
       id: "currentPassword",
