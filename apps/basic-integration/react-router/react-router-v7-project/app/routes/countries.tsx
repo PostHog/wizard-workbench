@@ -4,6 +4,20 @@ import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
 
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+);
+
+async function captureCountryAction(
+  event: "country_claimed" | "country_liked" | "country_visited",
+  properties: Record<string, string | number>,
+): Promise<void> {
+  if (!isPostHogConfigured) return;
+
+  const { default: posthog } = await import("posthog-js");
+  posthog.capture(event, properties);
+}
+
 export async function clientLoader() {
   try {
     // REST Countries API v3.1 requires fields parameter
@@ -136,8 +150,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
-                        claimCountry(countryName);
+                      onClick={async () => {
+                        if (!isClaimed) {
+                          claimCountry(countryName);
+                          await captureCountryAction("country_claimed", {
+                            country_name: countryName,
+                            region: country.region,
+                            claimed_country_count: user.claimedCountries.length + 1,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -149,8 +170,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
-                        likeCountry(countryName);
+                      onClick={async () => {
+                        if (!isLiked) {
+                          likeCountry(countryName);
+                          await captureCountryAction("country_liked", {
+                            country_name: countryName,
+                            region: country.region,
+                            liked_country_count: user.likedCountries.length + 1,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -162,8 +190,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
-                        visitCountry(countryName);
+                      onClick={async () => {
+                        if (!user.visitedCountries.includes(countryName)) {
+                          visitCountry(countryName);
+                          await captureCountryAction("country_visited", {
+                            country_name: countryName,
+                            region: country.region,
+                            visited_country_count: user.visitedCountries.length + 1,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"

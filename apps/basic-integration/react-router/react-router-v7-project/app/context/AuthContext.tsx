@@ -2,6 +2,46 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
 
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+)
+
+async function identifyUser(user: FakeUser): Promise<void> {
+  if (!isPostHogConfigured || !user.id) return
+
+  const { default: posthog } = await import('posthog-js')
+  posthog.identify(user.id, {
+    email: user.email,
+    name: user.username,
+  })
+}
+
+async function resetPostHog(): Promise<void> {
+  if (!isPostHogConfigured) return
+
+  const { default: posthog } = await import('posthog-js')
+  posthog.reset()
+}
+
+async function identifyAndCaptureUser(user: FakeUser, event: 'login_completed' | 'signup_completed'): Promise<void> {
+  if (!isPostHogConfigured || !user.id) return
+
+  const { default: posthog } = await import('posthog-js')
+  posthog.identify(user.id, {
+    email: user.email,
+    name: user.username,
+  })
+  posthog.capture(event)
+}
+
+async function captureLogout(): Promise<void> {
+  if (!isPostHogConfigured) return
+
+  const { default: posthog } = await import('posthog-js')
+  posthog.capture('logout_completed')
+  posthog.reset()
+}
+
 interface AuthContextType {
   user: FakeUser | null
   login: (username: string, password: string) => boolean
@@ -18,11 +58,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
+
+    if (currentUser) {
+      void identifyUser(currentUser)
+    }
   }, [])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      if (user && user.id !== loggedInUser.id) {
+        void resetPostHog().then(() => identifyAndCaptureUser(loggedInUser, 'login_completed'))
+      } else {
+        void identifyAndCaptureUser(loggedInUser, 'login_completed')
+      }
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      if (user && user.id !== newUser.id) {
+        void resetPostHog().then(() => identifyAndCaptureUser(newUser, 'signup_completed'))
+      } else {
+        void identifyAndCaptureUser(newUser, 'signup_completed')
+      }
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    void captureLogout()
     fakeLogout()
     setUser(null)
   }
