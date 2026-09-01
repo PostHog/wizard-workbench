@@ -20,6 +20,7 @@
 		24F39F8B18AFB1150055F8DC /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 24F39F8A18AFB1150055F8DC /* CoreGraphics.framework */; };
 		24F39F8D18AFB1150055F8DC /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 24F39F8C18AFB1150055F8DC /* UIKit.framework */; };
 		DA78360FD99A4A1D9C1E759C /* Authentication in Frameworks */ = {isa = PBXBuildFile; productRef = B2F5BEA03AC34B9DB788D8E2 /* Authentication */; };
+		A1B2C3D4E5F60708090A0B0C /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = A1B2C3D4E5F60708090A0B0D /* PostHog */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +48,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1B2C3D4E5F60708090A0B0F /* .env */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = .env; sourceTree = "<group>"; };
 		241387A51945A6E100D71220 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		2419D02024898DF700740184 /* HackersActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HackersActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		24F39F8518AFB1150055F8DC /* Hackers.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hackers.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -102,6 +104,7 @@
 				2406B38728AD083500CB396B /* SwiftSoup in Frameworks */,
 				241E7B412E511BC20013EEA1 /* Data in Frameworks */,
 				248256FB2E59D2540068E91E /* Networking in Frameworks */,
+				A1B2C3D4E5F60708090A0B0C /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -111,6 +114,7 @@
 		24F39F7C18AFB1150055F8DC = {
 			isa = PBXGroup;
 			children = (
+				A1B2C3D4E5F60708090A0B0F /* .env */,
 				241E7A262E4CB2830013EEA1 /* App */,
 				241E7A5C2E4CB28F0013EEA1 /* Extensions */,
 				2432F7502E7C2F5200BA0D54 /* Assets */,
@@ -192,6 +196,7 @@
 				248256FD2E59D2660068E91E /* Feed */,
 				2482576D2E5B38190068E91E /* Onboarding */,
 				B2F5BEA03AC34B9DB788D8E2 /* Authentication */,
+				A1B2C3D4E5F60708090A0B0D /* PostHog */,
 			);
 			productName = Hackers2;
 			productReference = 24F39F8518AFB1150055F8DC /* Hackers.app */;
@@ -237,6 +242,7 @@
 				248256FC2E59D2660068E91E /* XCLocalSwiftPackageReference "Features/Feed" */,
 				2482576C2E5B38190068E91E /* XCLocalSwiftPackageReference "Features/Onboarding" */,
 				52A3FC99203E47A9B5690643 /* XCLocalSwiftPackageReference "Features/Authentication" */,
+				A1B2C3D4E5F60708090A0B0E /* XCRemoteSwiftPackageReference "PostHog" */,
 			);
 			productRefGroup = 24F39F8618AFB1150055F8DC /* Products */;
 			projectDirPath = "";
@@ -492,6 +498,7 @@
 		};
 		24F39FB218AFB1150055F8DC /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1B2C3D4E5F60708090A0B0F /* .env */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon";
 				CLANG_ENABLE_MODULES = YES;
@@ -504,6 +511,8 @@
 				GCC_PREFIX_HEADER = "App/Supporting Files/Hackers2-Prefix.pch";
 				INFOPLIST_FILE = "App/Supporting Files/Hackers-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.news";
+				INFOPLIST_KEY_POSTHOG_HOST = "$(POSTHOG_HOST)";
+				INFOPLIST_KEY_POSTHOG_PROJECT_TOKEN = "$(POSTHOG_PROJECT_TOKEN)";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -523,6 +532,7 @@
 		};
 		24F39FB318AFB1150055F8DC /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1B2C3D4E5F60708090A0B0F /* .env */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon";
 				CLANG_ENABLE_MODULES = YES;
@@ -535,6 +545,8 @@
 				GCC_PREFIX_HEADER = "App/Supporting Files/Hackers2-Prefix.pch";
 				INFOPLIST_FILE = "App/Supporting Files/Hackers-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.news";
+				INFOPLIST_KEY_POSTHOG_HOST = "$(POSTHOG_HOST)";
+				INFOPLIST_KEY_POSTHOG_PROJECT_TOKEN = "$(POSTHOG_PROJECT_TOKEN)";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -631,6 +643,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		A1B2C3D4E5F60708090A0B0E /* XCRemoteSwiftPackageReference "PostHog" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.59.3;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -670,6 +690,11 @@
 		B2F5BEA03AC34B9DB788D8E2 /* Authentication */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Authentication;
+		};
+		A1B2C3D4E5F60708090A0B0D /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1B2C3D4E5F60708090A0B0E /* XCRemoteSwiftPackageReference "PostHog" */;
+			productName = PostHog;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
