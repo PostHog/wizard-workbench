@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
+import posthog from 'posthog-js'
 
 const username = ref('')
 const password = ref('')
@@ -14,6 +15,9 @@ const handleLogin = async () => {
 
   try {
     await login(username.value, password.value)
+    if (import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST) {
+      posthog.capture('user_signed_in')
+    }
   } catch (e: any) {
     error.value = e.message || 'Login failed'
   } finally {

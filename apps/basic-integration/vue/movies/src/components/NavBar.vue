@@ -2,12 +2,16 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
+import posthog from 'posthog-js'
 
 const route = useRoute()
 const router = useRouter()
 const { user, logout } = useAuth()
 
 const handleLogout = async () => {
+  if (import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST) {
+    posthog.capture('user_signed_out')
+  }
   await logout()
 }
 
