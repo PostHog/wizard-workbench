@@ -22,6 +22,7 @@ import {
 } from "~/components/ui/sidebar";
 import type { Tier } from "~/features/billing/billing-constants";
 import type { Organization } from "~/generated/browser";
+import { posthog } from "~/lib/posthog.client";
 
 type OrganizationSwitcherOrganization = {
   id: Organization["id"];
@@ -108,7 +109,16 @@ export function OrganizationSwitcher({
               </DropdownMenuLabel>
 
               {organizations.map((organization) => (
-                <Form key={organization.id} method="POST" replace>
+                <Form
+                  key={organization.id}
+                  method="POST"
+                  onSubmit={() => {
+                    posthog.capture("organization_switched", {
+                      organization_id: organization.id,
+                    });
+                  }}
+                  replace
+                >
                   <DropdownMenuItem
                     className="w-full gap-2 p-2"
                     render={

@@ -29,6 +29,7 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { posthog } from "~/lib/posthog.client";
 
 export type CancelOrModifySubscriptionModalContentProps = {
   canCancelSubscription: boolean;
@@ -119,7 +120,20 @@ export function CancelOrModifySubscriptionModalContent({
 
   return (
     <>
-      <Form method="post" replace>
+      <Form
+        method="post"
+        onSubmit={(event) => {
+          const submitter = event.nativeEvent.submitter;
+          const lookupKey =
+            submitter instanceof HTMLButtonElement
+              ? submitter.value
+              : undefined;
+          posthog.capture("subscription_change_requested", {
+            price_lookup_key: lookupKey,
+          });
+        }}
+        replace
+      >
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"
@@ -515,7 +529,10 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={(event) => {
+                  posthog.capture("subscription_cancellation_requested");
+                  onCancelSubscriptionClick?.(event);
+                }}
                 type="button"
                 variant="outline"
               >

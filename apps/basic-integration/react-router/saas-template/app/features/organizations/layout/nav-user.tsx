@@ -4,7 +4,7 @@ import {
   IconSelector,
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
-import { Form, href, Link } from "react-router";
+import { Form, href, Link, useSubmit } from "react-router";
 import { useHydrated } from "remix-utils/use-hydrated";
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
@@ -23,6 +23,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "~/components/ui/sidebar";
+import { posthog } from "~/lib/posthog.client";
 
 export type NavUserProps = {
   user: {
@@ -38,6 +39,13 @@ export function NavUser({ user }: NavUserProps) {
     keyPrefix: "layout.navUser",
   });
   const hydrated = useHydrated();
+  const submit = useSubmit();
+
+  const handleLogout = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    posthog.reset();
+    submit(event.currentTarget);
+  };
 
   return (
     <SidebarMenu>
@@ -115,7 +123,12 @@ export function NavUser({ user }: NavUserProps) {
 
             <DropdownMenuSeparator />
 
-            <Form action="/logout" method="post" replace>
+            <Form
+              action="/logout"
+              method="post"
+              onSubmit={handleLogout}
+              replace
+            >
               <DropdownMenuItem
                 render={
                   <button

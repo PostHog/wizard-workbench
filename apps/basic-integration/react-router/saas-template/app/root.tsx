@@ -218,10 +218,25 @@ function BaseErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   );
 }
 
+function CaptureRouteError({ error }: { error: Error }) {
+  useEffect(() => {
+    void import("./lib/posthog.client").then(({ posthog }) => {
+      posthog.captureException(error);
+    });
+  }, [error]);
+
+  return null;
+}
+
 export function ErrorBoundary({ error, ...props }: Route.ErrorBoundaryProps) {
   if (isRouteErrorResponse(error) && error.status === 404) {
     return <NotFound className="min-h-svh" />;
   }
 
-  return <BaseErrorBoundary error={error} {...props} />;
+  return (
+    <>
+      {error instanceof Error && <CaptureRouteError error={error} />}
+      <BaseErrorBoundary error={error} {...props} />
+    </>
+  );
 }
