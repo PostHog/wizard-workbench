@@ -63,3 +63,28 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.pricing-card .btn').forEach((cta) => {
+      cta.addEventListener('click', () => {
+        const plan = cta.closest('.pricing-card')?.querySelector('h3')?.textContent?.trim().toLowerCase();
+
+        if (plan === 'pro') {
+          window.posthog?.capture('free_trial_cta_clicked', {
+            location: 'pricing',
+            plan,
+          });
+        } else if (plan === 'starter') {
+          window.posthog?.capture('pricing_plan_cta_clicked', {
+            plan,
+          });
+        } else if (plan === 'enterprise') {
+          window.posthog?.capture('contact_sales_clicked', {
+            plan,
+          });
+        }
+      });
+    });
+  });
+</script>
