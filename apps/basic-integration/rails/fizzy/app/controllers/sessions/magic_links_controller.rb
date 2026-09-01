@@ -43,6 +43,14 @@ class Sessions::MagicLinksController < ApplicationController
     def sign_in(magic_link)
       clear_pending_authentication_token
       start_new_session_for magic_link.identity
+      unless magic_link.for_sign_up?
+        identify_identity
+        PostHog.capture(
+          distinct_id: Current.identity.id.to_s,
+          event: "user_signed_in",
+          properties: { authentication_method: "magic_link" }
+        )
+      end
 
       respond_to do |format|
         format.html { redirect_to after_sign_in_url(magic_link) }
@@ -85,5 +93,12 @@ class Sessions::MagicLinksController < ApplicationController
 
     def requires_signup_completion?(magic_link)
       magic_link.for_sign_up?
+    end
+
+    def identify_identity
+      PostHog.identify(
+        distinct_id: Current.identity.id.to_s,
+        properties: { email: Current.identity.email_address }
+      )
     end
 end
