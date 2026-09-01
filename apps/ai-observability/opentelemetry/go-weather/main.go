@@ -44,9 +44,10 @@ func (c *Conversation) Ask(ctx context.Context, client openai.Client, question s
 	c.messages = append(c.messages, openai.UserMessage(question))
 
 	response, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-		Model:    model,
-		Messages: c.messages,
-		Tools:    tools,
+		Model:             model,
+		Messages:          c.messages,
+		Tools:             tools,
+		ParallelToolCalls: openai.Bool(false),
 	})
 	if err != nil {
 		return "", err
@@ -71,9 +72,10 @@ func (c *Conversation) Ask(ctx context.Context, client openai.Client, question s
 	c.messages = append(c.messages, openai.ToolMessage(result, call.ID))
 
 	followup, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-		Model:    model,
-		Messages: c.messages,
-		Tools:    tools,
+		Model:             model,
+		Messages:          c.messages,
+		Tools:             tools,
+		ParallelToolCalls: openai.Bool(false),
 	})
 	if err != nil {
 		return "", err
