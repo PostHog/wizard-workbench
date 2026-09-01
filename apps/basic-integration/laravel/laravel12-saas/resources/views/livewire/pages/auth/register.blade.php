@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -31,6 +32,17 @@ new #[Layout('layouts.guest')] class extends Component
         event(new Registered($user = User::create($validated)));
 
         Auth::login($user);
+
+        $posthog = app(PostHogService::class);
+        $distinctId = (string) $user->getAuthIdentifier();
+
+        $posthog->identify($distinctId, [
+            'email' => $user->email,
+            'name' => $user->name,
+        ]);
+        $posthog->capture('user_signed_up', [
+            'signup_method' => 'form',
+        ], $distinctId);
 
         $this->redirect(route('dashboard', absolute: false), navigate: false);
     }
