@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -23,7 +24,7 @@ new class extends Component
     /**
      * Update the profile information for the currently authenticated user.
      */
-    public function updateProfileInformation(): void
+    public function updateProfileInformation(PostHogService $posthog): void
     {
         $user = Auth::user();
 
@@ -40,13 +41,19 @@ new class extends Component
 
         $user->save();
 
+        $posthog->identify((string) $user->getAuthIdentifier(), [
+            'email' => $user->email,
+            'name' => $user->name,
+        ]);
+        $posthog->capture((string) $user->getAuthIdentifier(), 'profile_updated');
+
         $this->dispatch('profile-updated', name: $user->name);
     }
 
     /**
      * Send an email verification notification to the current user.
      */
-    public function sendVerification(): void
+    public function sendVerification(PostHogService $posthog): void
     {
         $user = Auth::user();
 
@@ -57,6 +64,8 @@ new class extends Component
         }
 
         $user->sendEmailVerificationNotification();
+
+        $posthog->capture((string) $user->getAuthIdentifier(), 'verification_email_sent');
 
         Session::flash('status', 'verification-link-sent');
     }
