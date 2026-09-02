@@ -117,7 +117,15 @@ export default function RegisterRoute({
         </div>
 
         {/* Email Registration Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmit={() => {
+            void import("~/lib/posthog.client").then(({ default: posthog }) => {
+              posthog.capture("registration_submitted", { method: "email" });
+            });
+          }}
+          {...form.props}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -161,7 +169,14 @@ export default function RegisterRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Registration Form */}
-        <Form method="POST">
+        <Form
+          method="POST"
+          onSubmit={() => {
+            void import("~/lib/posthog.client").then(({ default: posthog }) => {
+              posthog.capture("registration_submitted", { method: "google" });
+            });
+          }}
+        >
           <Field>
             <Button
               name="intent"

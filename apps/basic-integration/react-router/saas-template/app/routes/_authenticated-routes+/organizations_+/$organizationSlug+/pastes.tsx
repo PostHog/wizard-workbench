@@ -246,7 +246,15 @@ export default function PastesRoute({ loaderData, params }: Route.ComponentProps
       {/* Create Paste Form */}
       <div id="create-paste" className="mt-8 rounded-lg border bg-card p-6">
         <h2 className="mb-4 text-xl font-semibold">Create New Paste</h2>
-        <Form method="post" className="space-y-4">
+        <Form
+          method="post"
+          className="space-y-4"
+          onSubmit={() => {
+            void import("~/lib/posthog.client").then(({ default: posthog }) => {
+              posthog.capture("paste_creation_submitted");
+            });
+          }}
+        >
           <input type="hidden" name="intent" value="create" />
           <div>
             <label htmlFor="title" className="mb-2 block text-sm font-medium">

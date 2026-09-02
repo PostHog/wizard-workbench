@@ -70,7 +70,15 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmit={() => {
+            void import("~/lib/posthog.client").then(({ default: posthog }) => {
+              posthog.capture("team_invite_submitted");
+            });
+          }}
+          {...form.props}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

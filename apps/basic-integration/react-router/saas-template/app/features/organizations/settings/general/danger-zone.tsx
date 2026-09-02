@@ -97,7 +97,15 @@ function DeleteOrganizationDialogComponent({
           <DialogDescription>{t("dialogDescription")}</DialogDescription>
         </DialogHeader>
 
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmit={() => {
+            void import("~/lib/posthog.client").then(({ default: posthog }) => {
+              posthog.capture("organization_deletion_submitted");
+            });
+          }}
+          {...form.props}
+        >
           <FieldSet disabled={isSubmitting}>
             <Field data-invalid={fields.confirmation.ariaInvalid}>
               <FieldLabel htmlFor={fields.confirmation.id}>

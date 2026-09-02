@@ -105,7 +105,17 @@ function DeleteAccountDialogComponent({
             {t("cancel")}
           </DialogClose>
 
-          <Form method="POST" replace>
+          <Form
+            method="POST"
+            onSubmit={() => {
+              void import("~/lib/posthog.client").then(
+                ({ default: posthog }) => {
+                  posthog.capture("user_account_deletion_submitted");
+                },
+              );
+            }}
+            replace
+          >
             <Button
               disabled={isDeletingAccount}
               name="intent"

@@ -1,7 +1,7 @@
 import "./app.css";
 
 import { FormOptionsProvider } from "@conform-to/react/future";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
 import {
@@ -31,6 +31,7 @@ import {
   i18nextMiddleware,
   localeCookie,
 } from "./features/localization/i18next-middleware.server";
+import { createSupabaseServerClient } from "./features/user-authentication/supabase.server";
 import { useToast } from "./hooks/use-toast";
 import { cn } from "./lib/utils";
 import { ClientHintCheck, getHints } from "./utils/client-hints";
@@ -66,17 +67,31 @@ export const shouldRevalidate = ({
 export const middleware = [securityMiddleware, i18nextMiddleware];
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const { colorScheme, honeypotInputProps, toastData } = await promiseHash({
-    colorScheme: getColorScheme(request),
-    honeypotInputProps: honeypot.getInputProps(),
-    toastData: getToast(request),
-  });
+  const { supabase } = createSupabaseServerClient({ request });
+  const { colorScheme, honeypotInputProps, toastData, userData } =
+    await promiseHash({
+      colorScheme: getColorScheme(request),
+      honeypotInputProps: honeypot.getInputProps(),
+      toastData: getToast(request),
+      userData: supabase.auth.getUser(),
+    });
+  const user = userData.data.user;
   const locale = getLocale(context);
   const i18next = getInstance(context);
   const title = i18next.t("appName");
   const { toast, headers: toastHeaders } = toastData;
   return data(
     {
+      authenticatedUser: user
+        ? {
+            email: user.email,
+            id: user.id,
+            name:
+              typeof user.user_metadata.full_name === "string"
+                ? user.user_metadata.full_name
+                : undefined,
+          }
+        : null,
       colorScheme,
       ENV: getEnv(),
       honeypotInputProps,
@@ -177,14 +192,43 @@ export function Layout({
   );
 }
 
-export default function App({ loaderData: { locale } }: Route.ComponentProps) {
+export default function App({ loaderData }: Route.ComponentProps) {
+  const { authenticatedUser, locale } = loaderData;
   const { i18n } = useTranslation();
+  const identifiedUserId = useRef<string | null>(null);
+  const hasProcessedIdentity = useRef(false);
 
   useEffect(() => {
     if (i18n.language !== locale) {
       i18n.changeLanguage(locale);
     }
   }, [i18n, locale]);
+
+  useEffect(() => {
+    void import("./lib/posthog.client").then(({ default: posthog }) => {
+      if (authenticatedUser) {
+        if (
+          identifiedUserId.current &&
+          identifiedUserId.current !== authenticatedUser.id
+        ) {
+          posthog.reset();
+        }
+
+        if (identifiedUserId.current !== authenticatedUser.id) {
+          posthog.identify(authenticatedUser.id, {
+            email: authenticatedUser.email,
+            ...(authenticatedUser.name && { name: authenticatedUser.name }),
+          });
+          identifiedUserId.current = authenticatedUser.id;
+        }
+      } else if (hasProcessedIdentity.current && identifiedUserId.current) {
+        posthog.reset();
+        identifiedUserId.current = null;
+      }
+
+      hasProcessedIdentity.current = true;
+    });
+  }, [authenticatedUser]);
 
   return <Outlet />;
 }
