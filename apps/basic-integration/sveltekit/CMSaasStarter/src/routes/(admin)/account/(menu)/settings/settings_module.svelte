@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance, applyAction } from "$app/forms"
+  import posthog from "posthog-js"
   import { page } from "$app/stores"
   import type { SubmitFunction } from "@sveltejs/kit"
 
@@ -57,6 +58,7 @@
       await applyAction(result)
       loading = false
       if (result.type === "success") {
+        posthog.capture("account_settings_updated", { setting: title })
         showSuccess = true
       }
     }
