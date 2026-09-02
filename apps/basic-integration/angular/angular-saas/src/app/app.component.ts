@@ -6,8 +6,9 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AppUpdateService, Logger } from '@core/services';
+import { AppUpdateService, Logger, PostHogService } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
+import { AuthenticationService, CredentialsService } from '@app/auth';
 
 @Component({
   selector: 'app-root',
@@ -23,11 +24,42 @@ export class AppComponent implements OnInit {
   private readonly i18nService = inject(I18nService);
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly authenticationService = inject(AuthenticationService);
+  private readonly credentialsService = inject(CredentialsService);
   private readonly destroyRef = inject(DestroyRef);
 
   title = 'angular-boilerplate';
 
   ngOnInit() {
+    if (!environment.posthogKey) {
+      if (!environment.production) {
+        throw new Error(
+          'NG_APP_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once NG_APP_POSTHOG_PROJECT_TOKEN is configured',
+        );
+      }
+    } else if (!environment.posthogHost) {
+      if (!environment.production) {
+        throw new Error(
+          'NG_APP_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once NG_APP_POSTHOG_HOST is configured',
+        );
+      }
+    } else {
+      this.posthogService.init(environment.posthogKey, {
+        api_host: environment.posthogHost,
+        capture_exceptions: {
+          capture_unhandled_errors: true,
+          capture_unhandled_rejections: true,
+          capture_console_errors: false,
+        },
+      });
+
+      const credentials = this.credentialsService.credentials();
+      if (credentials) {
+        this.authenticationService.identifyUser(credentials);
+      }
+    }
+
     // Setup logger
     if (environment.production) {
       Logger.enableProductionMode();
