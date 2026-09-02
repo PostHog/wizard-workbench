@@ -9,7 +9,9 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.0"
+    "@anthropic-ai/sdk": "^0.32.0",
+    "@posthog/ai": "^7.21.0",
+    "posthog-node": "^5.51.6"
   },
   "devDependencies": {
     "tsx": "^4.19.2",
