@@ -18,7 +18,7 @@ const weatherTool = new FunctionTool({
 
 const agent = new LlmAgent({
     name: 'weather_assistant',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.6-flash',
     instruction: 'Answer weather questions with the get_weather tool. Be concise.',
     tools: [weatherTool],
 })
