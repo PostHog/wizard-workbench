@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Features - Django SaaS{% endblock %}
+
+{% block content %}
+<h1>Features</h1>
+<p class="text-muted">Everything you need to manage and scale your business.</p>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem;">
+    <div class="card">
+        <h3>Project Management</h3>
+        <p>Create, organize, and manage all your projects from a central dashboard.</p>
+    </div>
+
+    <div class="card">
+        <h3>Activity Tracking</h3>
+        <p>Keep track of all changes with detailed activity logs and history.</p>
+    </div>
+
+    <div class="card">
+        <h3>Subscription Billing</h3>
+        <p>Flexible subscription plans with easy upgrade and downgrade options.</p>
+    </div>
+
+    <div class="card">
+        <h3>User Management</h3>
+        <p>Manage your account settings, profile, and security preferences.</p>
+    </div>
+
+    <div class="card">
+        <h3>Admin Dashboard</h3>
+        <p>Full admin panel to manage users, plans, and subscriptions.</p>
+    </div>
+
+    <div class="card">
+        <h3>Secure & Reliable</h3>
+        <p>Built with security best practices. Your data is safe with us.</p>
+    </div>
+</div>
+
+<div style="text-align: center; margin-top: 3rem;">
+    <a href="{% url 'accounts:register' %}" class="btn btn-primary">Start Free Trial</a>
+</div>
+{% endblock %}
