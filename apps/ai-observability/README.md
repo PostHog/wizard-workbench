@@ -25,6 +25,7 @@ Each app exists to test one thing the others don't:
 - `vercel-ai/nextjs-support-chat` — per-request identity; framework bootstrap
 - `manual-capture/node-http-chat` — hand-built tree; must reuse the existing client
 - `google-adk/node-weather` — framework plugin; identity comes from ADK's own ids
+- `opentelemetry/go-weather` — Go; no wrapper SDK exists, so the posthog-go OTel bridge
 
 The five weather apps implement the identical `get_weather` round trip from
 [Anthropic's tool-use docs](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview#how-tool-use-works),
@@ -39,6 +40,8 @@ conversation structure.
   acceptable only where the same structure lands. Exceptions:
   `openai-agents` (tracing processor), `vercel-ai` (`experimental_telemetry`),
   `google-adk` (Runner plugin), `manual-capture` (no SDK to wrap).
+  `manual-capture` (no SDK to wrap),
+  `opentelemetry/go-weather` (Go has no wrapper SDK; the posthog-go OTel bridge).
 - **Every app gets a session** — single-trace apps included. The graded
   property is **cardinality**: one id shared by the traces that belong
   together. A fresh id per call groups nothing and is worse than none.
