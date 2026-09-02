@@ -1,0 +1,67 @@
+---
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+
+const renderTime = new Date().toISOString();
+---
+
+<DocsLayout title="API Overview">
+  <h1>API Overview</h1>
+  <p class="subtitle">Complete reference for the NeuralFlow REST API</p>
+
+  <h2>Base URL</h2>
+  <pre><code>https://api.neuralflow.io/v1</code></pre>
+
+  <h2>Authentication</h2>
+  <p>
+    All API requests require authentication via Bearer token. Include your API key
+    in the Authorization header:
+  </p>
+
+  <pre><code>Authorization: Bearer your_api_key</code></pre>
+
+  <h2>Request Format</h2>
+  <p>
+    All request bodies should be JSON with the <code>Content-Type: application/json</code> header.
+    File uploads use <code>multipart/form-data</code>.
+  </p>
+
+  <h2>Response Format</h2>
+  <p>All responses are JSON with the following structure:</p>
+
+  <pre><code>{'{'}
+  "data": {'{'} ... {'}'},
+  "meta": {'{'}
+    "request_id": "req_abc123",
+    "timestamp": "2024-01-15T10:30:00Z"
+  {'}'}
+{'}'}</code></pre>
+
+  <h2>Error Handling</h2>
+  <p>Errors include a code, message, and optional details:</p>
+
+  <pre><code>{'{'}
+  "error": {'{'}
+    "code": "validation_error",
+    "message": "Invalid file type",
+    "details": {'{'}
+      "allowed": ["pdf", "png", "jpg"],
+      "received": "exe"
+    {'}'}
+  {'}'}
+{'}'}</code></pre>
+
+  <h2>Rate Limits</h2>
+  <p>
+    API requests are rate limited based on your plan. Rate limit headers are included
+    in all responses:
+  </p>
+  <ul>
+    <li><code>X-RateLimit-Limit</code> - Requests allowed per minute</li>
+    <li><code>X-RateLimit-Remaining</code> - Requests remaining</li>
+    <li><code>X-RateLimit-Reset</code> - Unix timestamp when limit resets</li>
+  </ul>
+
+  <div class="render-info">
+    Server-rendered at: {renderTime}
+  </div>
+</DocsLayout>

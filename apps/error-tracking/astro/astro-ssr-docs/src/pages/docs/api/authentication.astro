@@ -1,0 +1,58 @@
+---
+import DocsLayout from '../../../layouts/DocsLayout.astro';
+
+const renderTime = new Date().toISOString();
+---
+
+<DocsLayout title="Authentication">
+  <h1>Authentication</h1>
+  <p class="subtitle">Secure your API integrations</p>
+
+  <h2>API Keys</h2>
+  <p>
+    API keys are the simplest way to authenticate. Create keys in your dashboard
+    and include them in the Authorization header.
+  </p>
+
+  <pre><code>curl -X POST https://api.neuralflow.io/v1/documents \
+  -H "Authorization: Bearer nf_sk_live_abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{'{'}...{'}'}'</code></pre>
+
+  <h2>Key Types</h2>
+  <ul>
+    <li><strong>Live keys</strong> (<code>nf_sk_live_</code>) - For production use</li>
+    <li><strong>Test keys</strong> (<code>nf_sk_test_</code>) - For development and testing</li>
+  </ul>
+
+  <h2>OAuth 2.0</h2>
+  <p>
+    For user-facing applications, we support OAuth 2.0 with Authorization Code flow.
+    This allows your users to connect their NeuralFlow accounts.
+  </p>
+
+  <h3>Authorization URL</h3>
+  <pre><code>https://neuralflow.io/oauth/authorize
+  ?client_id=your_client_id
+  &redirect_uri=https://your-app.com/callback
+  &response_type=code
+  &scope=read write</code></pre>
+
+  <h3>Token Exchange</h3>
+  <pre><code>POST https://api.neuralflow.io/oauth/token
+{'{'}
+  "grant_type": "authorization_code",
+  "code": "auth_code_from_callback",
+  "client_id": "your_client_id",
+  "client_secret": "your_client_secret",
+  "redirect_uri": "https://your-app.com/callback"
+{'}'}</code></pre>
+
+  <div class="callout">
+    <p><strong>Security:</strong> Store API keys securely and never expose them in client-side code.</p>
+  </div>
+
+  <div class="render-info">
+    Server-rendered at: {renderTime}
+  </div>
+</DocsLayout>
