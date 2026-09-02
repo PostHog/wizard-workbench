@@ -2,17 +2,24 @@
 startup; each `answer()` embeds the question, ranks the corpus in plain
 Python, and writes the answer."""
 
+import atexit
 import math
 import os
+import uuid
 
-import openai
+from posthog import Posthog
+from posthog.ai.openai import OpenAI
 
-client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
+posthog = Posthog(os.environ["POSTHOG_API_KEY"], host=os.environ.get("POSTHOG_HOST", "https://us.i.posthog.com"))
+atexit.register(posthog.shutdown)
+
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""), posthog_client=posthog)
 
 EMBEDDING_MODEL = "text-embedding-3-small"
 CHAT_MODEL = "gpt-5-mini"
 
 USER_ID = "user_123"
+SESSION_ID = str(uuid.uuid4())
 
 DOCS = [
     "Feature flags are evaluated locally when you supply a personal API key.",
@@ -22,8 +29,14 @@ DOCS = [
 ]
 
 
-def embed(text: str) -> list[float]:
-    response = client.embeddings.create(input=text, model=EMBEDDING_MODEL)
+def embed(text: str, trace_id: str | None = None) -> list[float]:
+    kwargs = {
+        "posthog_distinct_id": USER_ID,
+        "posthog_properties": {"$ai_session_id": SESSION_ID},
+    }
+    if trace_id:
+        kwargs["posthog_trace_id"] = trace_id
+    response = client.embeddings.create(input=text, model=EMBEDDING_MODEL, **kwargs)
     return response.data[0].embedding
 
 
@@ -43,7 +56,8 @@ def retrieve(query_vector: list[float], index: list[tuple[str, list[float]]], to
 
 
 def answer(question: str, index: list[tuple[str, list[float]]]) -> str:
-    query_vector = embed(question)
+    trace_id = str(uuid.uuid4())
+    query_vector = embed(question, trace_id=trace_id)
     context = retrieve(query_vector, index)
     response = client.responses.create(
         model=CHAT_MODEL,
@@ -51,6 +65,9 @@ def answer(question: str, index: list[tuple[str, list[float]]]) -> str:
             {"role": "system", "content": "Answer using only the context provided."},
             {"role": "user", "content": "Context:\n" + "\n".join(context) + f"\n\nQuestion: {question}"},
         ],
+        posthog_distinct_id=USER_ID,
+        posthog_trace_id=trace_id,
+        posthog_properties={"$ai_session_id": SESSION_ID},
     )
     return response.output_text
 
