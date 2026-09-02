@@ -2,6 +2,40 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
 
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+)
+
+async function identifyUser(
+  user: FakeUser,
+  event?: 'user_logged_in' | 'user_signed_up',
+  resetFirst = false,
+) {
+  if (!isPostHogConfigured) return
+
+  const { default: posthog } = await import('posthog-js')
+
+  if (resetFirst) {
+    posthog.reset()
+  }
+
+  posthog.identify(user.id, {
+    email: user.email,
+    username: user.username,
+  })
+  if (event) {
+    posthog.capture(event, { authentication_method: 'fake' })
+  }
+}
+
+async function captureLogoutAndResetPostHog() {
+  if (!isPostHogConfigured) return
+
+  const { default: posthog } = await import('posthog-js')
+  posthog.capture('user_logged_out')
+  posthog.reset()
+}
+
 interface AuthContextType {
   user: FakeUser | null
   login: (username: string, password: string) => boolean
@@ -18,11 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
+
+    if (currentUser) {
+      void identifyUser(currentUser)
+    }
   }, [])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      void identifyUser(
+        loggedInUser,
+        'user_logged_in',
+        user?.id !== undefined && user.id !== loggedInUser.id,
+      )
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      void identifyUser(
+        newUser,
+        'user_signed_up',
+        user?.id !== undefined && user.id !== newUser.id,
+      )
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    void captureLogoutAndResetPostHog()
     fakeLogout()
     setUser(null)
   }
