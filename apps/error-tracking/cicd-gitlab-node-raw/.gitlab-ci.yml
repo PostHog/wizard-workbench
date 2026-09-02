@@ -1,0 +1,31 @@
+# Deploy pipeline for GitLab CI: build the app in the build job, hand the
+# compiled output to the deploy job as an artifact, then copy it to the server
+# and restart the app over SSH.
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  image: node:22-slim
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+
+deploy:
+  stage: deploy
+  image: node:22-slim
+  needs:
+    - build
+  environment: production
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq openssh-client rsync
+  script:
+    - rsync -avz --delete dist/ package.json package-lock.json "$DEPLOY_USER@$DEPLOY_HOST:/srv/cicd-gitlab-node-raw/"
+    - ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd /srv/cicd-gitlab-node-raw && npm ci --omit=dev && (pkill -f 'node dist/index.js' || true) && POSTHOG_KEY='$POSTHOG_KEY' POSTHOG_HOST='$POSTHOG_HOST' nohup node dist/index.js > app.log 2>&1 &"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
