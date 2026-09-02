@@ -67,6 +67,13 @@ async def update_settings(
             current_user.email = email
             db.commit()
             success = "Settings updated successfully"
+            posthog_client = getattr(request.app.state, "posthog_client", None)
+            if posthog_client:
+                posthog_client.set(
+                    distinct_id=str(current_user.id),
+                    properties={"email": current_user.email},
+                )
+                posthog_client.capture("settings_email_updated")
     else:
         success = "No changes made"
 
@@ -109,6 +116,9 @@ async def change_password(
         current_user.set_password(new_password)
         db.commit()
         success = "Password changed successfully"
+        posthog_client = getattr(request.app.state, "posthog_client", None)
+        if posthog_client:
+            posthog_client.capture("password_changed")
 
     api_key_count = db.query(APIKey).filter(
         APIKey.user_id == current_user.id,

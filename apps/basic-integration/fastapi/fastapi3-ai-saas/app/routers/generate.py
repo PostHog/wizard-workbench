@@ -2,7 +2,7 @@
 
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
@@ -42,6 +42,7 @@ class CreditsResponse(BaseModel):
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_content(
     request: GenerateRequest,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -75,6 +76,18 @@ async def generate_content(
         result=mock_content,
         credits_used=credits_needed,
     )
+
+    posthog_client = getattr(http_request.app.state, "posthog_client", None)
+    if posthog_client:
+        posthog_client.capture(
+            "content_generated",
+            properties={
+                "generation_type": generation.generation_type,
+                "credits_used": generation.credits_used,
+                "credits_remaining": current_user.credits,
+                "prompt_length": len(request.prompt),
+            },
+        )
 
     return GenerateResponse(
         id=generation.id,
