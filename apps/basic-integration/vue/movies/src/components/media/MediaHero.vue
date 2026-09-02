@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import type { Media } from '../../types'
 import { formatTime, formatVote, getTrailer } from '../../composables/utils'
+import posthog from 'posthog-js'
 
 const props = defineProps<{
   item: Media
@@ -17,6 +18,12 @@ onMounted(() => {
 
 function playTrailer() {
   if (trailerUrl.value) {
+    if (import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST) {
+      posthog.capture('trailer_played', {
+        media_id: props.item.id,
+        media_type: props.item.media_type,
+      })
+    }
     showModal.value = true
   }
 }
@@ -72,7 +79,7 @@ function closeModal() {
               type="button"
               class="flex gap-2 items-center px-6 py-3 bg-gray-400/15 hover:bg-gray-400/20 transition"
               title="Watch Trailer"
-              @click="playTrailer()"
+              @click.stop="playTrailer()"
             >
               <span class="i-ph-play" />
               Watch Trailer
@@ -89,7 +96,7 @@ function closeModal() {
         type="button"
         class="p-10 text-5xl opacity-20 hover:opacity-80 transition"
         title="Watch Trailer"
-        @click="playTrailer()"
+        @click.stop="playTrailer()"
       >
         <span class="i-ph-play-circle-light" />
       </button>
