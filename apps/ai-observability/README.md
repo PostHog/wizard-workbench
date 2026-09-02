@@ -24,8 +24,9 @@ Each app exists to test one thing the others don't:
 - `openai-agents/python-travel-triage` — tracing processor; the SDK emits the tree
 - `vercel-ai/nextjs-support-chat` — per-request identity; framework bootstrap
 - `manual-capture/node-http-chat` — hand-built tree; must reuse the existing client
+- `opentelemetry/go-weather` — Go; no wrapper SDK exists, so the posthog-go OTel bridge
 
-The four weather apps implement the identical `get_weather` round trip from
+The five weather apps implement the identical `get_weather` round trip from
 [Anthropic's tool-use docs](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview#how-tool-use-works),
 so a diff between any two isolates one variable: the SDK, the language, or the
 conversation structure.
@@ -37,7 +38,8 @@ conversation structure.
   `posthog_trace_id`, and `posthog_properties`, as shown in the docs. OTel is
   acceptable only where the same structure lands. Exceptions:
   `openai-agents` (tracing processor), `vercel-ai` (`experimental_telemetry`),
-  `manual-capture` (no SDK to wrap).
+  `manual-capture` (no SDK to wrap),
+  `opentelemetry/go-weather` (Go has no wrapper SDK; the posthog-go OTel bridge).
 - **Every app gets a session** — single-trace apps included. The graded
   property is **cardinality**: one id shared by the traces that belong
   together. A fresh id per call groups nothing and is worse than none.
