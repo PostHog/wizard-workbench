@@ -1,4 +1,5 @@
 export const useAuth = () => {
+  const { $posthog: posthog } = useNuxtApp()
   const cookie = useCookie<string | null>('auth-user', {
     httpOnly: false,
     secure: true,
@@ -23,6 +24,7 @@ export const useAuth = () => {
       if (response.success) {
         user.value = response.user
         cookie.value = response.user
+        posthog?.capture('user_logged_in')
         await navigateTo('/')
       }
       
@@ -33,6 +35,8 @@ export const useAuth = () => {
   }
 
   const logout = async () => {
+    posthog?.capture('user_logged_out')
+
     try {
       await $fetch('/api/auth/logout', { method: 'POST' })
     } catch (error) {

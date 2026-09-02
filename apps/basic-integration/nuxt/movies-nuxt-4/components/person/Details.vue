@@ -6,18 +6,27 @@ defineProps<{
 }>()
 
 const tab = ref<'known' | 'credits' | 'photos'>('known')
+const { $posthog: posthog } = useNuxtApp()
+
+function selectTab(selectedTab: 'known' | 'credits' | 'photos') {
+  if (tab.value === selectedTab)
+    return
+
+  tab.value = selectedTab
+  posthog?.capture('person_tab_selected', { tab: selectedTab })
+}
 </script>
 
 <template>
   <PersonInfo :item="item" />
   <div flex items-center justify-center gap8 py6>
-    <button n-tab :class="{ 'n-tab-active': tab === 'known' }" data-testid="tab-known" @click="tab = 'known'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'known' }" data-testid="tab-known" @click="selectTab('known')">
       {{ $t('Known For') }}
     </button>
-    <button n-tab :class="{ 'n-tab-active': tab === 'credits' }" data-testid="tab-credits" @click="tab = 'credits'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'credits' }" data-testid="tab-credits" @click="selectTab('credits')">
       {{ $t('Credits') }}
     </button>
-    <button n-tab :class="{ 'n-tab-active': tab === 'photos' }" data-testid="tab-photos" @click="tab = 'photos'">
+    <button n-tab :class="{ 'n-tab-active': tab === 'photos' }" data-testid="tab-photos" @click="selectTab('photos')">
       {{ $t('Person Photos') }}
     </button>
   </div>
