@@ -6,6 +6,7 @@
  *   router.on('/projects/:id', renderProject)
  *   router.navigate('/dashboard')
  */
+import posthog from './posthog.js';
 
 const routes = [];
 let notFoundHandler = null;
@@ -46,6 +47,7 @@ function resolve() {
   const match = matchRoute(path);
 
   if (match) {
+    posthog?.capture('$pageview', { $current_url: window.location.href });
     match.handler(match.params);
   } else if (notFoundHandler) {
     notFoundHandler();
