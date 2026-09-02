@@ -1,0 +1,59 @@
+import { useTranslation } from "react-i18next";
+
+import type { LinkNotificationProps } from "./notification-components";
+import { LinkNotification } from "./notification-components";
+import { LINK_NOTIFICATION_TYPE } from "./notification-constants";
+
+export type NotificationType = LinkNotificationProps;
+
+type NotificationContentProps = {
+  notification: NotificationType;
+};
+
+function NotificationContent({ notification }: NotificationContentProps) {
+  switch (notification.type) {
+    case LINK_NOTIFICATION_TYPE: {
+      return <LinkNotification {...notification} />;
+    }
+    default: {
+      return;
+    }
+  }
+}
+
+export type NotificationsPanelContentProps = {
+  notifications: NotificationType[];
+};
+
+export function NotificationsPanelContent({
+  notifications,
+}: NotificationsPanelContentProps) {
+  const { t } = useTranslation("notifications", {
+    keyPrefix: "notificationsPanel",
+  });
+
+  if (notifications.length === 0) {
+    return (
+      <div className="flex min-h-24 flex-col items-center justify-center gap-2 p-4">
+        <p className="font-semibold text-foreground text-lg">
+          {t("noNotificationsTitle")}
+        </p>
+
+        <p className="font-normal text-muted-foreground text-sm">
+          {t("noNotificationsDescription")}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="-m-2 flex flex-col overflow-y-auto p-2 sm:max-h-96">
+      {notifications.map((notification) => (
+        <NotificationContent
+          key={notification.recipientId}
+          notification={notification}
+        />
+      ))}
+    </div>
+  );
+}

@@ -1,0 +1,102 @@
+import type { Stripe } from "stripe";
+
+import type { Prisma, StripePrice } from "~/generated/client";
+import { prisma } from "~/utils/database.server";
+
+/* CREATE */
+
+/**
+ * Saves a new Stripe price to the database.
+ *
+ * @param price - The Stripe price to save.
+ * @returns The saved Stripe price.
+ */
+export async function saveStripePriceToDatabase(
+  price: Prisma.StripePriceUncheckedCreateInput,
+) {
+  return prisma.stripePrice.create({ data: price });
+}
+
+/**
+ * Creates a new Stripe price in the database.
+ *
+ * @param price - The Stripe price to create.
+ * @returns The created Stripe price.
+ */
+export async function saveStripePriceFromAPIToDatabase(price: Stripe.Price) {
+  return prisma.stripePrice.create({
+    data: {
+      active: price.active,
+      currency: price.currency,
+      interval: price.recurring?.interval ?? "month",
+      lookupKey: price.lookup_key ?? "",
+      product: { connect: { stripeId: price.product as string } },
+      stripeId: price.id,
+      unitAmount: price.unit_amount ?? 0,
+    },
+  });
+}
+
+/* READ */
+/**
+ * Retrieves a Stripe price from the database by its lookup key.
+ *
+ * @param lookupKey - The lookup key of the price to retrieve.
+ * @returns The retrieved Stripe price.
+ */
+export async function retrieveStripePriceFromDatabaseByLookupKey(
+  lookupKey: StripePrice["lookupKey"],
+) {
+  return prisma.stripePrice.findUnique({ where: { lookupKey } });
+}
+
+/**
+ * Retrieves a Stripe price with its associated product from the database by lookup key.
+ *
+ * @param lookupKey - The lookup key of the price to retrieve.
+ * @returns The retrieved Stripe price with its product.
+ */
+export async function retrieveStripePriceWithProductFromDatabaseByLookupKey(
+  lookupKey: StripePrice["lookupKey"],
+) {
+  return prisma.stripePrice.findUnique({
+    include: { product: true },
+    where: { lookupKey },
+  });
+}
+
+/* UPDATE */
+
+/**
+ * Updates an existing Stripe price in the database.
+ *
+ * @param price - The Stripe price to update.
+ * @returns The updated Stripe price.
+ */
+export async function updateStripePriceFromAPIInDatabase(price: Stripe.Price) {
+  return prisma.stripePrice.update({
+    data: {
+      active: price.active,
+      currency: price.currency,
+      interval: price.recurring?.interval,
+      lookupKey: price.lookup_key ?? "",
+      product: { connect: { stripeId: price.product as string } },
+      unitAmount: price.unit_amount ?? 0,
+    },
+    where: { stripeId: price.id },
+  });
+}
+
+/* DELETE */
+
+/**
+ * Deletes a Stripe price from the database by its Stripe ID.
+ *
+ * @param stripeId - The Stripe ID of the price to delete.
+ * @returns The deleted price.
+ */
+export async function deleteStripePriceFromDatabaseById(
+  stripeId: StripePrice["stripeId"],
+) {
+  return prisma.stripePrice.delete({ where: { stripeId } });
+}

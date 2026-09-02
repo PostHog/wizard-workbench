@@ -1,0 +1,143 @@
+import {
+  IconChartBar,
+  IconFolder,
+  IconHelp,
+  IconLayoutDashboard,
+  IconSettings,
+  IconFileText,
+} from "@tabler/icons-react";
+import type { ComponentProps } from "react";
+import { useTranslation } from "react-i18next";
+import { href } from "react-router";
+
+import { NavGroup } from "./nav-group";
+import type { NavUserProps } from "./nav-user";
+import { NavUser } from "./nav-user";
+import type { OrganizationSwitcherProps } from "./organization-switcher";
+import { OrganizationSwitcher } from "./organization-switcher";
+import type { Route } from ".react-router/types/app/routes/_authenticated-routes+/organizations_+/$organizationSlug+/+types/_sidebar-layout";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail,
+} from "~/components/ui/sidebar";
+import type { BillingSidebarCardProps } from "~/features/billing/billing-sidebar-card";
+import { BillingSidebarCard } from "~/features/billing/billing-sidebar-card";
+import { cn } from "~/lib/utils";
+
+type AppSidebarProps = {
+  organizationSlug: Route.ComponentProps["params"]["organizationSlug"];
+  billingSidebarCardProps?: BillingSidebarCardProps;
+  organizationSwitcherProps: OrganizationSwitcherProps;
+  navUserProps: NavUserProps;
+} & ComponentProps<typeof Sidebar>;
+
+export function AppSidebar({
+  billingSidebarCardProps,
+  navUserProps,
+  organizationSlug,
+  organizationSwitcherProps,
+  ...props
+}: AppSidebarProps) {
+  const { t } = useTranslation("organizations", {
+    keyPrefix: "layout.appSidebar.nav",
+  });
+
+  return (
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader>
+        <OrganizationSwitcher {...organizationSwitcherProps} />
+      </SidebarHeader>
+
+      <SidebarContent>
+        <NavGroup
+          items={[
+            {
+              icon: IconLayoutDashboard,
+              title: t("app.dashboard"),
+              url: href("/organizations/:organizationSlug/dashboard", {
+                organizationSlug,
+              }),
+            },
+            {
+              icon: IconFolder,
+              items: [
+                {
+                  title: t("app.projects.all"),
+                  url: href("/organizations/:organizationSlug/projects", {
+                    organizationSlug,
+                  }),
+                },
+                {
+                  title: t("app.projects.active"),
+                  url: href(
+                    "/organizations/:organizationSlug/projects/active",
+                    {
+                      organizationSlug,
+                    },
+                  ),
+                },
+              ],
+              title: t("app.projects.title"),
+            },
+            {
+              icon: IconChartBar,
+              title: t("app.analytics"),
+              url: href("/organizations/:organizationSlug/analytics", {
+                organizationSlug,
+              }),
+            },
+            {
+              icon: IconFileText,
+              title: "Pastes",
+              url: href("/organizations/:organizationSlug/pastes", {
+                organizationSlug,
+              }),
+            },
+          ]}
+          title={t("app.title")}
+        />
+
+        {billingSidebarCardProps && (
+          <BillingSidebarCard
+            className={cn(
+              "mt-auto overflow-hidden transition-[opacity,transform,max-height] ease-in-out",
+              "max-h-[500px] scale-100 opacity-100 delay-200 duration-500",
+              "group-data-[variant=sidebar]:mx-2 group-data-[state=collapsed]:max-h-0 group-data-[state=collapsed]:scale-95 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:delay-0 group-data-[state=collapsed]:duration-200",
+            )}
+            {...billingSidebarCardProps}
+          />
+        )}
+
+        <NavGroup
+          className={cn(!billingSidebarCardProps && "mt-auto")}
+          items={[
+            {
+              icon: IconSettings,
+              title: t("settings.organizationSettings"),
+              url: href("/organizations/:organizationSlug/settings", {
+                organizationSlug,
+              }),
+            },
+            {
+              icon: IconHelp,
+              title: t("settings.getHelp"),
+              url: href("/organizations/:organizationSlug/get-help", {
+                organizationSlug,
+              }),
+            },
+          ]}
+          size="sm"
+        />
+      </SidebarContent>
+
+      <SidebarFooter>
+        <NavUser {...navUserProps} />
+      </SidebarFooter>
+
+      <SidebarRail />
+    </Sidebar>
+  );
+}

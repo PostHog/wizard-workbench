@@ -1,0 +1,574 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: test code */
+import { faker } from "@faker-js/faker";
+import type { MiddlewareFunction, Params } from "react-router";
+import { RouterContextProvider } from "react-router";
+
+import { setMockSession } from "./mocks/handlers/supabase/mock-sessions";
+import type { LookupKey, Tier } from "~/features/billing/billing-constants";
+import { priceLookupKeysByTierAndInterval } from "~/features/billing/billing-constants";
+import type { StripeSubscriptionWithItemsAndPrice } from "~/features/billing/billing-factories.server";
+import {
+  createPopulatedStripePrice,
+  createPopulatedStripeProduct,
+  createPopulatedStripeSubscriptionWithItemsAndPrice,
+  createPopulatedStripeSubscriptionWithScheduleAndItemsWithPriceAndProduct,
+} from "~/features/billing/billing-factories.server";
+import {
+  retrieveStripePriceFromDatabaseByLookupKey,
+  saveStripePriceToDatabase,
+} from "~/features/billing/stripe-prices-model.server";
+import { saveStripeProductToDatabase } from "~/features/billing/stripe-product-model.server";
+import { i18nextMiddleware } from "~/features/localization/i18next-middleware.server";
+import type { OnboardingUser } from "~/features/onboarding/onboarding-helpers.server";
+import { createPopulatedOrganization } from "~/features/organizations/organizations-factories.server";
+import { organizationMembershipMiddleware } from "~/features/organizations/organizations-middleware.server";
+import {
+  addMembersToOrganizationInDatabaseById,
+  deleteOrganizationFromDatabaseById,
+  saveOrganizationToDatabase,
+  upsertStripeSubscriptionForOrganizationInDatabaseById,
+} from "~/features/organizations/organizations-model.server";
+import { createPopulatedUserAccount } from "~/features/user-accounts/user-accounts-factories.server";
+import {
+  deleteUserAccountFromDatabaseById,
+  saveUserAccountToDatabase,
+} from "~/features/user-accounts/user-accounts-model.server";
+import {
+  createPopulatedSupabaseSession,
+  createPopulatedSupabaseUser,
+} from "~/features/user-authentication/user-authentication-factories";
+import { authMiddleware } from "~/features/user-authentication/user-authentication-middleware.server";
+import type { Organization, UserAccount } from "~/generated/client";
+import {
+  OrganizationMembershipRole,
+  StripePriceInterval,
+} from "~/generated/client";
+import type { DeepPartial } from "~/utils/types";
+
+/**
+ * A factory function for creating an onboarded user with their memberships.
+ *
+ * @param props - The properties of the onboarding user.
+ * @returns An onboarding user.
+ *
+ * @example // Default user with 3 memberships
+ * const user = createOnboardingUser();
+ *
+ * @example // Override the user's name and email
+ * const customUser = createOnboardingUser({
+ *   name: 'Jane Doe',
+ *   email: 'jane@example.com',
+ * });
+ *
+ * @example // Override first membership role and organization name
+ * const customMembershipUser = createOnboardingUser({
+ *   memberships: [
+ *     {
+ *       role: OrganizationMembershipRole.admin,
+ *       organization: { name: 'Acme Corporation' },
+ *     },
+ *   ],
+ * });
+ *
+ * @example // Provide custom subscriptions for second membership
+ * const customSubUser = createOnboardingUser({
+ *   memberships: [
+ *     {},
+ *     {
+ *       organization: {
+ *         stripeSubscriptions: [
+ *           createSubscriptionWithItems({ status: 'canceled' }),
+ *         ],
+ *       },
+ *     },
+ *   ],
+ * });
+ */
+export const createOnboardingUser = (
+  overrides: DeepPartial<OnboardingUser> = {},
+): OnboardingUser => {
+  // Base user account
+  const baseUser = createPopulatedUserAccount();
+
+  // Prepare up to three default memberships
+  const defaultMemberships: OnboardingUser["memberships"] = Array.from({
+    length: overrides.memberships?.length ?? 3,
+  }).map(() => {
+    const organization = createPopulatedOrganization();
+    return {
+      deactivatedAt: null,
+      organization: {
+        ...organization,
+        _count: { memberships: faker.number.int({ max: 10, min: 1 }) },
+        // Each org gets at least one subscription with items
+        stripeSubscriptions: [
+          {
+            ...createPopulatedStripeSubscriptionWithScheduleAndItemsWithPriceAndProduct(
+              { organizationId: organization.id },
+            ),
+            schedule: null,
+          },
+        ],
+      },
+      role: OrganizationMembershipRole.member,
+    };
+  });
+
+  // Merge overrides for memberships
+  type Membership = OnboardingUser["memberships"][number];
+  type OrgWithSubscriptions = Membership["organization"];
+  const finalMemberships: Membership[] = defaultMemberships.map(
+    (base, index) => {
+      const overrideM =
+        (overrides.memberships?.[index] as Partial<Membership>) || {};
+      const baseOrg = base.organization;
+      const overrideOrg =
+        (overrideM.organization as Partial<OrgWithSubscriptions>) || {};
+
+      // Merge subscriptions array explicitly, fallback to base
+      const subscriptions =
+        overrideOrg.stripeSubscriptions ?? baseOrg.stripeSubscriptions;
+
+      const mergedOrg: OrgWithSubscriptions = {
+        ...baseOrg,
+        ...overrideOrg,
+        stripeSubscriptions: subscriptions,
+      };
+
+      return {
+        deactivatedAt: overrideM.deactivatedAt ?? base.deactivatedAt,
+        organization: mergedOrg,
+        role: overrideM.role ?? base.role,
+      };
+    },
+  );
+
+  return {
+    ...baseUser,
+    // User-level overrides (e.g. name, email)
+    ...overrides,
+    memberships: finalMemberships,
+  };
+};
+
+function createMockJWT(payload: object): string {
+  const header = { alg: "HS256", typ: "JWT" };
+  const encodedHeader = btoa(JSON.stringify(header)).replace(/=+$/, "");
+  const encodedPayload = btoa(JSON.stringify(payload)).replace(/=+$/, "");
+  const signature = "mock_signature";
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
+/**
+ * Creates a mock Supabase session with a fixed access token and refresh token.
+ *
+ * @param options - An object containing the user to create the session for.
+ * @returns A Promise that resolves to a mock Supabase session.
+ */
+export const createMockSupabaseSession = ({
+  user = createPopulatedUserAccount(),
+}: {
+  user?: UserAccount;
+}) => {
+  // Create a Supabase user with the provided ID and email
+  const supabaseUser = createPopulatedSupabaseUser({
+    email: user.email,
+    id: user.supabaseUserId,
+  });
+
+  const jwtPayload = {
+    email: supabaseUser.email,
+    exp: Math.floor(Date.now() / 1000) + 3600, // Expires in 1 hour
+    sub: supabaseUser.id, // Subject (user ID)
+  };
+
+  const access_token = createMockJWT(jwtPayload);
+
+  // Create a session with fixed tokens for testing
+  const session = createPopulatedSupabaseSession({
+    access_token,
+    user: supabaseUser,
+  });
+
+  return session;
+};
+
+/**
+ * Creates an authenticated request object with the given parameters and a user
+ * auth session behind the scenes.
+ * NOTE: You need to activate the MSW mocks for Supabase (`getUser`) for this to
+ * work.
+ *
+ * @param options - An object containing the url and user as well as optional
+ * form data.
+ * @returns A Request object with authentication cookies.
+ */
+export async function createAuthenticatedRequest({
+  url,
+  user,
+  method = "POST",
+  formData,
+  headers,
+}: {
+  url: string;
+  user: UserAccount;
+  method?: string;
+  formData?: FormData;
+  headers?: Headers;
+}) {
+  // Create a mock session with the provided user details.
+  const mockSession = createMockSupabaseSession({ user });
+
+  await setMockSession(mockSession.access_token, mockSession);
+
+  // Determine the Supabase project reference for the cookie name.
+  const projectReference =
+    /https:\/\/([^.]+)/.exec(process.env.VITE_SUPABASE_URL)?.[1] ?? "default";
+  const cookieName = `sb-${projectReference}-auth-token`;
+  const cookieValue = encodeURIComponent(JSON.stringify(mockSession));
+
+  // Create a new request with the auth cookie.
+  const request = new Request(url, { body: formData, method });
+
+  // Add any additional headers to the request first
+  if (headers) {
+    for (const [key, value] of headers.entries()) {
+      request.headers.set(key, value);
+    }
+  }
+
+  // Set the auth cookie, preserving any existing cookies
+  const existingCookies = request.headers.get("Cookie") ?? "";
+  const authCookie = `${cookieName}=${cookieValue}`;
+  request.headers.set(
+    "Cookie",
+    existingCookies ? `${existingCookies}; ${authCookie}` : authCookie,
+  );
+
+  return request;
+}
+
+export async function createUserWithTrialOrgAndAddAsMember({
+  organization = createPopulatedOrganization({
+    // This automatically sets the trial end to 14 days from the creation date.
+    createdAt: faker.date.recent({ days: 3 }),
+  }),
+  user = createPopulatedUserAccount(),
+  role = OrganizationMembershipRole.member as OrganizationMembershipRole,
+} = {}) {
+  // Save user account and organization and add user as a member.
+  await Promise.all([
+    saveUserAccountToDatabase(user),
+    saveOrganizationToDatabase(organization),
+  ]);
+  await addMembersToOrganizationInDatabaseById({
+    id: organization.id,
+    members: [user.id],
+    role,
+  });
+
+  return { organization, user };
+}
+
+/**
+ * Creates a test Stripe subscription for a user and organization.
+ *
+ * This helper function creates a Stripe customer and subscription, then associates them
+ * with the provided organization and user in the database.
+ *
+ * @param options - An object containing the user and organization
+ * @param options.user - The user account that will be set as the subscription purchaser
+ * @param options.organization - The organization that will own the subscription
+ * @returns The updated organization with the new subscription data
+ */
+export async function createTestSubscriptionForUserAndOrganization({
+  user,
+  organization,
+  subscription = createPopulatedStripeSubscriptionWithItemsAndPrice({
+    organizationId: organization.id,
+  }),
+  stripeCustomerId = createPopulatedOrganization().stripeCustomerId!,
+  lookupKey,
+}: {
+  user: UserAccount;
+  organization: Organization;
+  stripeCustomerId: NonNullable<Organization["stripeCustomerId"]>;
+  subscription?: StripeSubscriptionWithItemsAndPrice;
+  lookupKey?: LookupKey;
+}) {
+  const finalLookupKey =
+    lookupKey ?? subscription.items[0]?.price?.lookupKey ?? "";
+  const price =
+    await retrieveStripePriceFromDatabaseByLookupKey(finalLookupKey);
+
+  if (!price) {
+    throw new Error(`Price with lookup key ${finalLookupKey} not found`);
+  }
+
+  const organizationWithSubscription =
+    await upsertStripeSubscriptionForOrganizationInDatabaseById({
+      organizationId: organization.id,
+      purchasedById: user.id,
+      stripeCustomerId,
+      subscription: {
+        ...subscription,
+        items: subscription.items.map((item) => ({
+          ...item,
+          priceId: price.stripeId,
+        })),
+      },
+    });
+  return organizationWithSubscription;
+}
+
+/**
+ * Saves the user account and organization to the database and adds the user as
+ * a member of the organization.
+ *
+ * @param options - Optional parameter containing the organization and user
+ * objects to be saved.
+ * @returns - An object containing the saved organization and user.
+ */
+export async function createUserWithOrgAndAddAsMember({
+  organization = createPopulatedOrganization(),
+  user = createPopulatedUserAccount(),
+  role = OrganizationMembershipRole.member as OrganizationMembershipRole,
+  subscription = createPopulatedStripeSubscriptionWithItemsAndPrice({
+    organizationId: organization.id,
+  }),
+  lookupKey = priceLookupKeysByTierAndInterval.high.annual as LookupKey,
+} = {}) {
+  // Save user account and organization and add user as a member.
+  await createUserWithTrialOrgAndAddAsMember({
+    // When the user subscribes, it ends the trial.
+    organization: { ...organization, trialEnd: subscription.created },
+    role,
+    user,
+  });
+  const orgWithSub = await createTestSubscriptionForUserAndOrganization({
+    lookupKey,
+    organization,
+    stripeCustomerId: organization.stripeCustomerId!,
+    subscription,
+    user,
+  });
+
+  return {
+    organization,
+    subscription: orgWithSub.stripeSubscriptions[0]!,
+    user,
+  };
+}
+
+/**
+ * Deletes an organization and a user from the database.
+ *
+ * @param params - The organization and user to delete.
+ * @returns  A Promise that resolves when the organization and user account
+ * have been removed from the database.
+ */
+export async function teardownOrganizationAndMember({
+  organization,
+  user,
+}: {
+  organization: Organization;
+  user: UserAccount;
+}) {
+  try {
+    await deleteOrganizationFromDatabaseById(organization.id);
+  } catch {
+    // do nothing, the org was probably deleted in the test
+  }
+  try {
+    await deleteUserAccountFromDatabaseById(user.id);
+  } catch {
+    // do nothing, the user was probably deleted in the test
+  }
+}
+
+/**
+ * Ensures that Stripe products and their associated prices exist in the
+ * database.
+ * For each pricing tier, it:
+ * 1. Checks if monthly and annual prices already exist
+ * 2. Creates or reuses a product for the tier
+ * 3. Creates any missing prices (monthly and/or annual) for that product
+ *
+ * This ensures test data consistency by maintaining the same product-price
+ * relationships across test runs.
+ */
+export async function ensureStripeProductsAndPricesExist() {
+  for (const tier of Object.keys(priceLookupKeysByTierAndInterval) as Tier[]) {
+    const { monthly, annual } = priceLookupKeysByTierAndInterval[tier];
+
+    const [existingMonthlyPrice, existingAnnualPrice] = await Promise.all([
+      retrieveStripePriceFromDatabaseByLookupKey(monthly),
+      retrieveStripePriceFromDatabaseByLookupKey(annual),
+    ]);
+
+    let productId: string;
+
+    if (existingMonthlyPrice) {
+      productId = existingMonthlyPrice.productId;
+    } else if (existingAnnualPrice) {
+      productId = existingAnnualPrice.productId;
+    } else {
+      const product = createPopulatedStripeProduct({
+        maxSeats: tier === "high" ? 25 : tier === "mid" ? 5 : 1,
+        name: {
+          high: "Business",
+          low: "Hobby",
+          mid: "Startup",
+        }[tier],
+      });
+      await saveStripeProductToDatabase(product);
+      productId = product.stripeId;
+    }
+
+    if (!existingMonthlyPrice) {
+      const price = createPopulatedStripePrice({
+        interval: StripePriceInterval.month,
+        lookupKey: monthly,
+        productId,
+      });
+      await saveStripePriceToDatabase(price);
+    }
+
+    if (!existingAnnualPrice) {
+      const price = createPopulatedStripePrice({
+        interval: StripePriceInterval.year,
+        lookupKey: annual,
+        productId,
+      });
+      await saveStripePriceToDatabase(price);
+    }
+  }
+
+  console.log("✅ Stripe products and prices seeded successfully");
+}
+
+/**
+ * Creates and initializes a {@link RouterContextProvider} for use in tests.
+ *
+ * This helper sets up a new router context and sequentially executes the
+ * i18next middleware (as done in the root loader) followed by any additional
+ * custom middlewares. It is useful for testing components or routes that depend
+ * on React Router's context and middleware side effects.
+ *
+ * Each middleware receives an execution context object containing the router
+ * context, request, route params, and the route's `unstable_pattern`. The
+ * `unstable_pattern` simulates the route path pattern normally provided by
+ * React Router during runtime.
+ *
+ * If a middleware throws a {@link Response} (for example, to simulate a redirect
+ * or authentication failure), the function re-throws it so tests can assert on
+ * that behavior. Any other errors are also re-thrown.
+ *
+ * @param middlewares - Optional array of middleware functions to execute after
+ * the i18next middleware.
+ * @param params - Route parameters passed to each middleware.
+ * @param request - The {@link Request} object passed to each middleware.
+ * @param pattern - The route's `unstable_pattern` value (e.g. `/users/:id`),
+ * used to simulate the matched route path.
+ * @returns A {@link RouterContextProvider} instance populated with any state or
+ * mutations applied by the executed middlewares.
+ */
+export async function createTestContextProvider({
+  middlewares = [],
+  params,
+  request,
+  pattern,
+}: {
+  middlewares?: MiddlewareFunction[];
+  params: Params;
+  request: Request;
+  pattern: string;
+}) {
+  const context = new RouterContextProvider();
+
+  // i18next middleware runs in root loader, so all routes have access to the
+  // i18next context.
+  await i18nextMiddleware(
+    { context, params, request, unstable_pattern: pattern },
+    () => Promise.resolve(new Response(null, { status: 200 })),
+  );
+
+  for (const middleware of middlewares) {
+    try {
+      await middleware(
+        { context, params, request, unstable_pattern: pattern },
+        () => Promise.resolve(new Response(null, { status: 200 })),
+      );
+    } catch (error) {
+      // If middleware throws a Response (e.g., redirect), re-throw it
+      // This allows tests to catch authentication failures, redirects, etc.
+      if (error instanceof Response) {
+        throw error;
+      }
+      // For other errors, also re-throw
+      throw error;
+    }
+  }
+
+  return context;
+}
+
+/**
+ * Creates a RouterContextProvider with authentication middleware.
+ *
+ * This is a convenience wrapper around createTestContextProvider that
+ * pre-configures the auth middleware. Useful for testing authenticated routes
+ * and components that don't require organization context.
+ *
+ * @param params - Route parameters to pass to middlewares.
+ * @param request - Request object to pass to middlewares.
+ * @param pattern - The route's `unstable_pattern` value (e.g. `/users/:id`),
+ * used to simulate the matched route path.
+ * @returns A RouterContextProvider instance with auth context.
+ */
+export async function createAuthTestContextProvider({
+  params,
+  request,
+  pattern,
+}: {
+  params: Params;
+  request: Request;
+  pattern: string;
+}) {
+  return await createTestContextProvider({
+    middlewares: [authMiddleware],
+    params,
+    pattern,
+    request,
+  });
+}
+
+/**
+ * Creates a RouterContextProvider with authentication and organization
+ * membership middlewares.
+ *
+ * This is a convenience wrapper around createTestContextProvider that
+ * pre-configures the auth and organization membership middlewares. Useful for
+ * testing organization-specific routes and components.
+ *
+ * @param params - Route parameters to pass to middlewares.
+ * @param request - Request object to pass to middlewares.
+ * @returns A RouterContextProvider instance with auth and organization
+ * membership context.
+ */
+export async function createOrganizationMembershipTestContextProvider({
+  params,
+  request,
+  pattern,
+}: {
+  params: Params;
+  request: Request;
+  pattern: string;
+}) {
+  return await createTestContextProvider({
+    middlewares: [authMiddleware, organizationMembershipMiddleware],
+    params,
+    pattern,
+    request,
+  });
+}

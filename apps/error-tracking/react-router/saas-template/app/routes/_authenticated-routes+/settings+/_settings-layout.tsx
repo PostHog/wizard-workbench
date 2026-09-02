@@ -1,0 +1,39 @@
+import { useTranslation } from "react-i18next";
+import { TbArrowLeft } from "react-icons/tb";
+import { Link, Outlet } from "react-router";
+
+import { Button } from "~/components/ui/button";
+import { ThemeToggle } from "~/features/color-scheme/theme-toggle";
+
+export default function SettingsLayout() {
+  const { t } = useTranslation("settings", { keyPrefix: "layout" });
+
+  return (
+    <>
+      <header className="flex h-[var(--header-height)] items-center border-b">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between p-2">
+          <div className="flex items-center gap-2">
+            <Button
+              className="size-8"
+              render={
+                <Link aria-label={t("backButtonLabel")} to="/organizations" />
+              }
+              size="icon"
+              variant="outline"
+            >
+              <TbArrowLeft />
+            </Button>
+
+            <h1 className="font-medium text-base">{t("pageTitle")}</h1>
+          </div>
+
+          <ThemeToggle />
+        </div>
+      </header>
+
+      <main>
+        <Outlet />
+      </main>
+    </>
+  );
+}

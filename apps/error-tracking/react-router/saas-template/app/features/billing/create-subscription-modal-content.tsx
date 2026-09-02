@@ -1,0 +1,499 @@
+/** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
+import { IconCheck } from "@tabler/icons-react";
+import type { ComponentProps } from "react";
+import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import { Form, href, Link, useNavigation } from "react-router";
+
+import type { Interval, Tier } from "./billing-constants";
+import {
+  OPEN_CHECKOUT_SESSION_INTENT,
+  priceLookupKeysByTierAndInterval,
+} from "./billing-constants";
+import {
+  FeatureListItem,
+  FeaturesList,
+  FeaturesListTitle,
+  OfferBadge,
+  TierCard,
+  TierCardContent,
+  TierCardDescription,
+  TierCardHeader,
+  TierCardPrice,
+  TierCardTitle,
+  TierContainer,
+  TierGrid,
+} from "./pricing";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Separator } from "~/components/ui/separator";
+import { Spinner } from "~/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+
+export type CreateSubscriptionModalContentProps = {
+  /** how many seats your org is currently using */
+  currentSeats: number;
+  /** max seats per tier (e.g. { low: 1, mid: 10, high: 25 }) */
+  planLimits: Record<Tier, number>;
+};
+
+export function CreateSubscriptionModalContent({
+  currentSeats,
+  planLimits,
+}: CreateSubscriptionModalContentProps) {
+  const { t } = useTranslation("billing", { keyPrefix: "pricing" });
+  const { t: tModal } = useTranslation("billing", {
+    keyPrefix: "noCurrentPlanModal",
+  });
+  const [billingPeriod, setBillingPeriod] = useState("annual");
+
+  const navigation = useNavigation();
+  const isSubmitting =
+    navigation.formData?.get("intent") === OPEN_CHECKOUT_SESSION_INTENT;
+  const isSubscribingToLowMonthlyPlan =
+    navigation.formData?.get("lookupKey") ===
+    priceLookupKeysByTierAndInterval.low.monthly;
+  const isSubscribingToMidMonthlyPlan =
+    navigation.formData?.get("lookupKey") ===
+    priceLookupKeysByTierAndInterval.mid.monthly;
+  const isSubscribingToHighMonthlyPlan =
+    navigation.formData?.get("lookupKey") ===
+    priceLookupKeysByTierAndInterval.high.monthly;
+  const isSubscribingToLowAnnualPlan =
+    navigation.formData?.get("lookupKey") ===
+    priceLookupKeysByTierAndInterval.low.annual;
+  const isSubscribingToMidAnnualPlan =
+    navigation.formData?.get("lookupKey") ===
+    priceLookupKeysByTierAndInterval.mid.annual;
+  const isSubscribingToHighAnnualPlan =
+    navigation.formData?.get("lookupKey") ===
+    priceLookupKeysByTierAndInterval.high.annual;
+
+  const getFeatures = (key: string): string[] =>
+    t(`plans.${key}.features`, "", { returnObjects: true }) as string[];
+
+  const getButtonProps = (
+    interval: Interval,
+    tier: Tier,
+  ): Partial<ComponentProps<typeof Button>> => {
+    const isSubscribing = {
+      "annual-high": isSubscribingToHighAnnualPlan,
+      "annual-low": isSubscribingToLowAnnualPlan,
+      "annual-mid": isSubscribingToMidAnnualPlan,
+      "monthly-high": isSubscribingToHighMonthlyPlan,
+      "monthly-low": isSubscribingToLowMonthlyPlan,
+      "monthly-mid": isSubscribingToMidMonthlyPlan,
+    }[`${interval}-${tier}`];
+
+    return {
+      children: isSubscribing ? (
+        <>
+          <Spinner />
+          {tModal("tierCardBusy")}
+        </>
+      ) : (
+        tModal("tierCardCta")
+      ),
+      disabled: isSubscribing || planLimits[tier] < currentSeats,
+      name: "lookupKey",
+      value: priceLookupKeysByTierAndInterval[tier][interval],
+    };
+  };
+
+  // figure out which tiers can’t cover your seats:
+  const unavailable = (["low", "mid", "high"] as Tier[]).filter(
+    (tier) => planLimits[tier] < currentSeats,
+  );
+
+  return (
+    <Form method="post" replace>
+      {unavailable.length > 0 && (
+        <Alert className="mb-4">
+          <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>
+
+          <AlertDescription>
+            {unavailable.length === 1
+              ? tModal("disabledPlansAlert.descriptionSingular", {
+                  currentSeats,
+                  planCapacity: planLimits[unavailable[0]!],
+                  planTitle: t(`plans.${unavailable[0]!}.title`),
+                })
+              : tModal("disabledPlansAlert.descriptionPlural", {
+                  currentSeats,
+                  plan1Capacity: planLimits[unavailable[0]!],
+                  plan1Title: t(`plans.${unavailable[0]!}.title`),
+                  plan2Capacity: planLimits[unavailable[1]!],
+                  plan2Title: t(`plans.${unavailable[1]!}.title`),
+                })}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <fieldset disabled={isSubmitting}>
+        <input
+          name="intent"
+          type="hidden"
+          value={OPEN_CHECKOUT_SESSION_INTENT}
+        />
+
+        <Tabs onValueChange={setBillingPeriod} value={billingPeriod}>
+          <div className="mb-4 flex flex-col items-center gap-3 sm:flex-row md:mb-2">
+            <TabsList>
+              <TabsTrigger value="monthly">{t("monthly")}</TabsTrigger>
+              <TabsTrigger value="annual">{t("annual")}</TabsTrigger>
+            </TabsList>
+
+            {billingPeriod === "monthly" && (
+              <p className="text-primary text-sm">{t("saveAnnually")}</p>
+            )}
+          </div>
+
+          <TabsContent value="monthly">
+            <TierContainer>
+              <TierGrid>
+                {/* Low Tier */}
+                <TierCard>
+                  <TierCardHeader>
+                    <TierCardTitle>{t("plans.low.title")}</TierCardTitle>
+
+                    <TierCardPrice>
+                      <Trans
+                        components={{
+                          1: (
+                            <span className="font-normal text-muted-foreground text-sm" />
+                          ),
+                        }}
+                        i18nKey="pricing.price"
+                        ns="billing"
+                        values={{ price: "$17" }}
+                      />
+                    </TierCardPrice>
+
+                    <TierCardDescription>
+                      {t("plans.low.description")}
+                    </TierCardDescription>
+
+                    <Button
+                      className="w-full"
+                      type="submit"
+                      {...getButtonProps("monthly", "low")}
+                    />
+                  </TierCardHeader>
+
+                  <Separator />
+
+                  <TierCardContent>
+                    <FeaturesListTitle>
+                      {t("plans.low.featuresTitle")}
+                    </FeaturesListTitle>
+                    <FeaturesList>
+                      {getFeatures("low").map((feature) => (
+                        <FeatureListItem key={feature}>
+                          <IconCheck />
+                          {feature}
+                        </FeatureListItem>
+                      ))}
+                    </FeaturesList>
+                  </TierCardContent>
+                </TierCard>
+
+                {/* Mid Tier */}
+                <TierCard>
+                  <TierCardHeader>
+                    <TierCardTitle>{t("plans.mid.title")}</TierCardTitle>
+
+                    <TierCardPrice>
+                      <Trans
+                        components={{
+                          1: (
+                            <span className="font-normal text-muted-foreground text-sm" />
+                          ),
+                        }}
+                        i18nKey="pricing.price"
+                        ns="billing"
+                        values={{ price: "$30" }}
+                      />
+                    </TierCardPrice>
+
+                    <TierCardDescription>
+                      {t("plans.mid.description")}
+                    </TierCardDescription>
+
+                    <Button
+                      className="w-full"
+                      type="submit"
+                      {...getButtonProps("monthly", "mid")}
+                    />
+                  </TierCardHeader>
+
+                  <Separator />
+
+                  <TierCardContent>
+                    <FeaturesListTitle>
+                      {t("plans.mid.featuresTitle")}
+                    </FeaturesListTitle>
+
+                    <FeaturesList>
+                      {getFeatures("mid").map((feature) => (
+                        <FeatureListItem key={feature}>
+                          <IconCheck />
+                          {feature}
+                        </FeatureListItem>
+                      ))}
+                    </FeaturesList>
+                  </TierCardContent>
+                </TierCard>
+
+                {/* High Tier */}
+                <TierCard className="-mt-1.5 ring-2 ring-primary">
+                  <TierCardHeader>
+                    <TierCardTitle className="text-primary">
+                      {t("plans.high.title")}
+                      <Badge>{t("mostPopular")}</Badge>
+                    </TierCardTitle>
+
+                    <TierCardPrice>
+                      <Trans
+                        components={{
+                          1: (
+                            <span className="font-normal text-muted-foreground text-sm" />
+                          ),
+                        }}
+                        i18nKey="pricing.price"
+                        ns="billing"
+                        values={{ price: "$55" }}
+                      />
+                    </TierCardPrice>
+
+                    <TierCardDescription>
+                      {t("plans.high.description")}
+                    </TierCardDescription>
+
+                    <Button
+                      className="w-full"
+                      type="submit"
+                      {...getButtonProps("monthly", "high")}
+                    />
+                  </TierCardHeader>
+
+                  <Separator />
+
+                  <TierCardContent>
+                    <FeaturesListTitle>
+                      {t("plans.high.featuresTitle")}
+                    </FeaturesListTitle>
+
+                    <FeaturesList>
+                      {getFeatures("high").map((feature) => (
+                        <FeatureListItem key={feature}>
+                          <IconCheck />
+                          {feature}
+                        </FeatureListItem>
+                      ))}
+                    </FeaturesList>
+                  </TierCardContent>
+                </TierCard>
+              </TierGrid>
+            </TierContainer>
+          </TabsContent>
+
+          <TabsContent value="annual">
+            <TierContainer>
+              <TierGrid className="@6xl/tiers:grid-cols-4">
+                {/* Low Tier */}
+                <TierCard>
+                  <TierCardHeader>
+                    <TierCardTitle>{t("plans.low.title")}</TierCardTitle>
+
+                    <TierCardPrice>
+                      {
+                        <Trans
+                          components={{
+                            1: (
+                              <span className="font-normal text-muted-foreground text-sm" />
+                            ),
+                          }}
+                          i18nKey="pricing.price"
+                          ns="billing"
+                          values={{ price: "$15" }}
+                        />
+                      }
+
+                      <OfferBadge>-10%</OfferBadge>
+                    </TierCardPrice>
+
+                    <TierCardDescription>
+                      {t("plans.low.description")}
+                    </TierCardDescription>
+
+                    <Button
+                      className="w-full"
+                      type="submit"
+                      {...getButtonProps("annual", "low")}
+                    />
+                  </TierCardHeader>
+
+                  <Separator />
+
+                  <TierCardContent>
+                    <FeaturesListTitle>
+                      {t("plans.low.featuresTitle")}
+                    </FeaturesListTitle>
+
+                    <FeaturesList>
+                      {getFeatures("low").map((feature) => (
+                        <FeatureListItem key={feature}>
+                          <IconCheck />
+                          {feature}
+                        </FeatureListItem>
+                      ))}
+                    </FeaturesList>
+                  </TierCardContent>
+                </TierCard>
+
+                {/* Mid Tier */}
+                <TierCard>
+                  <TierCardHeader>
+                    <TierCardTitle>{t("plans.mid.title")}</TierCardTitle>
+
+                    <TierCardPrice>
+                      <Trans
+                        components={{
+                          1: (
+                            <span className="font-normal text-muted-foreground text-sm" />
+                          ),
+                        }}
+                        i18nKey="pricing.price"
+                        ns="billing"
+                        values={{ price: "$25" }}
+                      />
+
+                      <OfferBadge>-15%</OfferBadge>
+                    </TierCardPrice>
+
+                    <TierCardDescription>
+                      {t("plans.mid.description")}
+                    </TierCardDescription>
+
+                    <Button
+                      className="w-full"
+                      type="submit"
+                      {...getButtonProps("annual", "mid")}
+                    />
+                  </TierCardHeader>
+
+                  <Separator />
+
+                  <TierCardContent>
+                    <FeaturesListTitle>
+                      {t("plans.mid.featuresTitle")}
+                    </FeaturesListTitle>
+
+                    <FeaturesList>
+                      {getFeatures("mid").map((feature) => (
+                        <FeatureListItem key={feature}>
+                          <IconCheck />
+                          {feature}
+                        </FeatureListItem>
+                      ))}
+                    </FeaturesList>
+                  </TierCardContent>
+                </TierCard>
+
+                {/* High Tier */}
+                <TierCard className="-mt-1.5 ring-2 ring-primary">
+                  <TierCardHeader>
+                    <TierCardTitle className="text-primary">
+                      {t("plans.high.title")}
+                      <Badge>{t("mostPopular")}</Badge>
+                    </TierCardTitle>
+
+                    <TierCardPrice>
+                      <Trans
+                        components={{
+                          1: (
+                            <span className="font-normal text-muted-foreground text-sm" />
+                          ),
+                        }}
+                        i18nKey="pricing.price"
+                        ns="billing"
+                        values={{ price: "$45" }}
+                      />
+
+                      <OfferBadge>-20%</OfferBadge>
+                    </TierCardPrice>
+
+                    <TierCardDescription>
+                      {t("plans.high.description")}
+                    </TierCardDescription>
+
+                    <Button
+                      className="w-full"
+                      type="submit"
+                      {...getButtonProps("annual", "high")}
+                    />
+                  </TierCardHeader>
+
+                  <Separator />
+
+                  <TierCardContent>
+                    <FeaturesListTitle>
+                      {t("plans.high.featuresTitle")}
+                    </FeaturesListTitle>
+
+                    <FeaturesList>
+                      {getFeatures("high").map((feature) => (
+                        <FeatureListItem key={feature}>
+                          <IconCheck />
+                          {feature}
+                        </FeatureListItem>
+                      ))}
+                    </FeaturesList>
+                  </TierCardContent>
+                </TierCard>
+
+                {/* Enterprise Tier */}
+                <TierCard className="@4xl/tiers:col-start-2 @6xl/tiers:col-start-auto">
+                  <TierCardHeader>
+                    <TierCardTitle>{t("plans.enterprise.title")}</TierCardTitle>
+
+                    <TierCardPrice>{t("custom")}</TierCardPrice>
+
+                    <TierCardDescription>
+                      {t("plans.enterprise.description")}
+                    </TierCardDescription>
+
+                    <Button
+                      className="w-full"
+                      render={<Link to={href("/contact-sales")} />}
+                    >
+                      {t("plans.enterprise.cta")}
+                    </Button>
+                  </TierCardHeader>
+
+                  <Separator />
+
+                  <TierCardContent>
+                    <FeaturesListTitle>
+                      {t("plans.enterprise.featuresTitle")}
+                    </FeaturesListTitle>
+
+                    <FeaturesList>
+                      {getFeatures("enterprise").map((feature) => (
+                        <FeatureListItem key={feature}>
+                          <IconCheck />
+                          {feature}
+                        </FeatureListItem>
+                      ))}
+                    </FeaturesList>
+                  </TierCardContent>
+                </TierCard>
+              </TierGrid>
+            </TierContainer>
+          </TabsContent>
+        </Tabs>
+      </fieldset>
+    </Form>
+  );
+}
