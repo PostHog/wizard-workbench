@@ -1,3 +1,4 @@
+from django.apps import apps
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -59,6 +60,9 @@ def create_project(request):
                 action='project_created',
                 description=f'Created project: {project.name}'
             )
+            posthog_client = apps.get_app_config('accounts').posthog_client
+            if posthog_client:
+                posthog_client.capture('project_created')
 
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
@@ -82,6 +86,9 @@ def edit_project(request, pk):
                 action='project_updated',
                 description=f'Updated project: {project.name}'
             )
+            posthog_client = apps.get_app_config('accounts').posthog_client
+            if posthog_client:
+                posthog_client.capture('project_updated')
 
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
@@ -104,6 +111,9 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+        posthog_client = apps.get_app_config('accounts').posthog_client
+        if posthog_client:
+            posthog_client.capture('project_deleted')
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
