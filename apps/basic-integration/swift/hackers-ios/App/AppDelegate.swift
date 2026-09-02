@@ -6,6 +6,7 @@
 //
 
 import Data
+import PostHog
 import Shared
 import UIKit
 
@@ -33,6 +34,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
         // init default settings
         UserDefaults.standard.registerDefaults()
+
+        let projectToken = ProcessInfo.processInfo.environment["POSTHOG_PROJECT_TOKEN"] ?? "phc_nmum54dVqUBEAmNrWgHdnRF8HRSCVQhxL6kRhy4GCV6a"
+        let host = ProcessInfo.processInfo.environment["POSTHOG_HOST"] ?? "https://us.i.posthog.com"
+        let config = PostHogConfig(projectToken: projectToken, host: host)
+        config.errorTrackingConfig.autoCapture = true
+        PostHogSDK.shared.setup(config)
 
         return true
     }

@@ -67,12 +67,9 @@ public final class SessionService: AuthenticationServiceProtocol {
         return .authenticated
     }
 
-    public func unauthenticate() {
-        Task { [weak self] in
-            guard let self else { return }
-            try? await authenticationUseCase.logout()
-            await MainActor.run { self.user = nil }
-        }
+    public func unauthenticate() async {
+        try? await authenticationUseCase.logout()
+        user = nil
     }
 
     public enum AuthenticationState {
