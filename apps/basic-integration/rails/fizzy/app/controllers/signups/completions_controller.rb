@@ -23,6 +23,8 @@ class Signups::CompletionsController < ApplicationController
     end
 
     def welcome_to_account
+      identify_user(@signup.user)
+
       respond_to do |format|
         format.html do
           flash[:welcome_letter] = true
@@ -31,6 +33,15 @@ class Signups::CompletionsController < ApplicationController
 
         format.json { render json: { account_id: @signup.account.id }, status: :created }
       end
+    end
+
+    def identify_user(user)
+      return unless defined?(PostHog)
+
+      PostHog.identify(
+        distinct_id: user.posthog_distinct_id,
+        properties: user.posthog_properties
+      )
     end
 
     def invalid_signup
