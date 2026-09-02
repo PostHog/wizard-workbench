@@ -1,8 +1,10 @@
+import { randomUUID } from 'node:crypto'
 import { lookupOrder } from './orders.js'
 import { posthog } from './posthog.js'
 
 const LLM_URL = process.env.LLM_URL ?? 'http://localhost:11434/v1/chat/completions'
 const MODEL = 'llama3.2'
+const PROVIDER = 'ollama'
 
 type Message = {
     role: 'system' | 'user' | 'assistant' | 'tool'
@@ -35,12 +37,16 @@ const TOOLS = [
     },
 ]
 
-async function complete(messages: Message[]): Promise<Completion> {
+type GenerationContext = { traceId: string; sessionId: string; distinctId: string }
+
+async function complete(messages: Message[], context: GenerationContext): Promise<Completion> {
+    const start = Date.now()
     const res = await fetch(LLM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: MODEL, messages, tools: TOOLS }),
     })
+    const latency = (Date.now() - start) / 1000
     if (!res.ok) {
         throw new Error(`model returned ${res.status}`)
     }
@@ -49,6 +55,23 @@ async function complete(messages: Message[]): Promise<Completion> {
         usage?: { prompt_tokens: number; completion_tokens: number }
     }
     const message = body.choices[0]?.message
+
+    posthog.capture({
+        distinctId: context.distinctId,
+        event: '$ai_generation',
+        properties: {
+            $ai_trace_id: context.traceId,
+            $ai_session_id: context.sessionId,
+            $ai_model: MODEL,
+            $ai_provider: PROVIDER,
+            $ai_input: messages,
+            $ai_input_tokens: body.usage?.prompt_tokens ?? 0,
+            $ai_output_choices: [{ role: 'assistant', content: message?.content ?? '', tool_calls: message?.tool_calls }],
+            $ai_output_tokens: body.usage?.completion_tokens ?? 0,
+            $ai_latency: latency,
+        },
+    })
+
     return {
         text: message?.content ?? '',
         toolCalls: message?.tool_calls ?? [],
@@ -70,6 +93,8 @@ class Thread {
 
     /** Answer one question, end to end. */
     async ask(question: string): Promise<string> {
+        const context: GenerationContext = { traceId: randomUUID(), sessionId: this.threadId, distinctId: this.userId }
+
         const history: Message[] = this.turns.flatMap((t) => [
             { role: 'user' as const, content: t.question },
             { role: 'assistant' as const, content: t.answer },
@@ -81,20 +106,31 @@ class Thread {
             { role: 'user', content: question },
         ]
 
-        let result = await complete(messages)
+        let result = await complete(messages, context)
 
         if (result.toolCalls.length > 0) {
             messages.push({ role: 'assistant', content: '', tool_calls: result.toolCalls })
             for (const call of result.toolCalls) {
                 const args = JSON.parse(call.function.arguments) as { user_id?: string }
+                const toolStart = Date.now()
                 const output = lookupOrder(args.user_id ?? this.userId)
+                posthog.capture({
+                    distinctId: this.userId,
+                    event: '$ai_span',
+                    properties: {
+                        $ai_trace_id: context.traceId,
+                        $ai_session_id: context.sessionId,
+                        $ai_span_name: call.function.name,
+                        $ai_latency: (Date.now() - toolStart) / 1000,
+                    },
+                })
                 messages.push({
                     role: 'tool',
                     tool_call_id: call.id,
                     content: JSON.stringify(output),
                 })
             }
-            result = await complete(messages)
+            result = await complete(messages, context)
         }
 
         this.turns.push({ question, answer: result.text })
