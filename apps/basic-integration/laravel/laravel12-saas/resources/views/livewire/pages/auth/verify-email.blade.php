@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
@@ -19,7 +20,10 @@ new #[Layout('layouts.guest')] class extends Component
             return;
         }
 
-        Auth::user()->sendEmailVerificationNotification();
+        $user = Auth::user();
+        $user->sendEmailVerificationNotification();
+
+        app(PostHogService::class)->capture((string) $user->getAuthIdentifier(), 'email_verification_sent');
 
         Session::flash('status', 'verification-link-sent');
     }

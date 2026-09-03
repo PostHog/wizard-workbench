@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -40,6 +41,11 @@ new class extends Component
 
         $user->save();
 
+        app(PostHogService::class)->capture((string) $user->getAuthIdentifier(), 'profile_updated', [
+            'email_changed' => $user->wasChanged('email'),
+            'name_changed' => $user->wasChanged('name'),
+        ]);
+
         $this->dispatch('profile-updated', name: $user->name);
     }
 
@@ -57,6 +63,8 @@ new class extends Component
         }
 
         $user->sendEmailVerificationNotification();
+
+        app(PostHogService::class)->capture((string) $user->getAuthIdentifier(), 'email_verification_sent');
 
         Session::flash('status', 'verification-link-sent');
     }

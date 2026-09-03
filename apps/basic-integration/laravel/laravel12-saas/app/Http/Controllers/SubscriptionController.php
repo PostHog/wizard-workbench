@@ -7,6 +7,7 @@ use App\Actions\Billing\GetSubscriptionSummary;
 use App\Actions\Billing\RedirectToBillingPortal;
 use App\Actions\Billing\SwapPlan;
 use App\Domains\Billing\PlanCatalog;
+use App\Services\PostHogService;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -33,6 +34,10 @@ class SubscriptionController extends Controller
             return $this->createStubSubscription($user, $plan);
         }
 
+        app(PostHogService::class)->capture((string) $user->getAuthIdentifier(), 'subscription_checkout_started', [
+            'plan_id' => $plan->getKey(),
+        ]);
+
         $checkoutSession = $checkoutPlan($user, $plan);
 
         return redirect($checkoutSession->url);
@@ -58,6 +63,11 @@ class SubscriptionController extends Controller
             'amount' => $plan->price ?? 0,
         ]);
 
+        app(PostHogService::class)->capture((string) $user->getAuthIdentifier(), 'subscription_started', [
+            'billing_mode' => 'demo',
+            'plan_id' => $plan->getKey(),
+        ]);
+
         return redirect()->route('dashboard')->with('success', 'Demo subscription created for ' . $plan->name . '. (Stripe not configured)');
     }
 
@@ -70,6 +80,10 @@ class SubscriptionController extends Controller
             try {
                 $swapPlan($user, $plan);
 
+                app(PostHogService::class)->capture((string) $user->getAuthIdentifier(), 'subscription_plan_changed', [
+                    'plan_id' => $plan->getKey(),
+                ]);
+
                 return redirect()->route('subscribe')->with('success', 'Your subscription has been updated to '.$plan->name.'.');
             } catch (Exception $e) {
                 return redirect()->route('subscribe')->with('error', 'There was an error updating your subscription: '.$e->getMessage());
@@ -81,6 +95,13 @@ class SubscriptionController extends Controller
 
     public function redirectToBillingPortal(Request $request, RedirectToBillingPortal $billingPortal)
     {
-        return $billingPortal($request->user());
+        $user = $request->user();
+        $response = $billingPortal($user);
+
+        if (CheckoutPlan::isStripeConfigured()) {
+            app(PostHogService::class)->capture((string) $user->getAuthIdentifier(), 'billing_portal_opened');
+        }
+
+        return $response;
     }
 }
