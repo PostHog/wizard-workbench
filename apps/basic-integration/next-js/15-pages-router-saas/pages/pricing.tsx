@@ -1,5 +1,6 @@
 import { GetServerSideProps } from 'next';
 import { Check, ArrowRight, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
@@ -73,6 +74,11 @@ function PricingCard({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    posthog.capture('checkout_started', {
+      price_id: priceId,
+      plan_name: name
+    });
 
     startTransition(async () => {
       try {

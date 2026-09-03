@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
 import {
@@ -22,12 +23,26 @@ function UserMenu() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const router = useRouter();
 
+  useEffect(() => {
+    if (user && posthog.get_distinct_id() !== String(user.id)) {
+      posthog.identify(String(user.id), {
+        email: user.email,
+        name: user.name,
+        role: user.role
+      });
+    }
+  }, [user]);
+
   async function handleSignOut() {
     try {
       // Call sign-out API to delete HttpOnly session cookie
-      await fetch('/api/auth/sign-out', {
+      const response = await fetch('/api/auth/sign-out', {
         method: 'POST'
       });
+
+      if (!response.ok) return;
+
+      posthog.reset();
 
       // Clear SWR cache
       mutate('/api/user', null, false);
