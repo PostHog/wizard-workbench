@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
+from config import apps as config_apps
 from .models import Project, ActivityLog
 from .forms import ProjectForm
 
@@ -54,6 +55,9 @@ def create_project(request):
             project.owner = request.user
             project.save()
 
+            if config_apps.posthog_client:
+                config_apps.posthog_client.capture('project_created')
+
             ActivityLog.objects.create(
                 user=request.user,
                 action='project_created',
@@ -77,6 +81,9 @@ def edit_project(request, pk):
         if form.is_valid():
             form.save()
 
+            if config_apps.posthog_client:
+                config_apps.posthog_client.capture('project_updated')
+
             ActivityLog.objects.create(
                 user=request.user,
                 action='project_updated',
@@ -98,6 +105,9 @@ def delete_project(request, pk):
     if request.method == 'POST':
         name = project.name
         project.delete()
+
+        if config_apps.posthog_client:
+            config_apps.posthog_client.capture('project_deleted')
 
         ActivityLog.objects.create(
             user=request.user,
