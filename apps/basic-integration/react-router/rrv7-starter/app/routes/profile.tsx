@@ -6,6 +6,7 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import posthog, { isPostHogConfigured } from '@/lib/posthog.client'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
   const [isFollowing, setIsFollowing] = useState(false)
@@ -14,6 +15,9 @@ function FollowButton({ username, onFollow }: { username: string; onFollow: () =
     setIsFollowing(!isFollowing)
     if (!isFollowing) {
       onFollow()
+      if (isPostHogConfigured) {
+        posthog.capture('profile_followed')
+      }
     }
   }
 
