@@ -1,6 +1,48 @@
+import { loadEnvFile } from 'node:process';
 import Fastify from 'fastify';
+import { PostHog } from 'posthog-node';
+
+try {
+  loadEnvFile();
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+}
+
+const posthogProjectToken = process.env.POSTHOG_PROJECT_TOKEN;
+const posthogHost = process.env.POSTHOG_HOST;
+
+if ((!posthogProjectToken || !posthogHost) && process.env.NODE_ENV !== 'production') {
+  const missingVariable = !posthogProjectToken ? 'POSTHOG_PROJECT_TOKEN' : 'POSTHOG_HOST';
+  throw new Error(
+    `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+  );
+}
+
+export const posthog = posthogProjectToken && posthogHost
+  ? new PostHog(posthogProjectToken, {
+    host: posthogHost,
+    enableExceptionAutocapture: true,
+  })
+  : null;
 
 const fastify = Fastify({ logger: true });
+
+fastify.addHook('onClose', async () => {
+  if (posthog) {
+    await posthog.shutdown();
+  }
+});
+
+fastify.setErrorHandler((error, request, reply) => {
+  if (posthog) {
+    posthog.captureException(error, undefined, {
+      endpoint: request.routeOptions.url,
+      method: request.method,
+    });
+  }
+
+  reply.send(error);
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +81,17 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'post_created',
+      properties: {
+        post_id: post.id,
+        published: post.published,
+      },
+    });
+  }
+
   return reply.status(201).send(post);
 });
 
@@ -63,9 +116,30 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   }
 
   const { title, body, published } = request.body || {};
-  if (title !== undefined) post.title = title;
-  if (body !== undefined) post.body = body;
-  if (published !== undefined) post.published = published;
+  const updatedFields = [];
+  if (title !== undefined) {
+    post.title = title;
+    updatedFields.push('title');
+  }
+  if (body !== undefined) {
+    post.body = body;
+    updatedFields.push('body');
+  }
+  if (published !== undefined) {
+    post.published = published;
+    updatedFields.push('published');
+  }
+
+  if (posthog) {
+    posthog.capture({
+      event: 'post_updated',
+      properties: {
+        post_id: post.id,
+        published: post.published,
+        updated_fields: updatedFields,
+      },
+    });
+  }
 
   return post;
 });
@@ -79,11 +153,22 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   }
 
   const postId = posts[index].id;
+  const deletedCommentCount = comments.filter((comment) => comment.post_id === postId).length;
   posts.splice(index, 1);
 
   // Remove associated comments
   for (let i = comments.length - 1; i >= 0; i--) {
     if (comments[i].post_id === postId) comments.splice(i, 1);
+  }
+
+  if (posthog) {
+    posthog.capture({
+      event: 'post_deleted',
+      properties: {
+        post_id: postId,
+        deleted_comment_count: deletedCommentCount,
+      },
+    });
   }
 
   return reply.status(204).send();
@@ -111,14 +196,33 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'comment_created',
+      properties: {
+        comment_id: comment.id,
+        post_id: post.id,
+      },
+    });
+  }
+
   return reply.status(201).send(comment);
 });
 
 const PORT = process.env.PORT || 3001;
 
-fastify.listen({ port: PORT }, (err) => {
+const shutdown = async () => {
+  await fastify.close();
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+fastify.listen({ port: PORT }, async (err) => {
   if (err) {
     fastify.log.error(err);
+    await fastify.close();
     process.exit(1);
   }
 });
