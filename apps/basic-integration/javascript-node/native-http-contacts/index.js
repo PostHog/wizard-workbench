@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { posthog } from './posthog.js';
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -47,6 +48,12 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      if (posthog) {
+        posthog.capture({
+          event: 'group_created',
+          properties: { initial_contact_count: 0 },
+        });
+      }
       return json(res, 201, group);
     }
 
@@ -90,6 +97,12 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_created',
+          properties: { has_phone: Boolean(contact.phone), has_company: Boolean(contact.company) },
+        });
+      }
       return json(res, 201, contact);
     }
 
@@ -114,6 +127,16 @@ const server = createServer(async (req, res) => {
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_updated',
+          properties: {
+            updated_fields: Object.keys(body).filter((field) =>
+              ['name', 'email', 'phone', 'company', 'group_id'].includes(field)
+            ),
+          },
+        });
+      }
       return json(res, 200, contact);
     }
 
@@ -123,13 +146,26 @@ const server = createServer(async (req, res) => {
       const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
-      contacts.splice(index, 1);
+      const [contact] = contacts.splice(index, 1);
+      if (posthog) {
+        posthog.capture({
+          event: 'contact_deleted',
+          properties: { had_phone: Boolean(contact.phone), had_company: Boolean(contact.company) },
+        });
+      }
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    if (posthog) {
+      posthog.captureException(err, undefined, {
+        method,
+        path,
+        status_code: 500,
+      });
+    }
     json(res, 500, { error: 'Internal server error' });
   }
 });
@@ -139,3 +175,11 @@ const PORT = process.env.PORT || 3004;
 server.listen(PORT, () => {
   console.log(`Native HTTP contacts API running on http://localhost:${PORT}`);
 });
+
+async function shutdown() {
+  await new Promise((resolve) => server.close(resolve));
+  if (posthog) await posthog.shutdown();
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
