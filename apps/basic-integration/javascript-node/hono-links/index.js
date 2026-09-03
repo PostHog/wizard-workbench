@@ -1,5 +1,25 @@
+import 'dotenv/config';
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { PostHog } from 'posthog-node';
+
+const posthogProjectToken = process.env.POSTHOG_PROJECT_TOKEN;
+const posthogHost = process.env.POSTHOG_HOST;
+
+if (!posthogProjectToken && process.env.NODE_ENV !== 'production') {
+  throw new Error(
+    'POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_PROJECT_TOKEN is configured'
+  );
+}
+
+const posthog = posthogProjectToken
+  ? new PostHog(posthogProjectToken, {
+      host: posthogHost,
+      enableExceptionAutocapture: true,
+      flushAt: 1,
+      flushInterval: 0,
+    })
+  : null;
 
 const app = new Hono();
 
@@ -47,6 +67,10 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+  posthog?.capture({
+    event: 'link_created',
+    properties: { tag_count: tags.length, has_description: Boolean(description) },
+  });
   return c.json(link, 201);
 });
 
@@ -76,6 +100,10 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  posthog?.capture({
+    event: 'link_updated',
+    properties: { updated_fields: Object.keys(body).sort() },
+  });
   return c.json(link);
 });
 
@@ -87,7 +115,11 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [deletedLink] = links.splice(index, 1);
+  posthog?.capture({
+    event: 'link_deleted',
+    properties: { had_tags: deletedLink.tags.length > 0 },
+  });
   return c.body(null, 204);
 });
 
@@ -100,6 +132,11 @@ app.get('/api/tags', (c) => {
     }
   }
   return c.json({ tags: tagCounts });
+});
+
+app.onError((error, c) => {
+  posthog?.captureException(error);
+  return c.json({ error: 'Internal server error' }, 500);
 });
 
 const PORT = process.env.PORT || 3002;
