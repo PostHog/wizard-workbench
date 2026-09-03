@@ -1,7 +1,9 @@
 <script lang="ts">
   import { enhance, applyAction } from "$app/forms"
   import { page } from "$app/stores"
+  import { PUBLIC_POSTHOG_HOST, PUBLIC_POSTHOG_PROJECT_TOKEN } from "$env/static/public"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import posthog from "posthog-js"
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -57,6 +59,11 @@
       await applyAction(result)
       loading = false
       if (result.type === "success") {
+        if (PUBLIC_POSTHOG_PROJECT_TOKEN && PUBLIC_POSTHOG_HOST) {
+          posthog.capture("account_settings_updated", {
+            setting: formTarget.split("?/", 2)[1] ?? "unknown",
+          })
+        }
         showSuccess = true
       }
     }

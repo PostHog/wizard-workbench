@@ -1,7 +1,9 @@
 <script lang="ts">
   import { page } from "$app/stores"
+  import { PUBLIC_POSTHOG_HOST, PUBLIC_POSTHOG_PROJECT_TOKEN } from "$env/static/public"
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
+  import posthog from "posthog-js"
   import SettingsModule from "../settings_module.svelte"
 
   let adminSection: Writable<string> = getContext("adminSection")
@@ -35,6 +37,9 @@
           redirectTo: `${$page.url.origin}/auth/callback?next=%2Faccount%2Fsettings%2Freset_password`,
         })
         .then((d) => {
+          if (!d.error && PUBLIC_POSTHOG_PROJECT_TOKEN && PUBLIC_POSTHOG_HOST) {
+            posthog.capture("password_reset_requested")
+          }
           sentEmail = d.error ? false : true
           sendBtnDisabled = false
           sendBtnText = "Send Forgot Password Email"
