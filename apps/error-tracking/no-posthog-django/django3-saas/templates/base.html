@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Django SaaS{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+    <style>
+        :root {
+            --primary: #0066cc;
+            --primary-dark: #0052a3;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --muted: #6c757d;
+        }
+        body { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+        header { border-bottom: 1px solid #ddd; padding-bottom: 1rem; margin-bottom: 2rem; }
+        nav { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+        nav a { text-decoration: none; }
+        .nav-brand { font-weight: bold; font-size: 1.2rem; margin-right: auto; }
+        footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #ddd; text-align: center; color: var(--muted); }
+        .message { padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
+        .message.success { background: #d4edda; color: #155724; }
+        .message.error { background: #f8d7da; color: #721c24; }
+        .message.warning { background: #fff3cd; color: #856404; }
+        .message.info { background: #d1ecf1; color: #0c5460; }
+        .btn { display: inline-block; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; border: none; cursor: pointer; font-size: 1rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-small { padding: 0.25rem 0.5rem; font-size: 0.875rem; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+        .text-muted { color: var(--muted); }
+        .text-small { font-size: 0.875rem; }
+        .flex { display: flex; }
+        .flex-between { justify-content: space-between; }
+        .flex-center { align-items: center; }
+        .gap-1 { gap: 1rem; }
+        .mb-1 { margin-bottom: 1rem; }
+        .mb-2 { margin-bottom: 2rem; }
+        .mt-1 { margin-top: 1rem; }
+        .badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 10px; font-size: 0.75rem; background: var(--primary); color: white; }
+        .badge-success { background: var(--success); }
+        .badge-warning { background: var(--warning); color: #333; }
+        .stat-card { text-align: center; }
+        .stat-card h3 { font-size: 2rem; margin: 0; }
+        .stat-card p { margin: 0.5rem 0 0 0; color: var(--muted); }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="{% url 'marketing:home' %}" class="nav-brand">Django SaaS</a>
+            <a href="{% url 'marketing:features' %}">Features</a>
+            <a href="{% url 'billing:pricing' %}">Pricing</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'dashboard:index' %}">Dashboard</a>
+                <a href="{% url 'billing:manage' %}">Billing</a>
+                <a href="{% url 'accounts:settings' %}">Settings</a>
+                <a href="{% url 'accounts:logout' %}">Logout</a>
+            {% else %}
+                <a href="{% url 'accounts:login' %}">Login</a>
+                <a href="{% url 'accounts:register' %}">Register</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+        {% if messages %}
+            {% for message in messages %}
+                <p class="message {{ message.tags }}">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>Django SaaS App</p>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

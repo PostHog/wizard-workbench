@@ -1,0 +1,17 @@
+<div (click)="$event.stopPropagation(); $event.preventDefault()" [class.nav-item]="inNavbar()" [class.open]="isDropdownOpen()" class="language-selector">
+  <div class="dropdown-toggle" (click)="$event.stopPropagation(); $event.preventDefault(); toggleDropdown()">Lang: {{ currentLanguageCode() }}</div>
+  @if (isDropdownOpen()) {
+    <div [class.above]="openAbove()" class="selectable-list-popover">
+      <ul class="selectable-list-popover__list">
+        @for (language of languages(); track language) {
+          <li (click)="setLanguage(language)" [class.selected]="getLanguageCode(language) === currentLanguageCode()" class="selectable-list-popover__list__item">
+            <div class="icon"></div>
+            {{ language }}
+          </li>
+        } @empty {
+          <li>There are no items.</li>
+        }
+      </ul>
+    </div>
+  }
+</div>

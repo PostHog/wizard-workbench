@@ -1,0 +1,36 @@
+import { prependProtocol } from '@/lib/utils'
+
+export const isServer = typeof window === 'undefined'
+
+export const isClient = typeof window !== 'undefined'
+
+export const isDevelopment = __vercel.env === 'development' || import.meta.env.NODE_ENV === 'development'
+
+export const isProduction = __vercel.env === 'production' || import.meta.env.NODE_ENV === 'production'
+
+export const SITE_URL = prependProtocol(__vercel.url || import.meta.env.VITE_SITE_URL)
+
+if (!SITE_URL) {
+  console.error('VITE_SITE_URL is not set! This could break stuff like opengraph data.')
+}
+
+export const WATERMARK = `             
+             .;5####57..                        
+            .5#########;.                       
+            ;###########                        
+            ;###########.                       
+            .;#######N5.                        
+  .;;;..      .;75557..                  .;;;.  
+.5######;                             .;######5.
+#########;                            ;#########
+##########..                        ..##########
+;##########;                        ;##########;
+.7##########5;.                  .;5#########N7 
+ .7############7;..           .;7#N##########7. 
+   ;###############5577777755#############N#;.  
+    .7####################################7.    
+     ..;5#N############################5;.      
+         .;7########################7;..        
+             .;;755##########557;;...           
+
+              Made by joyco.studio              `
