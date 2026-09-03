@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import * as Haptics from "expo-haptics";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
@@ -15,6 +16,7 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
 
 import { parseTitle } from "@/lib/text";
+import { posthog } from "@/lib/posthog";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
@@ -22,6 +24,12 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+
+  useEffect(() => {
+    if (typeof itemId === "string") {
+      posthog?.screen("item_details", { story_id: itemId });
+    }
+  }, [itemId]);
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -163,6 +171,9 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog?.capture("external_link_opened", {
+                    story_id: item.id,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
