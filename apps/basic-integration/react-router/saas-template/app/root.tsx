@@ -1,7 +1,8 @@
 import "./app.css";
 
 import { FormOptionsProvider } from "@conform-to/react/future";
-import { useEffect } from "react";
+import { usePostHog } from "@posthog/react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
 import {
@@ -31,6 +32,7 @@ import {
   i18nextMiddleware,
   localeCookie,
 } from "./features/localization/i18next-middleware.server";
+import { createSupabaseServerClient } from "./features/user-authentication/supabase.server";
 import { useToast } from "./hooks/use-toast";
 import { cn } from "./lib/utils";
 import { ClientHintCheck, getHints } from "./utils/client-hints";
@@ -65,12 +67,22 @@ export const shouldRevalidate = ({
 
 export const middleware = [securityMiddleware, i18nextMiddleware];
 
+const posthogConfigured = Boolean(
+  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+    import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+);
+
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const { colorScheme, honeypotInputProps, toastData } = await promiseHash({
-    colorScheme: getColorScheme(request),
-    honeypotInputProps: honeypot.getInputProps(),
-    toastData: getToast(request),
+  const { supabase, headers: authHeaders } = createSupabaseServerClient({
+    request,
   });
+  const { colorScheme, honeypotInputProps, toastData, user } =
+    await promiseHash({
+      colorScheme: getColorScheme(request),
+      honeypotInputProps: honeypot.getInputProps(),
+      toastData: getToast(request),
+      user: supabase.auth.getUser().then(({ data }) => data.user),
+    });
   const locale = getLocale(context);
   const i18next = getInstance(context);
   const title = i18next.t("appName");
@@ -89,10 +101,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       },
       title,
       toast,
+      user: user && {
+        email: user.email,
+        id: user.id,
+      },
     },
     {
       headers: combineHeaders(
         { "Set-Cookie": await localeCookie.serialize(locale) },
+        authHeaders,
         toastHeaders,
       ),
     },
@@ -177,14 +194,38 @@ export function Layout({
   );
 }
 
-export default function App({ loaderData: { locale } }: Route.ComponentProps) {
+export default function App({ loaderData }: Route.ComponentProps) {
+  const { locale, user } = loaderData;
   const { i18n } = useTranslation();
+  const posthog = usePostHog();
+  const identifiedUserId = useRef<string | null>(null);
 
   useEffect(() => {
     if (i18n.language !== locale) {
       i18n.changeLanguage(locale);
     }
   }, [i18n, locale]);
+
+  useEffect(() => {
+    if (!posthogConfigured) return;
+
+    if (user) {
+      if (identifiedUserId.current && identifiedUserId.current !== user.id) {
+        posthog.reset();
+      }
+
+      if (identifiedUserId.current !== user.id) {
+        posthog.identify(
+          user.id,
+          user.email ? { email: user.email } : undefined,
+        );
+        identifiedUserId.current = user.id;
+      }
+    } else if (identifiedUserId.current) {
+      posthog.reset();
+      identifiedUserId.current = null;
+    }
+  }, [posthog, user]);
 
   return <Outlet />;
 }
