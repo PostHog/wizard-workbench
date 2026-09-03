@@ -1,0 +1,19 @@
+{
+  "name": "wb-aio-google-adk-node-weather",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PostHog-less weather assistant (Google ADK, tool use) for testing `wizard ai-observability`.",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@google/adk": "^2.0.0",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
