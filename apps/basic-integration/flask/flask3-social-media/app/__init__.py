@@ -1,7 +1,10 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+from flask import Flask, g, request, current_app
+from flask_login import current_user
+from posthog import Posthog
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -39,9 +42,60 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    posthog_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    missing_posthog_var = (
+        'POSTHOG_PROJECT_TOKEN' if not posthog_token else
+        'POSTHOG_HOST' if not posthog_host else None
+    )
+    if missing_posthog_var:
+        if app.debug:
+            raise RuntimeError(
+                f'{missing_posthog_var} variable required by PostHog is missing '
+                f'or un-configured, this causes events to be silently missed. '
+                f'This error stops appearing once {missing_posthog_var} is configured'
+            )
+        app.extensions['posthog'] = None
+    else:
+        posthog_client = Posthog(
+            posthog_token,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        app.extensions['posthog'] = posthog_client
+        atexit.register(posthog_client.shutdown)
+
     db.init_app(app)
     migrate.init_app(app, db)
     login.init_app(app)
+
+    @app.before_request
+    def start_posthog_request_context():
+        posthog_client = current_app.extensions.get('posthog')
+        if posthog_client is None:
+            return
+
+        context = posthog_client.new_context(fresh=True)
+        context.__enter__()
+        g.posthog_context = context
+
+        if current_user.is_authenticated:
+            posthog_client.identify_context(str(current_user.id))
+        else:
+            distinct_id = request.headers.get('X-POSTHOG-DISTINCT-ID')
+            if distinct_id:
+                posthog_client.identify_context(distinct_id)
+
+        session_id = request.headers.get('X-POSTHOG-SESSION-ID')
+        if session_id:
+            posthog_client.set_context_session(session_id)
+
+    @app.teardown_request
+    def end_posthog_request_context(error):
+        context = g.pop('posthog_context', None)
+        if context is not None:
+            context.__exit__(None, None, None)
+
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
