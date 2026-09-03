@@ -3,7 +3,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
-import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
+import {
+  DEMO_TOKEN,
+  DEMO_USER,
+  isDemoMode,
+  demoPermissions,
+} from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   signInSuccess,
@@ -20,6 +26,12 @@ export function* init() {
     yield put(signInSuccess(token));
     // Grant permissions immediately in demo mode
     if (isDemoMode(token)) {
+      posthog?.identify(String(DEMO_USER.id), {
+        $set: {
+          name: DEMO_USER.name,
+          email: DEMO_USER.email,
+        },
+      });
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
     }
   }
@@ -41,8 +53,15 @@ export function* signIn({ payload }) {
     if (email === 'demo@test.com' && password === 'demo') {
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
       yield put(signInSuccess(DEMO_TOKEN));
+      posthog?.identify(String(DEMO_USER.id), {
+        $set: {
+          name: DEMO_USER.name,
+          email: DEMO_USER.email,
+        },
+      });
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
+      posthog?.capture('sign_in_completed', { demo_mode: true });
       toast.showSuccess('Welcome to demo mode!');
       NavigationService.navigate('Main');
       return;
@@ -50,9 +69,24 @@ export function* signIn({ payload }) {
 
     const response = yield call(api.post, 'sessions', { email, password });
 
-    yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
+    const { token, user } = response.data;
 
-    yield put(signInSuccess(response.data.token));
+    if (!token) {
+      throw new Error('Session response is missing the authentication token');
+    }
+
+    yield call([AsyncStorage, 'setItem'], '@Omni:token', token);
+
+    yield put(signInSuccess(token));
+    if (user?.id) {
+      posthog?.identify(String(user.id), {
+        $set: {
+          ...(user.name ? { name: user.name } : {}),
+          ...(user.email ? { email: user.email } : {}),
+        },
+      });
+    }
+    posthog?.capture('sign_in_completed', { demo_mode: false });
     NavigationService.navigate('Main');
   } catch (err) {
     toast.showError('Invalid credentials');
@@ -60,6 +94,8 @@ export function* signIn({ payload }) {
 }
 
 export function* signOut() {
+  posthog?.capture('signed_out');
+  posthog?.reset();
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }

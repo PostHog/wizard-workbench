@@ -2,6 +2,11 @@
 // Login with: demo@test.com / demo
 
 export const DEMO_TOKEN = 'demo-token-12345';
+export const DEMO_USER = {
+  id: 6,
+  name: 'Demo User',
+  email: 'demo@test.com',
+};
 
 export const demoTeams = [
   { id: 1, name: 'Acme Corp', slug: 'acme-corp' },
@@ -35,7 +40,11 @@ export const demoMembers = {
     { id: 5, user: { name: 'Charlie Davis', email: 'charlie@startup.com' }, roles: [{ id: 3, name: 'Viewer' }] },
   ],
   'personal': [
-    { id: 6, user: { name: 'Demo User', email: 'demo@test.com' }, roles: [{ id: 1, name: 'Admin' }] },
+    {
+      id: DEMO_USER.id,
+      user: { name: DEMO_USER.name, email: DEMO_USER.email },
+      roles: [{ id: 1, name: 'Admin' }],
+    },
   ],
 };
 
