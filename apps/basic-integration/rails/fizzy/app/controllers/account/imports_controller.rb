@@ -36,6 +36,13 @@ class Account::ImportsController < ApplicationController
 
       Current.set(account: account) do
         import = account.imports.create!(identity: Current.identity, file: params[:file])
+
+        capture_posthog(
+          distinct_id: Current.identity.posthog_distinct_id,
+          event: "account_import_started",
+          properties: { account_id: account.id, import_id: import.id }
+        )
+
         import.process_later
       end
 

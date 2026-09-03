@@ -28,6 +28,12 @@ class BoardsController < ApplicationController
   def create
     @board = Board.create! board_params.with_defaults(all_access: true)
 
+    capture_posthog(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "board_created",
+      properties: { board_id: @board.id, account_id: @board.account_id }
+    )
+
     respond_to do |format|
       format.html { redirect_to board_path(@board) }
       format.json { head :created, location: board_path(@board, format: :json) }

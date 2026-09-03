@@ -43,6 +43,7 @@ class Sessions::MagicLinksController < ApplicationController
     def sign_in(magic_link)
       clear_pending_authentication_token
       start_new_session_for magic_link.identity
+      identify_current_user
 
       respond_to do |format|
         format.html { redirect_to after_sign_in_url(magic_link) }
@@ -85,5 +86,21 @@ class Sessions::MagicLinksController < ApplicationController
 
     def requires_signup_completion?(magic_link)
       magic_link.for_sign_up?
+    end
+
+    def identify_current_user
+      subject = Current.user || Current.identity
+      return unless subject
+
+      identify_posthog(
+        distinct_id: subject.posthog_distinct_id,
+        properties: subject.posthog_properties
+      )
+
+      capture_posthog(
+        distinct_id: subject.posthog_distinct_id,
+        event: "user_signed_in",
+        properties: { authentication_method: "magic_link" }
+      )
     end
 end

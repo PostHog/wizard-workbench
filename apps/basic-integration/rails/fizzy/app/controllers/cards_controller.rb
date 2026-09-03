@@ -14,11 +14,25 @@ class CardsController < ApplicationController
     respond_to do |format|
       format.html do
         card = Current.user.draft_new_card_in(@board)
+
+        capture_posthog(
+          distinct_id: Current.user.posthog_distinct_id,
+          event: "card_draft_started",
+          properties: { card_id: card.id, board_id: @board.id }
+        )
+
         redirect_to card_draft_path(card)
       end
 
       format.json do
         card = @board.cards.create! card_params.merge(creator: Current.user, status: "published")
+
+        capture_posthog(
+          distinct_id: Current.user.posthog_distinct_id,
+          event: "card_created",
+          properties: { card_id: card.id, board_id: @board.id, creation_source: "api" }
+        )
+
         head :created, location: card_path(card, format: :json)
       end
     end
