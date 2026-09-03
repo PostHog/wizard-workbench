@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from 'posthog-js/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -73,6 +74,10 @@ function UsersNotFoundComponent({ data }: NotFoundRouteProps) {
   )
 }
 
+const posthogApiKey = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogApiHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+const isPostHogConfigured = !!posthogApiKey && !!posthogApiHost
+
 const rootRoute = createRootRouteWithContext<{
   auth: Auth
 }>()({
@@ -84,9 +89,50 @@ function RouterSpinner() {
   return <Spinner show={isLoading} />
 }
 
+function RouterErrorComponent({ error }: { error: Error }) {
+  const posthog = usePostHog()
+
+  React.useEffect(() => {
+    if (isPostHogConfigured) {
+      posthog.captureException(error)
+    }
+  }, [error, posthog])
+
+  return <ErrorComponent error={error} />
+}
+
+function PostHogRoot({ children }: { children: React.ReactNode }) {
+  if (!isPostHogConfigured) {
+    if (import.meta.env.DEV) {
+      const missingVariable = !posthogApiKey
+        ? 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN'
+        : 'VITE_PUBLIC_POSTHOG_HOST'
+      throw new Error(
+        `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+      )
+    }
+
+    return children
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={posthogApiKey}
+      options={{
+        api_host: posthogApiHost,
+        defaults: '2026-01-30',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
+      {children}
+    </PostHogProvider>
+  )
+}
+
 function RootComponent() {
   return (
-    <>
+    <PostHogRoot>
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
@@ -132,7 +178,7 @@ function RootComponent() {
         </div>
       </div>
       <TanStackRouterDevtools position="bottom-right" />
-    </>
+    </PostHogRoot>
   )
 }
 
@@ -433,9 +479,15 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: invoice }) => {
+      if (isPostHogConfigured) {
+        posthog.capture('invoice_created', { invoice_id: invoice.id })
+      }
+      return router.invalidate()
+    },
   })
 
   return (
@@ -517,9 +569,15 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data: updatedInvoice }) => {
+      if (isPostHogConfigured) {
+        posthog.capture('invoice_updated', { invoice_id: updatedInvoice?.id })
+      }
+      return router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -1003,6 +1061,7 @@ const profileRoute = createRoute({
 
 function ProfileComponent() {
   const { username } = profileRoute.useRouteContext()
+  const posthog = usePostHog()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
 
@@ -1049,7 +1108,14 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => {
+                if (isPostHogConfigured) {
+                  posthog.capture('subscription_upgrade_clicked')
+                }
+              }}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Upgrade
             </button>
           </div>
@@ -1067,6 +1133,9 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                if (isPostHogConfigured) {
+                  posthog.capture('logout_completed')
+                }
                 auth.logout()
                 router.invalidate()
               }}
@@ -1094,6 +1163,7 @@ const loginRoute = createRoute({
 
 function LoginComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
   })
@@ -1102,6 +1172,9 @@ function LoginComponent() {
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (isPostHogConfigured) {
+      posthog.capture('login_submitted')
+    }
     auth.login(username)
     router.invalidate()
   }
@@ -1138,6 +1211,9 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                if (isPostHogConfigured) {
+                  posthog.capture('logout_completed')
+                }
                 auth.logout()
                 router.invalidate()
               }}
@@ -1251,7 +1327,7 @@ const router = createRouter({
       <Spinner />
     </div>
   ),
-  defaultErrorComponent: ({ error }) => <ErrorComponent error={error} />,
+  defaultErrorComponent: ({ error }) => <RouterErrorComponent error={error} />,
   context: {
     auth: undefined!, // We'll inject this when we render
   },
