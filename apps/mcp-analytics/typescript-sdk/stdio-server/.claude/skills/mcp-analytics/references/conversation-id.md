@@ -1,0 +1,110 @@
+> AI agents: this is one page from PostHog's docs. Full index of Markdown docs for LLMs: https://posthog.com/llms.txt
+
+# Conversation IDs - Docs
+
+Copy page
+
+# Conversation IDs - Docs
+
+A PostHog `$session_id` normally follows the MCP protocol session. The handshake-free `2026-07-28` revision has no protocol session, so each request gets a new session unless you add another correlation signal.
+
+`$mcp_conversation_id` is an opt-in property that lets you stitch those calls together at the conversation level. The SDK also derives `$session_id` from it, so PostHog session queries group the same calls.
+
+**Opt-in, with caveats**
+
+Conversation IDs are off by default and rely on the agent cooperating. Read the caveats below before enabling — there's a visible side effect on tool responses, and the value is agent-controlled.
+
+## Enabling
+
+TypeScript
+
+PostHog AI
+
+```typescript
+instrument(server, posthog, {
+  enableConversationId: true,
+})
+```
+
+With this on, the SDK does three things:
+
+1.  **Injects an optional `conversation_id` argument** into every tool's JSON Schema, with a description telling the agent to reuse the value the server returns.
+2.  **Mints a UUID** when the agent calls a tool without `conversation_id`, and returns it on the tool's response as a `{"conversation_id":"…"}` text block — data, not an instruction.
+3.  **Captures the supplied or minted value** on every event as `$mcp_conversation_id` and derives a stable `$session_id` from it.
+
+The SDK reuses an echoed UUIDv7 that matches the handles it mints. It replaces missing or arbitrary values with a new handle to avoid merging unrelated conversations.
+
+## How it lands in events
+
+PostHog AI
+
+```
+{
+  event: "$mcp_tool_call",
+  properties: {
+    "$session_id": "ses_2a3f…",            // derived from the conversation handle
+    "$mcp_conversation_id": "0198f2d6-…",  // echoed UUIDv7 conversation handle
+    "$mcp_tool_name": "search_events",
+    ...
+  }
+}
+```
+
+A new request or connection made by the same agent reusing the same `conversation_id` shares both `$mcp_conversation_id` and `$session_id`. You can group by the conversation property in HogQL:
+
+SQL
+
+[Run in PostHog](https://us.posthog.com/sql?open_query=SELECT%0A++properties.%24mcp_conversation_id+AS+conversation%2C%0A++arrayDistinct%28groupArray%28properties.%24mcp_tool_name%29%29+AS+tools_called%2C%0A++count%28%29+AS+tool_calls%0AFROM+events%0AWHERE+event+%3D+'%24mcp_tool_call'%0A++AND+properties.%24mcp_conversation_id+IS+NOT+NULL%0A++AND+timestamp+%3E+now%28%29+-+INTERVAL+7+DAY%0AGROUP+BY+conversation%0AORDER+BY+tool_calls+DESC%0ALIMIT+50)
+
+PostHog AI
+
+```sql
+SELECT
+  properties.$mcp_conversation_id AS conversation,
+  arrayDistinct(groupArray(properties.$mcp_tool_name)) AS tools_called,
+  count() AS tool_calls
+FROM events
+WHERE event = '$mcp_tool_call'
+  AND properties.$mcp_conversation_id IS NOT NULL
+  AND timestamp > now() - INTERVAL 7 DAY
+GROUP BY conversation
+ORDER BY tool_calls DESC
+LIMIT 50
+```
+
+## Caveats
+
+**Some tools can't take the injection**
+
+The `conversation_id` parameter can't be added to a schema built from `oneOf` / `allOf` / `anyOf` / `$ref`, or to a tool with no input schema. Those tools log a warning and get no handle, so their calls won't correlate. [`identify`](/docs/mcp-analytics/identifying-users.md) covers them.
+
+A client working from a **stale cached tool listing** won't know to send the parameter either — `ttlMs` caching on `tools/list` makes that more likely over time.
+
+**The handle is visible in tool output**
+
+It's returned as a `{"conversation_id":"…"}` text block, so consumers that surface raw tool-call content to end users will show that JSON. It's deliberately data rather than an instruction — an imperative sentence in tool output is indistinguishable from prompt injection, and hardened clients block it.
+
+**Agent-controlled values**
+
+The SDK only reuses UUIDv7 values that match the shape of handles it can mint. It replaces other values with a new handle. A client can still reuse a valid-looking handle across users, so don't use `$mcp_conversation_id` as a security boundary.
+
+**It also anchors the PostHog session**
+
+PostHog's session-level joins use `$session_id`. When conversation IDs are enabled, the SDK hashes the accepted `conversation_id` into a deterministic `$session_id`. Separate server instances derive the same value without shared storage.
+
+## When to skip this
+
+If your MCP server runs over a long-lived `2025-11-25` connection that already aligns with what you'd call a conversation, `$session_id` is already doing the right thing. Leave `enableConversationId` off.
+
+Turn it on when:
+
+-   The same logical conversation crosses connections (HTTP/SSE clients that reconnect).
+-   Your server handles the `2026-07-28` revision and you want more than one request in each PostHog session.
+
+### Still have questions?
+
+Ask PostHog AI
+
+### Was this page useful?
+
+HelpfulCould be better
