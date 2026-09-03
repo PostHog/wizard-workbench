@@ -5,6 +5,7 @@ import {
   RouterProvider,
   createRouter,
 } from '@tanstack/react-router'
+import posthog from 'posthog-js'
 import { auth } from './utils/auth'
 import { Spinner } from './components/Spinner'
 import { routeTree } from './routeTree.gen'
@@ -13,6 +14,19 @@ import './styles.css'
 
 //
 
+function PostHogErrorComponent({ error }: { error: Error }) {
+  React.useEffect(() => {
+    if (
+      import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+    ) {
+      posthog.captureException(error)
+    }
+  }, [error])
+
+  return <ErrorComponent error={error} />
+}
+
 const router = createRouter({
   routeTree,
   defaultPendingComponent: () => (
@@ -20,7 +34,7 @@ const router = createRouter({
       <Spinner />
     </div>
   ),
-  defaultErrorComponent: ({ error }) => <ErrorComponent error={error} />,
+  defaultErrorComponent: ({ error }) => <PostHogErrorComponent error={error} />,
   context: {
     auth: undefined!, // We'll inject this when we render
   },
