@@ -20,7 +20,15 @@
     "file": "00005-after-action-confirm_setup.png"
   },
   {
-    "frame": "00006-process-exit.ans",
-    "file": "00006-process-exit.png"
+    "frame": "00006-before-action-dismiss_outage.ans",
+    "file": "00006-before-action-dismiss_outage.png"
+  },
+  {
+    "frame": "00007-after-action-dismiss_outage.ans",
+    "file": "00007-after-action-dismiss_outage.png"
+  },
+  {
+    "frame": "00008-process-exit.ans",
+    "file": "00008-process-exit.png"
   }
 ]

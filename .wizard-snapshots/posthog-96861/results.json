@@ -2,11 +2,11 @@
   {
     "app": "basic-integration/javascript-node/express-todo",
     "id": "basic-express",
-    "started": "2026-09-08T22:27:55.624Z",
-    "ended": "2026-09-08T22:27:59.647Z",
+    "started": "2026-09-08T22:37:14.226Z",
+    "ended": "2026-09-08T22:37:18.904Z",
     "exitCode": 1,
     "signal": null,
-    "frames": 6,
+    "frames": 8,
     "renderStatus": 0,
     "runPhase": "idle",
     "passed": false,
@@ -17,12 +17,12 @@
     ],
     "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
     "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
     "backend": "http://localhost:8010",
     "sourceMapBuildRequested": false,
     "bootstrap_requests": [
       {
-        "timestamp": "2026-09-08T22:27:57.796059+00:00",
+        "timestamp": "2026-09-08T22:37:16.924809+00:00",
         "path": "/api/projects/1/",
         "status": 403
       }
@@ -50,16 +50,24 @@
         "file": "00005-after-action-confirm_setup.png"
       },
       {
-        "frame": "00006-process-exit.ans",
-        "file": "00006-process-exit.png"
+        "frame": "00006-before-action-dismiss_outage.ans",
+        "file": "00006-before-action-dismiss_outage.png"
+      },
+      {
+        "frame": "00007-after-action-dismiss_outage.ans",
+        "file": "00007-after-action-dismiss_outage.png"
+      },
+      {
+        "frame": "00008-process-exit.ans",
+        "file": "00008-process-exit.png"
       }
     ]
   },
   {
     "app": "basic-integration/next-js/15-app-router-todo",
     "id": "basic-next",
-    "started": "2026-09-08T22:27:59.688Z",
-    "ended": "2026-09-08T22:28:03.073Z",
+    "started": "2026-09-08T22:37:18.945Z",
+    "ended": "2026-09-08T22:37:22.790Z",
     "exitCode": 1,
     "signal": null,
     "frames": 5,
@@ -72,12 +80,12 @@
     ],
     "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
     "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
     "backend": "http://localhost:8010",
     "sourceMapBuildRequested": false,
     "bootstrap_requests": [
       {
-        "timestamp": "2026-09-08T22:28:01.467171+00:00",
+        "timestamp": "2026-09-08T22:37:20.879562+00:00",
         "path": "/api/projects/1/",
         "status": 403
       }
@@ -109,8 +117,8 @@
   {
     "app": "basic-integration/react-router/rrv7-starter",
     "id": "basic-react-router",
-    "started": "2026-09-08T22:28:03.113Z",
-    "ended": "2026-09-08T22:28:06.564Z",
+    "started": "2026-09-08T22:37:22.834Z",
+    "ended": "2026-09-08T22:37:26.274Z",
     "exitCode": 1,
     "signal": null,
     "frames": 5,
@@ -123,12 +131,12 @@
     ],
     "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
     "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
     "backend": "http://localhost:8010",
     "sourceMapBuildRequested": false,
     "bootstrap_requests": [
       {
-        "timestamp": "2026-09-08T22:28:04.950049+00:00",
+        "timestamp": "2026-09-08T22:37:24.617781+00:00",
         "path": "/api/projects/1/",
         "status": 403
       }
@@ -160,8 +168,8 @@
   {
     "app": "basic-integration/django/django3-saas",
     "id": "basic-django",
-    "started": "2026-09-08T22:28:06.607Z",
-    "ended": "2026-09-08T22:28:10.680Z",
+    "started": "2026-09-08T22:37:26.321Z",
+    "ended": "2026-09-08T22:37:30.500Z",
     "exitCode": 1,
     "signal": null,
     "frames": 7,
@@ -174,12 +182,12 @@
     ],
     "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
     "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
     "backend": "http://localhost:8010",
     "sourceMapBuildRequested": false,
     "bootstrap_requests": [
       {
-        "timestamp": "2026-09-08T22:28:08.628943+00:00",
+        "timestamp": "2026-09-08T22:37:28.604884+00:00",
         "path": "/api/projects/1/",
         "status": 403
       }
@@ -219,8 +227,8 @@
   {
     "app": "self-driving/astro/changelog-hub",
     "id": "self-driving",
-    "started": "2026-09-08T22:28:10.725Z",
-    "ended": "2026-09-08T22:28:14.594Z",
+    "started": "2026-09-08T22:37:30.542Z",
+    "ended": "2026-09-08T22:37:34.768Z",
     "exitCode": 1,
     "signal": null,
     "frames": 7,
@@ -234,12 +242,12 @@
     ],
     "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
     "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
     "backend": "http://localhost:8010",
     "sourceMapBuildRequested": false,
     "bootstrap_requests": [
       {
-        "timestamp": "2026-09-08T22:28:12.739516+00:00",
+        "timestamp": "2026-09-08T22:37:32.924261+00:00",
         "path": "/api/projects/1/",
         "status": 403
       }
@@ -279,8 +287,8 @@
   {
     "app": "error-tracking-upload-source-maps/react-vite",
     "id": "source-maps",
-    "started": "2026-09-08T22:28:14.636Z",
-    "ended": "2026-09-08T22:28:17.599Z",
+    "started": "2026-09-08T22:37:34.809Z",
+    "ended": "2026-09-08T22:37:37.874Z",
     "exitCode": 1,
     "signal": null,
     "frames": 3,
@@ -293,12 +301,12 @@
     ],
     "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
     "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
     "backend": "http://localhost:8010",
     "sourceMapBuildRequested": true,
     "bootstrap_requests": [
       {
-        "timestamp": "2026-09-08T22:28:16.155634+00:00",
+        "timestamp": "2026-09-08T22:37:36.389840+00:00",
         "path": "/api/projects/1/",
         "status": 403
       }

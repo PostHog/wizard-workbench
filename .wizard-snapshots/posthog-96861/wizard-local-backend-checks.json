@@ -1,22 +1,36 @@
 [
   {
     "check": "gateway_token",
-    "posthog_head": "cfea7e66703f4ae269097cbab21920f9ff66c682",
-    "checked_at": "2026-09-08T22:26:51.701637+00:00",
+    "posthog_head": "833665a4e96421de008845384da5adb7ab01dc2b",
+    "checked_at": "2026-09-08T22:36:48.361781+00:00",
     "url": "http://127.0.0.1:8010/api/wizard/gateway_token/",
-    "status": 201,
+    "status": 404,
     "response": {
-      "token": "[REDACTED]",
-      "expires_at": "2026-09-09T22:26:51Z",
-      "cap_usd": "6",
-      "gateway_url": "http://localhost:8080",
-      "team_id": 1
-    }
+      "type": "invalid_request",
+      "code": "not_rolled_out",
+      "detail": "Wizard gateway tokens are switched off for this organization.",
+      "attr": null
+    },
+    "configuration_note": "Local PostHog analytics/flag client is disabled (OPT_OUT_CAPTURE=1), so wizard-gateway-v2 is not true; current-head fail-closed rollout gate refuses."
+  },
+  {
+    "check": "gateway_token_reads_refusal_reason",
+    "posthog_head": "833665a4e96421de008845384da5adb7ab01dc2b",
+    "checked_at": "2026-09-08T22:36:48.404993+00:00",
+    "url": "http://127.0.0.1:8010/api/wizard/gateway_token/",
+    "status": 403,
+    "response": {
+      "type": "authentication_error",
+      "code": "not_rolled_out",
+      "detail": "Wizard gateway tokens are switched off for this organization.",
+      "attr": null
+    },
+    "configuration_note": "Local PostHog analytics/flag client is disabled (OPT_OUT_CAPTURE=1), so wizard-gateway-v2 is not true; current-head fail-closed rollout gate refuses."
   },
   {
     "check": "retired_python_gateway",
-    "posthog_head": "cfea7e66703f4ae269097cbab21920f9ff66c682",
-    "checked_at": "2026-09-08T22:26:51.736572+00:00",
+    "posthog_head": "833665a4e96421de008845384da5adb7ab01dc2b",
+    "checked_at": "2026-09-08T22:36:48.456806+00:00",
     "url": "http://127.0.0.1:3308/wizard/v1/messages",
     "status": 403,
     "response": {
@@ -27,6 +41,6 @@
         "reason": "product_retired"
       }
     },
-    "source_note": "Python gateway source unchanged between prior and current PR head."
+    "source_note": "Python gateway source unchanged between prior and current PR heads."
   }
 ]
