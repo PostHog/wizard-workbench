@@ -47,6 +47,7 @@ export default defineNuxtConfig({
   },
 
   i18n: {
+    restructureDir: false,
     detectBrowserLanguage: {
       useCookie: true,
       fallbackLocale: 'en',
