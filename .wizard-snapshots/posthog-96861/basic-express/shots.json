@@ -1,0 +1,26 @@
+[
+  {
+    "frame": "00001-intro.ans",
+    "file": "00001-intro.png"
+  },
+  {
+    "frame": "00002-intro.ans",
+    "file": "00002-intro.png"
+  },
+  {
+    "frame": "00003-before-action-confirm_setup.ans",
+    "file": "00003-before-action-confirm_setup.png"
+  },
+  {
+    "frame": "00004-health-check.ans",
+    "file": "00004-health-check.png"
+  },
+  {
+    "frame": "00005-after-action-confirm_setup.ans",
+    "file": "00005-after-action-confirm_setup.png"
+  },
+  {
+    "frame": "00006-process-exit.ans",
+    "file": "00006-process-exit.png"
+  }
+]

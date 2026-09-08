@@ -1,0 +1,322 @@
+[
+  {
+    "app": "basic-integration/javascript-node/express-todo",
+    "id": "basic-express",
+    "started": "2026-09-08T22:27:55.624Z",
+    "ended": "2026-09-08T22:27:59.647Z",
+    "exitCode": 1,
+    "signal": null,
+    "frames": 6,
+    "renderStatus": 0,
+    "runPhase": "idle",
+    "passed": false,
+    "screenPath": [
+      "intro",
+      "health-check",
+      "auth"
+    ],
+    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
+    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
+    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "backend": "http://localhost:8010",
+    "sourceMapBuildRequested": false,
+    "bootstrap_requests": [
+      {
+        "timestamp": "2026-09-08T22:27:57.796059+00:00",
+        "path": "/api/projects/1/",
+        "status": 403
+      }
+    ],
+    "title": "Basic integration \u2014 Express",
+    "shots": [
+      {
+        "frame": "00001-intro.ans",
+        "file": "00001-intro.png"
+      },
+      {
+        "frame": "00002-intro.ans",
+        "file": "00002-intro.png"
+      },
+      {
+        "frame": "00003-before-action-confirm_setup.ans",
+        "file": "00003-before-action-confirm_setup.png"
+      },
+      {
+        "frame": "00004-health-check.ans",
+        "file": "00004-health-check.png"
+      },
+      {
+        "frame": "00005-after-action-confirm_setup.ans",
+        "file": "00005-after-action-confirm_setup.png"
+      },
+      {
+        "frame": "00006-process-exit.ans",
+        "file": "00006-process-exit.png"
+      }
+    ]
+  },
+  {
+    "app": "basic-integration/next-js/15-app-router-todo",
+    "id": "basic-next",
+    "started": "2026-09-08T22:27:59.688Z",
+    "ended": "2026-09-08T22:28:03.073Z",
+    "exitCode": 1,
+    "signal": null,
+    "frames": 5,
+    "renderStatus": 0,
+    "runPhase": "idle",
+    "passed": false,
+    "screenPath": [
+      "intro",
+      "auth"
+    ],
+    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
+    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
+    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "backend": "http://localhost:8010",
+    "sourceMapBuildRequested": false,
+    "bootstrap_requests": [
+      {
+        "timestamp": "2026-09-08T22:28:01.467171+00:00",
+        "path": "/api/projects/1/",
+        "status": 403
+      }
+    ],
+    "title": "Basic integration \u2014 Next.js App Router",
+    "shots": [
+      {
+        "frame": "00001-intro.ans",
+        "file": "00001-intro.png"
+      },
+      {
+        "frame": "00002-intro.ans",
+        "file": "00002-intro.png"
+      },
+      {
+        "frame": "00003-intro.ans",
+        "file": "00003-intro.png"
+      },
+      {
+        "frame": "00004-before-action-confirm_setup.ans",
+        "file": "00004-before-action-confirm_setup.png"
+      },
+      {
+        "frame": "00005-process-exit.ans",
+        "file": "00005-process-exit.png"
+      }
+    ]
+  },
+  {
+    "app": "basic-integration/react-router/rrv7-starter",
+    "id": "basic-react-router",
+    "started": "2026-09-08T22:28:03.113Z",
+    "ended": "2026-09-08T22:28:06.564Z",
+    "exitCode": 1,
+    "signal": null,
+    "frames": 5,
+    "renderStatus": 0,
+    "runPhase": "idle",
+    "passed": false,
+    "screenPath": [
+      "intro",
+      "auth"
+    ],
+    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
+    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
+    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "backend": "http://localhost:8010",
+    "sourceMapBuildRequested": false,
+    "bootstrap_requests": [
+      {
+        "timestamp": "2026-09-08T22:28:04.950049+00:00",
+        "path": "/api/projects/1/",
+        "status": 403
+      }
+    ],
+    "title": "Basic integration \u2014 React Router",
+    "shots": [
+      {
+        "frame": "00001-intro.ans",
+        "file": "00001-intro.png"
+      },
+      {
+        "frame": "00002-intro.ans",
+        "file": "00002-intro.png"
+      },
+      {
+        "frame": "00003-intro.ans",
+        "file": "00003-intro.png"
+      },
+      {
+        "frame": "00004-before-action-confirm_setup.ans",
+        "file": "00004-before-action-confirm_setup.png"
+      },
+      {
+        "frame": "00005-process-exit.ans",
+        "file": "00005-process-exit.png"
+      }
+    ]
+  },
+  {
+    "app": "basic-integration/django/django3-saas",
+    "id": "basic-django",
+    "started": "2026-09-08T22:28:06.607Z",
+    "ended": "2026-09-08T22:28:10.680Z",
+    "exitCode": 1,
+    "signal": null,
+    "frames": 7,
+    "renderStatus": 0,
+    "runPhase": "idle",
+    "passed": false,
+    "screenPath": [
+      "intro",
+      "auth"
+    ],
+    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
+    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
+    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "backend": "http://localhost:8010",
+    "sourceMapBuildRequested": false,
+    "bootstrap_requests": [
+      {
+        "timestamp": "2026-09-08T22:28:08.628943+00:00",
+        "path": "/api/projects/1/",
+        "status": 403
+      }
+    ],
+    "title": "Basic integration \u2014 Django",
+    "shots": [
+      {
+        "frame": "00001-intro.ans",
+        "file": "00001-intro.png"
+      },
+      {
+        "frame": "00002-intro.ans",
+        "file": "00002-intro.png"
+      },
+      {
+        "frame": "00003-intro.ans",
+        "file": "00003-intro.png"
+      },
+      {
+        "frame": "00004-intro.ans",
+        "file": "00004-intro.png"
+      },
+      {
+        "frame": "00005-intro.ans",
+        "file": "00005-intro.png"
+      },
+      {
+        "frame": "00006-before-action-confirm_setup.ans",
+        "file": "00006-before-action-confirm_setup.png"
+      },
+      {
+        "frame": "00007-process-exit.ans",
+        "file": "00007-process-exit.png"
+      }
+    ]
+  },
+  {
+    "app": "self-driving/astro/changelog-hub",
+    "id": "self-driving",
+    "started": "2026-09-08T22:28:10.725Z",
+    "ended": "2026-09-08T22:28:14.594Z",
+    "exitCode": 1,
+    "signal": null,
+    "frames": 7,
+    "renderStatus": 0,
+    "runPhase": "idle",
+    "passed": false,
+    "screenPath": [
+      "self-driving-intro",
+      "self-driving-integration-check",
+      "auth"
+    ],
+    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
+    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
+    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "backend": "http://localhost:8010",
+    "sourceMapBuildRequested": false,
+    "bootstrap_requests": [
+      {
+        "timestamp": "2026-09-08T22:28:12.739516+00:00",
+        "path": "/api/projects/1/",
+        "status": 403
+      }
+    ],
+    "title": "Self-driving \u2014 Astro",
+    "shots": [
+      {
+        "frame": "00001-self-driving-intro.ans",
+        "file": "00001-self-driving-intro.png"
+      },
+      {
+        "frame": "00002-self-driving-intro.ans",
+        "file": "00002-self-driving-intro.png"
+      },
+      {
+        "frame": "00003-before-action-confirm_setup.ans",
+        "file": "00003-before-action-confirm_setup.png"
+      },
+      {
+        "frame": "00004-self-driving-integration-check.ans",
+        "file": "00004-self-driving-integration-check.png"
+      },
+      {
+        "frame": "00005-after-action-confirm_setup.ans",
+        "file": "00005-after-action-confirm_setup.png"
+      },
+      {
+        "frame": "00006-before-action-set_integrate.ans",
+        "file": "00006-before-action-set_integrate.png"
+      },
+      {
+        "frame": "00007-process-exit.ans",
+        "file": "00007-process-exit.png"
+      }
+    ]
+  },
+  {
+    "app": "error-tracking-upload-source-maps/react-vite",
+    "id": "source-maps",
+    "started": "2026-09-08T22:28:14.636Z",
+    "ended": "2026-09-08T22:28:17.599Z",
+    "exitCode": 1,
+    "signal": null,
+    "frames": 3,
+    "renderStatus": 0,
+    "runPhase": "idle",
+    "passed": false,
+    "screenPath": [
+      "source-maps-intro",
+      "auth"
+    ],
+    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
+    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
+    "posthogRef": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "backend": "http://localhost:8010",
+    "sourceMapBuildRequested": true,
+    "bootstrap_requests": [
+      {
+        "timestamp": "2026-09-08T22:28:16.155634+00:00",
+        "path": "/api/projects/1/",
+        "status": 403
+      }
+    ],
+    "title": "Source-map upload \u2014 React/Vite",
+    "shots": [
+      {
+        "frame": "00001-source-maps-intro.ans",
+        "file": "00001-source-maps-intro.png"
+      },
+      {
+        "frame": "00002-before-action-confirm_setup.ans",
+        "file": "00002-before-action-confirm_setup.png"
+      },
+      {
+        "frame": "00003-process-exit.ans",
+        "file": "00003-process-exit.png"
+      }
+    ]
+  }
+]

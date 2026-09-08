@@ -1,0 +1,30 @@
+[
+  {
+    "frame": "00001-self-driving-intro.ans",
+    "file": "00001-self-driving-intro.png"
+  },
+  {
+    "frame": "00002-self-driving-intro.ans",
+    "file": "00002-self-driving-intro.png"
+  },
+  {
+    "frame": "00003-before-action-confirm_setup.ans",
+    "file": "00003-before-action-confirm_setup.png"
+  },
+  {
+    "frame": "00004-self-driving-integration-check.ans",
+    "file": "00004-self-driving-integration-check.png"
+  },
+  {
+    "frame": "00005-after-action-confirm_setup.ans",
+    "file": "00005-after-action-confirm_setup.png"
+  },
+  {
+    "frame": "00006-before-action-set_integrate.ans",
+    "file": "00006-before-action-set_integrate.png"
+  },
+  {
+    "frame": "00007-process-exit.ans",
+    "file": "00007-process-exit.png"
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "posthog_head": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+  "checked_at": "2026-09-08T22:26:51.647885+00:00",
+  "base_url": "http://127.0.0.1:8010",
+  "credential_source": "unmodified PR96861 wizard_ci_token management command",
+  "results": [
+    {
+      "path": "/api/projects/1/",
+      "status": 403,
+      "body": {
+        "type": "authentication_error",
+        "code": "permission_denied",
+        "detail": "API key missing required scope 'project:read'",
+        "attr": null
+      }
+    },
+    {
+      "path": "/api/users/@me/",
+      "status": 403,
+      "body": {
+        "type": "authentication_error",
+        "code": "permission_denied",
+        "detail": "API key missing required scope 'user:read'",
+        "attr": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "frame": "00001-intro.ans",
+    "file": "00001-intro.png"
+  },
+  {
+    "frame": "00002-intro.ans",
+    "file": "00002-intro.png"
+  },
+  {
+    "frame": "00003-intro.ans",
+    "file": "00003-intro.png"
+  },
+  {
+    "frame": "00004-intro.ans",
+    "file": "00004-intro.png"
+  },
+  {
+    "frame": "00005-intro.ans",
+    "file": "00005-intro.png"
+  },
+  {
+    "frame": "00006-before-action-confirm_setup.ans",
+    "file": "00006-before-action-confirm_setup.png"
+  },
+  {
+    "frame": "00007-process-exit.ans",
+    "file": "00007-process-exit.png"
+  }
+]

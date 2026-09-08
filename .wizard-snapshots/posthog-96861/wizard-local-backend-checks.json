@@ -1,0 +1,32 @@
+[
+  {
+    "check": "gateway_token",
+    "posthog_head": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "checked_at": "2026-09-08T22:26:51.701637+00:00",
+    "url": "http://127.0.0.1:8010/api/wizard/gateway_token/",
+    "status": 201,
+    "response": {
+      "token": "[REDACTED]",
+      "expires_at": "2026-09-09T22:26:51Z",
+      "cap_usd": "6",
+      "gateway_url": "http://localhost:8080",
+      "team_id": 1
+    }
+  },
+  {
+    "check": "retired_python_gateway",
+    "posthog_head": "cfea7e66703f4ae269097cbab21920f9ff66c682",
+    "checked_at": "2026-09-08T22:26:51.736572+00:00",
+    "url": "http://127.0.0.1:3308/wizard/v1/messages",
+    "status": 403,
+    "response": {
+      "error": {
+        "message": "The wizard now runs on the PostHog AI gateway. Upgrade with: npx @posthog/wizard@latest",
+        "type": "permission_error",
+        "code": "product_access_denied",
+        "reason": "product_retired"
+      }
+    },
+    "source_note": "Python gateway source unchanged between prior and current PR head."
+  }
+]
