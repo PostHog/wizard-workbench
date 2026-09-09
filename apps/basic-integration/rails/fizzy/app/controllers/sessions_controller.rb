@@ -51,6 +51,11 @@ class SessionsController < ApplicationController
     end
 
     def sign_in(identity)
+      capture_posthog_event(
+        event: "magic_link_requested",
+        properties: { flow: "sign_in" }
+      )
+
       redirect_to_session_magic_link identity.send_magic_link
     end
 
@@ -59,6 +64,12 @@ class SessionsController < ApplicationController
 
       if signup.valid?(:identity_creation)
         magic_link = signup.create_identity
+
+        capture_posthog_event(
+          event: "magic_link_requested",
+          properties: { flow: "sign_up" }
+        )
+
         redirect_to_session_magic_link magic_link
       else
         respond_to do |format|

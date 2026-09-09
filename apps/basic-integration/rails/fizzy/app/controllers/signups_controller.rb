@@ -14,7 +14,14 @@ class SignupsController < ApplicationController
   def create
     signup = Signup.new(signup_params)
     if signup.valid?(:identity_creation)
-      redirect_to_session_magic_link signup.create_identity
+      magic_link = signup.create_identity
+
+      capture_posthog_event(
+        event: "signup_started",
+        properties: { signup_method: "email_magic_link" }
+      )
+
+      redirect_to_session_magic_link magic_link
     else
       head :unprocessable_entity
     end
