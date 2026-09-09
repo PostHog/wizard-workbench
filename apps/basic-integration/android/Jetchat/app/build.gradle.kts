@@ -26,6 +26,21 @@ android {
     compileSdk = libs.versions.compileSdk.get().toInt()
     namespace = "com.example.compose.jetchat"
 
+    val posthogEnvironment = rootProject.file(".env").takeIf { it.isFile }
+        ?.readLines()
+        ?.mapNotNull { line ->
+            line.takeUnless { it.isBlank() || it.trimStart().startsWith("#") }
+                ?.split("=", limit = 2)
+                ?.takeIf { it.size == 2 }
+        }
+        ?.associate { (key, value) -> key.trim() to value.trim().removeSurrounding("\"") }
+        .orEmpty()
+    fun posthogValue(name: String) =
+        providers.environmentVariable(name).orNull ?: posthogEnvironment[name].orEmpty()
+
+    val posthogProjectToken = posthogValue("POSTHOG_PROJECT_TOKEN")
+    val posthogHost = posthogValue("POSTHOG_HOST")
+
     defaultConfig {
         applicationId = "com.example.compose.jetchat"
         minSdk = libs.versions.minSdk.get().toInt()
@@ -35,6 +50,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         vectorDrawables.useSupportLibrary = true
+        buildConfigField("String", "POSTHOG_PROJECT_TOKEN", "\"$posthogProjectToken\"")
+        buildConfigField("String", "POSTHOG_HOST", "\"$posthogHost\"")
     }
 
     signingConfigs {
@@ -75,6 +92,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -96,6 +114,7 @@ dependencies {
     implementation(libs.androidx.glance.material3)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.posthog.android)
 
     implementation(libs.androidx.activity.compose)
 
