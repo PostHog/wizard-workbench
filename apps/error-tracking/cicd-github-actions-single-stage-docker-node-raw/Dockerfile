@@ -3,7 +3,7 @@
 # Single-stage build: install dependencies, compile TypeScript, and run the app
 # all from one image. Simpler than a multi-stage build, at the cost of a larger
 # final image (dev dependencies and source files stay in the layers).
-FROM node:22-slim
+FROM node:24-alpine
 WORKDIR /app
 
 # Install all dependencies (including dev deps such as typescript) using the lockfile.

@@ -3,7 +3,7 @@
 # ---- Build stage ----
 # Compiles the TypeScript app into dist/. The image is built and run by hand
 # (`docker build` / `docker run`) — this project has no CI pipeline.
-FROM node:22-slim AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
 # Install all dependencies (including dev deps such as typescript) using the lockfile.
@@ -17,7 +17,7 @@ RUN npm run build
 
 # ---- Runtime stage ----
 # Ships only production dependencies and the compiled output.
-FROM node:22-slim AS runtime
+FROM node:24-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 

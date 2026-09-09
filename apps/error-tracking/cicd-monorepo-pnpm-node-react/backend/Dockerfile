@@ -6,7 +6,7 @@
 # frontend is intentionally excluded (see .dockerignore).
 
 # ---- Build stage ----
-FROM node:22-slim AS build
+FROM node:24-alpine AS build
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable
@@ -31,7 +31,7 @@ RUN pnpm --filter @repo/shared build && pnpm --filter backend build
 # Reinstall production-only dependencies and copy in the compiled output. The
 # prod install recreates the backend -> @repo/shared workspace symlink, so we
 # just drop the built dist/ folders into place.
-FROM node:22-slim AS runtime
+FROM node:24-alpine AS runtime
 ENV NODE_ENV=production
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
