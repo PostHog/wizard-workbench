@@ -20,15 +20,71 @@
     "file": "00005-after-action-confirm_setup.png"
   },
   {
-    "frame": "00006-before-action-dismiss_outage.ans",
-    "file": "00006-before-action-dismiss_outage.png"
+    "frame": "00006-auth.ans",
+    "file": "00006-auth.png"
   },
   {
-    "frame": "00007-after-action-dismiss_outage.ans",
-    "file": "00007-after-action-dismiss_outage.png"
+    "frame": "00007-auth.ans",
+    "file": "00007-auth.png"
   },
   {
-    "frame": "00008-process-exit.ans",
-    "file": "00008-process-exit.png"
+    "frame": "00008-run.ans",
+    "file": "00008-run.png"
+  },
+  {
+    "frame": "00009-run.ans",
+    "file": "00009-run.png"
+  },
+  {
+    "frame": "00010-run.ans",
+    "file": "00010-run.png"
+  },
+  {
+    "frame": "00011-run.ans",
+    "file": "00011-run.png"
+  },
+  {
+    "frame": "00012-model-turn-00001-gateway-openai-gpt-5-6-luna.ans",
+    "file": "00012-model-turn-00001-gateway-openai-gpt-5-6-luna.png"
+  },
+  {
+    "frame": "00013-run.ans",
+    "file": "00013-run.png"
+  },
+  {
+    "frame": "00014-model-turn-00002-gateway-openai-gpt-5-6-terra.ans",
+    "file": "00014-model-turn-00002-gateway-openai-gpt-5-6-terra.png"
+  },
+  {
+    "frame": "00015-run.ans",
+    "file": "00015-run.png"
+  },
+  {
+    "frame": "00016-model-turn-00003-gateway-openai-gpt-5-6-terra.ans",
+    "file": "00016-model-turn-00003-gateway-openai-gpt-5-6-terra.png"
+  },
+  {
+    "frame": "00017-model-turn-00004-gateway-openai-gpt-5-6-terra.ans",
+    "file": "00017-model-turn-00004-gateway-openai-gpt-5-6-terra.png"
+  },
+  {
+    "frame": "00018-run.ans",
+    "file": "00018-run.png"
+  },
+  {
+    "frame": "00019-run.ans",
+    "file": "00019-run.png"
+  },
+  {
+    "frame": "00020-model-turn-00005-gateway-openai-gpt-5-6-terra.ans",
+    "file": "00020-model-turn-00005-gateway-openai-gpt-5-6-terra.png"
+  },
+  {
+    "frame": "00021-sanity-turn-limit.ans",
+    "file": "00021-sanity-turn-limit.png"
+  },
+  {
+    "frame": "00022-process-exit.ans",
+    "file": "00022-process-exit.png"
   }
 ]

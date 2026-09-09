@@ -2,32 +2,37 @@
   {
     "app": "basic-integration/javascript-node/express-todo",
     "id": "basic-express",
-    "started": "2026-09-08T22:37:14.226Z",
-    "ended": "2026-09-08T22:37:18.904Z",
+    "started": "2026-09-09T01:29:19.606Z",
+    "ended": "2026-09-09T01:29:41.876Z",
     "exitCode": 1,
     "signal": null,
-    "frames": 8,
+    "frames": 22,
     "renderStatus": 0,
-    "runPhase": "idle",
+    "runPhase": "running",
     "passed": false,
     "screenPath": [
       "intro",
       "health-check",
-      "auth"
+      "auth",
+      "run"
     ],
-    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
+    "wizardRef": "09c3902bde7f6bd16e430af9fd1beb51012275f9",
     "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
+    "posthogRef": "90b30495bcedac556fe8f090eb5e26ec5022b911",
+    "gatewayRef": "db47351534e17f0074011a6a6ba92e8296ef049a",
     "backend": "http://localhost:8010",
     "sourceMapBuildRequested": false,
-    "bootstrap_requests": [
-      {
-        "timestamp": "2026-09-08T22:37:16.924809+00:00",
-        "path": "/api/projects/1/",
-        "status": 403
-      }
-    ],
-    "title": "Basic integration \u2014 Express",
+    "modelTurns": 5,
+    "successfulModelTurns": 5,
+    "capturedModelTurns": 5,
+    "sanityStop": {
+      "reason": "requested_turn_limit",
+      "successfulTurns": 5,
+      "turnLimit": 5
+    },
+    "sanityPassed": true,
+    "title": "Express integration sanity",
+    "outcome": "passed",
     "shots": [
       {
         "frame": "00001-intro.ans",
@@ -50,281 +55,77 @@
         "file": "00005-after-action-confirm_setup.png"
       },
       {
-        "frame": "00006-before-action-dismiss_outage.ans",
-        "file": "00006-before-action-dismiss_outage.png"
+        "frame": "00006-auth.ans",
+        "file": "00006-auth.png"
       },
       {
-        "frame": "00007-after-action-dismiss_outage.ans",
-        "file": "00007-after-action-dismiss_outage.png"
+        "frame": "00007-auth.ans",
+        "file": "00007-auth.png"
       },
       {
-        "frame": "00008-process-exit.ans",
-        "file": "00008-process-exit.png"
-      }
-    ]
-  },
-  {
-    "app": "basic-integration/next-js/15-app-router-todo",
-    "id": "basic-next",
-    "started": "2026-09-08T22:37:18.945Z",
-    "ended": "2026-09-08T22:37:22.790Z",
-    "exitCode": 1,
-    "signal": null,
-    "frames": 5,
-    "renderStatus": 0,
-    "runPhase": "idle",
-    "passed": false,
-    "screenPath": [
-      "intro",
-      "auth"
-    ],
-    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
-    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
-    "backend": "http://localhost:8010",
-    "sourceMapBuildRequested": false,
-    "bootstrap_requests": [
-      {
-        "timestamp": "2026-09-08T22:37:20.879562+00:00",
-        "path": "/api/projects/1/",
-        "status": 403
-      }
-    ],
-    "title": "Basic integration \u2014 Next.js App Router",
-    "shots": [
-      {
-        "frame": "00001-intro.ans",
-        "file": "00001-intro.png"
+        "frame": "00008-run.ans",
+        "file": "00008-run.png"
       },
       {
-        "frame": "00002-intro.ans",
-        "file": "00002-intro.png"
+        "frame": "00009-run.ans",
+        "file": "00009-run.png"
       },
       {
-        "frame": "00003-intro.ans",
-        "file": "00003-intro.png"
+        "frame": "00010-run.ans",
+        "file": "00010-run.png"
       },
       {
-        "frame": "00004-before-action-confirm_setup.ans",
-        "file": "00004-before-action-confirm_setup.png"
+        "frame": "00011-run.ans",
+        "file": "00011-run.png"
       },
       {
-        "frame": "00005-process-exit.ans",
-        "file": "00005-process-exit.png"
-      }
-    ]
-  },
-  {
-    "app": "basic-integration/react-router/rrv7-starter",
-    "id": "basic-react-router",
-    "started": "2026-09-08T22:37:22.834Z",
-    "ended": "2026-09-08T22:37:26.274Z",
-    "exitCode": 1,
-    "signal": null,
-    "frames": 5,
-    "renderStatus": 0,
-    "runPhase": "idle",
-    "passed": false,
-    "screenPath": [
-      "intro",
-      "auth"
-    ],
-    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
-    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
-    "backend": "http://localhost:8010",
-    "sourceMapBuildRequested": false,
-    "bootstrap_requests": [
+        "frame": "00012-model-turn-00001-gateway-openai-gpt-5-6-luna.ans",
+        "file": "00012-model-turn-00001-gateway-openai-gpt-5-6-luna.png"
+      },
       {
-        "timestamp": "2026-09-08T22:37:24.617781+00:00",
-        "path": "/api/projects/1/",
-        "status": 403
+        "frame": "00013-run.ans",
+        "file": "00013-run.png"
+      },
+      {
+        "frame": "00014-model-turn-00002-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00014-model-turn-00002-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00015-run.ans",
+        "file": "00015-run.png"
+      },
+      {
+        "frame": "00016-model-turn-00003-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00016-model-turn-00003-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00017-model-turn-00004-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00017-model-turn-00004-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00018-run.ans",
+        "file": "00018-run.png"
+      },
+      {
+        "frame": "00019-run.ans",
+        "file": "00019-run.png"
+      },
+      {
+        "frame": "00020-model-turn-00005-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00020-model-turn-00005-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00021-sanity-turn-limit.ans",
+        "file": "00021-sanity-turn-limit.png"
+      },
+      {
+        "frame": "00022-process-exit.ans",
+        "file": "00022-process-exit.png"
       }
     ],
-    "title": "Basic integration \u2014 React Router",
-    "shots": [
-      {
-        "frame": "00001-intro.ans",
-        "file": "00001-intro.png"
-      },
-      {
-        "frame": "00002-intro.ans",
-        "file": "00002-intro.png"
-      },
-      {
-        "frame": "00003-intro.ans",
-        "file": "00003-intro.png"
-      },
-      {
-        "frame": "00004-before-action-confirm_setup.ans",
-        "file": "00004-before-action-confirm_setup.png"
-      },
-      {
-        "frame": "00005-process-exit.ans",
-        "file": "00005-process-exit.png"
-      }
-    ]
-  },
-  {
-    "app": "basic-integration/django/django3-saas",
-    "id": "basic-django",
-    "started": "2026-09-08T22:37:26.321Z",
-    "ended": "2026-09-08T22:37:30.500Z",
-    "exitCode": 1,
-    "signal": null,
-    "frames": 7,
-    "renderStatus": 0,
-    "runPhase": "idle",
-    "passed": false,
-    "screenPath": [
-      "intro",
-      "auth"
-    ],
-    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
-    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
-    "backend": "http://localhost:8010",
-    "sourceMapBuildRequested": false,
-    "bootstrap_requests": [
-      {
-        "timestamp": "2026-09-08T22:37:28.604884+00:00",
-        "path": "/api/projects/1/",
-        "status": 403
-      }
-    ],
-    "title": "Basic integration \u2014 Django",
-    "shots": [
-      {
-        "frame": "00001-intro.ans",
-        "file": "00001-intro.png"
-      },
-      {
-        "frame": "00002-intro.ans",
-        "file": "00002-intro.png"
-      },
-      {
-        "frame": "00003-intro.ans",
-        "file": "00003-intro.png"
-      },
-      {
-        "frame": "00004-intro.ans",
-        "file": "00004-intro.png"
-      },
-      {
-        "frame": "00005-intro.ans",
-        "file": "00005-intro.png"
-      },
-      {
-        "frame": "00006-before-action-confirm_setup.ans",
-        "file": "00006-before-action-confirm_setup.png"
-      },
-      {
-        "frame": "00007-process-exit.ans",
-        "file": "00007-process-exit.png"
-      }
-    ]
-  },
-  {
-    "app": "self-driving/astro/changelog-hub",
-    "id": "self-driving",
-    "started": "2026-09-08T22:37:30.542Z",
-    "ended": "2026-09-08T22:37:34.768Z",
-    "exitCode": 1,
-    "signal": null,
-    "frames": 7,
-    "renderStatus": 0,
-    "runPhase": "idle",
-    "passed": false,
-    "screenPath": [
-      "self-driving-intro",
-      "self-driving-integration-check",
-      "auth"
-    ],
-    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
-    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
-    "backend": "http://localhost:8010",
-    "sourceMapBuildRequested": false,
-    "bootstrap_requests": [
-      {
-        "timestamp": "2026-09-08T22:37:32.924261+00:00",
-        "path": "/api/projects/1/",
-        "status": 403
-      }
-    ],
-    "title": "Self-driving \u2014 Astro",
-    "shots": [
-      {
-        "frame": "00001-self-driving-intro.ans",
-        "file": "00001-self-driving-intro.png"
-      },
-      {
-        "frame": "00002-self-driving-intro.ans",
-        "file": "00002-self-driving-intro.png"
-      },
-      {
-        "frame": "00003-before-action-confirm_setup.ans",
-        "file": "00003-before-action-confirm_setup.png"
-      },
-      {
-        "frame": "00004-self-driving-integration-check.ans",
-        "file": "00004-self-driving-integration-check.png"
-      },
-      {
-        "frame": "00005-after-action-confirm_setup.ans",
-        "file": "00005-after-action-confirm_setup.png"
-      },
-      {
-        "frame": "00006-before-action-set_integrate.ans",
-        "file": "00006-before-action-set_integrate.png"
-      },
-      {
-        "frame": "00007-process-exit.ans",
-        "file": "00007-process-exit.png"
-      }
-    ]
-  },
-  {
-    "app": "error-tracking-upload-source-maps/react-vite",
-    "id": "source-maps",
-    "started": "2026-09-08T22:37:34.809Z",
-    "ended": "2026-09-08T22:37:37.874Z",
-    "exitCode": 1,
-    "signal": null,
-    "frames": 3,
-    "renderStatus": 0,
-    "runPhase": "idle",
-    "passed": false,
-    "screenPath": [
-      "source-maps-intro",
-      "auth"
-    ],
-    "wizardRef": "6526e29c04fe0de0210775fdd6cd3cc2feab50d5",
-    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
-    "posthogRef": "833665a4e96421de008845384da5adb7ab01dc2b",
-    "backend": "http://localhost:8010",
-    "sourceMapBuildRequested": true,
-    "bootstrap_requests": [
-      {
-        "timestamp": "2026-09-08T22:37:36.389840+00:00",
-        "path": "/api/projects/1/",
-        "status": 403
-      }
-    ],
-    "title": "Source-map upload \u2014 React/Vite",
-    "shots": [
-      {
-        "frame": "00001-source-maps-intro.ans",
-        "file": "00001-source-maps-intro.png"
-      },
-      {
-        "frame": "00002-before-action-confirm_setup.ans",
-        "file": "00002-before-action-confirm_setup.png"
-      },
-      {
-        "frame": "00003-process-exit.ans",
-        "file": "00003-process-exit.png"
-      }
-    ]
+    "assessment": "model-turn-sanity",
+    "requestedSuccessfulTurns": 5,
+    "credentialMode": "The real flow used a local wizard-app OAuth token with the application\u2019s full scope ceiling. A fresh token from the exact wizard_ci_token command has only llm_gateway:read and still returns HTTP 403 on project reads; this smoke does not establish deployed CI compatibility.",
+    "captureMode": "one PNG per observed Go gateway model-completion record, plus captured UI transitions and process exit"
   }
 ]

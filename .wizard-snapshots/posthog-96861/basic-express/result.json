@@ -1,0 +1,19 @@
+{
+  "passed": false,
+  "runPhase": "running",
+  "hasPosthogDep": false,
+  "newDeps": [],
+  "skillsComplete": false,
+  "screenPath": [
+    "intro",
+    "health-check",
+    "auth",
+    "run"
+  ],
+  "unansweredAsks": 0,
+  "refusedAsks": 0,
+  "abort": null,
+  "available": true,
+  "asks": 0,
+  "tasks": []
+}

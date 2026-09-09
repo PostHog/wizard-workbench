@@ -1,0 +1,39 @@
+{
+  "app": "basic-integration/javascript-node/express-todo",
+  "id": "basic-express",
+  "started": "2026-09-09T01:29:19.606Z",
+  "ended": "2026-09-09T01:29:41.876Z",
+  "exitCode": 1,
+  "signal": null,
+  "frames": 22,
+  "renderStatus": 0,
+  "runPhase": "running",
+  "passed": false,
+  "screenPath": [
+    "intro",
+    "health-check",
+    "auth",
+    "run"
+  ],
+  "wizardRef": "09c3902bde7f6bd16e430af9fd1beb51012275f9",
+  "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
+  "posthogRef": "90b30495bcedac556fe8f090eb5e26ec5022b911",
+  "gatewayRef": "db47351534e17f0074011a6a6ba92e8296ef049a",
+  "backend": "http://localhost:8010",
+  "sourceMapBuildRequested": false,
+  "modelTurns": 5,
+  "successfulModelTurns": 5,
+  "capturedModelTurns": 5,
+  "sanityStop": {
+    "reason": "requested_turn_limit",
+    "successfulTurns": 5,
+    "turnLimit": 5
+  },
+  "sanityPassed": true,
+  "title": "Express integration sanity",
+  "outcome": "passed",
+  "assessment": "model-turn-sanity",
+  "requestedSuccessfulTurns": 5,
+  "credentialMode": "The real flow used a local wizard-app OAuth token with the application\u2019s full scope ceiling. A fresh token from the exact wizard_ci_token command has only llm_gateway:read and still returns HTTP 403 on project reads; this smoke does not establish deployed CI compatibility.",
+  "captureMode": "one PNG per observed Go gateway model-completion record, plus captured UI transitions and process exit"
+}

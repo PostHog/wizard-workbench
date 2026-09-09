@@ -1,0 +1,120 @@
+{
+  "testedRefs": {
+    "wizardRef": "09c3902bde7f6bd16e430af9fd1beb51012275f9",
+    "posthogRef": "90b30495bcedac556fe8f090eb5e26ec5022b911",
+    "gatewayRef": "db47351534e17f0074011a6a6ba92e8296ef049a",
+    "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148"
+  },
+  "sourcePRTips": [
+    {
+      "repo": "PostHog/wizard",
+      "pr": 1221,
+      "sha": "f6e1f89bbc1d36a1e4a8786600d39376ccf38a57"
+    },
+    {
+      "repo": "PostHog/wizard",
+      "pr": 1222,
+      "sha": "eb9e605058f0f3e1b1cee99a023c4285f40524ce"
+    },
+    {
+      "repo": "PostHog/wizard",
+      "pr": 1224,
+      "sha": "388cd7d88ea3fe41aec976887e5876406370f758"
+    },
+    {
+      "repo": "PostHog/wizard",
+      "pr": 1225,
+      "sha": "6723957363f13ca5f886ba99e84702b2230a6a34"
+    },
+    {
+      "repo": "PostHog/wizard",
+      "pr": 1227,
+      "sha": "09c3902bde7f6bd16e430af9fd1beb51012275f9"
+    },
+    {
+      "repo": "PostHog/ai-gateway",
+      "pr": 435,
+      "sha": "a0ab2a5a58c44139e4c96f82384b3358c3c71dc3"
+    },
+    {
+      "repo": "PostHog/ai-gateway",
+      "pr": 462,
+      "sha": "14925b3a9d2847c5a2236bafb3ec7b7c24a78b16"
+    },
+    {
+      "repo": "PostHog/ai-gateway",
+      "pr": 455,
+      "sha": "8cbf845b27d4926b54c0dee243cc8b5096ddd274"
+    },
+    {
+      "repo": "PostHog/ai-gateway",
+      "pr": 464,
+      "sha": "7922b97cfdfea7a3f6bf880ff07ec271640d8e9f"
+    },
+    {
+      "repo": "PostHog/ai-gateway",
+      "pr": 461,
+      "sha": "b57155346810188f008edd722de7b01e5337cb99"
+    },
+    {
+      "repo": "PostHog/ai-gateway",
+      "pr": 456,
+      "sha": "6c4c1433f5839e1d0060d4ee0df67457e98c284e"
+    },
+    {
+      "repo": "PostHog/ai-gateway",
+      "pr": 457,
+      "sha": "9b4b17eb471d85eb67e1de6fac038e2fb28fb9fc"
+    },
+    {
+      "repo": "PostHog/ai-gateway",
+      "pr": 459,
+      "sha": "3ea0a07bc0e7652477f4411e489cad65c45dea09"
+    },
+    {
+      "repo": "PostHog/posthog",
+      "pr": 96840,
+      "sha": "c26ac96c52273e1c81a96d1e38456467c82d573c"
+    },
+    {
+      "repo": "PostHog/posthog",
+      "pr": 96846,
+      "sha": "74add69d931087dd08f2c1adb1c39296bfa5c770"
+    },
+    {
+      "repo": "PostHog/posthog",
+      "pr": 96851,
+      "sha": "70efde1edde23d5850a5192dceb1a5c69e0996b8"
+    },
+    {
+      "repo": "PostHog/posthog",
+      "pr": 96854,
+      "sha": "9bc50c092fcca312a4f82f61ee83ceacaf307fdb"
+    },
+    {
+      "repo": "PostHog/posthog",
+      "pr": 96861,
+      "sha": "a4540377b371efa5fed8413cd16298b6555d624b"
+    },
+    {
+      "repo": "PostHog/charts",
+      "pr": 15331,
+      "sha": "3719b27cd3ef8b2fc213ec70a202ea033ef8903a"
+    }
+  ],
+  "runtimeDescription": "One real Wizard snapshot-harness sanity run against local Django, PostgreSQL, Redis, MCP and Go gateway services, with live provider inference.",
+  "credentialMode": "The real flow used a local wizard-app OAuth token with the application\u2019s full scope ceiling. A fresh token from the exact wizard_ci_token command has only llm_gateway:read and still returns HTTP 403 on project reads; this smoke does not establish deployed CI compatibility.",
+  "contextRouting": "Verified in this run: skill menu and integration skill ZIP loaded from http://localhost:8765; MCP used http://localhost:8787/mcp and PostHog used http://localhost:8010.",
+  "localOverrides": [
+    "Snapshot harness captures observed gateway model completions and UI transitions, initializes local routing, and authenticates against the local API.",
+    "The local capture harness stops after five successful model completions; full integration completion is outside this sanity run.",
+    "Local fixtures enabled gateway rollout, allowed 100 mints per day, and set a $30 team gateway overspend allowance.",
+    "The run used the chart-defined new-tier scoped-token cap of $6; the local team wallet was funded for provider dispatch."
+  ],
+  "assemblyNotes": [
+    "Go gateway locally combines the recorded source PR tips; parked PR #460 is excluded.",
+    "PostHog source tips were locally rebased onto master 1732fba27a5e7cfe9aa0d3391de5c26492bde759; all 23 replayed patches were unchanged.",
+    "Charts #15331 was locally rebased to e9fc004bf33ee1674d6fc25fa0d0d8c4564667d1 on main de54c2c75873ebf1624847867226d8849528f2fe; all six replayed patches were unchanged."
+  ],
+  "requestedSuccessfulTurns": 5
+}
