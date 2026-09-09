@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -55,6 +56,21 @@ export function Login({
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
           return;
+        }
+
+        if (
+          result.user &&
+          process.env.NEXT_PUBLIC_POSTHOG_KEY &&
+          process.env.NEXT_PUBLIC_POSTHOG_HOST
+        ) {
+          posthog.identify(String(result.user.id), {
+            email: result.user.email,
+            name: result.user.name || undefined,
+            role: result.user.role
+          });
+          posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up', {
+            auth_method: 'password'
+          });
         }
 
         if (result.success && result.redirectTo) {

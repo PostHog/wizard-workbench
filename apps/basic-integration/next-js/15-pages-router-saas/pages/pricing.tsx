@@ -7,6 +7,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface Price {
   id: string;
@@ -89,6 +90,16 @@ function PricingCard({
         if (result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
+          if (
+            process.env.NEXT_PUBLIC_POSTHOG_KEY &&
+            process.env.NEXT_PUBLIC_POSTHOG_HOST
+          ) {
+            posthog.capture('checkout_started', {
+              plan_name: name,
+              billing_interval: interval,
+              trial_days: trialDays
+            });
+          }
           window.location.href = result.url;
         }
       } catch (err) {
