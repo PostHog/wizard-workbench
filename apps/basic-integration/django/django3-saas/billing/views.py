@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import timedelta
 from .models import Plan, Subscription
+from accounts.apps import posthog_client
 
 # Check if Stripe is configured
 STRIPE_CONFIGURED = bool(getattr(settings, 'STRIPE_SECRET_KEY', ''))
@@ -36,6 +37,13 @@ def subscribe(request, plan_slug):
         return redirect('billing:manage')
 
     if request.method == 'POST':
+        checkout_provider = 'stripe' if STRIPE_CONFIGURED and plan.stripe_price_id else 'demo'
+        if posthog_client:
+            posthog_client.capture('checkout_started', properties={
+                'plan_slug': plan.slug,
+                'billing_interval': plan.interval,
+                'checkout_provider': checkout_provider,
+            })
         if STRIPE_CONFIGURED and plan.stripe_price_id:
             # Create Stripe Checkout Session
             try:
@@ -70,6 +78,12 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            if posthog_client:
+                posthog_client.capture('subscription_activated', properties={
+                    'plan_slug': plan.slug,
+                    'billing_interval': plan.interval,
+                    'activation_source': 'demo',
+                })
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -130,6 +144,12 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+                if posthog_client:
+                    posthog_client.capture('subscription_plan_changed', properties={
+                        'plan_slug': plan.slug,
+                        'billing_interval': plan.interval,
+                        'change_source': 'stripe',
+                    })
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
                 messages.error(request, f'Error changing plan: {str(e)}')
@@ -137,6 +157,12 @@ def change_plan(request, plan_slug):
             # Demo mode
             subscription.plan = plan
             subscription.save()
+            if posthog_client:
+                posthog_client.capture('subscription_plan_changed', properties={
+                    'plan_slug': plan.slug,
+                    'billing_interval': plan.interval,
+                    'change_source': 'demo',
+                })
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -171,6 +197,11 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        if posthog_client:
+            posthog_client.capture('subscription_canceled', properties={
+                'plan_slug': subscription.plan.slug,
+                'cancellation_source': 'user',
+            })
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -269,6 +300,16 @@ def _handle_checkout_completed(session):
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
     )
+    if posthog_client:
+        posthog_client.capture(
+            'subscription_activated',
+            distinct_id=str(user.pk),
+            properties={
+                'plan_slug': plan.slug,
+                'billing_interval': plan.interval,
+                'activation_source': 'stripe_webhook',
+            },
+        )
 
 
 def _handle_subscription_updated(subscription_data):
@@ -323,5 +364,13 @@ def _handle_payment_failed(invoice):
         )
         subscription.status = 'past_due'
         subscription.save()
+        if posthog_client:
+            posthog_client.capture(
+                'subscription_payment_failed',
+                distinct_id=str(subscription.user_id),
+                properties={
+                    'plan_slug': subscription.plan.slug,
+                },
+            )
     except Subscription.DoesNotExist:
         pass
