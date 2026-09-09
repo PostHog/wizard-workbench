@@ -1,7 +1,10 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+from flask import Flask, g, request, current_app
+from flask_login import current_user
+from posthog import Posthog, identify_context, new_context, set_context_session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -33,11 +36,61 @@ login.login_message = _l('Please log in to access this page.')
 mail = Mail()
 moment = Moment()
 babel = Babel()
+posthog_client = None
 
 
 def create_app(config_class=Config):
+    global posthog_client
+
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    posthog_project_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    for variable_name, value in (
+            ('POSTHOG_PROJECT_TOKEN', posthog_project_token),
+            ('POSTHOG_HOST', posthog_host)):
+        if not value:
+            if app.debug:
+                raise RuntimeError(
+                    f'{variable_name} variable required by PostHog is missing '
+                    'or un-configured, this causes events to be silently missed. '
+                    f'This error stops appearing once {variable_name} is configured')
+            break
+    else:
+        posthog_client = Posthog(
+            posthog_project_token,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        atexit.register(posthog_client.shutdown)
+
+    @app.before_request
+    def bind_posthog_request_context():
+        """Bind analytics identity and session context for this request."""
+        if posthog_client is None:
+            return
+
+        context = new_context(fresh=True)
+        context.__enter__()
+        g.posthog_context = context
+
+        distinct_id = (
+            str(current_user.id) if current_user.is_authenticated
+            else request.headers.get('X-POSTHOG-DISTINCT-ID')
+        )
+        if distinct_id:
+            identify_context(distinct_id)
+
+        session_id = request.headers.get('X-POSTHOG-SESSION-ID')
+        if session_id:
+            set_context_session(session_id)
+
+    @app.teardown_request
+    def close_posthog_request_context(exception):
+        context = g.pop('posthog_context', None)
+        if context is not None:
+            context.__exit__(None, None, None)
 
     db.init_app(app)
     migrate.init_app(app, db)
