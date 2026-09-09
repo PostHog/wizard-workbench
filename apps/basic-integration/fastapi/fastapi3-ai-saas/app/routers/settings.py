@@ -2,11 +2,12 @@
 
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Form, Request, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Form, Request
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr
 
+from app import main
 from app.dependencies import DbSession, RequiredUser
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -28,6 +29,7 @@ class PasswordChange(BaseModel):
 async def settings_page(request: Request, current_user: RequiredUser, db: DbSession):
     """User settings page."""
     from app.models import APIKey
+
     api_key_count = db.query(APIKey).filter(
         APIKey.user_id == current_user.id,
         APIKey.is_active == True
@@ -53,7 +55,7 @@ async def update_settings(
     email: Annotated[str, Form()],
 ):
     """Update user settings."""
-    from app.models import User, APIKey
+    from app.models import APIKey, User
 
     error = None
     success = None
@@ -66,6 +68,8 @@ async def update_settings(
         else:
             current_user.email = email
             db.commit()
+            if main.posthog_client:
+                main.posthog_client.capture("email_updated")
             success = "Settings updated successfully"
     else:
         success = "No changes made"
@@ -108,6 +112,8 @@ async def change_password(
     else:
         current_user.set_password(new_password)
         db.commit()
+        if main.posthog_client:
+            main.posthog_client.capture("password_changed")
         success = "Password changed successfully"
 
     api_key_count = db.query(APIKey).filter(

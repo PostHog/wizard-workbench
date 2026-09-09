@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+from app import main
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
 
@@ -75,6 +76,16 @@ async def generate_content(
         result=mock_content,
         credits_used=credits_needed,
     )
+
+    if main.posthog_client:
+        main.posthog_client.capture(
+            "content_generated",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
 
     return GenerateResponse(
         id=generation.id,
