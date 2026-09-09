@@ -14,6 +14,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
 
+import { posthog } from "@/lib/posthog";
 import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
@@ -72,7 +73,15 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              onPress={() => {
+                posthog?.capture("author_profile_opened", {
+                  item_id: item.id,
+                  source: "item_details",
+                });
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -163,6 +172,10 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog?.capture("external_story_opened", {
+                    item_id: item.id,
+                    source: "item_details",
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +207,13 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog?.capture("parent_item_opened", {
+                  item_id: item.id,
+                  parent_item_id: parentItem.id,
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
