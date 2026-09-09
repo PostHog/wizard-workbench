@@ -1,7 +1,39 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { PostHog } from 'posthog-node';
+
+const posthogProjectToken = process.env.POSTHOG_PROJECT_TOKEN;
+const posthogHost = process.env.POSTHOG_HOST;
+
+if (!posthogProjectToken && process.env.NODE_ENV !== 'production') {
+  throw new Error(
+    'POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_PROJECT_TOKEN is configured'
+  );
+}
+
+if (!posthogHost && process.env.NODE_ENV !== 'production') {
+  throw new Error(
+    'POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured'
+  );
+}
+
+const posthog =
+  posthogProjectToken && posthogHost
+    ? new PostHog(posthogProjectToken, {
+        host: posthogHost,
+        enableExceptionAutocapture: true,
+      })
+    : undefined;
 
 const app = new Hono();
+
+app.onError((error, c) => {
+  if (posthog) {
+    posthog.captureException(error);
+  }
+
+  return c.text('Internal Server Error', 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +79,17 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_created',
+      properties: {
+        tag_count: tags.length,
+        has_description: Boolean(description),
+      },
+    });
+  }
+
   return c.json(link, 201);
 });
 
@@ -76,6 +119,17 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  if (posthog) {
+    posthog.capture({
+      event: 'link_updated',
+      properties: {
+        updated_fields: Object.keys(body),
+        is_favorite: link.favorite,
+        tag_count: link.tags.length,
+      },
+    });
+  }
+
   return c.json(link);
 });
 
@@ -88,6 +142,11 @@ app.delete('/api/links/:id', (c) => {
   }
 
   links.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({ event: 'link_deleted' });
+  }
+
   return c.body(null, 204);
 });
 
