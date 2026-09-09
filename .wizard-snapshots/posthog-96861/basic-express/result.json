@@ -1,19 +1,55 @@
 {
   "passed": false,
-  "runPhase": "running",
-  "hasPosthogDep": false,
-  "newDeps": [],
+  "runPhase": "completed",
+  "hasPosthogDep": true,
+  "newDeps": [
+    "posthog-node"
+  ],
   "skillsComplete": false,
   "screenPath": [
     "intro",
     "health-check",
     "auth",
-    "run"
+    "run",
+    "outro"
   ],
   "unansweredAsks": 0,
   "refusedAsks": 0,
   "abort": null,
   "available": true,
   "asks": 0,
-  "tasks": []
+  "tasks": [
+    {
+      "label": "Add PostHog SDK",
+      "status": "completed"
+    },
+    {
+      "label": "Initialize PostHog",
+      "status": "completed"
+    },
+    {
+      "label": "Add user identification",
+      "status": "skipped"
+    },
+    {
+      "label": "Enable error tracking",
+      "status": "completed"
+    },
+    {
+      "label": "Instrument core events",
+      "status": "completed"
+    },
+    {
+      "label": "Review integration",
+      "status": "completed"
+    },
+    {
+      "label": "Build analytics insights",
+      "status": "completed"
+    },
+    {
+      "label": "Publish setup report",
+      "status": "completed"
+    }
+  ]
 }

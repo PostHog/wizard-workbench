@@ -1,7 +1,7 @@
 [
   {
     "turn": 1,
-    "time": "2026-09-08T21:39:58.100605-04:00",
+    "time": "2026-09-08T21:43:17.314522-04:00",
     "provider": "openai",
     "model": "gpt-5.6-luna",
     "status": 200,
@@ -9,7 +9,7 @@
   },
   {
     "turn": 2,
-    "time": "2026-09-08T21:40:00.556775-04:00",
+    "time": "2026-09-08T21:43:20.393707-04:00",
     "provider": "openai",
     "model": "gpt-5.6-terra",
     "status": 200,
@@ -17,7 +17,7 @@
   },
   {
     "turn": 3,
-    "time": "2026-09-08T21:40:02.042833-04:00",
+    "time": "2026-09-08T21:43:23.942344-04:00",
     "provider": "openai",
     "model": "gpt-5.6-terra",
     "status": 200,
@@ -25,7 +25,7 @@
   },
   {
     "turn": 4,
-    "time": "2026-09-08T21:40:06.495348-04:00",
+    "time": "2026-09-08T21:43:26.387844-04:00",
     "provider": "openai",
     "model": "gpt-5.6-terra",
     "status": 200,
@@ -33,7 +33,551 @@
   },
   {
     "turn": 5,
-    "time": "2026-09-08T21:40:10.452726-04:00",
+    "time": "2026-09-08T21:43:27.932968-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 6,
+    "time": "2026-09-08T21:43:31.282857-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 7,
+    "time": "2026-09-08T21:43:33.009353-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 8,
+    "time": "2026-09-08T21:43:34.202252-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 9,
+    "time": "2026-09-08T21:43:35.455645-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-luna",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 10,
+    "time": "2026-09-08T21:43:35.611467-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-luna",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 11,
+    "time": "2026-09-08T21:43:37.713723-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 12,
+    "time": "2026-09-08T21:43:37.983049-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 13,
+    "time": "2026-09-08T21:43:39.820619-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 14,
+    "time": "2026-09-08T21:43:40.537221-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 15,
+    "time": "2026-09-08T21:43:41.886832-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-luna",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 16,
+    "time": "2026-09-08T21:43:42.698793-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-luna",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 17,
+    "time": "2026-09-08T21:43:44.139779-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 18,
+    "time": "2026-09-08T21:43:48.423849-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 19,
+    "time": "2026-09-08T21:43:52.632007-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 20,
+    "time": "2026-09-08T21:43:53.596911-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 21,
+    "time": "2026-09-08T21:43:54.144629-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 22,
+    "time": "2026-09-08T21:44:00.367615-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 23,
+    "time": "2026-09-08T21:44:03.646743-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 24,
+    "time": "2026-09-08T21:44:16.911828-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 25,
+    "time": "2026-09-08T21:44:19.087757-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 26,
+    "time": "2026-09-08T21:44:20.690438-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-luna",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 27,
+    "time": "2026-09-08T21:44:21.593425-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 28,
+    "time": "2026-09-08T21:44:22.622198-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 29,
+    "time": "2026-09-08T21:44:25.34892-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 30,
+    "time": "2026-09-08T21:44:26.048088-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 31,
+    "time": "2026-09-08T21:44:28.116599-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-luna",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 32,
+    "time": "2026-09-08T21:44:31.259548-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 33,
+    "time": "2026-09-08T21:44:33.003502-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 34,
+    "time": "2026-09-08T21:44:33.321157-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 35,
+    "time": "2026-09-08T21:44:36.220655-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 36,
+    "time": "2026-09-08T21:44:38.046057-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 37,
+    "time": "2026-09-08T21:44:41.015269-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 38,
+    "time": "2026-09-08T21:44:42.825134-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 39,
+    "time": "2026-09-08T21:44:44.766673-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-luna",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 40,
+    "time": "2026-09-08T21:44:47.645254-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 41,
+    "time": "2026-09-08T21:44:53.360476-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 42,
+    "time": "2026-09-08T21:44:55.001664-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 43,
+    "time": "2026-09-08T21:44:59.821015-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 44,
+    "time": "2026-09-08T21:45:00.607008-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 45,
+    "time": "2026-09-08T21:45:00.772205-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 46,
+    "time": "2026-09-08T21:45:03.024276-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 47,
+    "time": "2026-09-08T21:45:08.472168-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 48,
+    "time": "2026-09-08T21:45:10.045367-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 49,
+    "time": "2026-09-08T21:45:13.225286-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 50,
+    "time": "2026-09-08T21:45:13.849909-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-sol",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 51,
+    "time": "2026-09-08T21:45:16.620403-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 52,
+    "time": "2026-09-08T21:45:18.351796-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 53,
+    "time": "2026-09-08T21:45:19.770422-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 54,
+    "time": "2026-09-08T21:45:20.164276-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-sol",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 55,
+    "time": "2026-09-08T21:45:25.628218-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 56,
+    "time": "2026-09-08T21:45:25.734868-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-sol",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 57,
+    "time": "2026-09-08T21:45:28.7447-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 58,
+    "time": "2026-09-08T21:45:35.549163-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 59,
+    "time": "2026-09-08T21:45:36.635842-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 60,
+    "time": "2026-09-08T21:45:40.885025-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-sol",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 61,
+    "time": "2026-09-08T21:45:55.59376-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-sol",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 62,
+    "time": "2026-09-08T21:45:57.398256-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-sol",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 63,
+    "time": "2026-09-08T21:45:59.812288-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-sol",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 64,
+    "time": "2026-09-08T21:46:01.517338-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-sol",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 65,
+    "time": "2026-09-08T21:46:04.122817-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-sol",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 66,
+    "time": "2026-09-08T21:46:31.00424-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-sol",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 67,
+    "time": "2026-09-08T21:46:34.374517-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-sol",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 68,
+    "time": "2026-09-08T21:46:36.971145-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 69,
+    "time": "2026-09-08T21:46:55.36783-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 70,
+    "time": "2026-09-08T21:47:09.456306-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 71,
+    "time": "2026-09-08T21:47:11.302041-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 72,
+    "time": "2026-09-08T21:47:16.397699-04:00",
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "status": 200,
+    "outcome": "ok"
+  },
+  {
+    "turn": 73,
+    "time": "2026-09-08T21:47:18.121894-04:00",
     "provider": "openai",
     "model": "gpt-5.6-terra",
     "status": 200,

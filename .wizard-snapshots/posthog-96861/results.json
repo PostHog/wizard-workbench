@@ -2,19 +2,20 @@
   {
     "app": "basic-integration/javascript-node/express-todo",
     "id": "basic-express",
-    "started": "2026-09-09T01:39:53.210Z",
-    "ended": "2026-09-09T01:40:13.946Z",
+    "started": "2026-09-09T01:43:11.312Z",
+    "ended": "2026-09-09T01:47:41.668Z",
     "exitCode": 1,
     "signal": null,
-    "frames": 21,
+    "frames": 164,
     "renderStatus": 0,
-    "runPhase": "running",
+    "runPhase": "completed",
     "passed": false,
     "screenPath": [
       "intro",
       "health-check",
       "auth",
-      "run"
+      "run",
+      "outro"
     ],
     "wizardRef": "6723957363f13ca5f886ba99e84702b2230a6a34",
     "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
@@ -22,17 +23,11 @@
     "gatewayRef": "9a2f445a93b7bdb36bf4332cbf32539378429730",
     "backend": "http://localhost:8010",
     "sourceMapBuildRequested": false,
-    "modelTurns": 5,
-    "successfulModelTurns": 5,
-    "capturedModelTurns": 5,
-    "sanityStop": {
-      "reason": "requested_turn_limit",
-      "successfulTurns": 5,
-      "turnLimit": 5
-    },
-    "sanityPassed": true,
+    "modelTurns": 73,
+    "successfulModelTurns": 73,
+    "capturedModelTurns": 73,
     "title": "Express integration sanity",
-    "outcome": "passed",
+    "outcome": "failed",
     "shots": [
       {
         "frame": "00001-intro.ans",
@@ -83,12 +78,12 @@
         "file": "00012-model-turn-00001-gateway-openai-gpt-5-6-luna.png"
       },
       {
-        "frame": "00013-model-turn-00002-gateway-openai-gpt-5-6-terra.ans",
-        "file": "00013-model-turn-00002-gateway-openai-gpt-5-6-terra.png"
+        "frame": "00013-run.ans",
+        "file": "00013-run.png"
       },
       {
-        "frame": "00014-run.ans",
-        "file": "00014-run.png"
+        "frame": "00014-model-turn-00002-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00014-model-turn-00002-gateway-openai-gpt-5-6-terra.png"
       },
       {
         "frame": "00015-run.ans",
@@ -99,28 +94,600 @@
         "file": "00016-model-turn-00003-gateway-openai-gpt-5-6-terra.png"
       },
       {
-        "frame": "00017-run.ans",
-        "file": "00017-run.png"
+        "frame": "00017-model-turn-00004-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00017-model-turn-00004-gateway-openai-gpt-5-6-terra.png"
       },
       {
-        "frame": "00018-model-turn-00004-gateway-openai-gpt-5-6-terra.ans",
-        "file": "00018-model-turn-00004-gateway-openai-gpt-5-6-terra.png"
+        "frame": "00018-run.ans",
+        "file": "00018-run.png"
       },
       {
-        "frame": "00019-model-turn-00005-gateway-openai-gpt-5-6-terra.ans",
-        "file": "00019-model-turn-00005-gateway-openai-gpt-5-6-terra.png"
+        "frame": "00019-run.ans",
+        "file": "00019-run.png"
       },
       {
-        "frame": "00020-sanity-turn-limit.ans",
-        "file": "00020-sanity-turn-limit.png"
+        "frame": "00020-model-turn-00005-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00020-model-turn-00005-gateway-openai-gpt-5-6-terra.png"
       },
       {
-        "frame": "00021-process-exit.ans",
-        "file": "00021-process-exit.png"
+        "frame": "00021-run.ans",
+        "file": "00021-run.png"
+      },
+      {
+        "frame": "00022-model-turn-00006-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00022-model-turn-00006-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00023-run.ans",
+        "file": "00023-run.png"
+      },
+      {
+        "frame": "00024-model-turn-00007-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00024-model-turn-00007-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00025-run.ans",
+        "file": "00025-run.png"
+      },
+      {
+        "frame": "00026-run.ans",
+        "file": "00026-run.png"
+      },
+      {
+        "frame": "00027-run.ans",
+        "file": "00027-run.png"
+      },
+      {
+        "frame": "00028-run.ans",
+        "file": "00028-run.png"
+      },
+      {
+        "frame": "00029-model-turn-00008-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00029-model-turn-00008-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00030-model-turn-00009-gateway-openai-gpt-5-6-luna.ans",
+        "file": "00030-model-turn-00009-gateway-openai-gpt-5-6-luna.png"
+      },
+      {
+        "frame": "00031-model-turn-00010-gateway-openai-gpt-5-6-luna.ans",
+        "file": "00031-model-turn-00010-gateway-openai-gpt-5-6-luna.png"
+      },
+      {
+        "frame": "00032-model-turn-00011-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00032-model-turn-00011-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00033-run.ans",
+        "file": "00033-run.png"
+      },
+      {
+        "frame": "00034-run.ans",
+        "file": "00034-run.png"
+      },
+      {
+        "frame": "00035-model-turn-00012-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00035-model-turn-00012-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00036-model-turn-00013-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00036-model-turn-00013-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00037-run.ans",
+        "file": "00037-run.png"
+      },
+      {
+        "frame": "00038-model-turn-00014-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00038-model-turn-00014-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00039-run.ans",
+        "file": "00039-run.png"
+      },
+      {
+        "frame": "00040-model-turn-00015-gateway-openai-gpt-5-6-luna.ans",
+        "file": "00040-model-turn-00015-gateway-openai-gpt-5-6-luna.png"
+      },
+      {
+        "frame": "00041-model-turn-00016-gateway-openai-gpt-5-6-luna.ans",
+        "file": "00041-model-turn-00016-gateway-openai-gpt-5-6-luna.png"
+      },
+      {
+        "frame": "00042-run.ans",
+        "file": "00042-run.png"
+      },
+      {
+        "frame": "00043-model-turn-00017-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00043-model-turn-00017-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00044-run.ans",
+        "file": "00044-run.png"
+      },
+      {
+        "frame": "00045-model-turn-00018-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00045-model-turn-00018-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00046-run.ans",
+        "file": "00046-run.png"
+      },
+      {
+        "frame": "00047-model-turn-00019-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00047-model-turn-00019-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00048-run.ans",
+        "file": "00048-run.png"
+      },
+      {
+        "frame": "00049-model-turn-00020-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00049-model-turn-00020-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00050-run.ans",
+        "file": "00050-run.png"
+      },
+      {
+        "frame": "00051-model-turn-00021-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00051-model-turn-00021-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00052-model-turn-00022-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00052-model-turn-00022-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00053-run.ans",
+        "file": "00053-run.png"
+      },
+      {
+        "frame": "00054-model-turn-00023-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00054-model-turn-00023-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00055-run.ans",
+        "file": "00055-run.png"
+      },
+      {
+        "frame": "00056-model-turn-00024-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00056-model-turn-00024-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00057-model-turn-00025-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00057-model-turn-00025-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00058-run.ans",
+        "file": "00058-run.png"
+      },
+      {
+        "frame": "00059-run.ans",
+        "file": "00059-run.png"
+      },
+      {
+        "frame": "00060-run.ans",
+        "file": "00060-run.png"
+      },
+      {
+        "frame": "00061-model-turn-00026-gateway-openai-gpt-5-6-luna.ans",
+        "file": "00061-model-turn-00026-gateway-openai-gpt-5-6-luna.png"
+      },
+      {
+        "frame": "00062-model-turn-00027-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00062-model-turn-00027-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00063-run.ans",
+        "file": "00063-run.png"
+      },
+      {
+        "frame": "00064-run.ans",
+        "file": "00064-run.png"
+      },
+      {
+        "frame": "00065-model-turn-00028-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00065-model-turn-00028-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00066-run.ans",
+        "file": "00066-run.png"
+      },
+      {
+        "frame": "00067-model-turn-00029-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00067-model-turn-00029-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00068-model-turn-00030-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00068-model-turn-00030-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00069-run.ans",
+        "file": "00069-run.png"
+      },
+      {
+        "frame": "00070-model-turn-00031-gateway-openai-gpt-5-6-luna.ans",
+        "file": "00070-model-turn-00031-gateway-openai-gpt-5-6-luna.png"
+      },
+      {
+        "frame": "00071-model-turn-00032-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00071-model-turn-00032-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00072-run.ans",
+        "file": "00072-run.png"
+      },
+      {
+        "frame": "00073-run.ans",
+        "file": "00073-run.png"
+      },
+      {
+        "frame": "00074-model-turn-00033-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00074-model-turn-00033-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00075-model-turn-00034-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00075-model-turn-00034-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00076-model-turn-00035-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00076-model-turn-00035-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00077-run.ans",
+        "file": "00077-run.png"
+      },
+      {
+        "frame": "00078-model-turn-00036-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00078-model-turn-00036-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00079-run.ans",
+        "file": "00079-run.png"
+      },
+      {
+        "frame": "00080-model-turn-00037-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00080-model-turn-00037-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00081-run.ans",
+        "file": "00081-run.png"
+      },
+      {
+        "frame": "00082-run.ans",
+        "file": "00082-run.png"
+      },
+      {
+        "frame": "00083-model-turn-00038-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00083-model-turn-00038-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00084-model-turn-00039-gateway-openai-gpt-5-6-luna.ans",
+        "file": "00084-model-turn-00039-gateway-openai-gpt-5-6-luna.png"
+      },
+      {
+        "frame": "00085-run.ans",
+        "file": "00085-run.png"
+      },
+      {
+        "frame": "00086-model-turn-00040-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00086-model-turn-00040-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00087-run.ans",
+        "file": "00087-run.png"
+      },
+      {
+        "frame": "00088-model-turn-00041-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00088-model-turn-00041-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00089-run.ans",
+        "file": "00089-run.png"
+      },
+      {
+        "frame": "00090-model-turn-00042-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00090-model-turn-00042-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00091-run.ans",
+        "file": "00091-run.png"
+      },
+      {
+        "frame": "00092-model-turn-00043-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00092-model-turn-00043-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00093-run.ans",
+        "file": "00093-run.png"
+      },
+      {
+        "frame": "00094-model-turn-00044-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00094-model-turn-00044-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00095-run.ans",
+        "file": "00095-run.png"
+      },
+      {
+        "frame": "00096-model-turn-00045-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00096-model-turn-00045-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00097-model-turn-00046-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00097-model-turn-00046-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00098-run.ans",
+        "file": "00098-run.png"
+      },
+      {
+        "frame": "00099-model-turn-00047-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00099-model-turn-00047-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00100-run.ans",
+        "file": "00100-run.png"
+      },
+      {
+        "frame": "00101-run.ans",
+        "file": "00101-run.png"
+      },
+      {
+        "frame": "00102-run.ans",
+        "file": "00102-run.png"
+      },
+      {
+        "frame": "00103-model-turn-00048-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00103-model-turn-00048-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00104-model-turn-00049-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00104-model-turn-00049-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00105-run.ans",
+        "file": "00105-run.png"
+      },
+      {
+        "frame": "00106-model-turn-00050-gateway-openai-gpt-5-6-sol.ans",
+        "file": "00106-model-turn-00050-gateway-openai-gpt-5-6-sol.png"
+      },
+      {
+        "frame": "00107-run.ans",
+        "file": "00107-run.png"
+      },
+      {
+        "frame": "00108-run.ans",
+        "file": "00108-run.png"
+      },
+      {
+        "frame": "00109-model-turn-00051-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00109-model-turn-00051-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00110-run.ans",
+        "file": "00110-run.png"
+      },
+      {
+        "frame": "00111-model-turn-00052-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00111-model-turn-00052-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00112-run.ans",
+        "file": "00112-run.png"
+      },
+      {
+        "frame": "00113-model-turn-00053-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00113-model-turn-00053-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00114-run.ans",
+        "file": "00114-run.png"
+      },
+      {
+        "frame": "00115-model-turn-00054-gateway-openai-gpt-5-6-sol.ans",
+        "file": "00115-model-turn-00054-gateway-openai-gpt-5-6-sol.png"
+      },
+      {
+        "frame": "00116-run.ans",
+        "file": "00116-run.png"
+      },
+      {
+        "frame": "00117-model-turn-00055-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00117-model-turn-00055-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00118-run.ans",
+        "file": "00118-run.png"
+      },
+      {
+        "frame": "00119-model-turn-00056-gateway-openai-gpt-5-6-sol.ans",
+        "file": "00119-model-turn-00056-gateway-openai-gpt-5-6-sol.png"
+      },
+      {
+        "frame": "00120-model-turn-00057-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00120-model-turn-00057-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00121-run.ans",
+        "file": "00121-run.png"
+      },
+      {
+        "frame": "00122-model-turn-00058-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00122-model-turn-00058-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00123-run.ans",
+        "file": "00123-run.png"
+      },
+      {
+        "frame": "00124-model-turn-00059-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00124-model-turn-00059-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00125-run.ans",
+        "file": "00125-run.png"
+      },
+      {
+        "frame": "00126-model-turn-00060-gateway-openai-gpt-5-6-sol.ans",
+        "file": "00126-model-turn-00060-gateway-openai-gpt-5-6-sol.png"
+      },
+      {
+        "frame": "00127-model-turn-00061-gateway-openai-gpt-5-6-sol.ans",
+        "file": "00127-model-turn-00061-gateway-openai-gpt-5-6-sol.png"
+      },
+      {
+        "frame": "00128-run.ans",
+        "file": "00128-run.png"
+      },
+      {
+        "frame": "00129-model-turn-00062-gateway-openai-gpt-5-6-sol.ans",
+        "file": "00129-model-turn-00062-gateway-openai-gpt-5-6-sol.png"
+      },
+      {
+        "frame": "00130-run.ans",
+        "file": "00130-run.png"
+      },
+      {
+        "frame": "00131-run.ans",
+        "file": "00131-run.png"
+      },
+      {
+        "frame": "00132-model-turn-00063-gateway-openai-gpt-5-6-sol.ans",
+        "file": "00132-model-turn-00063-gateway-openai-gpt-5-6-sol.png"
+      },
+      {
+        "frame": "00133-model-turn-00064-gateway-openai-gpt-5-6-sol.ans",
+        "file": "00133-model-turn-00064-gateway-openai-gpt-5-6-sol.png"
+      },
+      {
+        "frame": "00134-model-turn-00065-gateway-openai-gpt-5-6-sol.ans",
+        "file": "00134-model-turn-00065-gateway-openai-gpt-5-6-sol.png"
+      },
+      {
+        "frame": "00135-run.ans",
+        "file": "00135-run.png"
+      },
+      {
+        "frame": "00136-model-turn-00066-gateway-openai-gpt-5-6-sol.ans",
+        "file": "00136-model-turn-00066-gateway-openai-gpt-5-6-sol.png"
+      },
+      {
+        "frame": "00137-run.ans",
+        "file": "00137-run.png"
+      },
+      {
+        "frame": "00138-run.ans",
+        "file": "00138-run.png"
+      },
+      {
+        "frame": "00139-model-turn-00067-gateway-openai-gpt-5-6-sol.ans",
+        "file": "00139-model-turn-00067-gateway-openai-gpt-5-6-sol.png"
+      },
+      {
+        "frame": "00140-run.ans",
+        "file": "00140-run.png"
+      },
+      {
+        "frame": "00141-model-turn-00068-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00141-model-turn-00068-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00142-run.ans",
+        "file": "00142-run.png"
+      },
+      {
+        "frame": "00143-model-turn-00069-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00143-model-turn-00069-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00144-run.ans",
+        "file": "00144-run.png"
+      },
+      {
+        "frame": "00145-model-turn-00070-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00145-model-turn-00070-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00146-model-turn-00071-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00146-model-turn-00071-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00147-run.ans",
+        "file": "00147-run.png"
+      },
+      {
+        "frame": "00148-model-turn-00072-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00148-model-turn-00072-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00149-run.ans",
+        "file": "00149-run.png"
+      },
+      {
+        "frame": "00150-run.ans",
+        "file": "00150-run.png"
+      },
+      {
+        "frame": "00151-outro.ans",
+        "file": "00151-outro.png"
+      },
+      {
+        "frame": "00152-model-turn-00073-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00152-model-turn-00073-gateway-openai-gpt-5-6-terra.png"
+      },
+      {
+        "frame": "00153-before-action-dismiss_outro.ans",
+        "file": "00153-before-action-dismiss_outro.png"
+      },
+      {
+        "frame": "00154-mcp.ans",
+        "file": "00154-mcp.png"
+      },
+      {
+        "frame": "00155-after-action-dismiss_outro.ans",
+        "file": "00155-after-action-dismiss_outro.png"
+      },
+      {
+        "frame": "00156-before-action-set_mcp_outcome.ans",
+        "file": "00156-before-action-set_mcp_outcome.png"
+      },
+      {
+        "frame": "00157-slack-connect.ans",
+        "file": "00157-slack-connect.png"
+      },
+      {
+        "frame": "00158-after-action-set_mcp_outcome.ans",
+        "file": "00158-after-action-set_mcp_outcome.png"
+      },
+      {
+        "frame": "00159-before-action-dismiss_slack.ans",
+        "file": "00159-before-action-dismiss_slack.png"
+      },
+      {
+        "frame": "00160-keep-skills.ans",
+        "file": "00160-keep-skills.png"
+      },
+      {
+        "frame": "00161-after-action-dismiss_slack.ans",
+        "file": "00161-after-action-dismiss_slack.png"
+      },
+      {
+        "frame": "00162-before-action-keep_skills.ans",
+        "file": "00162-before-action-keep_skills.png"
+      },
+      {
+        "frame": "00163-after-action-keep_skills.ans",
+        "file": "00163-after-action-keep_skills.png"
+      },
+      {
+        "frame": "00164-process-exit.ans",
+        "file": "00164-process-exit.png"
       }
     ],
-    "assessment": "model-turn-sanity",
-    "requestedSuccessfulTurns": 5,
+    "assessment": "end-to-end",
+    "requestedSuccessfulTurns": null,
     "credentialMode": "This run used a locally minted wizard-app OAuth fixture with the application\u2019s full scope ceiling. The user\u2019s two supplied PostHog keys were not exercised. A separate locally generated narrow control token returned a project-read 403; that result does not establish any scope defect in the user\u2019s keys or explain an issue with them.",
     "captureMode": "one PNG per observed Go gateway model-completion record, plus captured UI transitions and process exit"
   }

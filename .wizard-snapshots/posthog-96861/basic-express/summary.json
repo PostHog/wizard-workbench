@@ -1,19 +1,20 @@
 {
   "app": "basic-integration/javascript-node/express-todo",
   "id": "basic-express",
-  "started": "2026-09-09T01:39:53.210Z",
-  "ended": "2026-09-09T01:40:13.946Z",
+  "started": "2026-09-09T01:43:11.312Z",
+  "ended": "2026-09-09T01:47:41.668Z",
   "exitCode": 1,
   "signal": null,
-  "frames": 21,
+  "frames": 164,
   "renderStatus": 0,
-  "runPhase": "running",
+  "runPhase": "completed",
   "passed": false,
   "screenPath": [
     "intro",
     "health-check",
     "auth",
-    "run"
+    "run",
+    "outro"
   ],
   "wizardRef": "6723957363f13ca5f886ba99e84702b2230a6a34",
   "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
@@ -21,19 +22,13 @@
   "gatewayRef": "9a2f445a93b7bdb36bf4332cbf32539378429730",
   "backend": "http://localhost:8010",
   "sourceMapBuildRequested": false,
-  "modelTurns": 5,
-  "successfulModelTurns": 5,
-  "capturedModelTurns": 5,
-  "sanityStop": {
-    "reason": "requested_turn_limit",
-    "successfulTurns": 5,
-    "turnLimit": 5
-  },
-  "sanityPassed": true,
+  "modelTurns": 73,
+  "successfulModelTurns": 73,
+  "capturedModelTurns": 73,
   "title": "Express integration sanity",
-  "outcome": "passed",
-  "assessment": "model-turn-sanity",
-  "requestedSuccessfulTurns": 5,
+  "outcome": "failed",
+  "assessment": "end-to-end",
+  "requestedSuccessfulTurns": null,
   "credentialMode": "This run used a locally minted wizard-app OAuth fixture with the application\u2019s full scope ceiling. The user\u2019s two supplied PostHog keys were not exercised. A separate locally generated narrow control token returned a project-read 403; that result does not establish any scope defect in the user\u2019s keys or explain an issue with them.",
   "captureMode": "one PNG per observed Go gateway model-completion record, plus captured UI transitions and process exit"
 }

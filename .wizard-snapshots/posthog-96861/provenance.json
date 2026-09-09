@@ -82,21 +82,21 @@
       "sha": "3719b27cd3ef8b2fc213ec70a202ea033ef8903a"
     }
   ],
-  "runtimeDescription": "One real Wizard five-turn sanity run against the locally combined model, effort, budget and backend stacks. The gateway system-prompt stack (#455/#464/#461) and companion Wizard #1227 are excluded; Wizard #1225 retains its original runtime guidance.",
+  "runtimeDescription": "A full real Wizard Express integration run on the locally restacked model, effort, budget and backend chains, with no model-turn cutoff. Gateway system-prompt PRs #455/#464/#461 and companion Wizard #1227 were excluded.",
   "credentialMode": "This run used a locally minted wizard-app OAuth fixture with the application\u2019s full scope ceiling. The user\u2019s two supplied PostHog keys were not exercised. A separate locally generated narrow control token returned a project-read 403; that result does not establish any scope defect in the user\u2019s keys or explain an issue with them.",
-  "contextRouting": "Skill menu and integration skill ZIP loaded from http://localhost:8765; MCP used http://localhost:8787/mcp and PostHog used http://localhost:8010.",
+  "contextRouting": "Current full-run logs confirm http://localhost:8765 for skill menu and skill ZIP, http://localhost:8787/mcp for MCP, and http://localhost:8010 for PostHog.",
   "localOverrides": [
     "Snapshot harness captures observed gateway model completions and UI transitions, initializes local routing, and authenticates against the local API.",
-    "The local capture harness stops after five successful model completions; full integration completion is outside this sanity run.",
     "Local fixtures enabled gateway rollout, allowed 100 mints per day, and set a $30 team gateway overspend allowance.",
     "The run used the chart-defined new-tier scoped-token cap of $6; the local team wallet was funded for provider dispatch."
   ],
   "assemblyNotes": [
     "System-prompt stack excluded for this run: Wizard #1227 and Go gateway #455, #464, #461. Wizard uses the unchanged #1225 system prompt; the separate #1227 branch is preserved.",
-    "Go gateway no-system-prompt combined SHA is pending; parked PR #460 remains excluded.",
     "PostHog source tips were locally rebased onto master 1732fba27a5e7cfe9aa0d3391de5c26492bde759; all 23 replayed patches were unchanged.",
     "Charts #15331 was locally rebased to e9fc004bf33ee1674d6fc25fa0d0d8c4564667d1 on main de54c2c75873ebf1624847867226d8849528f2fe; all six replayed patches were unchanged.",
-    "Go locally combines main \u2192 #435 \u2192 #462 with main \u2192 #456 \u2192 #457 \u2192 #459. Ancestry and source checks confirm #455/#464/#461 are absent; no gateway-owned prompt policy code is present."
+    "Go locally combines main \u2192 #435 \u2192 #462 with main \u2192 #456 \u2192 #457 \u2192 #459. Ancestry and source checks confirm #455/#464/#461 are absent; no gateway-owned prompt policy code is present.",
+    "Wizard reached MCP setup, Slack skip and Keep Skills, then exited successfully. The existing resultWritten guard also present on main preserves the first-outro result.json, so raw wrapper assertions report a stale screenPath and skillsComplete=false. All raw results are preserved."
   ],
-  "requestedSuccessfulTurns": 5
+  "requestedSuccessfulTurns": null,
+  "assessment": "end-to-end"
 }
