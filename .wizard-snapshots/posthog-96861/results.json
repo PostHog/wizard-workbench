@@ -2,11 +2,11 @@
   {
     "app": "basic-integration/javascript-node/express-todo",
     "id": "basic-express",
-    "started": "2026-09-09T01:29:19.606Z",
-    "ended": "2026-09-09T01:29:41.876Z",
+    "started": "2026-09-09T01:39:53.210Z",
+    "ended": "2026-09-09T01:40:13.946Z",
     "exitCode": 1,
     "signal": null,
-    "frames": 22,
+    "frames": 21,
     "renderStatus": 0,
     "runPhase": "running",
     "passed": false,
@@ -16,10 +16,10 @@
       "auth",
       "run"
     ],
-    "wizardRef": "09c3902bde7f6bd16e430af9fd1beb51012275f9",
+    "wizardRef": "6723957363f13ca5f886ba99e84702b2230a6a34",
     "contextMillRef": "f8f89ca9f2165ccc319212c9089b9cefefb7a148",
     "posthogRef": "90b30495bcedac556fe8f090eb5e26ec5022b911",
-    "gatewayRef": "db47351534e17f0074011a6a6ba92e8296ef049a",
+    "gatewayRef": "9a2f445a93b7bdb36bf4332cbf32539378429730",
     "backend": "http://localhost:8010",
     "sourceMapBuildRequested": false,
     "modelTurns": 5,
@@ -83,12 +83,12 @@
         "file": "00012-model-turn-00001-gateway-openai-gpt-5-6-luna.png"
       },
       {
-        "frame": "00013-run.ans",
-        "file": "00013-run.png"
+        "frame": "00013-model-turn-00002-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00013-model-turn-00002-gateway-openai-gpt-5-6-terra.png"
       },
       {
-        "frame": "00014-model-turn-00002-gateway-openai-gpt-5-6-terra.ans",
-        "file": "00014-model-turn-00002-gateway-openai-gpt-5-6-terra.png"
+        "frame": "00014-run.ans",
+        "file": "00014-run.png"
       },
       {
         "frame": "00015-run.ans",
@@ -99,33 +99,29 @@
         "file": "00016-model-turn-00003-gateway-openai-gpt-5-6-terra.png"
       },
       {
-        "frame": "00017-model-turn-00004-gateway-openai-gpt-5-6-terra.ans",
-        "file": "00017-model-turn-00004-gateway-openai-gpt-5-6-terra.png"
+        "frame": "00017-run.ans",
+        "file": "00017-run.png"
       },
       {
-        "frame": "00018-run.ans",
-        "file": "00018-run.png"
+        "frame": "00018-model-turn-00004-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00018-model-turn-00004-gateway-openai-gpt-5-6-terra.png"
       },
       {
-        "frame": "00019-run.ans",
-        "file": "00019-run.png"
+        "frame": "00019-model-turn-00005-gateway-openai-gpt-5-6-terra.ans",
+        "file": "00019-model-turn-00005-gateway-openai-gpt-5-6-terra.png"
       },
       {
-        "frame": "00020-model-turn-00005-gateway-openai-gpt-5-6-terra.ans",
-        "file": "00020-model-turn-00005-gateway-openai-gpt-5-6-terra.png"
+        "frame": "00020-sanity-turn-limit.ans",
+        "file": "00020-sanity-turn-limit.png"
       },
       {
-        "frame": "00021-sanity-turn-limit.ans",
-        "file": "00021-sanity-turn-limit.png"
-      },
-      {
-        "frame": "00022-process-exit.ans",
-        "file": "00022-process-exit.png"
+        "frame": "00021-process-exit.ans",
+        "file": "00021-process-exit.png"
       }
     ],
     "assessment": "model-turn-sanity",
     "requestedSuccessfulTurns": 5,
-    "credentialMode": "The real flow used a local wizard-app OAuth token with the application\u2019s full scope ceiling. A fresh token from the exact wizard_ci_token command has only llm_gateway:read and still returns HTTP 403 on project reads; this smoke does not establish deployed CI compatibility.",
+    "credentialMode": "This run used a locally minted wizard-app OAuth fixture with the application\u2019s full scope ceiling. The user\u2019s two supplied PostHog keys were not exercised. A separate locally generated narrow control token returned a project-read 403; that result does not establish any scope defect in the user\u2019s keys or explain an issue with them.",
     "captureMode": "one PNG per observed Go gateway model-completion record, plus captured UI transitions and process exit"
   }
 ]
