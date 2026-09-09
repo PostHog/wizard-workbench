@@ -7,6 +7,7 @@ import { environment } from '@env/environment';
 import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppUpdateService, Logger } from '@core/services';
+import { PosthogService } from '@core/services/posthog.service';
 import { SocketIoService } from '@core/socket-io';
 
 @Component({
@@ -23,6 +24,7 @@ export class AppComponent implements OnInit {
   private readonly i18nService = inject(I18nService);
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
+  private readonly posthogService = inject(PosthogService);
   private readonly destroyRef = inject(DestroyRef);
 
   title = 'angular-boilerplate';

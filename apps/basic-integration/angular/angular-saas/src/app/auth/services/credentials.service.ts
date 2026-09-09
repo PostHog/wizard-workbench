@@ -1,5 +1,6 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, Injectable, inject, signal } from '@angular/core';
 import { Credentials } from '@core/entities';
+import { PosthogService } from '@core/services/posthog.service';
 
 const credentialsKey = 'credentials';
 
@@ -11,11 +12,17 @@ const credentialsKey = 'credentials';
   providedIn: 'root',
 })
 export class CredentialsService {
+  private readonly posthogService = inject(PosthogService);
+
   /** The user credentials signal */
   readonly credentials = signal<Credentials | null>(this.loadCredentials());
 
   /** Computed signal for checking authentication status */
   readonly isAuthenticated = computed(() => !!this.credentials());
+
+  constructor() {
+    this.identify(this.credentials());
+  }
 
   private loadCredentials(): Credentials | null {
     const savedCredentials = sessionStorage.getItem(credentialsKey) || localStorage.getItem(credentialsKey);
@@ -30,6 +37,19 @@ export class CredentialsService {
    * @param remember True to remember credentials across sessions.
    */
   setCredentials(credentials?: Credentials, remember = true) {
+    const previousCredentials = this.credentials();
+
+    if (!credentials) {
+      if (previousCredentials) {
+        this.posthogService.client?.reset();
+      }
+    } else {
+      if (previousCredentials && previousCredentials.id !== credentials.id) {
+        this.posthogService.client?.reset();
+      }
+      this.identify(credentials);
+    }
+
     this.credentials.set(credentials || null);
 
     if (credentials) {
@@ -39,5 +59,17 @@ export class CredentialsService {
       sessionStorage.removeItem(credentialsKey);
       localStorage.removeItem(credentialsKey);
     }
+  }
+
+  private identify(credentials: Credentials | null): void {
+    if (!credentials?.id) {
+      return;
+    }
+
+    this.posthogService.client?.identify(credentials.id, {
+      email: credentials.email,
+      name: credentials.fullName.trim(),
+      role: credentials.roles[0],
+    });
   }
 }
