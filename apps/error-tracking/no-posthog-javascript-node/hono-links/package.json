@@ -6,10 +6,15 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "start:production": "node dist/index.js",
+    "build": "esbuild index.js --bundle --platform=node --format=esm --packages=external --sourcemap --sources-content=true --outfile=dist/index.js",
     "dev": "node --watch index.js"
   },
   "dependencies": {
     "hono": "^4.6.0",
     "@hono/node-server": "^1.13.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

@@ -6,11 +6,16 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "start:production": "node dist/index.js",
+    "build": "esbuild index.js --bundle --platform=node --format=esm --packages=external --sourcemap --sources-content=true --outfile=dist/index.js",
     "dev": "node --watch index.js"
   },
   "dependencies": {
     "koa": "^2.15.0",
     "koa-router": "^13.0.0",
     "koa-bodyparser": "^4.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }
