@@ -6,11 +6,14 @@ defineProps<{
   item: Media
   query?: QueryItem
 }>()
+
+const { $posthog } = useNuxtApp()
 </script>
 
 <template>
   <NuxtLink
     :to="`/${item.media_type || type}/${item.id}`" pb2
+    @click="$posthog?.capture('media_selected', { media_id: item.id, media_type: item.media_type || type })"
   >
     <div
       block bg-gray4:10 p1 class="aspect-10/16"
