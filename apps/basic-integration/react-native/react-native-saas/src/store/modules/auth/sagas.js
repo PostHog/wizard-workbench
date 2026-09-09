@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
+import { posthog } from '../../../config/posthog';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
 
 import {
@@ -12,6 +13,12 @@ import {
 } from './actions';
 
 import { selectTeam } from '../teams/actions';
+
+function identifyAuthenticatedUser(email) {
+  posthog?.identify(email, {
+    $set: { email },
+  });
+}
 
 export function* init() {
   const token = yield call([AsyncStorage, 'getItem'], '@Omni:token');
@@ -41,6 +48,8 @@ export function* signIn({ payload }) {
     if (email === 'demo@test.com' && password === 'demo') {
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
       yield put(signInSuccess(DEMO_TOKEN));
+      identifyAuthenticatedUser(email);
+      posthog?.capture('user_signed_in', { authentication_method: 'demo' });
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
       toast.showSuccess('Welcome to demo mode!');
@@ -53,6 +62,8 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+    identifyAuthenticatedUser(email);
+    posthog?.capture('user_signed_in', { authentication_method: 'password' });
     NavigationService.navigate('Main');
   } catch (err) {
     toast.showError('Invalid credentials');
@@ -60,6 +71,8 @@ export function* signIn({ payload }) {
 }
 
 export function* signOut() {
+  posthog?.capture('user_signed_out');
+  posthog?.reset();
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
