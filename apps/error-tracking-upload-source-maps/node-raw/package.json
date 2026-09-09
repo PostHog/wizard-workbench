@@ -4,13 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && posthog-cli --dotenv-file .env sourcemap process --directory ./dist --release-name node-raw",
     "start": "node --env-file=.env dist/index.js"
   },
   "dependencies": {
     "posthog-node": "^5.35.4"
   },
   "devDependencies": {
+    "@posthog/cli": "^0.16.0",
     "@types/node": "^26.0.0",
     "typescript": "^5.7.2"
   }
