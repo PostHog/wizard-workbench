@@ -9,7 +9,7 @@ class SourceMapExampleApplication : Application() {
         super.onCreate()
         val config = PostHogAndroidConfig(
             apiKey = "phc_raG2H9V246hkNZk6K89DZGG98qQyPrKKlicifGlpOXA",
-            host = "https://internal-c.posthog.com",
+            host = "https://us.i.posthog.com",
         )
         PostHogAndroid.setup(this, config)
     }
