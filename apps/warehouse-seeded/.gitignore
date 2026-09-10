@@ -1,0 +1,11 @@
+# The seeded fixtures exist to test `.env` KEY-NAME detection inside a full
+# integration run, so their env files have to be committed. The root .gitignore
+# excludes `**/.env` and `**/.env.local`; re-include them here, and here only.
+#
+# Every value in these files is an obvious placeholder. The wizard's detector
+# reads key names and never values, so a placeholder detects exactly like a
+# real secret. Never commit a real credential to this tree.
+!.env
+!.env.local
+!**/.env
+!**/.env.local

@@ -1,0 +1,10 @@
+# This fixture is never installed — it exists so the detector sees a real pnpm
+# monorepo and walks into `apps/*`. It is still scanned like production code,
+# and the supply-chain lint requires a release-age floor on any pnpm workspace,
+# so the floor is set here too rather than carving out an exception.
+#
+# 10080 minutes = seven days, the minimum the lint accepts.
+packages:
+  - 'apps/*'
+
+minimumReleaseAge: 10080

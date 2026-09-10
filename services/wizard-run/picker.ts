@@ -47,19 +47,28 @@ export async function promptChoice(
   return choices[index];
 }
 
+/**
+ * @param ciMode  restrict to commands that accept `--ci`.
+ * @param driven  the caller drives the run from an e2e.json flow definition
+ *                (the snapshots and --e2e paths) rather than diffing a real run.
+ */
 export async function selectCommand(
   ciMode: boolean,
-  e2eOnly = false,
+  driven = false,
 ): Promise<WizardCommand> {
-  const base = ciMode
+  const ciFiltered = ciMode
     ? WIZARD_COMMANDS.filter((c) => c.ciCapable)
     : WIZARD_COMMANDS;
+  // An e2eOnly command (e.g. warehouse) is graded by assertions against a
+  // mocked backend, so a diff-mode run of it grades nothing. Offer it only on
+  // the driven paths.
+  const base = driven ? ciFiltered : ciFiltered.filter((c) => !c.e2eOnly);
   // Snapshots are auto-driven by an e2e.json flow definition, so that mode only
   // offers commands that have one. Interactive / headless runs are real wizard
   // runs — every command is available. Fall back to the full list if no e2e
   // flows resolve (e.g. WIZARD_PATH unset) so the picker never goes empty.
   const withE2e = base.filter((c) => c.hasE2e);
-  const available = e2eOnly && withE2e.length > 0 ? withE2e : base;
+  const available = driven && withE2e.length > 0 ? withE2e : base;
 
   if (available.length === 0) {
     console.error("No wizard commands available for this mode.");

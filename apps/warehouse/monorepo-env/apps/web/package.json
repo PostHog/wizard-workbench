@@ -1,0 +1,15 @@
+{
+  "name": "@desk/web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "^15.1.6",
+    "posthog-js": "^1.215.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

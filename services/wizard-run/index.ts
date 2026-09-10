@@ -68,7 +68,9 @@ Usage:
   pnpm wizard-run --region <us|eu>        PostHog region (default: us)
 
 Available commands:
-${WIZARD_COMMANDS.map((c) => `  ${commandToInvocation(c.id).padEnd(28)}  ${c.description}`).join("\n")}
+${WIZARD_COMMANDS.filter((c) => !c.e2eOnly)
+  .map((c) => `  ${commandToInvocation(c.id).padEnd(28)}  ${c.description}`)
+  .join("\n")}
 
 Options:
   --command <id>     Wizard command (see above)
@@ -115,6 +117,14 @@ async function main(): Promise<void> {
     }
     if (opts.ci && !found.ciCapable) {
       console.error(`Command "${found.id}" does not support CI mode.`);
+      process.exit(1);
+    }
+    // An e2eOnly command runs against a mocked backend and is graded by
+    // assertions, not by a diff. wizard-run has no assertion layer.
+    if (!snapshots && found.e2eOnly) {
+      console.error(
+        `Command "${found.id}" only runs under wizard-ci --e2e. Pick the snapshots mode, or run: pnpm wizard-ci <app> --e2e`,
+      );
       process.exit(1);
     }
     command = found;

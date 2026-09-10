@@ -1,0 +1,2776 @@
+{
+  "_recorded": {
+    "recordedAt": "2026-08-27T10:05:00.000Z",
+    "recordedFrom": "https://mcp.posthog.com/mcp",
+    "recordedBy": "services/mcp-stub/record.ts",
+    "note": "Recorded from production. The `errors` block is verbatim prod output with the internal request origin rewritten to a public placeholder; the status code and message body are untouched. See ./README.md for what `source` means on each table list."
+  },
+  "errors": {
+    "unresolvable-host": {
+      "_recorded": {
+        "command": "exec call --json external-data-sources-db-schema {\"source_type\": \"Postgres\", \"payload\": {\"host\": \"db.invalid.example.com\", ...}}",
+        "redaction": "request origin rewritten from an internal cluster service name to https://app.posthog.example"
+      },
+      "status": 400,
+      "text": "Error: [external-data-sources-db-schema]: Request failed:\nURL: POST https://app.posthog.example/api/projects/{project_id}/external_data_sources/database_schema/\nStatus Code: 400 (Bad Request)\nError Message: {\"message\":\"Could not resolve the database host. Check that the host is spelled correctly and reachable from the public internet.\"}",
+      "message": "Could not resolve the database host. Check that the host is spelled correctly and reachable from the public internet."
+    },
+    "rejected-api-key": {
+      "_recorded": {
+        "command": "exec call --json external-data-sources-db-schema {\"source_type\": \"Stripe\", \"payload\": {\"auth_method\": \"api_key\", \"stripe_secret_key\": \"<invalid>\"}}",
+        "redaction": "request origin rewritten from an internal cluster service name to https://app.posthog.example"
+      },
+      "status": 400,
+      "text": "Error: [external-data-sources-db-schema]: Request failed:\nURL: POST https://app.posthog.example/api/projects/{project_id}/external_data_sources/database_schema/\nStatus Code: 400 (Bad Request)\nError Message: {\"message\":\"Stripe rejected the API key. Double-check that you pasted a restricted key (rk_live_...) for the same Stripe account, with no extra whitespace, and that it has not been revoked.\"}",
+      "message": "Stripe rejected the API key. Double-check that you pasted a restricted key (rk_live_...) for the same Stripe account, with no extra whitespace, and that it has not been revoked."
+    },
+    "missing-field": {
+      "_recorded": {
+        "command": "shape taken from the recorded external-data-sources-db-schema tool description: \"Returns 400 with a message if credentials are invalid.\""
+      },
+      "status": 400,
+      "text": "Error: [external-data-sources-db-schema]: Request failed:\nURL: POST https://app.posthog.example/api/projects/{project_id}/external_data_sources/database_schema/\nStatus Code: 400 (Bad Request)\nError Message: {\"message\":\"Missing required field(s) for {source_type}: {fields}.\"}",
+      "message": "Missing required field(s) for {source_type}: {fields}."
+    },
+    "unknown-source-type": {
+      "_recorded": {
+        "command": "shape taken from the recorded external-data-sources-create tool description: source_type must be a name external-data-sources-wizard returns."
+      },
+      "status": 400,
+      "text": "Error: [external-data-sources-db-schema]: Request failed:\nURL: POST https://app.posthog.example/api/projects/{project_id}/external_data_sources/database_schema/\nStatus Code: 400 (Bad Request)\nError Message: {\"message\":\"Unknown source type '{source_type}'. Call external-data-sources-wizard for the list of supported types.\"}",
+      "message": "Unknown source type '{source_type}'. Call external-data-sources-wizard for the list of supported types."
+    }
+  },
+  "tables": {
+    "Stripe": {
+      "source": "recorded",
+      "note": "Schema names as prod reports them for a live Stripe source. Names only — no ids, row counts, sync state or account details were kept.",
+      "rows": [
+        {
+          "table": "ApplicationFee",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "BalanceTransaction",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "BillingCreditBalanceSummary",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "BillingCreditBalanceTransaction",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "BillingCreditGrant",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "BillingMeter",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Charge",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "CheckoutSession",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Coupon",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "CreditNote",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Customer",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "CustomerBalanceTransaction",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "CustomerPaymentMethod",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "CustomerPaymentMethodHistory",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Discount",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Dispute",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "EarlyFraudWarning",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "EntitlementsActiveEntitlement",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "EntitlementsFeature",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Event",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Invoice",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "InvoiceItem",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "InvoicePayment",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "PaymentIntent",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "PaymentLink",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Payout",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Plan",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Price",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Product",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "PromotionCode",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Quote",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Refund",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Review",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "SetupAttempt",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "SetupIntent",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "ShippingRate",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Subscription",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "SubscriptionItem",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "SubscriptionSchedule",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "TaxId",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "TaxRate",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Topup",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "Transfer",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": true,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "created",
+              "field_type": "datetime",
+              "label": "created",
+              "type": "datetime"
+            }
+          ]
+        }
+      ]
+    },
+    "Hubspot": {
+      "source": "recorded",
+      "note": "Derived from the `custom_properties` field names in sources-wizard.json, which is itself a prod recording. HubSpot's object set is fixed by its API, so it is the same for every account.",
+      "rows": [
+        {
+          "table": "contacts",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "companies",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "deals",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "tickets",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "quotes",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "emails",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "meetings",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "leads",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "calls",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "notes",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "tasks",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "communications",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "feedback_submissions",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "line_items",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "products",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "invoices",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "orders",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "subscriptions",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "commerce_payments",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "hs_lastmodifieddate",
+              "field_type": "datetime",
+              "label": "hs_lastmodifieddate",
+              "type": "datetime"
+            }
+          ]
+        }
+      ]
+    },
+    "HuggingFace": {
+      "source": "synthesized",
+      "note": "Prod cannot list Hub repositories without a live access token. The three repository kinds come from the recorded source caption in sources-wizard.json: \"models, datasets, and Spaces\".",
+      "rows": [
+        {
+          "table": "models",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "lastModified",
+              "field_type": "datetime",
+              "label": "lastModified",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "datasets",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "lastModified",
+              "field_type": "datetime",
+              "label": "lastModified",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "spaces",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": false,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "lastModified",
+              "field_type": "datetime",
+              "label": "lastModified",
+              "type": "datetime"
+            }
+          ]
+        }
+      ]
+    },
+    "Postgres": {
+      "source": "synthesized",
+      "note": "A database table list is a property of the customer's database, so prod cannot supply a generic one. These names are deliberately plain. The row SHAPE is taken from the recorded external-data-sources-db-schema tool description.",
+      "rows": [
+        {
+          "table": "customers",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": true,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "updated_at",
+              "field_type": "datetime",
+              "label": "updated_at",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "orders",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": true,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "updated_at",
+              "field_type": "datetime",
+              "label": "updated_at",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "order_items",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": true,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "updated_at",
+              "field_type": "datetime",
+              "label": "updated_at",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "products",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": true,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "updated_at",
+              "field_type": "datetime",
+              "label": "updated_at",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "users",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": true,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "updated_at",
+              "field_type": "datetime",
+              "label": "updated_at",
+              "type": "datetime"
+            }
+          ]
+        }
+      ]
+    },
+    "Supabase": {
+      "source": "synthesized",
+      "note": "Same reason as Postgres — Supabase is Postgres, and the table list belongs to the customer's project.",
+      "rows": [
+        {
+          "table": "customers",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": true,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "updated_at",
+              "field_type": "datetime",
+              "label": "updated_at",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "orders",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": true,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "updated_at",
+              "field_type": "datetime",
+              "label": "updated_at",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "order_items",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": true,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "updated_at",
+              "field_type": "datetime",
+              "label": "updated_at",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "products",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": true,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "updated_at",
+              "field_type": "datetime",
+              "label": "updated_at",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "table": "users",
+          "incremental_available": true,
+          "append_available": true,
+          "cdc_available": true,
+          "supports_webhooks": false,
+          "detected_primary_keys": [
+            "id"
+          ],
+          "available_columns": [
+            {
+              "name": "id",
+              "type": "string",
+              "nullable": false
+            },
+            {
+              "name": "created",
+              "type": "datetime",
+              "nullable": false
+            },
+            {
+              "name": "updated_at",
+              "type": "datetime",
+              "nullable": true
+            }
+          ],
+          "rows": 0,
+          "incremental_fields": [
+            {
+              "field": "updated_at",
+              "field_type": "datetime",
+              "label": "updated_at",
+              "type": "datetime"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

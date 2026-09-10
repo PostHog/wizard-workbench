@@ -1,0 +1,448 @@
+{
+  "_recorded": {
+    "recordedAt": "2026-08-27T10:05:00.000Z",
+    "recordedFrom": "https://mcp.posthog.com/mcp",
+    "recordedBy": "services/mcp-stub/record.ts",
+    "command": "exec call --json external-data-sources-wizard {\"source_type\": \"Postgres,Stripe,Supabase,HuggingFace,Hubspot\"}",
+    "note": "Recorded from production. Field metadata only — no credential values. Do not hand-edit; run `pnpm mcp-stub:record`."
+  },
+  "sources": {
+    "Postgres": {
+      "name": "Postgres",
+      "caption": "Enter your Postgres credentials to automatically pull your Postgres data into the PostHog Data warehouse",
+      "docsUrl": "https://posthog.com/docs/cdp/sources/postgres",
+      "featured": true,
+      "unreleasedSource": null,
+      "fields": [
+        {
+          "caption": null,
+          "label": "Connection string (optional)",
+          "name": "connection_string",
+          "placeholder": "postgresql://user:password@localhost:5432/database",
+          "required": false,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "caption": "Must be reachable from the public internet. Add PostHog's egress IP addresses to your firewall allowlist (see the docs above) and use a public host. `localhost` and private IPs (10.x, 172.16-31.x, 192.168.x) can't be reached. For a database that can't be exposed publicly, enable the SSH tunnel below.",
+          "label": "Host",
+          "name": "host",
+          "placeholder": "db.example.com",
+          "required": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "caption": null,
+          "label": "Port",
+          "name": "port",
+          "placeholder": "5432",
+          "required": true,
+          "secret": false,
+          "type": "number"
+        },
+        {
+          "caption": null,
+          "label": "Database",
+          "name": "database",
+          "placeholder": "postgres",
+          "required": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "caption": null,
+          "label": "User",
+          "name": "user",
+          "placeholder": "postgres",
+          "required": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "caption": null,
+          "label": "Password",
+          "name": "password",
+          "placeholder": "",
+          "required": true,
+          "secret": true,
+          "type": "password"
+        },
+        {
+          "caption": null,
+          "label": "Schema",
+          "name": "schema",
+          "placeholder": "public",
+          "required": false,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "label": "Use SSH tunnel?",
+          "name": "ssh_tunnel",
+          "type": "ssh-tunnel"
+        }
+      ]
+    },
+    "Hubspot": {
+      "name": "Hubspot",
+      "caption": "Select an existing Hubspot account to link to PostHog or create a new connection",
+      "docsUrl": "https://posthog.com/docs/cdp/sources/hubspot",
+      "featured": true,
+      "unreleasedSource": null,
+      "fields": [
+        {
+          "kind": "hubspot",
+          "label": "Hubspot account",
+          "name": "hubspot_integration_id",
+          "required": true,
+          "requiredScopes": null,
+          "type": "oauth"
+        },
+        {
+          "caption": "Specify which properties to sync for each schema. Leave empty to use defaults. Changing properties requires a full resync.",
+          "default": false,
+          "fields": [
+            {
+              "caption": null,
+              "label": "Contacts properties",
+              "name": "contacts_properties",
+              "placeholder": "createdate, email, firstname, hs_object_id, hs_lead_status, lastmodifieddate, lastname, hs_buying_role",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Companies properties",
+              "name": "companies_properties",
+              "placeholder": "createdate, domain, hs_lastmodifieddate, hs_object_id, hs_csm_sentiment, hs_lead_status, name",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Deals properties",
+              "name": "deals_properties",
+              "placeholder": "amount, closedate, createdate, dealname, dealstage, hs_lastmodifieddate, hs_object_id, pipeline, hs_mrr",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Tickets properties",
+              "name": "tickets_properties",
+              "placeholder": "createdate, content, hs_lastmodifieddate, hs_object_id, hs_pipeline, hs_pipeline_stage, hs_ticket_category, hs_ticket_priority, subject",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Quotes properties",
+              "name": "quotes_properties",
+              "placeholder": "hs_createdate, hs_expiration_date, hs_lastmodifieddate, hs_object_id, hs_public_url_key, hs_status, hs_title",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Emails properties",
+              "name": "emails_properties",
+              "placeholder": "hs_timestamp, hs_lastmodifieddate, hs_object_id, hs_email_direction, hs_email_html, hs_email_status, hs_email_subject, hs_email_text, hs_attachment_ids, hs_email_headers",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Meetings properties",
+              "name": "meetings_properties",
+              "placeholder": "hs_timestamp, hs_lastmodifieddate, hs_object_id, hs_meeting_title, hs_meeting_body, hs_internal_meeting_notes, hs_meeting_external_URL, hs_meeting_location, hs_meeting_start_time, hs_meeting_end_time, hs_meeting_outcome, hs_activity_type, hs_attachment_ids",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Leads properties",
+              "name": "leads_properties",
+              "placeholder": "hs_createdate, hs_lastmodifieddate, hs_lead_label, hs_lead_name, hs_lead_type, hs_object_id, hs_pipeline, hs_pipeline_stage",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Calls properties",
+              "name": "calls_properties",
+              "placeholder": "hs_object_id, hs_lastmodifieddate, hs_timestamp",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Notes properties",
+              "name": "notes_properties",
+              "placeholder": "hs_object_id, hs_lastmodifieddate, hs_timestamp",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Tasks properties",
+              "name": "tasks_properties",
+              "placeholder": "hs_object_id, hs_lastmodifieddate, hs_timestamp",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Communications properties",
+              "name": "communications_properties",
+              "placeholder": "hs_object_id, hs_lastmodifieddate, hs_timestamp",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Feedback_submissions properties",
+              "name": "feedback_submissions_properties",
+              "placeholder": "hs_object_id, hs_lastmodifieddate",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Line_items properties",
+              "name": "line_items_properties",
+              "placeholder": "hs_object_id, hs_lastmodifieddate",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Products properties",
+              "name": "products_properties",
+              "placeholder": "hs_object_id, hs_lastmodifieddate",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Invoices properties",
+              "name": "invoices_properties",
+              "placeholder": "hs_object_id, hs_lastmodifieddate",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Orders properties",
+              "name": "orders_properties",
+              "placeholder": "hs_object_id, hs_lastmodifieddate",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Subscriptions properties",
+              "name": "subscriptions_properties",
+              "placeholder": "hs_object_id, hs_lastmodifieddate",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            },
+            {
+              "caption": null,
+              "label": "Commerce_payments properties",
+              "name": "commerce_payments_properties",
+              "placeholder": "hs_object_id, hs_lastmodifieddate",
+              "required": false,
+              "secret": false,
+              "type": "textarea"
+            }
+          ],
+          "label": "Customize synced properties",
+          "name": "custom_properties",
+          "type": "switch-group"
+        }
+      ]
+    },
+    "HuggingFace": {
+      "name": "HuggingFace",
+      "caption": "Enter your Hugging Face access token to pull your Hub repositories into the PostHog Data warehouse.\n\nCreate a token in your [Hugging Face access token settings](https://huggingface.co/settings/tokens). A read token is enough for public repos; grant read access to your namespace's repo contents (and `read-org` if you're syncing an organization) to include private repos.\n\nSet **Username or organization** to the namespace whose models, datasets, and Spaces you want to sync (e.g. your username or an org you belong to).\n",
+      "docsUrl": "https://posthog.com/docs/cdp/sources/hugging-face",
+      "featured": false,
+      "unreleasedSource": null,
+      "fields": [
+        {
+          "caption": null,
+          "label": "Access token",
+          "name": "api_token",
+          "placeholder": "hf_...",
+          "required": true,
+          "secret": true,
+          "type": "password"
+        },
+        {
+          "caption": null,
+          "label": "Username or organization",
+          "name": "author",
+          "placeholder": "huggingface",
+          "required": true,
+          "secret": false,
+          "type": "text"
+        }
+      ]
+    },
+    "Stripe": {
+      "name": "Stripe",
+      "caption": "Connect your Stripe account to automatically sync your Stripe data into PostHog. You can choose between OAuth (recommended) or legacy RAK Stripe keys. If you choose the latter, you will need your [Stripe account ID](https://dashboard.stripe.com/settings/account), and create a [restricted API key](https://dashboard.stripe.com/apikeys/create?name=PostHog&permissions[0]=rak_balance_transaction_source_read&permissions[1]=rak_charge_read&permissions[2]=rak_customer_read&permissions[3]=rak_dispute_read&permissions[4]=rak_payout_read&permissions[5]=rak_product_read&permissions[6]=rak_credit_note_read&permissions[7]=rak_invoice_read&permissions[8]=rak_plan_read&permissions[9]=rak_coupon_read&permissions[10]=rak_subscription_read&permissions[11]=rak_application_fee_read&permissions[12]=rak_transfer_read&permissions[13]=rak_connected_account_read&permissions[14]=rak_payment_method_read&permissions[15]=rak_webhook_write)",
+      "docsUrl": "https://posthog.com/docs/cdp/sources/stripe",
+      "featured": true,
+      "unreleasedSource": null,
+      "fields": [
+        {
+          "caption": null,
+          "converter": null,
+          "defaultValue": "api_key",
+          "label": "Authentication type",
+          "multiple": null,
+          "name": "auth_method",
+          "options": [
+            {
+              "fields": [
+                {
+                  "caption": "Create a [restricted API key](https://dashboard.stripe.com/apikeys/create?name=PostHog&permissions[0]=rak_balance_transaction_source_read&permissions[1]=rak_charge_read&permissions[2]=rak_customer_read&permissions[3]=rak_dispute_read&permissions[4]=rak_payout_read&permissions[5]=rak_product_read&permissions[6]=rak_credit_note_read&permissions[7]=rak_invoice_read&permissions[8]=rak_plan_read&permissions[9]=rak_coupon_read&permissions[10]=rak_subscription_read&permissions[11]=rak_application_fee_read&permissions[12]=rak_transfer_read&permissions[13]=rak_connected_account_read&permissions[14]=rak_payment_method_read&permissions[15]=rak_webhook_write) with the pre-defined permissions",
+                  "label": "API key",
+                  "name": "stripe_secret_key",
+                  "placeholder": "rk_live_...",
+                  "required": true,
+                  "secret": true,
+                  "type": "password"
+                }
+              ],
+              "label": "Restricted API key",
+              "value": "api_key"
+            },
+            {
+              "fields": [
+                {
+                  "kind": "stripe",
+                  "label": "Stripe account",
+                  "name": "stripe_integration_id",
+                  "required": true,
+                  "requiredScopes": null,
+                  "type": "oauth"
+                }
+              ],
+              "label": "OAuth connection",
+              "value": "oauth"
+            }
+          ],
+          "required": true,
+          "type": "select"
+        },
+        {
+          "caption": "Leave blank in most cases, including when connecting with OAuth. Only set this if you use a Stripe Connect platform key and want to sync a specific connected account. You can find it under Account details in your [Stripe account settings](https://dashboard.stripe.com/settings/account).",
+          "label": "Account id (optional)",
+          "name": "stripe_account_id",
+          "placeholder": "acct_...",
+          "required": false,
+          "secret": false,
+          "type": "text"
+        }
+      ]
+    },
+    "Supabase": {
+      "name": "Supabase",
+      "caption": "Enter your Supabase credentials to automatically pull your data into the PostHog Data warehouse",
+      "docsUrl": "https://posthog.com/tutorials/supabase-query",
+      "featured": true,
+      "unreleasedSource": null,
+      "fields": [
+        {
+          "caption": null,
+          "label": "Connection string (optional)",
+          "name": "connection_string",
+          "placeholder": "postgresql://user:password@localhost:5432/database",
+          "required": false,
+          "secret": true,
+          "type": "text"
+        },
+        {
+          "caption": "To get your connection string, click **Connect** in the top bar of your Supabase dashboard, open the **Direct** tab, and pick **Session pooler** or **Direct connection** — the URL is shown at the bottom. For standard syncs use the **Session pooler** host, e.g. `aws-0-<region>.pooler.supabase.com`, with username `postgres.<project-ref>` — the direct host `db.<ref>.supabase.co` is IPv6-only. For **change data capture (CDC)** you must use **Direct connection** instead and enable Supabase's **IPv4 add-on**, because logical replication doesn't work through the pooler.",
+          "label": "Host",
+          "name": "host",
+          "placeholder": "aws-0-us-east-1.pooler.supabase.com",
+          "required": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "caption": null,
+          "label": "Port",
+          "name": "port",
+          "placeholder": "5432",
+          "required": true,
+          "secret": false,
+          "type": "number"
+        },
+        {
+          "caption": null,
+          "label": "Database",
+          "name": "database",
+          "placeholder": "postgres",
+          "required": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "caption": null,
+          "label": "User",
+          "name": "user",
+          "placeholder": "postgres",
+          "required": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "caption": null,
+          "label": "Password",
+          "name": "password",
+          "placeholder": "",
+          "required": true,
+          "secret": true,
+          "type": "password"
+        },
+        {
+          "caption": null,
+          "label": "Schema",
+          "name": "schema",
+          "placeholder": "public",
+          "required": false,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "label": "Use SSH tunnel?",
+          "name": "ssh_tunnel",
+          "type": "ssh-tunnel"
+        }
+      ]
+    }
+  }
+}

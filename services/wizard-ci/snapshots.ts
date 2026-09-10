@@ -147,7 +147,7 @@ async function main(): Promise<number> {
     // A non-zero run (e.g. self-driving aborting at GitHub-connect) is still
     // worth a report — render whatever frames were captured, and reflect the
     // failure in the exit code rather than bailing before the report.
-    const code = runE2e({ app: def.app, projectId, program });
+    const code = await runE2e({ app: def.app, projectId, program });
     if (code !== 0) {
       console.error(`✖ e2e run failed for ${def.name} (exit ${code}) — rendering captured frames anyway`);
       failed = true;

@@ -1,0 +1,32 @@
+{
+  "_recorded": {
+    "recordedAt": "2026-08-27T10:05:00.000Z",
+    "recordedFrom": "https://mcp.posthog.com/mcp",
+    "recordedBy": "services/mcp-stub/record.ts",
+    "note": "Recorded from production. Do not hand-edit — run `pnpm mcp-stub:record`.",
+    "command": "exec search external-data-sources"
+  },
+  "names": [
+    "external-data-sources-db-schema",
+    "external-data-sources-jobs",
+    "external-data-sources-preview-resource",
+    "external-data-sync-logs",
+    "data-warehouse-source-setup",
+    "external-data-schemas-partial-update",
+    "external-data-sources-check-cdc-prerequisites-create",
+    "external-data-sources-connections-list",
+    "external-data-sources-create",
+    "external-data-sources-create-webhook-create",
+    "external-data-sources-delete-webhook-create",
+    "external-data-sources-destroy",
+    "external-data-sources-list",
+    "external-data-sources-partial-update",
+    "external-data-sources-refresh-schemas",
+    "external-data-sources-reload",
+    "external-data-sources-repair-cdc-create",
+    "external-data-sources-retrieve",
+    "external-data-sources-update-webhook-inputs-create",
+    "external-data-sources-webhook-info-retrieve",
+    "external-data-sources-wizard"
+  ]
+}
