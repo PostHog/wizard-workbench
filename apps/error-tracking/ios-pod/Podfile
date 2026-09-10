@@ -1,0 +1,7 @@
+# PostHog is installed, but dSYM upload is intentionally not configured.
+platform :ios, "16.0"
+
+target "SourceMapExamplePods" do
+  use_frameworks!
+  pod "PostHog"
+end
