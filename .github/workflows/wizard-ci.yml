@@ -718,6 +718,9 @@ jobs:
           POSTHOG_REGION: ${{ needs.discover.outputs.input_posthog_region }}
           POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
           POSTHOG_WIZARD_PROJECT_ID: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_TARGET_PROJECT_ID }}
+          # Mint with this job's GitHub identity, which prod pins only for US runs on main;
+          # other runs keep the personal key. Unprefixed: POSTHOG_WIZARD_* are CLI flags.
+          WIZARD_CI_IDENTITY: ${{ github.ref == 'refs/heads/main' && needs.discover.outputs.input_posthog_region == 'us' && 'github-actions' || '' }}
           WIZARD_PATH: ${{ env.WIZARD_PATH }}
           CONTEXT_MILL_PATH: ${{ env.CONTEXT_MILL_PATH }}
           WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
@@ -753,6 +756,9 @@ jobs:
           POSTHOG_REGION: ${{ needs.discover.outputs.input_posthog_region }}
           POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
           POSTHOG_WIZARD_PROJECT_ID: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_TARGET_PROJECT_ID }}
+          # Mint with this job's GitHub identity, which prod pins only for US runs on main;
+          # other runs keep the personal key. Unprefixed: POSTHOG_WIZARD_* are CLI flags.
+          WIZARD_CI_IDENTITY: ${{ github.ref == 'refs/heads/main' && needs.discover.outputs.input_posthog_region == 'us' && 'github-actions' || '' }}
           WIZARD_PATH: ${{ env.WIZARD_PATH }}
           CONTEXT_MILL_PATH: ${{ env.CONTEXT_MILL_PATH }}
           POSTHOG_WIZARD_YARA_REPORT: 'true'
