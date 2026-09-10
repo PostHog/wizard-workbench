@@ -7,6 +7,8 @@
  *   router.navigate('/dashboard')
  */
 
+import { capturePostHog } from './posthog.js';
+
 const routes = [];
 let notFoundHandler = null;
 
@@ -44,6 +46,8 @@ function getCurrentPath() {
 function resolve() {
   const path = getCurrentPath();
   const match = matchRoute(path);
+
+  capturePostHog('$pageview', { $current_url: window.location.href });
 
   if (match) {
     match.handler(match.params);
