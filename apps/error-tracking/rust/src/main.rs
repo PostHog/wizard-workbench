@@ -4,7 +4,7 @@ use std::io::Error;
 async fn main() {
     let client = posthog_rs::client((
         "phc_raG2H9V246hkNZk6K89DZGG98qQyPrKKlicifGlpOXA",
-        "https://internal-c.posthog.com",
+        "https://us.i.posthog.com",
     ))
     .await;
 

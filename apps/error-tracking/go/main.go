@@ -10,7 +10,7 @@ import (
 func main() {
 	client, err := posthog.NewWithConfig(
 		"phc_raG2H9V246hkNZk6K89DZGG98qQyPrKKlicifGlpOXA",
-		posthog.Config{Endpoint: "https://internal-c.posthog.com"},
+		posthog.Config{Endpoint: "https://us.i.posthog.com"},
 	)
 	if err != nil {
 		panic(err)
