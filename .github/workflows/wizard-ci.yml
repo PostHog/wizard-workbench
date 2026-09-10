@@ -633,6 +633,11 @@ jobs:
         if: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Write gateway token
+        run: printf '%s' "$GATEWAY_TOKEN" > "$RUNNER_TEMP/gateway-token"
+        env:
+          GATEWAY_TOKEN: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_GATEWAY_TOKEN }}
+
       - name: Execute wizard
         id: execute-wizard
         continue-on-error: true
@@ -665,6 +670,7 @@ jobs:
           POSTHOG_REGION: ${{ needs.discover.outputs.input_posthog_region }}
           POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
           POSTHOG_WIZARD_PROJECT_ID: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_TARGET_PROJECT_ID }}
+          WIZARD_CI_GATEWAY_TOKEN_FILE: ${{ runner.temp }}/gateway-token
           WIZARD_PATH: ${{ env.WIZARD_PATH }}
           CONTEXT_MILL_PATH: ${{ env.CONTEXT_MILL_PATH }}
           WIZARD_REF: ${{ needs.discover.outputs.input_wizard_ref }}
