@@ -8,7 +8,7 @@ stages:
 
 build:
   stage: build
-  image: node:22-slim
+  image: node:24-alpine
   script:
     - npm ci
     - npm run build
@@ -18,12 +18,12 @@ build:
 
 deploy:
   stage: deploy
-  image: node:22-slim
+  image: node:24-alpine
   needs:
     - build
   environment: production
   before_script:
-    - apt-get update -qq && apt-get install -y -qq openssh-client rsync
+    - apk add --no-cache openssh-client rsync
   script:
     - rsync -avz --delete dist/ package.json package-lock.json "$DEPLOY_USER@$DEPLOY_HOST:/srv/cicd-gitlab-node-raw/"
     - ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd /srv/cicd-gitlab-node-raw && npm ci --omit=dev && (pkill -f 'node dist/index.js' || true) && POSTHOG_KEY='$POSTHOG_KEY' POSTHOG_HOST='$POSTHOG_HOST' nohup node dist/index.js > app.log 2>&1 &"
