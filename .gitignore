@@ -96,6 +96,13 @@ Desktop.ini
 .claude/*.local.*
 .stripe/
 
+# Wizard-run droppings inside fixture apps — installed skills, the run cache,
+# and the setup report a run leaves behind must never be committed as fixture
+# state (they bias later runs into skipping install/report steps).
+apps/**/.claude/skills/
+apps/**/.posthog-wizard-cache/
+apps/**/posthog-*-report.md
+
 # Temporary
 tmp/
 temp/
