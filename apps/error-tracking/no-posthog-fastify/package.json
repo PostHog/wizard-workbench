@@ -1,0 +1,17 @@
+{
+  "name": "no-posthog-fastify",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js",
+    "start:production": "node dist/index.js",
+    "build": "esbuild index.js --bundle --platform=node --packages=external --sourcemap --sources-content=true --outfile=dist/index.js --format=esm"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
