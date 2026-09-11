@@ -1,8 +1,0 @@
-{
-  "cSpell.words": [
-    "TMDB"
-  ],
-  "eslint.useFlatConfig": true,
-  "prettier.enable": false,
-  "editor.formatOnSave": false
-}

@@ -1,0 +1,18 @@
+{
+  "name": "no-posthog-hono",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js",
+    "start:production": "node dist/index.js",
+    "build": "esbuild index.js --bundle --platform=node --packages=external --sourcemap --sources-content=true --outfile=dist/index.js --format=esm"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.0",
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

@@ -1,4 +1,0 @@
-export default {
-  extensions: "{{extensions}} up to {{maxFileSize}}",
-  heading: "Drag and drop or <1>select files</1> to upload",
-};
