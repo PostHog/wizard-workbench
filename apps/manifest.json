@@ -92,7 +92,7 @@
       "dir": "error-tracking",
       "label": "Error Tracking",
       "description": "Set up PostHog error tracking; installs the SDK first if the project doesn't have it, and wires source-map upload where the platform needs it",
-      "ciCapable": true
+      "ciCapable": false
     }
   ]
 }
