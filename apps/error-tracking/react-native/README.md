@@ -1,7 +1,7 @@
-# Bare React Native source-maps fixture
+# Bare React Native error-tracking fixture
 
-PostHog SDK installed, no source-map upload configured — run the wizard's
-`upload-source-maps` against this app.
+The PostHog SDK is installed. Exception capture and symbol upload are not
+configured. Run `wizard error-tracking` against this app.
 
 ## Setup
 
