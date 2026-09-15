@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["NativeCrashTestModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.nativecrashtest.NativeCrashTestModule"]
+  }
+}

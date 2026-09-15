@@ -1,0 +1,72 @@
+name: Deploy
+
+# Deploy pipeline. The Docker build/push is not inlined here — it is delegated
+# to a local composite action (.github/actions/build-and-push) that accepts
+# inputs.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build and push image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # Delegate the Docker build/push to the nested composite action,
+      # passing registry/image details as inputs.
+      - name: Build and push image
+        id: build
+        uses: ./.github/actions/build-and-push
+        with:
+          registry: ghcr.io
+          image-name: ${{ github.repository }}
+          registry-username: ${{ github.actor }}
+          registry-password: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    name: Deploy to server over SSH
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - name: SSH into server and run the new image
+        uses: appleboy/ssh-action@v1
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: IMAGE
+          script: |
+            set -euo pipefail
+
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+            docker pull "${IMAGE}"
+
+            # Replace the running container with the freshly built image.
+            docker rm -f node-raw-app 2>/dev/null || true
+            docker run -d \
+              --name node-raw-app \
+              --restart unless-stopped \
+              -e POSTHOG_KEY="${{ secrets.POSTHOG_KEY }}" \
+              -e POSTHOG_HOST="${{ secrets.POSTHOG_HOST }}" \
+              "${IMAGE}"

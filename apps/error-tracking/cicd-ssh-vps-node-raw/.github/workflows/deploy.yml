@@ -1,0 +1,44 @@
+name: Deploy
+
+# Deploy pipeline: no Docker. The job SSHes into the VPS and runs the build and
+# start commands directly on the box — the same steps you'd type by hand after
+# `ssh deploy@your-vps`.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and run on VPS over SSH
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - name: SSH into the VPS, build and run the app
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /srv/cicd-ssh-vps-node-raw
+
+            # Pull the latest code and build it on the server.
+            git pull --ff-only origin main
+            npm ci
+            npm run build
+
+            # Stop the previous instance, then start the freshly built app
+            # detached so it keeps running after this SSH session ends.
+            pkill -f "node dist/index.js" || true
+            POSTHOG_KEY="${{ secrets.POSTHOG_KEY }}" \
+            POSTHOG_HOST="${{ secrets.POSTHOG_HOST }}" \
+              nohup node dist/index.js > app.log 2>&1 &
