@@ -17,6 +17,7 @@ import routes from './routes'
 import { promisifyGsap } from '@/lib/gsap'
 import { Header } from '@/components/header'
 import Footer from '@/components/footer'
+import { PostHogClientProvider } from '@/components/posthog-provider'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
@@ -73,11 +74,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body suppressHydrationWarning>
-        <Header />
-        {children}
-        <Footer />
-        <ScrollRestoration />
-        <Scripts />
+        <PostHogClientProvider>
+          <Header />
+          {children}
+          <Footer />
+          <ScrollRestoration />
+          <Scripts />
+        </PostHogClientProvider>
       </body>
     </html>
   )
