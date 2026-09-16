@@ -36,6 +36,11 @@ class User < ApplicationRecord
     update!(verified_at: Time.current) unless verified?
   end
 
+  # Used by posthog-rails to associate controller errors with this user.
+  def posthog_distinct_id
+    id.to_s
+  end
+
   private
     def close_remote_connections
       ActionCable.server.remote_connections.where(current_user: self).disconnect(reconnect: false)
