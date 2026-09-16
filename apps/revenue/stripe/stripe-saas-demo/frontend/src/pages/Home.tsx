@@ -64,7 +64,8 @@ export function Home() {
 
   function handleSignUp() {
     if (!email || !name) return;
-    posthog.identify(email, { email, name });
+    const distinctId = posthog.get_distinct_id();
+    posthog.identify(distinctId, { email, name });
     posthog.capture("user_signed_up");
   }
 

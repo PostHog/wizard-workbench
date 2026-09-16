@@ -15,11 +15,9 @@ subscriptionsRouter.post("/", async (req, res) => {
       return;
     }
 
-    if (userId) {
-      const user = getUser(userId);
-      if (user) {
-        console.log(`Creating subscription for user ${user.email} (${user.id})`);
-      }
+    const user = userId ? getUser(userId) : undefined;
+    if (user) {
+      console.log(`Creating subscription for user ${user.email} (${user.id})`);
     }
 
     const subscription = await stripe.subscriptions.create({
@@ -28,6 +26,9 @@ subscriptionsRouter.post("/", async (req, res) => {
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
       expand: ["latest_invoice.payment_intent"],
+      ...(user?.posthogDistinctId && {
+        metadata: { posthog_person_distinct_id: user.posthogDistinctId },
+      }),
     });
 
     const invoice = subscription.latest_invoice as any;
@@ -41,12 +42,14 @@ subscriptionsRouter.post("/", async (req, res) => {
   } catch (err: any) {
     console.error("Error creating subscription:", err.message);
     const { customerId, priceId, userId } = req.body;
-    const distinctId = userId || customerId || "anonymous";
-    posthog.capture({
-      distinctId,
-      event: "subscription_setup_failed",
-      properties: { stripe_customer_id: customerId, price_id: priceId, error_message: err.message },
-    });
+    const distinctId = userId ? getUser(userId)?.posthogDistinctId : undefined;
+    if (distinctId) {
+      posthog?.capture({
+        distinctId,
+        event: "subscription_setup_failed",
+        properties: { stripe_customer_id: customerId, price_id: priceId, error_message: err.message },
+      });
+    }
     res.status(500).json({ error: err.message });
   }
 });

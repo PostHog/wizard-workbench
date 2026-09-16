@@ -1,7 +1,6 @@
 import { Router } from "express";
 import express from "express";
 import { stripe } from "../stripe";
-import { getUser } from "../users";
 import { posthog } from "../posthog";
 
 export const webhooksRouter = Router();
@@ -36,27 +35,21 @@ webhooksRouter.post(
         console.log("   Customer:", session.customer);
         console.log("   Client Reference ID:", session.client_reference_id);
 
-        const distinctId = session.client_reference_id
-          ? getUser(session.client_reference_id)?.posthogDistinctId ?? session.client_reference_id
-          : session.customer_email ?? session.customer ?? session.id;
+        const distinctId =
+          session.metadata?.posthog_person_distinct_id ?? session.client_reference_id;
 
-        if (session.client_reference_id) {
-          const user = getUser(session.client_reference_id);
-          if (user) {
-            console.log(`   User found: ${user.email} (${user.id})`);
-          }
+        if (distinctId) {
+          posthog?.capture({
+            distinctId,
+            event: "checkout_completed",
+            properties: {
+              checkout_session_id: session.id,
+              stripe_customer_id: session.customer,
+              amount_total: session.amount_total,
+              currency: session.currency,
+            },
+          });
         }
-
-        posthog.capture({
-          distinctId,
-          event: "checkout_completed",
-          properties: {
-            checkout_session_id: session.id,
-            stripe_customer_id: session.customer,
-            amount_total: session.amount_total,
-            currency: session.currency,
-          },
-        });
         break;
       }
 
@@ -64,16 +57,19 @@ webhooksRouter.post(
         const subscription = event.data.object;
         console.log("✅ Subscription created:", subscription.id);
 
-        posthog.capture({
-          distinctId: subscription.customer as string,
-          event: "subscription_created",
-          properties: {
-            subscription_id: subscription.id,
-            stripe_customer_id: subscription.customer,
-            status: subscription.status,
-            price_id: subscription.items?.data?.[0]?.price?.id,
-          },
-        });
+        const distinctId = subscription.metadata?.posthog_person_distinct_id;
+        if (distinctId) {
+          posthog?.capture({
+            distinctId,
+            event: "subscription_created",
+            properties: {
+              subscription_id: subscription.id,
+              stripe_customer_id: subscription.customer,
+              status: subscription.status,
+              price_id: subscription.items?.data?.[0]?.price?.id,
+            },
+          });
+        }
         break;
       }
 
@@ -81,17 +77,22 @@ webhooksRouter.post(
         const invoice = event.data.object;
         console.log("✅ Invoice paid:", invoice.id);
 
-        posthog.capture({
-          distinctId: invoice.customer as string,
-          event: "invoice_paid",
-          properties: {
-            invoice_id: invoice.id,
-            stripe_customer_id: invoice.customer,
-            amount_paid: invoice.amount_paid,
-            currency: invoice.currency,
-            subscription_id: invoice.subscription,
-          },
-        });
+        const distinctId =
+          invoice.parent?.subscription_details?.metadata?.posthog_person_distinct_id ??
+          invoice.subscription_details?.metadata?.posthog_person_distinct_id;
+        if (distinctId) {
+          posthog?.capture({
+            distinctId,
+            event: "invoice_paid",
+            properties: {
+              invoice_id: invoice.id,
+              stripe_customer_id: invoice.customer,
+              amount_paid: invoice.amount_paid,
+              currency: invoice.currency,
+              subscription_id: invoice.subscription,
+            },
+          });
+        }
         break;
       }
 

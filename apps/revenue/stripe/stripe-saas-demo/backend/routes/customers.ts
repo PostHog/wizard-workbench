@@ -24,6 +24,9 @@ customersRouter.post("/", async (req, res) => {
     const customer = await stripe.customers.create({
       email,
       name,
+      ...(posthogDistinctId && {
+        metadata: { posthog_person_distinct_id: posthogDistinctId },
+      }),
     });
 
     const user = existing
@@ -33,13 +36,14 @@ customersRouter.post("/", async (req, res) => {
     if (!existing) {
       updateUser(user.id, { stripeCustomerId: customer.id });
 
-      const distinctId = posthogDistinctId || email;
-      posthog.identify({ distinctId, properties: { email, name } });
-      posthog.capture({
-        distinctId,
-        event: "user_created",
-        properties: { stripe_customer_id: customer.id, email, name },
-      });
+      if (posthogDistinctId) {
+        posthog?.identify({ distinctId: posthogDistinctId, properties: { email, name } });
+        posthog?.capture({
+          distinctId: posthogDistinctId,
+          event: "user_created",
+          properties: { stripe_customer_id: customer.id },
+        });
+      }
     }
 
     res.json({ user, customerId: customer.id });
