@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@google/adk": "^2.0.0",
+    "@posthog/ai": "^8.12.1",
+    "posthog-node": "^5.9.4",
     "zod": "^4.2.1"
   },
   "devDependencies": {

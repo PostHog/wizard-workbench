@@ -1,7 +1,11 @@
 import { FunctionTool, InMemorySessionService, LlmAgent, Runner } from '@google/adk'
+import { PostHogADKPlugin } from '@posthog/ai/adk'
+import { PostHog } from 'posthog-node'
 import { z } from 'zod'
 
 import { getWeather } from './weather.js'
+
+const posthog = new PostHog(process.env.POSTHOG_API_KEY!, { host: process.env.POSTHOG_HOST })
 
 const APP_NAME = 'wb-aio-google-adk-node-weather'
 const USER_ID = 'user_123'
@@ -24,7 +28,12 @@ const agent = new LlmAgent({
 })
 
 const sessionService = new InMemorySessionService()
-const runner = new Runner({ appName: APP_NAME, agent, sessionService })
+const runner = new Runner({
+    appName: APP_NAME,
+    agent,
+    sessionService,
+    plugins: [new PostHogADKPlugin({ client: posthog })],
+})
 
 /** Answer one question inside the shared session. ADK runs the tool loop itself. */
 async function ask(question: string): Promise<void> {
@@ -45,6 +54,7 @@ async function main(): Promise<void> {
     await sessionService.createSession({ appName: APP_NAME, userId: USER_ID, sessionId: SESSION_ID })
     await ask("What's the weather in San Francisco?")
     await ask('How about Boston?')
+    await posthog.shutdown()
 }
 
 main().catch((err) => {
