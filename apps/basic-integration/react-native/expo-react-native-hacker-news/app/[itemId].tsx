@@ -13,6 +13,7 @@ import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
@@ -20,6 +21,7 @@ import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export default function ItemDetails() {
+  const posthog = usePostHog();
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
 
@@ -120,6 +122,10 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog?.capture("discussion_upvote_pressed", {
+                  item_id: item.id,
+                  item_type: item.type,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -141,6 +147,10 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog?.capture("discussion_comments_pressed", {
+                  item_id: item.id,
+                  item_type: item.type,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Warning
                 );
@@ -163,6 +173,10 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog?.capture("external_story_opened", {
+                    item_id: item.id,
+                    destination_host: new URL(item.url).host,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +208,13 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog?.capture("parent_discussion_opened", {
+                  item_id: parentItem.id,
+                  item_type: parentItem.type,
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
