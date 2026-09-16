@@ -6,6 +6,7 @@
 //
 
 import Data
+import PostHog
 import Shared
 import UIKit
 
@@ -34,6 +35,36 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // init default settings
         UserDefaults.standard.registerDefaults()
 
+        configurePostHog()
+
         return true
+    }
+
+    private func configurePostHog() {
+        guard let projectToken = postHogConfigurationValue(for: "POSTHOG_PROJECT_TOKEN") else {
+            #if DEBUG
+            preconditionFailure("POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_PROJECT_TOKEN is configured")
+            #else
+            return
+            #endif
+        }
+        guard let host = postHogConfigurationValue(for: "POSTHOG_HOST") else {
+            #if DEBUG
+            preconditionFailure("POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured")
+            #else
+            return
+            #endif
+        }
+
+        let config = PostHogConfig(projectToken: projectToken, host: host)
+        config.errorTrackingConfig.autoCapture = true
+        PostHogSDK.shared.setup(config)
+    }
+
+    private func postHogConfigurationValue(for key: String) -> String? {
+        let value = ProcessInfo.processInfo.environment[key]
+            ?? Bundle.main.object(forInfoDictionaryKey: key) as? String
+        guard let value, !value.isEmpty, !value.hasPrefix("$(") else { return nil }
+        return value
     }
 }
