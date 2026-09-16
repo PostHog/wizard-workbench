@@ -8,6 +8,11 @@ import { useRouter } from 'next/router';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
 
+const isPostHogConfigured = Boolean(
+  process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+    process.env.NEXT_PUBLIC_POSTHOG_HOST
+);
+
 interface Price {
   id: string;
   productId: string;
@@ -85,6 +90,16 @@ function PricingCard({
         });
 
         const result = await response.json();
+
+        if ((result.redirectTo || result.url) && isPostHogConfigured) {
+          const posthog = (await import('posthog-js')).default;
+          posthog.capture('checkout_started', {
+            plan_name: name,
+            billing_interval: interval,
+            trial_days: trialDays,
+            unit_amount: price
+          });
+        }
 
         if (result.redirectTo) {
           router.push(result.redirectTo);

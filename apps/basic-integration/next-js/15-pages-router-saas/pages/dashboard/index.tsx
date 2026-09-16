@@ -20,6 +20,10 @@ import useSWR, { mutate } from 'swr';
 import { useState, useTransition } from 'react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const isPostHogConfigured = Boolean(
+  process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+    process.env.NEXT_PUBLIC_POSTHOG_HOST
+);
 
 function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
@@ -36,6 +40,10 @@ function ManageSubscription() {
       const result = await response.json();
 
       if (response.ok && result.url) {
+        if (isPostHogConfigured) {
+          const posthog = (await import('posthog-js')).default;
+          posthog.capture('subscription_portal_opened');
+        }
         window.location.href = result.url;
       }
     } catch (err) {
@@ -100,6 +108,11 @@ function TeamMembers() {
         if (!response.ok) {
           setError(result.error || 'Failed to remove member');
           return;
+        }
+
+        if (isPostHogConfigured) {
+          const posthog = (await import('posthog-js')).default;
+          posthog.capture('team_member_removed');
         }
 
         // Refresh team data
@@ -208,6 +221,12 @@ function InviteTeamMember() {
         }
 
         setSuccess(result.success);
+
+        if (isPostHogConfigured) {
+          const posthog = (await import('posthog-js')).default;
+          posthog.capture('team_invitation_sent', { invited_role: data.role });
+        }
+
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {

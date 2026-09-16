@@ -16,6 +16,10 @@ import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const isPostHogConfigured = Boolean(
+  process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+    process.env.NEXT_PUBLIC_POSTHOG_HOST
+);
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,9 +29,19 @@ function UserMenu() {
   async function handleSignOut() {
     try {
       // Call sign-out API to delete HttpOnly session cookie
-      await fetch('/api/auth/sign-out', {
+      const response = await fetch('/api/auth/sign-out', {
         method: 'POST'
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to sign out');
+      }
+
+      if (isPostHogConfigured) {
+        const posthog = (await import('posthog-js')).default;
+        posthog.capture('user_signed_out');
+        posthog.reset();
+      }
 
       // Clear SWR cache
       mutate('/api/user', null, false);
