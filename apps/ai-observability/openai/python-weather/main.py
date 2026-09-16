@@ -2,14 +2,25 @@
 registered `get_weather` tool before answering, so one question is either one
 model call or two with a tool execution between them."""
 
+import atexit
 import json
 import os
+import time
+import uuid
 
-import openai
+from posthog import Posthog
+from posthog.ai.openai import OpenAI
 
 from weather import get_weather
 
-client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
+posthog_client = Posthog(
+    os.environ["POSTHOG_API_KEY"],
+    host=os.environ.get("POSTHOG_HOST", "https://us.i.posthog.com"),
+    enable_exception_autocapture=True,
+)
+atexit.register(posthog_client.shutdown)
+
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""), posthog_client=posthog_client)
 
 MODEL = "gpt-5-mini"
 
@@ -44,6 +55,8 @@ class Conversation:
 
     def ask(self, question: str) -> str:
         """Answer one question, running the tool if the model asks for it."""
+        trace_id = str(uuid.uuid4())
+        posthog_properties = {"$ai_session_id": self.thread_id}
         self.messages.append({"role": "user", "content": question})
 
         response = client.chat.completions.create(
@@ -51,6 +64,9 @@ class Conversation:
             messages=self.messages,
             tools=TOOLS,
             parallel_tool_calls=False,
+            posthog_distinct_id=self.user_id,
+            posthog_trace_id=trace_id,
+            posthog_properties=posthog_properties,
         )
         message = response.choices[0].message
 
@@ -60,7 +76,21 @@ class Conversation:
 
         call = message.tool_calls[0]
         args = json.loads(call.function.arguments)
+        start = time.time()
         result = get_weather(**args)
+        posthog_client.capture(
+            distinct_id=self.user_id,
+            event="$ai_span",
+            properties={
+                "$ai_trace_id": trace_id,
+                "$ai_session_id": self.thread_id,
+                "$ai_span_id": str(uuid.uuid4()),
+                "$ai_span_name": call.function.name,
+                "$ai_input_state": call.function.arguments,
+                "$ai_output_state": result,
+                "$ai_latency": time.time() - start,
+            },
+        )
 
         self.messages.append(message)
         self.messages.append(
@@ -72,6 +102,9 @@ class Conversation:
             messages=self.messages,
             tools=TOOLS,
             parallel_tool_calls=False,
+            posthog_distinct_id=self.user_id,
+            posthog_trace_id=trace_id,
+            posthog_properties=posthog_properties,
         )
         answer = followup.choices[0].message.content or ""
         self.messages.append({"role": "assistant", "content": answer})
