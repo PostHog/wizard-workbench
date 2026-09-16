@@ -3,10 +3,23 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+
+type AuthenticatedUser = {
+  id: number;
+  email: string;
+  name: string | null;
+  role: string;
+};
+
+const isPostHogConfigured = Boolean(
+  process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+    process.env.NEXT_PUBLIC_POSTHOG_HOST
+);
 
 export function Login({
   mode = 'signin',
@@ -55,6 +68,16 @@ export function Login({
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
           return;
+        }
+
+        if (result.success && result.user && isPostHogConfigured) {
+          const user = result.user as AuthenticatedUser;
+          posthog.identify(String(user.id), {
+            email: user.email,
+            ...(user.name ? { name: user.name } : {}),
+            role: user.role
+          });
+          posthog.capture(mode === 'signin' ? 'signed_in' : 'account_created');
         }
 
         if (result.success && result.redirectTo) {
