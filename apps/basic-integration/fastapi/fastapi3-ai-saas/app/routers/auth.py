@@ -9,10 +9,24 @@ from fastapi.templating import Jinja2Templates
 from app.config import get_settings
 from app.dependencies import CurrentUser, DbSession, RequiredUser, create_session_token
 from app.models import User
+from app.posthog_client import get_posthog_client
 
 router = APIRouter()
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
+
+
+def _identify_user(user: User, event_name: str) -> None:
+    """Set stable identity and capture a successful authentication event."""
+    posthog_client = get_posthog_client()
+    if posthog_client is None:
+        return
+
+    distinct_id = str(user.id)
+    with posthog_client.new_context(fresh=True):
+        posthog_client.identify_context(distinct_id)
+        posthog_client.set(distinct_id=distinct_id, properties={"email": user.email})
+        posthog_client.capture(event_name)
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -34,6 +48,7 @@ async def login(
     user = User.authenticate(db, email, password)
 
     if user:
+        _identify_user(user, "user_logged_in")
         response = RedirectResponse(url="/dashboard", status_code=302)
         response.set_cookie(
             key="session_token",
@@ -70,6 +85,7 @@ async def signup(
         )
 
     user = User.create(db, email=email, password=password, credits=settings.default_credits)
+    _identify_user(user, "user_signed_up")
 
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(
@@ -84,6 +100,10 @@ async def signup(
 @router.get("/logout")
 async def logout(current_user: RequiredUser):
     """Logout user."""
+    posthog_client = get_posthog_client()
+    if posthog_client is not None:
+        posthog_client.capture("user_logged_out")
+
     response = RedirectResponse(url="/", status_code=302)
     response.delete_cookie(key="session_token")
     return response
