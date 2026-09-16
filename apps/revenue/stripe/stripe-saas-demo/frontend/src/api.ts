@@ -28,6 +28,16 @@ export function createSubscription(customerId: string, priceId: string, userId?:
   );
 }
 
-export function createCheckoutSession(priceId: string, userId?: string, customerEmail?: string) {
-  return request<{ url: string }>("/api/checkout", { priceId, userId, customerEmail });
+export function createCheckoutSession(
+  priceId: string,
+  userId?: string,
+  customerEmail?: string,
+  posthogDistinctId?: string
+) {
+  return request<{ url: string }>("/api/checkout", {
+    priceId,
+    userId,
+    customerEmail,
+    posthogDistinctId,
+  });
 }

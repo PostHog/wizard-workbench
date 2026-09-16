@@ -24,6 +24,9 @@ customersRouter.post("/", async (req, res) => {
     const customer = await stripe.customers.create({
       email,
       name,
+      metadata: posthogDistinctId
+        ? { posthog_person_distinct_id: posthogDistinctId }
+        : undefined,
     });
 
     const user = existing
@@ -38,7 +41,7 @@ customersRouter.post("/", async (req, res) => {
       posthog.capture({
         distinctId,
         event: "user_created",
-        properties: { stripe_customer_id: customer.id, email, name },
+        properties: { stripe_customer_id: customer.id },
       });
     }
 

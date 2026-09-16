@@ -7,7 +7,7 @@ export const checkoutRouter = Router();
 // POST /api/checkout — create a Stripe Checkout session
 checkoutRouter.post("/", async (req, res) => {
   try {
-    const { priceId, userId, customerEmail } = req.body;
+    const { priceId, customerEmail, posthogDistinctId } = req.body;
 
     if (!priceId) {
       res.status(400).json({ error: "priceId is required" });
@@ -21,15 +21,23 @@ checkoutRouter.post("/", async (req, res) => {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${frontendUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${frontendUrl}/?canceled=true`,
-      client_reference_id: userId,
+      client_reference_id: posthogDistinctId,
       customer_email: customerEmail,
+      metadata: posthogDistinctId
+        ? { posthog_person_distinct_id: posthogDistinctId }
+        : undefined,
+      subscription_data: {
+        metadata: posthogDistinctId
+          ? { posthog_person_distinct_id: posthogDistinctId }
+          : undefined,
+      },
     });
 
     res.json({ url: session.url });
   } catch (err: any) {
     console.error("Error creating checkout session:", err.message);
-    const { priceId, userId, customerEmail } = req.body;
-    const distinctId = userId || customerEmail || "anonymous";
+    const { priceId, userId, posthogDistinctId } = req.body;
+    const distinctId = posthogDistinctId || userId || "anonymous";
     posthog.capture({
       distinctId,
       event: "checkout_session_failed",
