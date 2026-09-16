@@ -2,14 +2,25 @@
 registered `get_weather` tool before answering, so one question is either one
 model call or two with a tool execution between them."""
 
+import atexit
 import json
 import os
+import time
+import uuid
 
-import openai
+from posthog import Posthog
+from posthog.ai.openai import OpenAI
 
 from weather import get_weather
 
-client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""))
+posthog = Posthog(
+    os.environ["POSTHOG_API_KEY"],
+    host=os.environ["POSTHOG_HOST"],
+    enable_exception_autocapture=True,
+)
+atexit.register(posthog.shutdown)
+
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", ""), posthog_client=posthog)
 
 MODEL = "gpt-5-mini"
 
@@ -45,12 +56,16 @@ class Conversation:
     def ask(self, question: str) -> str:
         """Answer one question, running the tool if the model asks for it."""
         self.messages.append({"role": "user", "content": question})
+        trace_id = str(uuid.uuid4())
 
         response = client.chat.completions.create(
             model=MODEL,
             messages=self.messages,
             tools=TOOLS,
             parallel_tool_calls=False,
+            posthog_distinct_id=self.user_id,
+            posthog_trace_id=trace_id,
+            posthog_properties={"$ai_session_id": self.thread_id},
         )
         message = response.choices[0].message
 
@@ -60,7 +75,21 @@ class Conversation:
 
         call = message.tool_calls[0]
         args = json.loads(call.function.arguments)
+        start = time.time()
         result = get_weather(**args)
+        posthog.capture(
+            distinct_id=self.user_id,
+            event="$ai_span",
+            properties={
+                "$ai_trace_id": trace_id,
+                "$ai_session_id": self.thread_id,
+                "$ai_span_id": str(uuid.uuid4()),
+                "$ai_span_name": call.function.name,
+                "$ai_input_state": args,
+                "$ai_output_state": result,
+                "$ai_latency": time.time() - start,
+            },
+        )
 
         self.messages.append(message)
         self.messages.append(
@@ -72,6 +101,9 @@ class Conversation:
             messages=self.messages,
             tools=TOOLS,
             parallel_tool_calls=False,
+            posthog_distinct_id=self.user_id,
+            posthog_trace_id=trace_id,
+            posthog_properties={"$ai_session_id": self.thread_id},
         )
         answer = followup.choices[0].message.content or ""
         self.messages.append({"role": "assistant", "content": answer})
