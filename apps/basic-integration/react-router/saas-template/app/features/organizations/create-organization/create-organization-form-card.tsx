@@ -2,6 +2,7 @@ import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconBuilding } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, href, Link } from "react-router";
 
@@ -145,6 +146,14 @@ export function CreateOrganizationFormCard({
             disabled={isCreatingOrganization}
             form={form.id}
             name="intent"
+            onClick={() => {
+              if (
+                import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+              ) {
+                posthog.capture("organization_creation_submitted");
+              }
+            }}
             type="submit"
             value={CREATE_ORGANIZATION_INTENT}
           >

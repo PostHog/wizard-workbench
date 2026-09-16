@@ -1,3 +1,4 @@
+import posthog from "posthog-js";
 import { Trans, useTranslation } from "react-i18next";
 import { Form } from "react-router";
 
@@ -109,6 +110,14 @@ function DeleteAccountDialogComponent({
             <Button
               disabled={isDeletingAccount}
               name="intent"
+              onClick={() => {
+                if (
+                  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                  import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+                ) {
+                  posthog.capture("account_deletion_submitted");
+                }
+              }}
               type="submit"
               value={DELETE_USER_ACCOUNT_INTENT}
               variant="destructive"

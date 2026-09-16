@@ -1,6 +1,7 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
-import { useEffect } from "react";
+import posthog from "posthog-js";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
 import { useHydrated } from "remix-utils/use-hydrated";
@@ -58,6 +59,9 @@ export function EmailInviteCard({
     }
   }, [successEmail, intent]);
 
+  const [inviteRole, setInviteRole] = useState(
+    OrganizationMembershipRole.member,
+  );
   const hydrated = useHydrated();
   const disabled = isInvitingByEmail || organizationIsFull;
 
@@ -103,6 +107,9 @@ export function EmailInviteCard({
                   <Select
                     defaultValue={OrganizationMembershipRole.member}
                     name={fields.role.name}
+                    onValueChange={(role) =>
+                      setInviteRole(role as OrganizationMembershipRole)
+                    }
                   >
                     <SelectTrigger
                       aria-describedby={fields.role.ariaDescribedBy}
@@ -163,6 +170,16 @@ export function EmailInviteCard({
           disabled={disabled}
           form={form.props.id}
           name="intent"
+          onClick={() => {
+            if (
+              import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+              import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+            ) {
+              posthog.capture("team_invite_submitted", {
+                membership_role: inviteRole,
+              });
+            }
+          }}
           type="submit"
           value={INVITE_BY_EMAIL_INTENT}
         >

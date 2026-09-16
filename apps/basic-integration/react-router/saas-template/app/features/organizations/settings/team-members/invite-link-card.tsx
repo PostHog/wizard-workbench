@@ -4,6 +4,7 @@ import {
   IconCopy,
 } from "@tabler/icons-react";
 import copyToClipboard from "copy-to-clipboard";
+import posthog from "posthog-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
@@ -112,6 +113,12 @@ export function InviteLinkCard({
                 )}
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
+                  if (
+                    import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                    import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+                  ) {
+                    posthog.capture("invite_link_copied");
+                  }
                   setLinkCopied(true);
                 }}
                 size="icon"
