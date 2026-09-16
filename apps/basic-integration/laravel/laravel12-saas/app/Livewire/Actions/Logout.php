@@ -12,6 +12,8 @@ class Logout
      */
     public function __invoke(): void
     {
+        app(\App\Services\PostHogService::class)->capture('user_logged_out');
+
         Auth::guard('web')->logout();
 
         Session::invalidate();

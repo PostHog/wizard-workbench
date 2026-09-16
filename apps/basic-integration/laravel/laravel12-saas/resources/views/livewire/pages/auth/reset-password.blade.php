@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -42,9 +43,12 @@ new #[Layout('layouts.guest')] class extends Component
         // Here we will attempt to reset the user's password. If it is successful we
         // will update the password on an actual user model and persist it to the
         // database. Otherwise we will parse the error and return the response.
+        $resetUser = null;
+
         $status = Password::reset(
             $this->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user) {
+            function ($user) use (&$resetUser) {
+                $resetUser = $user;
                 $user->forceFill([
                     'password' => Hash::make($this->password),
                     'remember_token' => Str::random(60),
@@ -62,6 +66,8 @@ new #[Layout('layouts.guest')] class extends Component
 
             return;
         }
+
+        app(PostHogService::class)->capture('password_reset_completed', [], (string) $resetUser->id);
 
         Session::flash('status', __($status));
 
