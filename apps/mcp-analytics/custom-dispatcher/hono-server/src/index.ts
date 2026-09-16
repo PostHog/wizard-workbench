@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server'
+import { PostHogMCP } from '@posthog/mcp'
 import { Hono } from 'hono'
 
 // A custom MCP dispatcher: it speaks the MCP JSON-RPC protocol directly over
@@ -12,6 +13,18 @@ type JsonRpcRequest = {
     method: string
     params?: Record<string, unknown>
 }
+
+const posthogProjectToken = process.env.POSTHOG_PROJECT_TOKEN
+const posthogHost = process.env.POSTHOG_HOST
+
+if (!posthogProjectToken || !posthogHost) {
+    throw new Error('POSTHOG_PROJECT_TOKEN and POSTHOG_HOST must be set')
+}
+
+const posthog = new PostHogMCP(posthogProjectToken, {
+    host: posthogHost,
+    captureModel: true,
+})
 
 const TOOLS = [
     {
@@ -45,39 +58,97 @@ function runTool(name: string, args: Record<string, unknown>): unknown {
     }
 }
 
+const advertisedTools = posthog.prepareToolList(TOOLS)
 const app = new Hono()
 
 app.post('/mcp', async (c) => {
+    const startedAt = Date.now()
     const body = (await c.req.json()) as JsonRpcRequest
+    const paramsProtocolVersion = body.params?.protocolVersion
+    const requestMetadata = {
+        protocolVersion:
+            c.req.header('MCP-Protocol-Version') ??
+            (typeof paramsProtocolVersion === 'string' ? paramsProtocolVersion : undefined),
+        clientUserAgent: c.req.header('user-agent'),
+        vendorClient: c.req.header('x-anthropic-client'),
+    }
 
     if (body.method === 'initialize') {
-        return c.json({
-            jsonrpc: '2.0',
-            id: body.id,
-            result: {
-                protocolVersion: '2024-11-05',
-                capabilities: { tools: {} },
-                serverInfo: { name: 'workbench-hono-dispatcher', version: '1.0.0' },
-            },
+        const clientInfo = body.params?.clientInfo as Record<string, unknown> | undefined
+        const result = {
+            protocolVersion: '2024-11-05',
+            capabilities: { tools: {} },
+            serverInfo: { name: 'workbench-hono-dispatcher', version: '1.0.0' },
+        }
+        posthog.captureInitialize({
+            clientName: typeof clientInfo?.name === 'string' ? clientInfo.name : undefined,
+            clientVersion: typeof clientInfo?.version === 'string' ? clientInfo.version : undefined,
+            parameters: body.params,
+            response: result,
+            durationMs: Date.now() - startedAt,
+            ...requestMetadata,
         })
+        return c.json({ jsonrpc: '2.0', id: body.id, result })
     }
 
     if (body.method === 'tools/list') {
-        return c.json({ jsonrpc: '2.0', id: body.id, result: { tools: TOOLS } })
+        const result = { tools: advertisedTools }
+        posthog.captureToolsList({
+            toolNames: advertisedTools.map((tool) => tool.name),
+            parameters: body.params,
+            response: result,
+            durationMs: Date.now() - startedAt,
+            ...requestMetadata,
+        })
+        return c.json({ jsonrpc: '2.0', id: body.id, result })
     }
 
     if (body.method === 'tools/call') {
         const params = body.params ?? {}
         const name = String(params.name)
-        const args = (params.arguments as Record<string, unknown>) ?? {}
+        const originalTool = TOOLS.find((tool) => tool.name === name)
+        const preparedCall = posthog.prepareToolCall(
+            name,
+            (params.arguments as Record<string, unknown>) ?? {},
+            {
+                originalTool,
+                requestMeta: params._meta as Record<string, unknown> | undefined,
+            }
+        )
+        const args = preparedCall.args ?? {}
         try {
-            return c.json({ jsonrpc: '2.0', id: body.id, result: runTool(name, args) })
-        } catch (err) {
-            return c.json({
-                jsonrpc: '2.0',
-                id: body.id,
-                result: { isError: true, content: [{ type: 'text', text: String(err) }] },
+            const result = runTool(name, args)
+            posthog.captureToolCall({
+                toolName: name,
+                toolDescription: originalTool?.description,
+                parameters: args,
+                response: result,
+                durationMs: Date.now() - startedAt,
+                isError: false,
+                intent: preparedCall.intent,
+                intentSource: preparedCall.intentSource,
+                llmModel: preparedCall.llmModel,
+                llmModelSource: preparedCall.llmModelSource,
+                ...requestMetadata,
             })
+            return c.json({ jsonrpc: '2.0', id: body.id, result })
+        } catch (err) {
+            const result = { isError: true, content: [{ type: 'text', text: String(err) }] }
+            posthog.captureToolCall({
+                toolName: name,
+                toolDescription: originalTool?.description,
+                parameters: args,
+                response: result,
+                durationMs: Date.now() - startedAt,
+                isError: true,
+                error: err,
+                intent: preparedCall.intent,
+                intentSource: preparedCall.intentSource,
+                llmModel: preparedCall.llmModel,
+                llmModelSource: preparedCall.llmModelSource,
+                ...requestMetadata,
+            })
+            return c.json({ jsonrpc: '2.0', id: body.id, result })
         }
     }
 
@@ -89,3 +160,8 @@ app.post('/mcp', async (c) => {
 })
 
 serve({ fetch: app.fetch, port: 3000 })
+
+process.on('SIGTERM', async () => {
+    await posthog.shutdown()
+    process.exit(0)
+})
