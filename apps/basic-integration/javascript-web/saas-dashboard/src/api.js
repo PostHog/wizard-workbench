@@ -5,6 +5,7 @@
  * to mimic real network calls. In a real app, these would be
  * fetch() calls to a backend.
  */
+import { identifyUser, isPostHogEnabled, posthog, resetPostHog } from './posthog.js';
 import { store } from './store.js';
 
 const DELAY_MS = 150;
@@ -21,11 +22,21 @@ export const api = {
     if (!success) {
       throw new Error('Invalid credentials. Use a team member email.');
     }
-    return store.state.currentUser;
+
+    const user = store.state.currentUser;
+    identifyUser(user);
+    if (isPostHogEnabled) {
+      posthog.capture('login_succeeded');
+    }
+    return user;
   },
 
   async logout() {
     await delay(50);
+    if (isPostHogEnabled) {
+      posthog.capture('logout_completed');
+    }
+    resetPostHog();
     store.logout();
   },
 
