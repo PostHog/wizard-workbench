@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
+from config import apps as config_apps
 from .models import Project, ActivityLog
 from .forms import ProjectForm
 
@@ -60,6 +61,11 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            if config_apps.posthog_client is not None:
+                config_apps.posthog_client.capture(
+                    'project_created',
+                    properties={'has_description': bool(project.description)},
+                )
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +89,11 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            if config_apps.posthog_client is not None:
+                config_apps.posthog_client.capture(
+                    'project_updated',
+                    properties={'has_description': bool(project.description)},
+                )
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -105,6 +116,8 @@ def delete_project(request, pk):
             description=f'Deleted project: {name}'
         )
 
+        if config_apps.posthog_client is not None:
+            config_apps.posthog_client.capture('project_deleted')
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
 
