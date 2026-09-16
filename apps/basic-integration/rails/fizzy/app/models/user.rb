@@ -28,6 +28,19 @@ class User < ApplicationRecord
     name != identity.email_address
   end
 
+  def posthog_distinct_id
+    (identity_id || id).to_s
+  end
+
+  def posthog_properties
+    {
+      email: identity&.email_address,
+      name: name,
+      role: role,
+      created_at: created_at&.iso8601
+    }.compact
+  end
+
   def verified?
     verified_at.present?
   end

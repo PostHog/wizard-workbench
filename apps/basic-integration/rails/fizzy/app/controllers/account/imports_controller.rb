@@ -39,6 +39,14 @@ class Account::ImportsController < ApplicationController
         import.process_later
       end
 
+      if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+        PostHog.capture(
+          distinct_id: Current.identity.id.to_s,
+          event: "account_import_started",
+          properties: { account_id: account.id }
+        )
+      end
+
       redirect_to account_import_path(import, script_name: account.slug)
     end
 end

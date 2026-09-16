@@ -89,6 +89,17 @@ module Authentication
       identity.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
         set_current_session session
       end
+
+      identify_posthog_user(identity)
+    end
+
+    def identify_posthog_user(identity)
+      return unless ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+
+      PostHog.identify(
+        distinct_id: identity.id.to_s,
+        properties: { email: identity.email_address, staff: identity.staff }
+      )
     end
 
     def set_current_session(session)
