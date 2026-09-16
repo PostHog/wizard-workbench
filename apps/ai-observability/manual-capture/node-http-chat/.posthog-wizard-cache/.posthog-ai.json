@@ -1,0 +1,1 @@
+{ "provider": "ollama", "package": "posthog-node", "otel_init_file": "src/index.ts" }
