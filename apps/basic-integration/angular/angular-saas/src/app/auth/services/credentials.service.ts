@@ -1,5 +1,6 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, Injectable, inject, signal } from '@angular/core';
 import { Credentials } from '@core/entities';
+import { PostHogService } from '@core/services';
 
 const credentialsKey = 'credentials';
 
@@ -11,6 +12,8 @@ const credentialsKey = 'credentials';
   providedIn: 'root',
 })
 export class CredentialsService {
+  private readonly posthogService = inject(PostHogService);
+
   /** The user credentials signal */
   readonly credentials = signal<Credentials | null>(this.loadCredentials());
 
@@ -30,6 +33,13 @@ export class CredentialsService {
    * @param remember True to remember credentials across sessions.
    */
   setCredentials(credentials?: Credentials, remember = true) {
+    const currentCredentials = this.credentials();
+    if (!credentials && currentCredentials) {
+      this.posthogService.posthog.reset();
+    } else if (credentials && currentCredentials?.id && currentCredentials.id !== credentials.id) {
+      this.posthogService.posthog.reset();
+    }
+
     this.credentials.set(credentials || null);
 
     if (credentials) {
@@ -39,5 +49,26 @@ export class CredentialsService {
       sessionStorage.removeItem(credentialsKey);
       localStorage.removeItem(credentialsKey);
     }
+  }
+
+  /** Identifies the authenticated user after PostHog has initialized. */
+  identifyCurrentUser(): void {
+    const credentials = this.credentials();
+    if (!credentials?.id) {
+      return;
+    }
+
+    const personProperties: Record<string, string> = {};
+    if (credentials.email) {
+      personProperties['email'] = credentials.email;
+    }
+    if (credentials.fullName.trim()) {
+      personProperties['name'] = credentials.fullName.trim();
+    }
+    if (credentials.roles[0]) {
+      personProperties['role'] = credentials.roles[0];
+    }
+
+    this.posthogService.posthog.identify(credentials.id, personProperties);
   }
 }
