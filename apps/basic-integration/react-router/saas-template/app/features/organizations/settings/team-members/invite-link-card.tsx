@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import {
   IconAlertTriangle,
   IconClipboardCheck,
@@ -37,6 +38,7 @@ export function InviteLinkCard({
   const { t, i18n } = useTranslation("organizations", {
     keyPrefix: "settings.teamMembers.inviteLink",
   });
+  const posthog = usePostHog();
 
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -112,6 +114,7 @@ export function InviteLinkCard({
                 )}
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
+                  posthog.capture("invite_link_copied");
                   setLinkCopied(true);
                 }}
                 size="icon"

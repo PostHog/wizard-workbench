@@ -1,3 +1,4 @@
+import { PostHogErrorBoundary, PostHogProvider } from "@posthog/react";
 import i18next from "i18next";
 import I18nextBrowserLanguageDetector from "i18next-browser-languagedetector";
 import Fetch from "i18next-fetch-backend";
@@ -5,6 +6,8 @@ import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { I18nextProvider, initReactI18next } from "react-i18next";
 import { HydratedRouter } from "react-router/dom";
+
+import { posthog } from "./lib/posthog.client";
 
 async function hydrate() {
   await i18next
@@ -22,9 +25,13 @@ async function hydrate() {
     hydrateRoot(
       document,
       <I18nextProvider i18n={i18next}>
-        <StrictMode>
-          <HydratedRouter />
-        </StrictMode>
+        <PostHogProvider client={posthog}>
+          <PostHogErrorBoundary>
+            <StrictMode>
+              <HydratedRouter />
+            </StrictMode>
+          </PostHogErrorBoundary>
+        </PostHogProvider>
       </I18nextProvider>,
     );
   });

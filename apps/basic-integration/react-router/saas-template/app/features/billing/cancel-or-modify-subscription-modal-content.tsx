@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
@@ -53,6 +54,7 @@ export function CancelOrModifySubscriptionModalContent({
   const { t: tModal } = useTranslation("billing", {
     keyPrefix: "billingPage.pricingModal",
   });
+  const posthog = usePostHog();
   const [billingPeriod, setBillingPeriod] = useState("annual");
 
   const isSubmitting =
@@ -81,9 +83,21 @@ export function CancelOrModifySubscriptionModalContent({
     if (isCurrentTier) {
       if (interval !== currentTierInterval) {
         return interval === "annual"
-          ? { children: tModal("switchToAnnualButton") }
+          ? {
+              children: tModal("switchToAnnualButton"),
+              onClick: () =>
+                posthog.capture("subscription_change_requested", {
+                  billing_interval: interval,
+                  plan_tier: tier,
+                }),
+            }
           : {
               children: tModal("switchToMonthlyButton"),
+              onClick: () =>
+                posthog.capture("subscription_change_requested", {
+                  billing_interval: interval,
+                  plan_tier: tier,
+                }),
               variant: "outline",
             };
       }
@@ -112,9 +126,18 @@ export function CancelOrModifySubscriptionModalContent({
     }
 
     // 3. Default static buttons for upgrade vs downgrade
-    return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+    return {
+      children: isUpgrade
+        ? tModal("upgradeButton")
+        : tModal("downgradeButton"),
+      disabled: isUpgrade ? isSubmitting : undefined,
+      onClick: () =>
+        posthog.capture("subscription_change_requested", {
+          billing_interval: interval,
+          plan_tier: tier,
+        }),
+      ...(isUpgrade ? {} : { variant: "outline" }),
+    };
   };
 
   return (

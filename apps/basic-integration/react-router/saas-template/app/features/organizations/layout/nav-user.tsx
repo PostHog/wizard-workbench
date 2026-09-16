@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import {
   IconLogout,
   IconRosetteDiscountCheck,
@@ -33,6 +34,7 @@ export type NavUserProps = {
 };
 
 export function NavUser({ user }: NavUserProps) {
+  const posthog = usePostHog();
   const { isMobile } = useSidebar();
   const { t } = useTranslation("organizations", {
     keyPrefix: "layout.navUser",
@@ -115,7 +117,12 @@ export function NavUser({ user }: NavUserProps) {
 
             <DropdownMenuSeparator />
 
-            <Form action="/logout" method="post" replace>
+            <Form
+              action="/logout"
+              method="post"
+              onSubmit={() => posthog.reset()}
+              replace
+            >
               <DropdownMenuItem
                 render={
                   <button
