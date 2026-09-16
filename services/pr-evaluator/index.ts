@@ -3,7 +3,7 @@ import "dotenv/config";
 import { mkdir } from "fs/promises";
 import { join } from "path";
 import * as readline from "readline";
-import { evaluatePR, configureGateway } from "./evaluator.js";
+import { evaluatePR, configureGateway, resolveGatewayToken } from "./evaluator.js";
 import { fetchLocalBranch } from "./git-local.js";
 import { fetchPR } from "../github/index.js";
 
@@ -151,14 +151,19 @@ async function main(): Promise<void> {
     }
   }
 
-  // Validate environment - uses PostHog LLM gateway with POSTHOG_PERSONAL_API_KEY
-  if (!process.env.POSTHOG_PERSONAL_API_KEY) {
-    console.error("Error: POSTHOG_PERSONAL_API_KEY environment variable is required");
+  // Validate environment - the PostHog AI gateway takes a gateway credential
+  // (`phs_` project secret key), not the personal `phx_` key.
+  const gatewayToken = resolveGatewayToken();
+  if (!gatewayToken) {
+    console.error(
+      "Error: no PostHog gateway token. Set POSTHOG_GATEWAY_TOKEN (a phs_ project secret key) " +
+        "in .env, or point WIZARD_CI_GATEWAY_TOKEN_FILE at a file holding one.",
+    );
     process.exit(1);
   }
   const region = process.env.POSTHOG_REGION || "us";
   // Configure the Claude Agent SDK to use PostHog's LLM gateway
-  configureGateway(process.env.POSTHOG_PERSONAL_API_KEY, region);
+  configureGateway(gatewayToken, region);
 
   // For local branch mode, always use test-run (can't post to GitHub without a PR)
   if (hasBranch && !args.testRun) {

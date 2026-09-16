@@ -1,3 +1,4 @@
+import { readFileSync } from "fs";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { PostHog } from "posthog-node";
 import { z } from "zod";
@@ -175,24 +176,57 @@ export function injectScoresIntoComment(comment: string, scores: EvaluateScores)
 // ── Gateway configuration ────────────────────────────────────────────────────
 
 /**
- * Get LLM gateway URL based on PostHog region
+ * Get LLM gateway URL based on PostHog region.
+ *
+ * Origin only, no path: the Anthropic SDK appends `/v1/messages` itself. The
+ * legacy `gateway.<region>.posthog.com/wizard` route is retired and answers
+ * every call with `403 product_retired`.
  */
 function getLlmGatewayUrl(region: string): string {
-  if (region === "eu") {
-    return "https://gateway.eu.posthog.com/wizard";
+  const override = process.env.WIZARD_CI_GATEWAY_URL;
+  if (override) {
+    return override.replace(/\/+$/, "");
   }
-  return "https://gateway.us.posthog.com/wizard";
+  if (region === "eu") {
+    return "https://ai-gateway.eu.posthog.com";
+  }
+  return "https://ai-gateway.us.posthog.com";
+}
+
+/**
+ * The gateway bearer for this run: a `phs_` project secret key (or `pha_` OAuth
+ * token). The personal `phx_` key the legacy gateway took is not a gateway
+ * credential and the AI gateway will not resolve it.
+ *
+ * CI writes the secret to a file and points `WIZARD_CI_GATEWAY_TOKEN_FILE` at
+ * it — the same handoff the wizard itself reads — so the token never lands in a
+ * child process's environment. Locally, `POSTHOG_GATEWAY_TOKEN` in `.env`.
+ */
+export function resolveGatewayToken(): string | undefined {
+  const file = process.env.WIZARD_CI_GATEWAY_TOKEN_FILE;
+  if (file) {
+    const token = readFileSync(file, "utf8").trim();
+    if (token) {
+      return token;
+    }
+  }
+  return process.env.POSTHOG_GATEWAY_TOKEN?.trim() || undefined;
 }
 
 /**
  * Configure the Claude Agent SDK to use PostHog's LLM gateway
  */
-export function configureGateway(apiKey: string, region: string): void {
+export function configureGateway(gatewayToken: string, region: string): void {
   const gatewayUrl = getLlmGatewayUrl(region);
   process.env.ANTHROPIC_BASE_URL = gatewayUrl;
-  process.env.ANTHROPIC_AUTH_TOKEN = apiKey;
+  process.env.ANTHROPIC_AUTH_TOKEN = gatewayToken;
   // Disable experimental betas that the LLM gateway doesn't support
   process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "true";
+  // Names this spend in AI observability. Without it the evaluator's generations
+  // are indistinguishable from the wizard runs they grade, on the same key.
+  process.env.ANTHROPIC_CUSTOM_HEADERS = `X-PostHog-Properties: ${JSON.stringify({
+    ai_product: "wizard-ci-evaluator",
+  })}`;
   console.log(`Configured LLM gateway: ${gatewayUrl}`);
 }
 
