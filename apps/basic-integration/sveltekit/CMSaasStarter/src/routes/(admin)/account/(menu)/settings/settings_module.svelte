@@ -2,6 +2,11 @@
   import { enhance, applyAction } from "$app/forms"
   import { page } from "$app/stores"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import {
+    PUBLIC_POSTHOG_HOST,
+    PUBLIC_POSTHOG_PROJECT_TOKEN,
+  } from "$env/static/public"
+  import posthog from "posthog-js"
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -50,6 +55,13 @@
     saveButtonTitle = "Save",
   }: Props = $props()
 
+  const settingByFormTarget: Record<string, string> = {
+    "/account/api?/toggleEmailSubscription": "email_subscription",
+    "/account/api?/updateEmail": "email",
+    "/account/api?/updatePassword": "password",
+    "/account/api?/updateProfile": "profile",
+  }
+
   const handleSubmit: SubmitFunction = () => {
     loading = true
     return async ({ update, result }) => {
@@ -58,6 +70,10 @@
       loading = false
       if (result.type === "success") {
         showSuccess = true
+        const setting = settingByFormTarget[formTarget]
+        if (setting && PUBLIC_POSTHOG_PROJECT_TOKEN && PUBLIC_POSTHOG_HOST) {
+          posthog.capture("account_setting_saved", { setting })
+        }
       }
     }
   }

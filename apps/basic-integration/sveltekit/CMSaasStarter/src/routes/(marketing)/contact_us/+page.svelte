@@ -1,6 +1,11 @@
 <script lang="ts">
   import { enhance, applyAction } from "$app/forms"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import {
+    PUBLIC_POSTHOG_HOST,
+    PUBLIC_POSTHOG_PROJECT_TOKEN,
+  } from "$env/static/public"
+  import posthog from "posthog-js"
   import type { FullAutoFill } from "svelte/elements"
 
   let errors: { [fieldName: string]: string } = $state({})
@@ -62,6 +67,9 @@
       loading = false
       if (result.type === "success") {
         showSuccess = true
+        if (PUBLIC_POSTHOG_PROJECT_TOKEN && PUBLIC_POSTHOG_HOST) {
+          posthog.capture("contact_request_submitted")
+        }
       } else if (result.type === "failure") {
         errors = result.data?.errors ?? {}
       } else if (result.type === "error") {

@@ -1,5 +1,10 @@
 <script lang="ts">
   import { pricingPlans } from "./pricing_plans"
+  import {
+    PUBLIC_POSTHOG_HOST,
+    PUBLIC_POSTHOG_PROJECT_TOKEN,
+  } from "$env/static/public"
+  import posthog from "posthog-js"
 
   interface Props {
     // Module context
@@ -15,6 +20,12 @@
     currentPlanId = "",
     center = true,
   }: Props = $props()
+
+  function captureCheckoutStarted(planId: string, hasStripePrice: boolean) {
+    if (hasStripePrice && PUBLIC_POSTHOG_PROJECT_TOKEN && PUBLIC_POSTHOG_HOST) {
+      posthog.capture("subscription_checkout_started", { plan_id: planId })
+    }
+  }
 </script>
 
 <div
@@ -57,6 +68,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() => captureCheckoutStarted(plan.id, Boolean(plan.stripe_price_id))}
               >
                 {callToAction}
               </a>
