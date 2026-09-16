@@ -1,10 +1,21 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { instrument } from '@posthog/mcp'
+import { PostHog } from 'posthog-node'
 import { z } from 'zod'
 
-// A minimal, PostHog-less MCP server. The `wizard mcp-analytics` flow should
-// detect the McpServer object below and wrap it with `instrument(server, posthog)`.
+const posthogProjectToken = process.env.POSTHOG_PROJECT_TOKEN
+const posthogHost = process.env.POSTHOG_HOST
+
+if (!posthogProjectToken || !posthogHost) {
+    throw new Error('POSTHOG_PROJECT_TOKEN and POSTHOG_HOST are required')
+}
+
+const posthog = new PostHog(posthogProjectToken, { host: posthogHost })
+
+// A minimal MCP server instrumented with PostHog MCP analytics.
 const server = new McpServer({ name: 'workbench-stdio-server', version: '1.0.0' })
+instrument(server, posthog, { captureModel: true })
 
 server.tool(
     'echo',
@@ -25,6 +36,11 @@ async function main(): Promise<void> {
     await server.connect(transport)
     // STDIO transport: never write to stdout (it is the protocol channel).
 }
+
+process.on('SIGTERM', async () => {
+    await posthog.shutdown()
+    process.exit(0)
+})
 
 main().catch((err) => {
     process.stderr.write(`fatal: ${String(err)}\n`)
