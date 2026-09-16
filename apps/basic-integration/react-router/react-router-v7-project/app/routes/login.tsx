@@ -23,8 +23,14 @@ export default function Login() {
       setIsLoading(false)
 
       if (success) {
+        window.dispatchEvent(new CustomEvent('posthog:capture', {
+          detail: { eventName: 'login_succeeded' },
+        }))
         navigate('/profile')
       } else {
+        window.dispatchEvent(new CustomEvent('posthog:capture', {
+          detail: { eventName: 'login_failed' },
+        }))
         setError('Invalid credentials! (But this is fake, so any password works if the username exists)')
       }
     }, 500)

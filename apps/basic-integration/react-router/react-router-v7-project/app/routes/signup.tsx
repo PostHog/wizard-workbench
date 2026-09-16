@@ -24,12 +24,21 @@ export default function Signup() {
         setIsLoading(false)
 
         if (newUser) {
+          window.dispatchEvent(new CustomEvent('posthog:capture', {
+            detail: { eventName: 'signup_completed' },
+          }))
           navigate('/profile')
         } else {
+          window.dispatchEvent(new CustomEvent('posthog:capture', {
+            detail: { eventName: 'signup_failed' },
+          }))
           setError('Signup failed! (But this is fake, so it should always work)')
         }
       } catch (err) {
         setIsLoading(false)
+        window.dispatchEvent(new CustomEvent('posthog:capture', {
+          detail: { eventName: 'signup_failed' },
+        }))
         setError('Something went wrong!')
       }
     }, 500)

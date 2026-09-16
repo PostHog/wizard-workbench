@@ -64,7 +64,12 @@ export default function Profile() {
                   View Stats
                 </Link>
                 <button
-                  onClick={logout}
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('posthog:capture', {
+                      detail: { eventName: 'logout_completed' },
+                    }))
+                    logout()
+                  }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
                 >
                   Logout
