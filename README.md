@@ -146,7 +146,8 @@ cp .env.example .env
 | `CONTEXT_MILL_PATH` | Yes | Path to your local context-mill repo (e.g., `~/development/context-mill`) |
 | `MCP_PATH` | Yes | Path to MCP service (e.g., `~/development/posthog/services/mcp`) |
 | `WIZARD_PATH` | Yes | Path to your local wizard repo (e.g., `~/development/wizard`) |
-| `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key for wizard CI mode and PR evaluator |
+| `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key (`phx_`) for wizard CI mode |
+| `POSTHOG_GATEWAY_TOKEN` | For the evaluator | PostHog project secret key (`phs_`) the PR evaluator sends to the AI gateway. In CI this arrives as a file path in `WIZARD_CI_GATEWAY_TOKEN_FILE` instead. |
 | `POSTHOG_REGION` | No | PostHog region (`us` or `eu`). Defaults to `us`. Can also be set via `--region` flag or workflow input. |
 
 These `*_PATH` vars say **where the repos live** — which binary and which
