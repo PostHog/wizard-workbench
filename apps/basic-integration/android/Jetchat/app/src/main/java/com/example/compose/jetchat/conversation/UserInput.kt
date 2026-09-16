@@ -104,6 +104,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
+import com.example.compose.jetchat.JetchatApplication
 import com.example.compose.jetchat.R
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
@@ -446,13 +447,18 @@ private fun UserInputText(
             onStartRecording = {
                 val consumed = !isRecordingMessage
                 isRecordingMessage = true
+                if (consumed) {
+                    JetchatApplication.capturePostHogEvent("voice_recording_started")
+                }
                 consumed
             },
             onFinishRecording = {
                 // handle end of recording
+                JetchatApplication.capturePostHogEvent("voice_recording_completed")
                 isRecordingMessage = false
             },
             onCancelRecording = {
+                JetchatApplication.capturePostHogEvent("voice_recording_cancelled")
                 isRecordingMessage = false
             },
             modifier = Modifier.fillMaxHeight(),

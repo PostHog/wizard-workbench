@@ -87,6 +87,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
+import com.example.compose.jetchat.JetchatApplication
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
@@ -136,6 +137,10 @@ fun ConversationContent(
 
                 uiState.addMessage(
                     Message(authorMe, clipData.getItemAt(0).text.toString(), timeNow),
+                )
+                JetchatApplication.capturePostHogEvent(
+                    "message_dropped",
+                    mapOf("channel_name" to uiState.channelName),
                 )
 
                 return true
@@ -202,6 +207,10 @@ fun ConversationContent(
                 onMessageSent = { content ->
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
+                    )
+                    JetchatApplication.capturePostHogEvent(
+                        "message_sent",
+                        mapOf("channel_name" to uiState.channelName),
                     )
                 },
                 resetScroll = {
