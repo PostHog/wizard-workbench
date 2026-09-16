@@ -349,6 +349,7 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
     private func postTypeMenuButton(for postType: Domain.PostType) -> some View {
         Button {
             selectedPostType = postType
+            navigationStore.selectPostType(postType)
             Task {
                 await viewModel.changePostType(postType)
             }
