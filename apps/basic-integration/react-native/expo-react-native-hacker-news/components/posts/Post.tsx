@@ -12,6 +12,7 @@ import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link2, MessageSquareText } from "lucide-react-native";
 
+import { posthog } from "@/lib/posthog";
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
@@ -34,6 +35,10 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
+          posthog?.capture("story_opened", {
+            story_id: id,
+            destination: isExternal ? "external" : "discussion",
+          });
           if (isExternal) Linking.openURL(url);
           else await navigateToDetails();
         }}
@@ -66,6 +71,10 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog?.capture("discussion_opened", {
+              discussion_id: id,
+              source: "story_list",
+            });
             await navigateToDetails();
           }}
         >
@@ -86,6 +95,9 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           <Pressable
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              posthog?.capture("external_link_opened", {
+                source: "story_list",
+              });
               Linking.openURL(url);
             }}
           >
