@@ -36,7 +36,7 @@ onMounted(async () => {
   <div class="min-h-screen bg-black text-white">
     <div v-if="heroItem" class="mb-10">
       <router-link :to="`/${type}/${heroItem.id}`">
-        <MediaHero :item="heroItem" />
+        <MediaHero :item="heroItem" :type="type" />
       </router-link>
     </div>
     <CarouselAutoQuery
