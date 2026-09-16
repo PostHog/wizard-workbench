@@ -83,6 +83,7 @@ class NavActivity : AppCompatActivity() {
                         LoginScreen(
                             onLogin = { username, password ->
                                 viewModel.login(username, password)
+                                JetchatApplication.postHogOrNull()?.capture("user_logged_in")
                             },
                         )
                     } else {
@@ -91,6 +92,10 @@ class NavActivity : AppCompatActivity() {
                             selectedMenu = selectedMenu,
                             username = loggedInUsername,
                             onChatClicked = {
+                                JetchatApplication.postHogOrNull()?.capture(
+                                    "chat_channel_selected",
+                                    mapOf("channel_name" to it),
+                                )
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
                                     drawerState.close()
@@ -106,6 +111,7 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onLogoutClicked = {
+                                JetchatApplication.postHogOrNull()?.capture("user_logged_out")
                                 viewModel.logout()
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
