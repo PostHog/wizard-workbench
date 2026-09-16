@@ -1,0 +1,1 @@
+{ "provider": "openai", "package": "@posthog/ai", "otel_init_file": "app/api/chat/route.ts" }
