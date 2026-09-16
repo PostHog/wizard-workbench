@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import posthog from 'posthog-js'
 import type { Media } from '../types'
 import { getMedia, getRecommendations } from '../composables/useTMDB'
 import { formatTime, formatVote, getTrailer } from '../composables/utils'
@@ -61,6 +62,9 @@ const recommendations = ref<Media[]>([])
 const loading = ref(false)
 const showModal = ref(false)
 const trailerUrl = computed(() => item.value ? getTrailer(item.value) : null)
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+)
 
 async function loadMedia() {
   loading.value = true
@@ -102,6 +106,12 @@ watch(() => route.fullPath, () => {
 function playTrailer() {
   if (trailerUrl.value) {
     showModal.value = true
+    if (isPostHogConfigured) {
+      posthog.capture('trailer_started', {
+        media_id: item.value?.id,
+        media_type: type.value,
+      })
+    }
   }
 }
 
