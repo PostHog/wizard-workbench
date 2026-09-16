@@ -1,7 +1,13 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
 
 const app = new Hono();
+
+app.onError((err, c) => {
+  posthog?.captureException(err, 'anonymous');
+  return c.json({ error: 'Internal Server Error' }, 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +53,14 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+  posthog?.capture({
+    event: 'link_created',
+    properties: {
+      link_id: link.id,
+      tag_count: tags.length,
+      has_description: Boolean(description),
+    },
+  });
   return c.json(link, 201);
 });
 
@@ -76,6 +90,17 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  posthog?.capture({
+    event: 'link_updated',
+    properties: {
+      link_id: link.id,
+      updated_fields: ['url', 'title', 'description', 'tags', 'favorite'].filter(
+        (field) => body[field] !== undefined
+      ),
+      tag_count: link.tags.length,
+      is_favorite: link.favorite,
+    },
+  });
   return c.json(link);
 });
 
@@ -87,7 +112,15 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [deletedLink] = links.splice(index, 1);
+  posthog?.capture({
+    event: 'link_deleted',
+    properties: {
+      link_id: deletedLink.id,
+      tag_count: deletedLink.tags.length,
+      was_favorite: deletedLink.favorite,
+    },
+  });
   return c.body(null, 204);
 });
 
@@ -104,6 +137,15 @@ app.get('/api/tags', (c) => {
 
 const PORT = process.env.PORT || 3002;
 
-serve({ fetch: app.fetch, port: PORT }, () => {
+const server = serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Hono links API running on http://localhost:${PORT}`);
 });
+
+function shutdown() {
+  server.close(async () => {
+    await posthog?.shutdown();
+  });
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
