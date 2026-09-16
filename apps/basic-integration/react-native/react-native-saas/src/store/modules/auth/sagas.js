@@ -4,6 +4,7 @@ import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
 
 import {
   signInSuccess,
@@ -41,6 +42,11 @@ export function* signIn({ payload }) {
     if (email === 'demo@test.com' && password === 'demo') {
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
       yield put(signInSuccess(DEMO_TOKEN));
+      // The app does not receive an account ID, so email is its only available identifier.
+      if (posthog) {
+        posthog.identify(email, { $set: { email } });
+        posthog.capture('sign_in_succeeded', { is_demo_mode: true });
+      }
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
       toast.showSuccess('Welcome to demo mode!');
@@ -53,6 +59,11 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+    // The session response exposes no stable account ID, so use the login email as a fallback.
+    if (posthog) {
+      posthog.identify(email, { $set: { email } });
+      posthog.capture('sign_in_succeeded', { is_demo_mode: false });
+    }
     NavigationService.navigate('Main');
   } catch (err) {
     toast.showError('Invalid credentials');
@@ -60,6 +71,10 @@ export function* signIn({ payload }) {
 }
 
 export function* signOut() {
+  if (posthog) {
+    posthog.capture('signed_out');
+    posthog.reset();
+  }
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
