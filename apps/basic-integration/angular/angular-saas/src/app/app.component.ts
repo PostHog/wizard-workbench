@@ -1,12 +1,13 @@
 import { Component, OnInit, inject, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { AuthenticationService, CredentialsService } from '@app/auth';
 import { I18nService } from '@app/i18n';
 import { Title } from '@angular/platform-browser';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AppUpdateService, Logger } from '@core/services';
+import { AppUpdateService, Logger, PostHogService } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
 
 @Component({
@@ -23,6 +24,9 @@ export class AppComponent implements OnInit {
   private readonly i18nService = inject(I18nService);
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly authenticationService = inject(AuthenticationService);
+  private readonly credentialsService = inject(CredentialsService);
   private readonly destroyRef = inject(DestroyRef);
 
   title = 'angular-boilerplate';
@@ -32,6 +36,9 @@ export class AppComponent implements OnInit {
     if (environment.production) {
       Logger.enableProductionMode();
     }
+
+    this.posthogService.init(environment.posthogKey, environment.posthogHost, environment.production);
+    this.authenticationService.identify(this.credentialsService.credentials());
 
     // Initialize i18nService with default language and supported languages
     this.i18nService.init(environment.defaultLanguage, environment.supportedLanguages);
