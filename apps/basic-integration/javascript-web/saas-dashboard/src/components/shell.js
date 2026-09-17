@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import posthog, { isPostHogConfigured } from '../posthog.js';
 import { router } from '../router.js';
 import { store } from '../store.js';
 
@@ -54,6 +55,10 @@ export function renderShell(activeSection) {
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
     await api.logout();
+    if (isPostHogConfigured) {
+      posthog.capture('user_signed_out');
+      posthog.reset();
+    }
     router.navigate('/login');
   });
 }
