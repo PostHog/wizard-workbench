@@ -5,7 +5,7 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.dependencies import DbSession, RequiredUser
+from app.dependencies import DbSession, PostHogClient, RequiredUser
 from app.models import Generation
 
 router = APIRouter(prefix="/api")
@@ -44,6 +44,7 @@ async def generate_content(
     request: GenerateRequest,
     current_user: RequiredUser,
     db: DbSession,
+    posthog_client: PostHogClient,
 ):
     """Generate AI content (mock implementation).
 
@@ -75,6 +76,16 @@ async def generate_content(
         result=mock_content,
         credits_used=credits_needed,
     )
+
+    if posthog_client is not None:
+        posthog_client.capture(
+            "generation_created",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
 
     return GenerateResponse(
         id=generation.id,

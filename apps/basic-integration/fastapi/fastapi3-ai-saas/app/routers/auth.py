@@ -7,7 +7,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
-from app.dependencies import CurrentUser, DbSession, RequiredUser, create_session_token
+from app.dependencies import (
+    CurrentUser,
+    DbSession,
+    PostHogClient,
+    RequiredUser,
+    create_session_token,
+)
 from app.models import User
 
 router = APIRouter()
@@ -29,11 +35,17 @@ async def login(
     db: DbSession,
     email: Annotated[str, Form()],
     password: Annotated[str, Form()],
+    posthog_client: PostHogClient,
 ):
     """Handle login form submission."""
     user = User.authenticate(db, email, password)
 
     if user:
+        if posthog_client is not None:
+            with posthog_client.new_context(fresh=True):
+                posthog_client.identify_context(str(user.id))
+                posthog_client.set(distinct_id=str(user.id), properties={"email": user.email})
+                posthog_client.capture("user_logged_in", properties={"login_method": "password"})
         response = RedirectResponse(url="/dashboard", status_code=302)
         response.set_cookie(
             key="session_token",
@@ -62,6 +74,7 @@ async def signup(
     db: DbSession,
     email: Annotated[str, Form()],
     password: Annotated[str, Form()],
+    posthog_client: PostHogClient,
 ):
     """Handle signup form submission."""
     if User.get_by_email(db, email):
@@ -70,6 +83,12 @@ async def signup(
         )
 
     user = User.create(db, email=email, password=password, credits=settings.default_credits)
+
+    if posthog_client is not None:
+        with posthog_client.new_context(fresh=True):
+            posthog_client.identify_context(str(user.id))
+            posthog_client.set(distinct_id=str(user.id), properties={"email": user.email})
+            posthog_client.capture("user_signed_up", properties={"signup_method": "email_password"})
 
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(
@@ -82,8 +101,11 @@ async def signup(
 
 
 @router.get("/logout")
-async def logout(current_user: RequiredUser):
+async def logout(current_user: RequiredUser, posthog_client: PostHogClient):
     """Logout user."""
+    if posthog_client is not None:
+        posthog_client.capture("user_logged_out")
+
     response = RedirectResponse(url="/", status_code=302)
     response.delete_cookie(key="session_token")
     return response
