@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { usePostHog } from "@posthog/react";
 import type { Product } from "../data/products";
 
 export interface CartItem extends Product {
@@ -19,8 +20,15 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const posthog = usePostHog();
 
   const addToCart = (product: Product) => {
+    posthog?.capture("product_added_to_cart", {
+      product_id: product.id,
+      product_category: product.category,
+      product_price: product.price,
+      quantity_added: 1,
+    });
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
@@ -35,6 +43,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const removeFromCart = (productId: number) => {
+    posthog?.capture("cart_item_removed", { product_id: productId });
     setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
   };
 
@@ -43,6 +52,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart(productId);
       return;
     }
+    posthog?.capture("cart_quantity_updated", {
+      product_id: productId,
+      quantity,
+    });
     setCart((prevCart) =>
       prevCart.map((item) =>
         item.id === productId ? { ...item, quantity } : item
