@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
+  import posthog from "posthog-js"
   import SettingsModule from "../settings_module.svelte"
 
   let adminSection: Writable<string> = getContext("adminSection")
@@ -9,6 +10,10 @@
   let { data } = $props()
 
   let { user } = data
+
+  function handleEmailChangeRequested() {
+    posthog.capture("email_change_requested")
+  }
 </script>
 
 <svelte:head>
@@ -23,6 +28,7 @@
   successTitle="Email change initiated"
   successBody="You should receive emails at both the old and new address to confirm the change. Please click the link in both emails to finalized the change. Until finalized, you must sign in with your current email."
   formTarget="/account/api?/updateEmail"
+  onSuccess={handleEmailChangeRequested}
   fields={[
     {
       id: "email",

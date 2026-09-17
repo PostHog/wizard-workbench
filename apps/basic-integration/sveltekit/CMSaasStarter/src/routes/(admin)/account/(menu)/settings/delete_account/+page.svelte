@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
+  import posthog from "posthog-js"
   import SettingsModule from "../settings_module.svelte"
 
   let adminSection: Writable<string> = getContext("adminSection")
@@ -8,6 +9,11 @@
 
   let { data } = $props()
   let { session } = data
+
+  function handleAccountDeletionRequested() {
+    posthog.capture("account_deletion_requested")
+    posthog.reset()
+  }
 </script>
 
 <svelte:head>
@@ -26,6 +32,7 @@
   successTitle="Account queued for deletion"
   successBody="Your account will be deleted shortly."
   formTarget="/account/api?/deleteAccount"
+  onSuccess={handleAccountDeletionRequested}
   fields={[
     {
       id: "currentPassword",

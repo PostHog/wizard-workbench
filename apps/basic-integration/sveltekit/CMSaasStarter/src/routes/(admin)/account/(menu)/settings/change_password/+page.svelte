@@ -2,10 +2,15 @@
   import { page } from "$app/stores"
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
+  import posthog from "posthog-js"
   import SettingsModule from "../settings_module.svelte"
 
   let adminSection: Writable<string> = getContext("adminSection")
   adminSection.set("settings")
+
+  function handlePasswordChanged() {
+    posthog.capture("password_changed")
+  }
 
   let { data } = $props()
   let { user, supabase } = data
@@ -57,6 +62,7 @@
     successTitle="Password Changed"
     successBody="On next sign in, use your new password."
     formTarget="/account/api?/updatePassword"
+    onSuccess={handlePasswordChanged}
     fields={[
       {
         id: "newPassword1",

@@ -34,6 +34,7 @@
     editButtonTitle?: string | null
     editLink?: string | null
     saveButtonTitle?: string
+    onSuccess?: (data: Record<string, unknown> | undefined) => void
   }
 
   let {
@@ -48,16 +49,22 @@
     editButtonTitle = null,
     editLink = null,
     saveButtonTitle = "Save",
+    onSuccess,
   }: Props = $props()
 
   const handleSubmit: SubmitFunction = () => {
     loading = true
     return async ({ update, result }) => {
+      if (result.type === "redirect") {
+        onSuccess?.(undefined)
+      }
+
       await update({ reset: false })
       await applyAction(result)
       loading = false
       if (result.type === "success") {
         showSuccess = true
+        onSuccess?.(result.data)
       }
     }
   }

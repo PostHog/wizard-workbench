@@ -2,6 +2,7 @@
   import SettingsModule from "../settings_module.svelte"
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
+  import posthog from "posthog-js"
 
   let adminSection: Writable<string> = getContext("adminSection")
   adminSection.set("settings")
@@ -9,6 +10,10 @@
   let { data } = $props()
 
   let { profile } = data
+
+  function handleProfileUpdated() {
+    posthog.capture("profile_updated")
+  }
 </script>
 
 <svelte:head>
@@ -22,6 +27,7 @@
   title="Edit Profile"
   successTitle="Saved Profile"
   formTarget="/account/api?/updateProfile"
+  onSuccess={handleProfileUpdated}
   fields={[
     {
       id: "fullName",
