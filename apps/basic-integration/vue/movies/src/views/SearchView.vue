@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute } from 'vue-router'
 import { searchShows } from '../composables/useTMDB'
 import type { Media } from '../types'
 import MediaCard from '../components/media/MediaCard.vue'
 
 const route = useRoute()
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+)
 const query = ref('')
 const results = ref<Media[]>([])
 const loading = ref(false)
 
-const search = async () => {
-  if (!query.value.trim()) {
+const search = async (isUserInitiated = false) => {
+  const trimmedQuery = query.value.trim()
+  if (!trimmedQuery) {
     results.value = []
     return
   }
@@ -22,6 +27,12 @@ const search = async () => {
     results.value = response.results.filter((item: Media) => 
       item.media_type === 'movie' || item.media_type === 'tv'
     ) as Media[]
+    if (isUserInitiated && isPostHogConfigured) {
+      posthog.capture('media_search_submitted', {
+        query_length: trimmedQuery.length,
+        result_count: results.value.length,
+      })
+    }
   } catch (error) {
     console.error('Search error:', error)
     results.value = []
@@ -43,7 +54,7 @@ watch(() => route.query.q, (newQuery) => {
     <div class="max-w-6xl mx-auto">
       <h1 class="text-3xl font-bold mb-6">Search</h1>
       
-      <form @submit.prevent="search" class="mb-8">
+      <form @submit.prevent="search(true)" class="mb-8">
         <div class="flex gap-4">
           <input
             v-model="query"
