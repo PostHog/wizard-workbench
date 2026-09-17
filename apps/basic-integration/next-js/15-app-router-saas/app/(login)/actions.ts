@@ -19,6 +19,7 @@ import {
 import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { captureServerEvent } from '@/lib/posthog-server';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
 import {
@@ -90,6 +91,10 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
+  await captureServerEvent({
+    distinctId: foundUser.id.toString(),
+    event: 'user_signed_in'
+  });
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -211,6 +216,11 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
     setSession(createdUser)
   ]);
+  await captureServerEvent({
+    distinctId: createdUser.id.toString(),
+    event: 'user_signed_up',
+    properties: { joined_via_invitation: Boolean(inviteId) }
+  });
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -281,6 +291,10 @@ export const updatePassword = validatedActionWithUser(
         .where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PASSWORD)
     ]);
+    await captureServerEvent({
+      distinctId: user.id.toString(),
+      event: 'password_updated'
+    });
 
     return {
       success: 'Password updated successfully.'
@@ -333,6 +347,10 @@ export const deleteAccount = validatedActionWithUser(
         );
     }
 
+    await captureServerEvent({
+      distinctId: user.id.toString(),
+      event: 'account_deleted'
+    });
     (await cookies()).delete('session');
     redirect('/sign-in');
   }
@@ -353,6 +371,10 @@ export const updateAccount = validatedActionWithUser(
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
+    await captureServerEvent({
+      distinctId: user.id.toString(),
+      event: 'account_updated'
+    });
 
     return { name, success: 'Account updated successfully.' };
   }
@@ -386,6 +408,10 @@ export const removeTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.REMOVE_TEAM_MEMBER
     );
+    await captureServerEvent({
+      distinctId: user.id.toString(),
+      event: 'team_member_removed'
+    });
 
     return { success: 'Team member removed successfully' };
   }
@@ -450,6 +476,11 @@ export const inviteTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+    await captureServerEvent({
+      distinctId: user.id.toString(),
+      event: 'team_member_invited',
+      properties: { role }
+    });
 
     // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
     // await sendInvitationEmail(email, userWithTeam.team.name, role)
