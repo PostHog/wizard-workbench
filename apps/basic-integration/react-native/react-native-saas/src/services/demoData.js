@@ -2,6 +2,8 @@
 // Login with: demo@test.com / demo
 
 export const DEMO_TOKEN = 'demo-token-12345';
+export const DEMO_USER_ID = '6';
+export const DEMO_USER_EMAIL = 'demo@test.com';
 
 export const demoTeams = [
   { id: 1, name: 'Acme Corp', slug: 'acme-corp' },
