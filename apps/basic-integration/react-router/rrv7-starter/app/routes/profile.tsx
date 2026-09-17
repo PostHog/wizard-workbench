@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { usePostHog } from '@posthog/react'
 import { fakeUser } from '@/lib/data/fake-data'
 import { fakeFollowers } from '@/lib/data/fake-data'
 import type { Route } from './+types/profile'
@@ -8,9 +9,13 @@ import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/
 import cn from '@/lib/utils/cn'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
+  const posthog = usePostHog()
   const [isFollowing, setIsFollowing] = useState(false)
 
   const handleClick = () => {
+    posthog?.capture('follow_back_toggled', {
+      is_following: !isFollowing,
+    })
     setIsFollowing(!isFollowing)
     if (!isFollowing) {
       onFollow()
