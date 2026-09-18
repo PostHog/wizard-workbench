@@ -184,7 +184,9 @@ export function runE2e(opts: E2eOptions): number {
         ["full interactive flow reached keep-skills", !!result?.screenPath?.includes("keep-skills")],
         ["skillsComplete", result?.skillsComplete === true],
       ]
-    : [["reached the outro", !!result?.screenPath?.includes("outro")]];
+    // A program may render its own outro screen (audit-outro, source-maps-outro),
+    // so match the suffix rather than the integration flow's exact screen id.
+    : [["reached the outro", !!result?.screenPath?.some((s) => s.endsWith("outro"))]];
   const checks: Array<[string, boolean]> = result
     ? [
         ["agent run completed", result.runPhase === "completed"],
