@@ -9,6 +9,7 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import "./posthog.client";
 import { CartProvider } from "./context/CartContext";
 import Navbar from "./components/Navbar";
 
