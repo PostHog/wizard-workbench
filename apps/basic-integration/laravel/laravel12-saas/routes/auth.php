@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
@@ -30,7 +31,10 @@ Route::middleware('auth')->group(function () {
     Volt::route('confirm-password', 'pages.auth.confirm-password')
         ->name('password.confirm');
 
-    Route::get('logout', function () {
+    Route::get('logout', function (PostHogService $posthog) {
+        $user = Auth::user();
+        $posthog->capture((string) $user->getAuthIdentifier(), 'user_logged_out');
+
         Auth::guard('web')->logout();
         request()->session()->invalidate();
         request()->session()->regenerateToken();
