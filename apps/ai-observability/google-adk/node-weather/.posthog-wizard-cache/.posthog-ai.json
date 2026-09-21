@@ -1,0 +1,5 @@
+{
+  "provider": "google-adk",
+  "package": "unavailable: @posthog/ai has no ./adk export",
+  "otel_init_file": ""
+}
