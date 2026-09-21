@@ -1,6 +1,7 @@
 <script lang="ts">
   import { applyAction, enhance } from "$app/forms"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import { capturePostHog } from "$lib/posthog"
   import "../../../../app.css"
 
   interface User {
@@ -36,6 +37,9 @@
     loading = true
     return async ({ update, result }) => {
       await update({ reset: false })
+      if (result.type === "success") {
+        capturePostHog("profile_created")
+      }
       await applyAction(result)
       loading = false
     }

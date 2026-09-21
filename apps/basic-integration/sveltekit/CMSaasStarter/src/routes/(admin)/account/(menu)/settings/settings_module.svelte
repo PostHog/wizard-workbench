@@ -2,6 +2,7 @@
   import { enhance, applyAction } from "$app/forms"
   import { page } from "$app/stores"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import { capturePostHog } from "$lib/posthog"
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -34,6 +35,7 @@
     editButtonTitle?: string | null
     editLink?: string | null
     saveButtonTitle?: string
+    successEvent?: string
   }
 
   let {
@@ -48,12 +50,19 @@
     editButtonTitle = null,
     editLink = null,
     saveButtonTitle = "Save",
+    successEvent,
   }: Props = $props()
 
   const handleSubmit: SubmitFunction = () => {
     loading = true
     return async ({ update, result }) => {
       await update({ reset: false })
+      if (
+        successEvent &&
+        (result.type === "success" || result.type === "redirect")
+      ) {
+        capturePostHog(successEvent)
+      }
       await applyAction(result)
       loading = false
       if (result.type === "success") {

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { pricingPlans } from "./pricing_plans"
+  import { capturePostHog } from "$lib/posthog"
 
   interface Props {
     // Module context
@@ -57,6 +58,11 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() =>
+                  capturePostHog("plan_selected", {
+                    plan_id: plan.id,
+                    call_to_action: callToAction,
+                  })}
               >
                 {callToAction}
               </a>

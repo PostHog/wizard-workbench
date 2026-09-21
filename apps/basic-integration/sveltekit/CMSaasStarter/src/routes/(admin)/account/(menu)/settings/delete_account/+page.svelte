@@ -25,6 +25,7 @@
   saveButtonTitle="Delete Account"
   successTitle="Account queued for deletion"
   successBody="Your account will be deleted shortly."
+  successEvent="account_deleted"
   formTarget="/account/api?/deleteAccount"
   fields={[
     {
