@@ -5,6 +5,7 @@
  * to mimic real network calls. In a real app, these would be
  * fetch() calls to a backend.
  */
+import posthog, { isPostHogEnabled } from './posthog.js';
 import { store } from './store.js';
 
 const DELAY_MS = 150;
@@ -17,15 +18,34 @@ export const api = {
   async login(email) {
     await delay();
 
+    const previousUserId = store.state.currentUser?.id;
     const success = store.login(email);
     if (!success) {
       throw new Error('Invalid credentials. Use a team member email.');
     }
-    return store.state.currentUser;
+
+    const currentUser = store.state.currentUser;
+    if (isPostHogEnabled && currentUser?.id) {
+      if (previousUserId && previousUserId !== currentUser.id) {
+        posthog.reset();
+      }
+      posthog.identify(currentUser.id, {
+        email: currentUser.email,
+        name: currentUser.name,
+        role: currentUser.role,
+      });
+      posthog.capture('logged_in');
+    }
+
+    return currentUser;
   },
 
   async logout() {
     await delay(50);
+    if (isPostHogEnabled) {
+      posthog.capture('logged_out');
+      posthog.reset();
+    }
     store.logout();
   },
 
@@ -45,34 +65,70 @@ export const api = {
     await delay();
 
     if (!name.trim()) throw new Error('Project name is required');
-    return store.createProject(name.trim(), description.trim());
+    const project = store.createProject(name.trim(), description.trim());
+    if (isPostHogEnabled) {
+      posthog.capture('created_project', {
+        has_description: Boolean(description.trim()),
+      });
+    }
+    return project;
   },
 
   async deleteProject(id) {
     await delay();
+    const project = store.getProject(id);
     store.deleteProject(id);
+    if (isPostHogEnabled && project) {
+      posthog.capture('deleted_project', { task_count: project.tasks.length });
+    }
   },
 
   async addTask(projectId, title, priority) {
     await delay();
 
     if (!title.trim()) throw new Error('Task title is required');
-    return store.addTask(projectId, title.trim(), priority);
+    const task = store.addTask(projectId, title.trim(), priority);
+    if (isPostHogEnabled && task) {
+      posthog.capture('added_task', { priority: task.priority });
+    }
+    return task;
   },
 
   async updateTaskStatus(projectId, taskId, status) {
     await delay(50);
+    const task = store.getProject(projectId)?.tasks.find((item) => item.id === taskId);
+    const previousStatus = task?.status;
     store.updateTaskStatus(projectId, taskId, status);
+    if (isPostHogEnabled && task && previousStatus !== status) {
+      posthog.capture(status === 'done' ? 'completed_task' : 'moved_task', {
+        previous_status: previousStatus,
+        status,
+      });
+    }
   },
 
   async deleteTask(projectId, taskId) {
     await delay(50);
+    const task = store.getProject(projectId)?.tasks.find((item) => item.id === taskId);
     store.deleteTask(projectId, taskId);
+    if (isPostHogEnabled && task) {
+      posthog.capture('deleted_task', {
+        priority: task.priority,
+        status: task.status,
+      });
+    }
   },
 
   async assignTask(projectId, taskId, assigneeId) {
     await delay(50);
+    const task = store.getProject(projectId)?.tasks.find((item) => item.id === taskId);
     store.assignTask(projectId, taskId, assigneeId);
+    if (isPostHogEnabled && task) {
+      posthog.capture('assigned_task', {
+        is_assigned: Boolean(assigneeId),
+        priority: task.priority,
+      });
+    }
   },
 
   async getStats() {
