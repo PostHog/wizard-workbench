@@ -450,7 +450,9 @@ function genericChecks(
 ): Array<[string, boolean]> {
   if (expect?.expectAbort) return [];
 
-  const reachedOutro = !!result.screenPath?.includes("outro");
+  // A program may render its own outro screen (audit-outro,
+  // source-maps-outro), so match the suffix rather than the exact id.
+  const reachedOutro = !!result.screenPath?.some((s) => s.endsWith("outro"));
   const completed = result.runPhase === "completed";
 
   if (expect && !expect.seeded) {
