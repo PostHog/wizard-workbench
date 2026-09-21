@@ -1,6 +1,16 @@
 import Fastify from 'fastify';
+import { posthog } from './posthog.js';
 
 const fastify = Fastify({ logger: true });
+
+fastify.addHook('onClose', async () => {
+  await posthog?.shutdown();
+});
+
+fastify.setErrorHandler((error, request, reply) => {
+  posthog?.captureException(error, request.id);
+  reply.send(error);
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +49,10 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+  posthog?.capture({
+    event: 'post_created',
+    properties: { published: post.published },
+  });
   return reply.status(201).send(post);
 });
 
@@ -63,10 +77,24 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   }
 
   const { title, body, published } = request.body || {};
-  if (title !== undefined) post.title = title;
-  if (body !== undefined) post.body = body;
-  if (published !== undefined) post.published = published;
+  const updatedFields = [];
+  if (title !== undefined) {
+    post.title = title;
+    updatedFields.push('title');
+  }
+  if (body !== undefined) {
+    post.body = body;
+    updatedFields.push('body');
+  }
+  if (published !== undefined) {
+    post.published = published;
+    updatedFields.push('published');
+  }
 
+  posthog?.capture({
+    event: 'post_updated',
+    properties: { updated_fields: updatedFields, published: post.published },
+  });
   return post;
 });
 
@@ -82,10 +110,18 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   posts.splice(index, 1);
 
   // Remove associated comments
+  let deletedCommentCount = 0;
   for (let i = comments.length - 1; i >= 0; i--) {
-    if (comments[i].post_id === postId) comments.splice(i, 1);
+    if (comments[i].post_id === postId) {
+      comments.splice(i, 1);
+      deletedCommentCount++;
+    }
   }
 
+  posthog?.capture({
+    event: 'post_deleted',
+    properties: { deleted_comment_count: deletedCommentCount },
+  });
   return reply.status(204).send();
 });
 
@@ -111,6 +147,7 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+  posthog?.capture({ event: 'comment_created' });
   return reply.status(201).send(comment);
 });
 
