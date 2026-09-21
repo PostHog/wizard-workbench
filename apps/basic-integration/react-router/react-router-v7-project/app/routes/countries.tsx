@@ -110,6 +110,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
             const countryName = country.name.common;
             const isClaimed = user?.claimedCountries.includes(countryName);
             const isLiked = user?.likedCountries.includes(countryName);
+            const isVisited = user?.visitedCountries.includes(countryName);
             
             return (
               <li
@@ -138,6 +139,11 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         claimCountry(countryName);
+                        if (!isClaimed) {
+                          window.posthog?.capture('country_claimed', {
+                            country_name: countryName,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -151,6 +157,11 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         likeCountry(countryName);
+                        if (!isLiked) {
+                          window.posthog?.capture('country_liked', {
+                            country_name: countryName,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -164,6 +175,11 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         visitCountry(countryName);
+                        if (!isVisited) {
+                          window.posthog?.capture('country_visited', {
+                            country_name: countryName,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"

@@ -12,17 +12,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function identifyUser(user: FakeUser) {
+  window.posthog?.identify(user.id, {
+    email: user.email,
+    username: user.username,
+  })
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
 
   useEffect(() => {
     const currentUser = getCurrentUser()
+    if (currentUser) {
+      identifyUser(currentUser)
+    }
     setUser(currentUser)
   }, [])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      if (user && user.id !== loggedInUser.id) {
+        window.posthog?.reset()
+      }
+      identifyUser(loggedInUser)
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      if (user && user.id !== newUser.id) {
+        window.posthog?.reset()
+      }
+      identifyUser(newUser)
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,26 +59,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    if (user) {
+      window.posthog?.reset()
+    }
     fakeLogout()
     setUser(null)
   }
 
   // Sync user state when localStorage changes
   useEffect(() => {
-    const handleStorageChange = () => {
-      const currentUser = getCurrentUser()
-      setUser(currentUser)
-    }
-    window.addEventListener('storage', handleStorageChange)
-    const interval = setInterval(() => {
+    const syncUser = () => {
       const currentUser = getCurrentUser()
       if (currentUser?.id !== user?.id) {
-        setUser(currentUser)
+        if (user) {
+          window.posthog?.reset()
+        }
+        if (currentUser) {
+          identifyUser(currentUser)
+        }
       }
-    }, 1000)
+      setUser(currentUser)
+    }
+
+    window.addEventListener('storage', syncUser)
+    const interval = setInterval(syncUser, 1000)
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('storage', syncUser)
       clearInterval(interval)
     }
   }, [user?.id])
