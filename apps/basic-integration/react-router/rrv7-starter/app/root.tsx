@@ -9,6 +9,7 @@ import {
   type MetaFunction,
 } from 'react-router'
 import gsap from 'gsap'
+import { useEffect } from 'react'
 
 import type { Route } from './+types/root'
 import stylesheet from './app.css?url'
@@ -17,6 +18,7 @@ import routes from './routes'
 import { promisifyGsap } from '@/lib/gsap'
 import { Header } from '@/components/header'
 import Footer from '@/components/footer'
+import { initializePostHog, PostHogClientProvider } from '@/components/posthog-provider'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
@@ -73,11 +75,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body suppressHydrationWarning>
-        <Header />
-        {children}
-        <Footer />
-        <ScrollRestoration />
-        <Scripts />
+        <PostHogClientProvider>
+          <Header />
+          {children}
+          <Footer />
+          <ScrollRestoration />
+          <Scripts />
+        </PostHogClientProvider>
       </body>
     </html>
   )
@@ -132,6 +136,18 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  useEffect(() => {
+    if (typeof window === 'undefined' || !(error instanceof Error)) return
+
+    const projectToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+    const host = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+    if (!projectToken || !host) return
+
+    void initializePostHog(projectToken, host).then((posthog) => {
+      posthog.captureException(error)
+    })
+  }, [error])
+
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined

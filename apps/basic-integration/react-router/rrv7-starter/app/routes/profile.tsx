@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { usePostHog } from '@posthog/react'
 import { fakeUser } from '@/lib/data/fake-data'
 import { fakeFollowers } from '@/lib/data/fake-data'
 import type { Route } from './+types/profile'
@@ -44,6 +45,7 @@ export const meta: Route.MetaFunction = () => {
 }
 
 export default function Profile() {
+  const posthog = usePostHog()
   const [followers, setFollowers] = useState(fakeUser.followers)
   const [following, setFollowing] = useState(fakeUser.following)
   const [posts, setPosts] = useState(fakeUser.posts)
@@ -146,6 +148,9 @@ export default function Profile() {
                   onFollow={() => {
                     const newFollowing = getFollowing() + 1
                     setFollowing(newFollowing)
+                    posthog?.capture('follower_followed', {
+                      following_count: newFollowing,
+                    })
                   }}
                 />
               </div>
