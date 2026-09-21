@@ -11,6 +11,11 @@ class Signups::CompletionsController < ApplicationController
     @signup = Signup.new(signup_params)
 
     if @signup.complete
+      PostHog.capture(
+        distinct_id: @signup.user.posthog_distinct_id,
+        event: "account_signup_completed"
+      ) if Rails.configuration.x.posthog_configured
+
       welcome_to_account
     else
       invalid_signup
