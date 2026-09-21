@@ -2,7 +2,7 @@
 
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
@@ -44,6 +44,7 @@ async def generate_content(
     request: GenerateRequest,
     current_user: RequiredUser,
     db: DbSession,
+    http_request: Request,
 ):
     """Generate AI content (mock implementation).
 
@@ -54,6 +55,16 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        posthog_client = http_request.app.state.posthog_client
+        if posthog_client:
+            posthog_client.capture(
+                "generation_blocked_insufficient_credits",
+                properties={
+                    "generation_type": request.generation_type,
+                    "credits_required": credits_needed,
+                    "credits_available": current_user.credits,
+                },
+            )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -75,6 +86,17 @@ async def generate_content(
         result=mock_content,
         credits_used=credits_needed,
     )
+
+    posthog_client = http_request.app.state.posthog_client
+    if posthog_client:
+        posthog_client.capture(
+            "generation_completed",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
 
     return GenerateResponse(
         id=generation.id,

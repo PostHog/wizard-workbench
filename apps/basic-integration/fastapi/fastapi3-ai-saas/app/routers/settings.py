@@ -66,6 +66,10 @@ async def update_settings(
         else:
             current_user.email = email
             db.commit()
+            posthog_client = request.app.state.posthog_client
+            if posthog_client:
+                posthog_client.set(properties={"email": current_user.email})
+                posthog_client.capture("account_email_updated")
             success = "Settings updated successfully"
     else:
         success = "No changes made"
@@ -108,6 +112,9 @@ async def change_password(
     else:
         current_user.set_password(new_password)
         db.commit()
+        posthog_client = request.app.state.posthog_client
+        if posthog_client:
+            posthog_client.capture("password_changed")
         success = "Password changed successfully"
 
     api_key_count = db.query(APIKey).filter(
