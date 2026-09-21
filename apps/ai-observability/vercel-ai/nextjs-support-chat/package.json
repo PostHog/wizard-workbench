@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.0",
+    "@opentelemetry/resources": "^2.0.0",
+    "@opentelemetry/sdk-node": "^0.208.0",
+    "@posthog/ai": "^8.7.0",
     "ai": "^5.0.0",
     "next": "^15.1.0",
     "react": "^19.0.0",
