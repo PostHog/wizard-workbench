@@ -1,13 +1,15 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+from flask import Flask, g, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog, identify_context, new_context
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -35,9 +37,60 @@ moment = Moment()
 babel = Babel()
 
 
+def get_posthog_client():
+    """Return the PostHog client initialized for the current Flask app."""
+    return current_app.extensions.get('posthog_client')
+
+
+def identify_posthog_request_user(user):
+    """Bind an authenticated user to the active request's PostHog context."""
+    if get_posthog_client() and hasattr(g, 'posthog_request_context'):
+        identify_context(str(user.id))
+
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    posthog_project_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    if posthog_project_token and posthog_host:
+        posthog_client = Posthog(
+            project_api_key=posthog_project_token,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        app.extensions['posthog_client'] = posthog_client
+        atexit.register(posthog_client.shutdown)
+    else:
+        app.extensions['posthog_client'] = None
+        if app.debug:
+            missing_var = ('POSTHOG_PROJECT_TOKEN' if not posthog_project_token
+                           else 'POSTHOG_HOST')
+            raise RuntimeError(
+                f'{missing_var} variable required by PostHog is missing or '
+                f'un-configured, this causes events to be silently missed. '
+                f'This error stops appearing once {missing_var} is configured')
+
+    @app.before_request
+    def open_posthog_request_context():
+        posthog_client = get_posthog_client()
+        if not posthog_client:
+            return
+
+        context = new_context()
+        context.__enter__()
+        g.posthog_request_context = context
+        if current_user.is_authenticated:
+            identify_context(str(current_user.id))
+        elif request.headers.get('X-POSTHOG-DISTINCT-ID'):
+            identify_context(request.headers['X-POSTHOG-DISTINCT-ID'])
+
+    @app.teardown_request
+    def close_posthog_request_context(error=None):
+        context = g.pop('posthog_request_context', None)
+        if context:
+            context.__exit__(None, None, None)
 
     db.init_app(app)
     migrate.init_app(app, db)
