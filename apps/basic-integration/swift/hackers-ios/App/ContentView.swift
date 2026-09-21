@@ -10,11 +10,12 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import Foundation
+import PostHog
 import Settings
 import Shared
 import SwiftUI
 import UIKit
-import Foundation
 
 @MainActor
 struct MainContentView: View {
@@ -83,6 +84,7 @@ struct MainContentView: View {
                                     _ = try await sessionService.authenticate(username: username, password: password)
                                 },
                                 onLogout: {
+                                    PostHogSDK.shared.capture("logout_requested")
                                     sessionService.unauthenticate()
                                 },
                                 onShowOnboarding: {
@@ -105,6 +107,7 @@ struct MainContentView: View {
                     _ = try await sessionService.authenticate(username: username, password: password)
                 },
                 onLogout: {
+                    PostHogSDK.shared.capture("logout_requested")
                     sessionService.unauthenticate()
                 },
                 textSize: settingsViewModel.textSize
@@ -121,6 +124,7 @@ struct MainContentView: View {
                     _ = try await sessionService.authenticate(username: username, password: password)
                 },
                 onLogout: {
+                    PostHogSDK.shared.capture("logout_requested")
                     sessionService.unauthenticate()
                 },
                 onShowOnboarding: {
@@ -142,6 +146,19 @@ struct MainContentView: View {
             if onboardingCoordinator.shouldShowOnboarding() {
                 showOnboarding = true
             }
+        }
+        .onChange(of: sessionService.username, initial: true) { previousUsername, username in
+            guard let username else {
+                if previousUsername != nil {
+                    PostHogSDK.shared.reset()
+                }
+                return
+            }
+
+            // Hacker News exposes accounts by this stable resource name; no separate user ID is available.
+            PostHogSDK.shared.identify("hn_user:\(username)", userProperties: [
+                "hn_username": username
+            ])
         }
     }
 

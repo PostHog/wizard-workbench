@@ -257,6 +257,11 @@ public final class FeedViewModel: @unchecked Sendable {
     public func toggleBookmark(for post: Domain.Post) async -> Bool {
         let newState = await bookmarksController.toggle(post: post)
         await handleBookmarksUpdate(postId: post.id, isBookmarked: newState)
+        if newState != post.isBookmarked {
+            AnalyticsTracker.shared.capture("bookmark_updated", properties: [
+                "bookmark_state": newState ? "saved" : "removed"
+            ])
+        }
         return newState
     }
 

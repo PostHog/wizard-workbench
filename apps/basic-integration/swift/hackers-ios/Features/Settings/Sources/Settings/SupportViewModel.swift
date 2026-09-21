@@ -80,6 +80,11 @@ public final class SupportViewModel: @unchecked Sendable {
             defer { self.processingProductId = nil }
             do {
                 let result = try await self.supportUseCase.purchase(productId: product.id)
+                if result == .success {
+                    AnalyticsTracker.shared.capture("support_purchase_completed", properties: [
+                        "purchase_type": product.kind == .subscription ? "subscription" : "tip"
+                    ])
+                }
                 self.handle(result: result, for: product)
                 if result == .success, product.kind == .subscription {
                     self.isSubscribed = true
@@ -101,6 +106,9 @@ public final class SupportViewModel: @unchecked Sendable {
             do {
                 let result = try await self.supportUseCase.restorePurchases()
                 await self.updateSubscriptionStatus()
+                if result == .success {
+                    AnalyticsTracker.shared.capture("purchases_restored")
+                }
                 self.handleRestore(result: result)
             } catch {
                 self.alertInfo = AlertInfo(

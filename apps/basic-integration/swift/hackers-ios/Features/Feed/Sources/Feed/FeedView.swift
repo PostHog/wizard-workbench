@@ -59,7 +59,7 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
                        let selectedPost = viewModel.posts.first(where: { $0.id == postId })
                     {
                         selectedPostId = postId
-                        navigationStore.showPost(selectedPost)
+                        openPost(selectedPost)
                     }
                 },
             )
@@ -194,7 +194,7 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
             showThumbnails: viewModel.showThumbnails,
             compactMode: viewModel.compactFeedDesign,
             onLinkTap: { handleLinkTap(post: post) },
-            onCommentsTap: isSidebar ? nil : { navigationStore.showPost(post) },
+            onCommentsTap: isSidebar ? nil : { openPost(post) },
             onPostUpdated: { updatedPost in
                 viewModel.replacePost(updatedPost)
             },
@@ -351,6 +351,9 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
             selectedPostType = postType
             Task {
                 await viewModel.changePostType(postType)
+                AnalyticsTracker.shared.capture("feed_category_selected", properties: [
+                    "feed_category": postType.rawValue
+                ])
             }
         } label: {
             HStack {
@@ -364,14 +367,25 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
         }
     }
 
+    private func openPost(_ post: Domain.Post) {
+        AnalyticsTracker.shared.capture("post_opened", properties: [
+            "feed_category": post.postType.rawValue
+        ])
+        navigationStore.showPost(post)
+    }
+
     private func handleLinkTap(post: Domain.Post) {
         guard !isHackerNewsItemURL(post.url) else {
-            navigationStore.showPost(post)
+            openPost(post)
             return
         }
 
+        AnalyticsTracker.shared.capture("external_link_opened", properties: [
+            "feed_category": post.postType.rawValue
+        ])
+
         if isSidebar {
-            navigationStore.showPost(post)
+            openPost(post)
             selectedPostId = post.id
         }
 

@@ -8,6 +8,7 @@
 import Domain
 import Foundation
 import Onboarding
+import Shared
 import SwiftUI
 
 @MainActor
@@ -31,6 +32,7 @@ final class OnboardingCoordinator {
     func makeOnboardingView(onDismiss: @escaping () -> Void) -> some View {
         Onboarding.OnboardingService.createOnboardingView {
             self.markOnboardingShown()
+            AnalyticsTracker.shared.capture("onboarding_completed")
             onDismiss()
         }
     }
