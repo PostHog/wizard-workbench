@@ -17,7 +17,7 @@
  *   POSTHOG_REGION             us | eu
  *   WIZARD_PATH                a wizard checkout that has e2e-harness/ (where the run happens)
  *
- * Only a genuine failure (run died, no snapshots) exits non-zero.
+ * Assertion failures exit non-zero after writing any captured frames and report.
  */
 import "dotenv/config";
 import { join, basename } from "path";

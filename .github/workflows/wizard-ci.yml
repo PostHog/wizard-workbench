@@ -896,9 +896,9 @@ jobs:
             aws s3 cp "$YARA_JSON" "${S3_PREFIX}/posthog-wizard-yara-report.json" || true
           fi
 
-          # An assertion-graded leg leaves no PR, so its evidence is the only
-          # record of what happened. Same prefix as everything else.
-          if [ "$IS_E2E" = "true" ]; then
+          # Snapshot reviews also need their raw frames when an assertion fails
+          # before a review PR can be opened. Same prefix as e2e evidence.
+          if [ "$IS_E2E" = "true" ] || [ "$SNAPSHOTS" = "true" ]; then
             BASE="${MATRIX_APP##*/}"
             aws s3 cp "/tmp/wizard-e2e-${BASE}.json" "${S3_PREFIX}/e2e-result.json" || true
             aws s3 cp "/tmp/wizard-e2e-${BASE}-mcp-journal.json" "${S3_PREFIX}/mcp-journal.json" || true
@@ -917,6 +917,7 @@ jobs:
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
           AWS_BUCKET: ${{ secrets.AWS_WIZARD_ARTIFACTS_BUCKET }}
           IS_E2E: ${{ steps.leg.outputs.is_e2e }}
+          SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
 
       - name: Label and close PR
         if: steps.process-results.outputs.pr_number

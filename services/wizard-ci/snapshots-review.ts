@@ -43,12 +43,20 @@ import { getRepoRoot, git } from "../github/index.js";
 
 const REVIEW_DIR = ".wizard-snapshots"; // committed on the review branch only
 
-function run(cmd: string, args: string[], extraEnv: Record<string, string> = {}) {
+function run(
+  cmd: string,
+  args: string[],
+  extraEnv: Record<string, string> = {},
+  allowNonzero = false,
+): number {
   const r = spawnSync(cmd, args, {
     stdio: "inherit",
     env: { ...process.env, ...extraEnv },
   });
-  if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} failed`);
+  if (r.error) throw r.error;
+  if (r.status === null || (r.status !== 0 && !allowNonzero))
+    throw new Error(`${cmd} ${args.join(" ")} failed`);
+  return r.status;
 }
 
 /**
@@ -61,9 +69,14 @@ function prBody(
   rawBase: string,
   runUrl: string | null,
   timings: Record<string, number>,
+  e2eExitCode: number,
 ): string {
   const lines: string[] = [
     "Automated wizard CI snapshot run.",
+    "",
+    e2eExitCode === 0
+      ? "E2E assertions: PASS"
+      : `E2E assertions: FAIL (exit ${e2eExitCode}). Review the frames and run log before treating this run as complete.`,
     "",
     runUrl ? `Source: [github-actions](${runUrl})` : "Source: local",
     `App: \`${app}\``,
@@ -99,8 +112,11 @@ async function main(): Promise<number> {
   const name = basename(app);
   const reportDir = reportDirFor(app);
 
-  // 1. a real run → report.html (the current real-TUI frames).
-  run("npx", ["tsx", "services/wizard-ci/snapshots.ts", app]);
+  // 1. a real run → report.html (the current real-TUI frames). Assertions can
+  // fail after capture; keep the review path open while retaining a red exit.
+  // Remove stale output first so a crash cannot publish a previous run's frames.
+  rmSync(reportDir, { recursive: true, force: true });
+  const e2eExitCode = run("npx", ["tsx", "services/wizard-ci/snapshots.ts", app], {}, true);
   const report = join(reportDir, "report.html");
   if (!existsSync(report)) {
     console.error(`✖ no report at ${report}`);
@@ -124,7 +140,7 @@ async function main(): Promise<number> {
     ? `https://github.com/${repoSlug}/actions/runs/${process.env.GITHUB_RUN_ID}`
     : null;
   const timings = frameTimings(snapsDirFor(app));
-  const body = prBody(app, shots, rawBase, runUrl, timings);
+  const body = prBody(app, shots, rawBase, runUrl, timings, e2eExitCode);
   const title = `[CI] (snapshots) ${app}`;
 
   if (dryRun) {
@@ -135,7 +151,7 @@ async function main(): Promise<number> {
     writeFileSync(join(dest, "PR_BODY.md"), body);
     console.log(`\n[dry-run] review bundle → ${dest}`);
     console.log(`  ${shots.length} frames, PR body in PR_BODY.md`);
-    return 0;
+    return e2eExitCode === 0 ? 0 : 1;
   }
 
   // Live: copy PNGs into the repo, commit them to the review branch, open the PR.
@@ -186,13 +202,15 @@ async function main(): Promise<number> {
       const comment = [
         `### Wizard CI snapshot review — \`${app}\``,
         "",
+        e2eExitCode === 0 ? "E2E assertions: PASS" : `E2E assertions: FAIL (exit ${e2eExitCode})`,
+        "",
         `**${shots.length}** key-moment frame(s) captured.` +
           (r.prUrl ? ` [Review →](${r.prUrl})` : ""),
       ].join("\n");
       postPRComment(commentPr, comment, repoRoot);
       console.log(`✓ commented on PR #${commentPr}`);
     }
-    return 0;
+    return e2eExitCode === 0 ? 0 : 1;
   } catch (e) {
     console.error(`✖ ${e instanceof Error ? e.message : String(e)}`);
     return 1;
