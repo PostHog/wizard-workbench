@@ -1147,6 +1147,16 @@ jobs:
       # assertion-graded leg does have one, and swallowing it would make this
       # whole tier decorative. Runs last so the PR comment, the artifacts and
       # the summary are all written before the leg goes red.
+      - name: Fail a snapshot leg that did not publish its review
+        if: always() && steps.execute-wizard.outcome == 'failure'
+        env:
+          SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
+        run: |
+          if [ "$SNAPSHOTS" = "true" ]; then
+            echo "::error::Snapshot capture or review publication failed; see Execute wizard and uploaded evidence."
+            exit 1
+          fi
+
       - name: Fail the leg on a failed assertion
         if: always() && steps.leg.outputs.is_e2e == 'true'
         env:
