@@ -1,0 +1,21 @@
+{
+  "name": "nuxt-3-6-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "prepare": "nuxt prepare"
+  },
+  "dependencies": {
+    "nuxt": "~3.6.5",
+    "posthog-js": "^1.376.2",
+    "vue": "^3.3.4",
+    "vue-router": "^4.2.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

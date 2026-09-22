@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "react-native-expo",
+    "slug": "react-native-expo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ablaszkiewicz.reactnativeexpo"
+    },
+    "android": {
+      "package": "com.ablaszkiewicz.reactnativeexpo"
+    }
+  }
+}
