@@ -724,6 +724,9 @@ jobs:
           # workflow_dispatch sets inputs.snapshots; a /wizard-ci-snapshots comment
           # arrives as a repository_dispatch carrying client_payload.snapshots.
           SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
+          # A manual run from a feature branch reviews frames against that branch;
+          # normal runs from main still target main.
+          SNAPSHOT_BASE: ${{ github.ref_name }}
           MATRIX_APP: ${{ matrix.app }}
           INPUT_BASE_BRANCH: ${{ needs.discover.outputs.input_base_branch }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
