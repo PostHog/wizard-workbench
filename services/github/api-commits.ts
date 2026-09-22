@@ -175,6 +175,45 @@ interface CreateCommitResponse {
   };
 }
 
+type BatchedChange =
+  | { kind: "addition"; value: FileAddition; bytes: number }
+  | { kind: "deletion"; value: FileDeletion; bytes: number };
+
+/** Keep each GraphQL mutation small enough for large snapshot reviews. */
+export function batchFileChanges(
+  additions: FileAddition[],
+  deletions: FileDeletion[],
+  maxBytes = 750_000,
+  maxFiles = 20,
+): BatchedChange[][] {
+  const changes: BatchedChange[] = [
+    ...additions.map((value) => ({
+      kind: "addition" as const,
+      value,
+      bytes: Math.ceil(value.contents.length / 3) * 4,
+    })),
+    ...deletions.map((value) => ({
+      kind: "deletion" as const,
+      value,
+      bytes: value.path.length,
+    })),
+  ];
+  const batches: BatchedChange[][] = [];
+  let batch: BatchedChange[] = [];
+  let bytes = 0;
+  for (const change of changes) {
+    if (batch.length && (batch.length >= maxFiles || bytes + change.bytes > maxBytes)) {
+      batches.push(batch);
+      batch = [];
+      bytes = 0;
+    }
+    batch.push(change);
+    bytes += change.bytes;
+  }
+  if (batch.length) batches.push(batch);
+  return batches;
+}
+
 /**
  * Create a signed commit on a new branch via the GraphQL
  * createCommitOnBranch mutation.
@@ -199,29 +238,37 @@ export async function createSignedCommit(opts: ApiCommitOptions): Promise<ApiCom
     sha: baseSha,
   });
 
-  // 2. Create the signed commit on that branch.
-  const response = await octokit.graphql<CreateCommitResponse>(CREATE_COMMIT_MUTATION, {
-    input: {
-      branch: {
-        repositoryNameWithOwner: `${repoOwner}/${repoName}`,
-        branchName: branch,
-      },
-      message: { headline: message },
-      fileChanges: {
-        additions: additions.map((a) => ({
-          path: a.path,
-          contents: a.contents.toString("base64"),
-        })),
-        deletions: deletions.map((d) => ({ path: d.path })),
-      },
-      expectedHeadOid: baseSha,
-    },
-  });
+  // GraphQL commits carry every file as base64 inside one request. Snapshot
+  // reviews can contain hundreds of frames, and one giant mutation times out
+  // at GitHub's edge. Each batch becomes a GitHub-signed commit on the same
+  // branch, with the previous commit as its expected head.
+  const batches = batchFileChanges(additions, deletions);
 
-  return {
-    commitSha: response.createCommitOnBranch.commit.oid,
-    commitUrl: response.createCommitOnBranch.commit.url,
-  };
+  let headOid = baseSha;
+  let commitUrl = "";
+  for (const [index, group] of batches.entries()) {
+    const response = await octokit.graphql<CreateCommitResponse>(CREATE_COMMIT_MUTATION, {
+      input: {
+        branch: {
+          repositoryNameWithOwner: `${repoOwner}/${repoName}`,
+          branchName: branch,
+        },
+        message: { headline: batches.length === 1 ? message : `${message} (${index + 1}/${batches.length})` },
+        fileChanges: {
+          additions: group.filter((change) => change.kind === "addition").map((change) => ({
+            path: change.value.path,
+            contents: change.value.contents.toString("base64"),
+          })),
+          deletions: group.filter((change) => change.kind === "deletion").map((change) => ({ path: change.value.path })),
+        },
+        expectedHeadOid: headOid,
+      },
+    });
+    headOid = response.createCommitOnBranch.commit.oid;
+    commitUrl = response.createCommitOnBranch.commit.url;
+  }
+
+  return { commitSha: headOid, commitUrl };
 }
 
 // ============================================================================
