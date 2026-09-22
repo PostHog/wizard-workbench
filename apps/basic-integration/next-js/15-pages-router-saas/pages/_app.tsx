@@ -2,19 +2,49 @@ import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
 import { Manrope } from 'next/font/google';
 import { SWRConfig } from 'swr';
+import posthog from 'posthog-js';
+import ErrorBoundary from '@/components/error-boundary';
 
 const manrope = Manrope({ subsets: ['latin'] });
+
+if (typeof window !== 'undefined') {
+  const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+  const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+
+  if (!projectToken) {
+    if (process.env.NODE_ENV === 'development') {
+      throw new Error(
+        'NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN is configured'
+      );
+    }
+  } else if (!host) {
+    if (process.env.NODE_ENV === 'development') {
+      throw new Error(
+        'NEXT_PUBLIC_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once NEXT_PUBLIC_POSTHOG_HOST is configured'
+      );
+    }
+  } else {
+    posthog.init(projectToken, {
+      api_host: host,
+      defaults: '2026-01-30',
+      capture_exceptions: true,
+      debug: process.env.NODE_ENV === 'development'
+    });
+  }
+}
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <div className={manrope.className}>
-      <SWRConfig
-        value={{
-          fallback: pageProps.fallback || {}
-        }}
-      >
-        <Component {...pageProps} />
-      </SWRConfig>
+      <ErrorBoundary>
+        <SWRConfig
+          value={{
+            fallback: pageProps.fallback || {}
+          }}
+        >
+          <Component {...pageProps} />
+        </SWRConfig>
+      </ErrorBoundary>
     </div>
   );
 }
