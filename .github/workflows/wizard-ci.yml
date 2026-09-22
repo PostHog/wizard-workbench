@@ -724,6 +724,9 @@ jobs:
           # workflow_dispatch sets inputs.snapshots; a /wizard-ci-snapshots comment
           # arrives as a repository_dispatch carrying client_payload.snapshots.
           SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
+          # A manual run from a feature branch reviews frames against that branch;
+          # normal runs from main still target main.
+          SNAPSHOT_BASE: ${{ github.ref_name }}
           MATRIX_APP: ${{ matrix.app }}
           INPUT_BASE_BRANCH: ${{ needs.discover.outputs.input_base_branch }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
@@ -936,7 +939,7 @@ jobs:
           SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
 
       - name: Label and close PR
-        if: steps.process-results.outputs.pr_number
+        if: steps.process-results.outputs.pr_number && !(inputs.snapshots || github.event.client_payload.snapshots)
         run: |
           gh pr edit "$PR_NUMBER" --add-label "CI/CD"
           gh pr close "$PR_NUMBER"
@@ -1140,13 +1143,23 @@ jobs:
             });
             console.log('Updated comment for ' + app);
 
-      # The only step in this job that is allowed to fail the leg.
+      # These final verdict steps are allowed to fail the leg.
       #
       # A diff leg has no pass/fail to report — it opens a PR and a human or the
       # evaluator grades it — so `continue-on-error` is right there. An
-      # assertion-graded leg does have one, and swallowing it would make this
-      # whole tier decorative. Runs last so the PR comment, the artifacts and
-      # the summary are all written before the leg goes red.
+      # assertion-graded or snapshot leg does have one, and swallowing it would
+      # make the evidence misleading. Run these last so the PR comment, artifacts
+      # and summary are written before the leg goes red.
+      - name: Fail a snapshot leg that did not publish its review
+        if: always() && steps.execute-wizard.outcome == 'failure'
+        env:
+          SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
+        run: |
+          if [ "$SNAPSHOTS" = "true" ]; then
+            echo "::error::Snapshot capture or review publication failed; see Execute wizard and uploaded evidence."
+            exit 1
+          fi
+
       - name: Fail the leg on a failed assertion
         if: always() && steps.leg.outputs.is_e2e == 'true'
         env:
