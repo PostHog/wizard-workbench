@@ -1,8 +1,27 @@
 import Anthropic from '@anthropic-ai/sdk'
+import PostHogAnthropic from '@posthog/ai/anthropic'
+import { PostHog } from 'posthog-node'
 
 import { getWeather } from './weather.js'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' })
+const posthogApiKey = process.env.POSTHOG_API_KEY
+
+if (!posthogApiKey && process.env.NODE_ENV !== 'production') {
+    throw new Error(
+        'POSTHOG_API_KEY variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_API_KEY is configured'
+    )
+}
+
+const posthog = posthogApiKey
+    ? new PostHog(posthogApiKey, {
+          host: process.env.POSTHOG_HOST,
+          enableExceptionAutocapture: true,
+      })
+    : undefined
+
+const client = posthog
+    ? new PostHogAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '', posthog })
+    : new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' })
 
 const MODEL = 'claude-opus-5'
 
@@ -40,18 +59,28 @@ class Conversation {
 
     /** Answer one question, running the tool if the model asks for it. */
     async ask(question: string): Promise<string> {
+        const traceId = crypto.randomUUID()
+        const observability = posthog
+            ? {
+                  posthogDistinctId: this.userId,
+                  posthogTraceId: traceId,
+                  posthogProperties: { $ai_session_id: this.threadId },
+              }
+            : {}
+
         this.messages.push({ role: 'user', content: question })
 
-        const response = await client.messages.create({
+        const response = await (client as PostHogAnthropic).messages.create({
             model: MODEL,
             max_tokens: 1024,
             tools,
             tool_choice: toolChoice,
             messages: this.messages,
+            ...observability,
         })
 
         const toolUse = response.content.find(
-            (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
+            (block: Anthropic.ContentBlock): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
         )
 
         if (!toolUse) {
@@ -61,7 +90,22 @@ class Conversation {
         }
 
         const { location } = toolUse.input as { location: string }
+        const toolStart = Date.now()
         const result = getWeather(location)
+
+        posthog?.capture({
+            distinctId: this.userId,
+            event: '$ai_span',
+            properties: {
+                $ai_trace_id: traceId,
+                $ai_session_id: this.threadId,
+                $ai_span_id: crypto.randomUUID(),
+                $ai_span_name: 'get_weather',
+                $ai_input_state: { location },
+                $ai_output_state: result,
+                $ai_latency: (Date.now() - toolStart) / 1000,
+            },
+        })
 
         this.messages.push(
             { role: 'assistant', content: response.content },
@@ -71,12 +115,13 @@ class Conversation {
             }
         )
 
-        const followup = await client.messages.create({
+        const followup = await (client as PostHogAnthropic).messages.create({
             model: MODEL,
             max_tokens: 1024,
             tools,
             tool_choice: toolChoice,
             messages: this.messages,
+            ...observability,
         })
 
         const answer = textOf(followup)
@@ -91,7 +136,11 @@ async function main(): Promise<void> {
     console.log(await thread.ask('How about Boston?'))
 }
 
-main().catch((err) => {
-    console.error(`fatal: ${String(err)}`)
-    process.exit(1)
-})
+main()
+    .catch((err) => {
+        console.error(`fatal: ${String(err)}`)
+        process.exitCode = 1
+    })
+    .finally(async () => {
+        await posthog?.shutdown()
+    })
