@@ -1140,13 +1140,13 @@ jobs:
             });
             console.log('Updated comment for ' + app);
 
-      # The only step in this job that is allowed to fail the leg.
+      # These final verdict steps are allowed to fail the leg.
       #
       # A diff leg has no pass/fail to report — it opens a PR and a human or the
       # evaluator grades it — so `continue-on-error` is right there. An
-      # assertion-graded leg does have one, and swallowing it would make this
-      # whole tier decorative. Runs last so the PR comment, the artifacts and
-      # the summary are all written before the leg goes red.
+      # assertion-graded or snapshot leg does have one, and swallowing it would
+      # make the evidence misleading. Run these last so the PR comment, artifacts
+      # and summary are written before the leg goes red.
       - name: Fail a snapshot leg that did not publish its review
         if: always() && steps.execute-wizard.outcome == 'failure'
         env:
