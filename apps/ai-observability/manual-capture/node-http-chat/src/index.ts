@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { lookupOrder } from './orders.js'
 import { posthog } from './posthog.js'
 
@@ -20,6 +21,12 @@ type Completion = {
     completionTokens: number
 }
 
+type AiContext = {
+    distinctId: string
+    sessionId: string
+    traceId: string
+}
+
 const TOOLS = [
     {
         type: 'function',
@@ -35,7 +42,8 @@ const TOOLS = [
     },
 ]
 
-async function complete(messages: Message[]): Promise<Completion> {
+async function complete(messages: Message[], ai: AiContext): Promise<Completion> {
+    const startedAt = performance.now()
     const res = await fetch(LLM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,12 +57,37 @@ async function complete(messages: Message[]): Promise<Completion> {
         usage?: { prompt_tokens: number; completion_tokens: number }
     }
     const message = body.choices[0]?.message
-    return {
+    const completion = {
         text: message?.content ?? '',
         toolCalls: message?.tool_calls ?? [],
         promptTokens: body.usage?.prompt_tokens ?? 0,
         completionTokens: body.usage?.completion_tokens ?? 0,
     }
+
+    posthog.capture({
+        distinctId: ai.distinctId,
+        event: '$ai_generation',
+        properties: {
+            $ai_trace_id: ai.traceId,
+            $ai_session_id: ai.sessionId,
+            $ai_span_id: randomUUID(),
+            $ai_parent_id: ai.traceId,
+            $ai_span_name: 'chat_completion',
+            $ai_model: MODEL,
+            $ai_provider: 'ollama',
+            $ai_input: messages,
+            $ai_input_tokens: completion.promptTokens,
+            $ai_output_choices: [{ role: 'assistant', content: completion.text }],
+            $ai_output_tokens: completion.completionTokens,
+            $ai_latency: (performance.now() - startedAt) / 1000,
+            $ai_http_status: res.status,
+            $ai_base_url: new URL(LLM_URL).origin,
+            $ai_request_url: LLM_URL,
+            $ai_tools: TOOLS,
+        },
+    })
+
+    return completion
 }
 
 type Turn = { question: string; answer: string }
@@ -81,20 +114,40 @@ class Thread {
             { role: 'user', content: question },
         ]
 
-        let result = await complete(messages)
+        const ai: AiContext = {
+            distinctId: this.userId,
+            sessionId: this.threadId,
+            traceId: randomUUID(),
+        }
+        let result = await complete(messages, ai)
 
         if (result.toolCalls.length > 0) {
             messages.push({ role: 'assistant', content: '', tool_calls: result.toolCalls })
             for (const call of result.toolCalls) {
                 const args = JSON.parse(call.function.arguments) as { user_id?: string }
+                const startedAt = performance.now()
                 const output = lookupOrder(args.user_id ?? this.userId)
+                posthog.capture({
+                    distinctId: ai.distinctId,
+                    event: '$ai_span',
+                    properties: {
+                        $ai_trace_id: ai.traceId,
+                        $ai_session_id: ai.sessionId,
+                        $ai_span_id: randomUUID(),
+                        $ai_parent_id: ai.traceId,
+                        $ai_span_name: call.function.name,
+                        $ai_input_state: { tool: call.function.name },
+                        $ai_output_state: { found: output !== null },
+                        $ai_latency: (performance.now() - startedAt) / 1000,
+                    },
+                })
                 messages.push({
                     role: 'tool',
                     tool_call_id: call.id,
                     content: JSON.stringify(output),
                 })
             }
-            result = await complete(messages)
+            result = await complete(messages, ai)
         }
 
         this.turns.push({ question, answer: result.text })
