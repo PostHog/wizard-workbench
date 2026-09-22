@@ -180,7 +180,7 @@ async function main(): Promise<number> {
   const baseSha = git("rev-parse HEAD", repoRoot);
   console.log(`Opening snapshots-review PR on branch ${branch}…`);
   try {
-    const r = (await commitAndCreatePR({
+    const r = await commitAndCreatePR({
       repoOwner,
       repoName,
       repoRoot,
@@ -193,8 +193,11 @@ async function main(): Promise<number> {
       body,
       draft: false,
       token,
-    })) as { prUrl?: string };
-    console.log(`✓ review PR: ${r.prUrl ?? "(created)"}`);
+    });
+    if (!r.success || !r.prUrl) {
+      throw new Error(r.error ?? "Snapshot review PR was not created");
+    }
+    console.log(`✓ review PR: ${r.prUrl}`);
 
     // When triggered by a /wizard-ci PR comment, report back on that PR with a
     // link to the full review.
