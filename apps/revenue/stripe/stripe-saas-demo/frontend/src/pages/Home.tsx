@@ -36,7 +36,7 @@ export function Home() {
       const distinctId = posthog.get_distinct_id();
       const { user } = await createCustomer(email, name, distinctId);
 
-      const { url } = await createCheckoutSession(priceId, user.id, email);
+      const { url } = await createCheckoutSession(priceId, user.id, email, distinctId);
       if (url) window.location.href = url;
     } catch (err: any) {
       setError(err.message);

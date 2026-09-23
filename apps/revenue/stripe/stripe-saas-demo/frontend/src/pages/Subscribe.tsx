@@ -83,7 +83,12 @@ export function Subscribe() {
     setError(null);
 
     try {
-      const result = await createSubscription(customerId, priceId, userId || undefined);
+      const result = await createSubscription(
+        customerId,
+        priceId,
+        userId || undefined,
+        posthog.get_distinct_id()
+      );
       setClientSecret(result.clientSecret);
     } catch (err: any) {
       setError(err.message);
