@@ -322,6 +322,25 @@ This generates the CA cert at `~/.mitmproxy/mitmproxy-ca-cert.pem` and adds it t
 
 ### Usage
 
-In phrocs, start the `mitmproxy` process first, then start `wizard-run-proxy`. Traffic will appear in the mitmproxy TUI.
+In phrocs, start the `mitmproxy` process first, then start `wizard-run-proxy`. The pane runs `mitmdump` with the scoped fault addon. Without `WIZARD_PROXY_SCENARIO`, gateway traffic passes through. The addon reports only scenario, HTTP status, exact path, and hit count; it does not log headers, credentials, prompts, or bodies. `wizard-run-proxy` expands the CA path from `$HOME` before starting Node.
+
+To inject a single fault into the first matching gateway request, start phrocs with one of these environment values: `http_400`, `http_401`, `http_429`, `http_503`, `malformed`, `truncated`, or `midstream`. For example:
+
+```bash
+WIZARD_PROXY_SCENARIO=http_401 phrocs
+```
+
+The scenario applies only to `POST` on the exact Anthropic Messages, OpenAI Responses, and Chat Completions paths at `ai-gateway.us.posthog.com`, `ai-gateway.eu.posthog.com`, or the `/wizard` prefix on local gateway hosts. Subsequent requests pass through, which lets a retry reach the gateway or provider simulator. Restart the proxy pane to reset the hit count. `malformed` returns broken JSON, `truncated` returns an incomplete SSE frame, and `midstream` returns an opening SSE frame followed by an error frame. These synthetic frames exercise client parsing; the gateway provider simulator is the source for deterministic upstream retry and recovery behavior.
+
+For a no-credential canary, start the proxy pane with `WIZARD_PROXY_SCENARIO=http_401`, then run:
+
+```bash
+curl --silent --show-error --insecure --proxy http://127.0.0.1:8888 --noproxy '' --request POST \
+  --header 'Content-Type: application/json' --data '{}' \
+  --output /dev/null --dump-header - \
+  https://ai-gateway.us.posthog.com/v1/messages
+```
+
+Expect `HTTP/2 401` (or `HTTP/1.1 401`), `X-Wizard-Fault: http_401`, and a `wizard-fault scenario=http_401 ... hit=1` line in the proxy pane. A pass-through response has no `X-Wizard-Fault` header. This verifies injection only; actual Wizard verification requires a recorded gateway hit from each harness before drawing conclusions about its TUI/headless result.
 
 Alternatively, you can use [Charles Proxy](https://www.charlesproxy.com/) (GUI-based, paid license) on port `8888` instead of mitmproxy.
