@@ -129,13 +129,31 @@ export const createInvoiceFn = createServerFn({ method: 'POST' })
     (d: { title: string; description: string; amount: number; dueDate: string }) => d
   )
   .handler(async ({ data }) => {
+    const { flushPostHogLogs, getPostHogLogger } = await import('./posthog-logs')
+    const posthogLogger = getPostHogLogger()
+
     console.info('Creating invoice...', data)
-    return createInvoice(data)
+    const invoice = createInvoice(data)
+
+    posthogLogger?.emit({
+      severityText: 'INFO',
+      body: 'invoice created',
+      attributes: {
+        event: 'invoice.created',
+        invoice_status: invoice.status,
+      },
+    })
+    await flushPostHogLogs()
+
+    return invoice
   })
 
 export const markInvoicePaid = createServerFn({ method: 'POST' })
   .inputValidator((d: string) => d)
   .handler(async ({ data: invoiceId }) => {
+    const { flushPostHogLogs, getPostHogLogger } = await import('./posthog-logs')
+    const posthogLogger = getPostHogLogger()
+
     console.info(`Marking invoice ${invoiceId} as paid...`)
     const id = Number(invoiceId)
     if (isNaN(id)) {
@@ -145,5 +163,16 @@ export const markInvoicePaid = createServerFn({ method: 'POST' })
     if (!invoice) {
       throw new Error('Invoice not found')
     }
+
+    posthogLogger?.emit({
+      severityText: 'INFO',
+      body: 'invoice marked paid',
+      attributes: {
+        event: 'invoice.marked_paid',
+        invoice_status: invoice.status,
+      },
+    })
+    await flushPostHogLogs()
+
     return invoice
   })

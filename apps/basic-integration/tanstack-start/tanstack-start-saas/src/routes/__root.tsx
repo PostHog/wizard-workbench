@@ -7,6 +7,7 @@ import {
   createRootRoute,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from '@posthog/react'
 import * as React from 'react'
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary'
 import { NotFound } from '~/components/NotFound'
@@ -57,7 +58,44 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
+const posthogApiKey = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const missingPostHogConfig = !posthogApiKey
+    ? 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN'
+    : !posthogHost
+      ? 'VITE_PUBLIC_POSTHOG_HOST'
+      : null
+
+  if (missingPostHogConfig) {
+    if (typeof window !== 'undefined' && import.meta.env.DEV) {
+      throw new Error(
+        `${missingPostHogConfig} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingPostHogConfig} is configured`,
+      )
+    }
+
+    return <DocumentShell>{children}</DocumentShell>
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={posthogApiKey}
+      options={{
+        api_host: posthogHost,
+        defaults: '2025-05-24',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+        tracing_headers:
+          typeof window !== 'undefined' ? [window.location.hostname] : [],
+      }}
+    >
+      <DocumentShell>{children}</DocumentShell>
+    </PostHogProvider>
+  )
+}
+
+function DocumentShell({ children }: { children: React.ReactNode }) {
   return (
     <html>
       <head>
