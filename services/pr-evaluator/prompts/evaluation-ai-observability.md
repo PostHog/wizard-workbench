@@ -31,6 +31,8 @@ Scores are computed server-side from your rubric answers.
 
 **Scope of evaluation:** Evaluate ONLY the changes introduced by this PR. This PR is produced by the `ai-observability` wizard command, whose job is to make an **existing** app's LLM calls emit PostHog AI observability events. It is NOT supposed to rewrite the app's LLM logic, restructure its tool loop, or add unrelated PostHog features. If the base app has pre-existing issues, note them separately but do NOT let them affect your YES/NO answers.
 
+For proxy apps, enumerate the inference entry points in the app README before scoring. Check direct model calls behind HTTP and WebSocket handlers as well as shared proxy helpers. A generation on one route does not cover another route. Follow each stream through its final event, provider error, or client disconnect. Check token fields against that provider's response shape.
+
 ## What this wizard is supposed to do
 
 The `ai-observability` wizard instruments an app's LLM calls so they land in PostHog as a `session → trace → span → generation` tree. There are three instrumentation paths:
@@ -72,7 +74,7 @@ Key structural facts to evaluate against:
 ### 3. PostHog implementation (AI observability-specific)
 
 - **ph_instrumentation_initialized_once** — Instrumentation is set up exactly once, at module scope or app startup — not inside a request handler or per-call function.
-- **ph_generations_captured** — The app's LLM calls will actually produce `$ai_generation` events: either an instrumentor is attached to the SDK in use, or the client is swapped for the PostHog wrapper, or explicit `$ai_generation` captures exist. An OTel provider configured but never attached to an instrumentor is NO.
+- **ph_generations_captured** — Every inference path in the app's README will actually produce `$ai_generation` events: either an instrumentor is attached to the SDK in use, or the client is swapped for the PostHog wrapper, or explicit `$ai_generation` captures exist. One uncovered HTTP or WebSocket path is NO. An OTel provider configured but never attached to an instrumentor is NO.
 - **ph_trace_groups_the_request** — All LLM calls belonging to one logical request land in **one** trace. On the wrapper path this requires a shared `posthog_trace_id` passed to every call — a call that omits it gets a freshly generated UUID, splitting one request into several single-generation traces. If each call in a multi-call request would get its own trace, mark NO.
 - **ph_session_id_set** — `$ai_session_id` is set, using the app's own conversation/thread identifier where one exists (see the README). Not set at all is NO.
 - **ph_session_id_correct_key** — The session is carried by the literal property key **`$ai_session_id`**. Keys like `posthog.session_id`, `session_id`, or `ai_session_id` are silently dropped by ingest — they look plausible and record nothing. Mark NO for any variant spelling.
@@ -83,7 +85,7 @@ Key structural facts to evaluate against:
 
 ### 4. Event quality (AI observability-specific)
 
-- **eq_events_would_render_as_tree** — Taken together, the emitted events form the hierarchy the README describes: the expected number of sessions, traces per session, and events per trace. Walk the code and count what a single run would emit. If the result is flat generations with no grouping, mark NO regardless of how much instrumentation code is present.
+- **eq_events_would_render_as_tree** — Taken together, the emitted events form the hierarchy and outcomes the README describes: the expected number of sessions, traces per session, and events per trace. Walk the code and count what a single run would emit. A partial stream labeled successful, an HTTP provider error without an error outcome, or token counts read from another provider's schema is NO. Flat generations with no grouping are NO regardless of how much instrumentation code is present.
 - **eq_person_attribution** — Events carry a real user identifier from the app (not a hardcoded placeholder, not a random UUID per run, not left to an anonymous fallback).
 - **eq_span_parenting** — Any explicitly captured `$ai_span` sets `$ai_trace_id` and links to its parent via `$ai_parent_id`. **N/A** if no manual spans were captured.
 - **eq_no_fabricated_structure** — The PR does not invent structure the app does not have: no synthetic session id where the app has no conversation concept and none can be inferred, no spans around code that does nothing meaningful.

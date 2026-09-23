@@ -5,7 +5,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { detectFramework, detectArchType, parseCommandments, parseDocsConfig } from "./prompt-builder.js";
+import { buildSystemPrompt, detectFramework, detectArchType, parseCommandments, parseDocsConfig } from "./prompt-builder.js";
 import {
   repairAndParseJSON,
   validateAndCorrectScores,
@@ -47,6 +47,34 @@ function makeScores(overrides: Partial<EvaluateScores> = {}): EvaluateScores {
     ...overrides,
   };
 }
+
+it("uses the AI observability criterion keys in the output rubric", async () => {
+  const prompt = await buildSystemPrompt(undefined, { command: "ai-observability" });
+  const block = prompt.match(/<!-- RUBRIC\s*(\{[\s\S]*?\})\s*RUBRIC -->/);
+  assert.ok(block, "AI output rubric is present");
+  const rubric = JSON.parse(block[1]) as Record<string, Record<string, string>>;
+
+  assert.deepEqual(Object.keys(rubric.file_analysis), [
+    "fa_changes_relevant", "fa_correct_files", "fa_no_unnecessary_changes",
+    "fa_code_quality", "fa_imports_valid", "fa_files_complete",
+  ]);
+  assert.deepEqual(Object.keys(rubric.app_sanity), [
+    "as_builds", "as_preserves_existing", "as_minimal_changes", "as_no_syntax_errors",
+    "as_correct_imports", "as_env_documented", "as_dependency_version_valid", "as_flushes_before_exit",
+  ]);
+  assert.deepEqual(Object.keys(rubric.posthog_implementation), [
+    "ph_instrumentation_initialized_once", "ph_generations_captured", "ph_trace_groups_the_request",
+    "ph_session_id_set", "ph_session_id_correct_key", "ph_session_cardinality_correct",
+    "ph_identity_scope_correct", "ph_no_hand_authored_spans", "ph_additive_only",
+  ]);
+  assert.deepEqual(Object.keys(rubric.event_quality), [
+    "eq_events_would_render_as_tree", "eq_person_attribution", "eq_span_parenting",
+    "eq_no_fabricated_structure", "eq_privacy_respected",
+  ]);
+  const statedCriteria = [...prompt.matchAll(/^- \*\*((?:fa|as|ph|eq)_[a-z_]+)\*\*/gm)].map((match) => match[1]);
+  const outputCriteria = Object.values(rubric).flatMap((dimension) => Object.keys(dimension));
+  assert.deepEqual(outputCriteria, statedCriteria);
+});
 
 // ── detectFramework ──────────────────────────────────────────────────────────
 

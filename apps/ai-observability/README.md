@@ -24,6 +24,7 @@ Each app exists to test one thing the others don't:
 - `openai-agents/python-travel-triage` — tracing processor; the SDK emits the tree
 - `vercel-ai/nextjs-support-chat` — per-request identity; framework bootstrap
 - `manual-capture/node-http-chat` — hand-built tree; must reuse the existing client
+- `manual-capture/python-multi-route-proxy` — raw proxy routes, streams, failures, and direct calls
 - `google-adk/node-weather` — framework plugin; identity comes from ADK's own ids
 - `opentelemetry/go-weather` — Go; no wrapper SDK exists, so the posthog-go OTel bridge
 
@@ -47,8 +48,9 @@ conversation structure.
   together. A fresh id per call groups nothing and is worse than none.
 - **Spans come from tool registration** (or explicit `$ai_span` capture on the
   manual path). Never from hand-authored wrappers around helper functions.
-- Static fixtures in the style of [`../mcp-analytics`](../mcp-analytics): not
-  executed, no lockfiles, no keys. Node type-checks with `tsc --noEmit`.
+- Static Wizard fixtures in the style of [`../mcp-analytics`](../mcp-analytics):
+  no lockfiles or keys. Node type-checks with `tsc --noEmit`. The multi-route
+  proxy has a local fake-provider contract test; Wizard CI evaluates its diff.
 - Each README states the tree the app must produce and grades **emitted
   events, not the diff** — every observed failure mode so far produced
   plausible code and a broken tree.
