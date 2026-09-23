@@ -59,6 +59,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.upvote(item: postForVoting)
+            NotificationCenter.default.post(name: .postUpvoted, object: nil)
 
         } catch {
             // Revert optimistic changes on error
@@ -96,6 +97,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.unvote(item: postForVoting)
+            NotificationCenter.default.post(name: .postUnvoted, object: nil)
 
         } catch {
             // Revert optimistic changes on error
@@ -128,6 +130,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.upvoteComment(commentForVoting, for: post)
+            NotificationCenter.default.post(name: .commentUpvoted, object: nil)
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = false
@@ -155,6 +158,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.unvoteComment(commentForVoting, for: post)
+            NotificationCenter.default.post(name: .commentUnvoted, object: nil)
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = true

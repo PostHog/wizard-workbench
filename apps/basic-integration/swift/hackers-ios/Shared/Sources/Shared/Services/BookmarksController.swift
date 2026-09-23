@@ -64,6 +64,7 @@ public final class BookmarksController: @unchecked Sendable {
                 object: nil,
                 userInfo: ["postId": post.id, "isBookmarked": newState]
             )
+            NotificationCenter.default.post(name: newState ? .postBookmarked : .bookmarkRemoved, object: nil)
             return newState
         } catch {
             return cachedIDs.contains(post.id)

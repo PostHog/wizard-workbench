@@ -10,6 +10,7 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import PostHog
 import Settings
 import Shared
 import SwiftUI
@@ -81,9 +82,11 @@ struct MainContentView: View {
                                 currentUsername: sessionService.username,
                                 onLogin: { username, password in
                                     _ = try await sessionService.authenticate(username: username, password: password)
+                                    capturePostHogEvent("sign_in_completed")
                                 },
                                 onLogout: {
                                     sessionService.unauthenticate()
+                                    capturePostHogEvent("signed_out")
                                 },
                                 onShowOnboarding: {
                                     showOnboarding = true
@@ -103,9 +106,11 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    capturePostHogEvent("sign_in_completed")
                 },
                 onLogout: {
                     sessionService.unauthenticate()
+                    capturePostHogEvent("signed_out")
                 },
                 textSize: settingsViewModel.textSize
             )
@@ -119,9 +124,11 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    capturePostHogEvent("sign_in_completed")
                 },
                 onLogout: {
                     sessionService.unauthenticate()
+                    capturePostHogEvent("signed_out")
                 },
                 onShowOnboarding: {
                     showOnboarding = true
@@ -143,6 +150,45 @@ struct MainContentView: View {
                 showOnboarding = true
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .userDidLogout)) { _ in
+            capturePostHogEvent("signed_out")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .postBookmarked)) { _ in
+            capturePostHogEvent("post_bookmarked")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .bookmarkRemoved)) { _ in
+            capturePostHogEvent("bookmark_removed")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .postUpvoted)) { _ in
+            capturePostHogEvent("post_upvoted")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .postUnvoted)) { _ in
+            capturePostHogEvent("post_unvoted")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .commentUpvoted)) { _ in
+            capturePostHogEvent("comment_upvoted")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .commentUnvoted)) { _ in
+            capturePostHogEvent("comment_unvoted")
+        }
+    }
+
+    private func capturePostHogEvent(_ event: String) {
+        guard isPostHogConfigured else { return }
+        PostHogSDK.shared.capture(event)
+    }
+
+    private var isPostHogConfigured: Bool {
+        guard let projectToken = Bundle.main.object(forInfoDictionaryKey: "POSTHOG_PROJECT_TOKEN") as? String,
+              !projectToken.isEmpty,
+              !projectToken.hasPrefix("$("),
+              let host = Bundle.main.object(forInfoDictionaryKey: "POSTHOG_HOST") as? String,
+              !host.isEmpty,
+              !host.hasPrefix("$(")
+        else {
+            return false
+        }
+        return true
     }
 
     private var isPresentingModal: Bool {
