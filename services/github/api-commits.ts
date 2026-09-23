@@ -7,7 +7,7 @@
  * require verified signatures.
  */
 import { execSync } from "child_process";
-import { readFileSync } from "fs";
+import { lstatSync, readFileSync } from "fs";
 import { join } from "path";
 import { Octokit } from "@octokit/rest";
 
@@ -118,6 +118,21 @@ export function collectFileChanges(opts: CollectChangesOptions): CollectChangesR
   const deletions: FileDeletion[] = [];
   const seen = new Set<string>();
 
+  const addFile = (path: string) => {
+    if (seen.has(path)) return;
+    seen.add(path);
+    const absolute = join(repoRoot, path);
+    // createCommitOnBranch can only write regular files. Symlinks (like the
+    // `lib64 -> lib` link a Python venv creates) and nested repos still show
+    // up in git status, and readFileSync would follow them into a directory
+    // and throw EISDIR.
+    if (!lstatSync(absolute).isFile()) {
+      console.warn(`      Skipping non-regular file: ${path}`);
+      return;
+    }
+    additions.push({ path, contents: readFileSync(absolute) });
+  };
+
   for (const entry of entries) {
     const isDeletion = entry.index === "D" || entry.worktree === "D";
     const isRename = entry.index === "R" || entry.worktree === "R";
@@ -127,10 +142,7 @@ export function collectFileChanges(opts: CollectChangesOptions): CollectChangesR
         deletions.push({ path: entry.oldPath });
         seen.add(entry.oldPath);
       }
-      if (!seen.has(entry.path)) {
-        additions.push({ path: entry.path, contents: readFileSync(join(repoRoot, entry.path)) });
-        seen.add(entry.path);
-      }
+      addFile(entry.path);
       continue;
     }
 
@@ -142,10 +154,7 @@ export function collectFileChanges(opts: CollectChangesOptions): CollectChangesR
       continue;
     }
 
-    if (!seen.has(entry.path)) {
-      additions.push({ path: entry.path, contents: readFileSync(join(repoRoot, entry.path)) });
-      seen.add(entry.path);
-    }
+    addFile(entry.path);
   }
 
   return { additions, deletions };
