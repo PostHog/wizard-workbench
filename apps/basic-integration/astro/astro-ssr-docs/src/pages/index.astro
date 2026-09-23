@@ -11,7 +11,7 @@ import Layout from '../layouts/Layout.astro';
         Comprehensive guides, API references, and best practices.
       </p>
       <div class="hero-buttons">
-        <a href="/docs" class="btn btn-primary">Get Started</a>
+        <a href="/docs" class="btn btn-primary" id="get-started-cta">Get Started</a>
         <a href="/docs/api" class="btn btn-secondary">API Reference</a>
       </div>
     </div>
@@ -54,3 +54,24 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </footer>
 </Layout>
+
+<script is:inline>
+  const documentationLogger = {
+    info(message, attributes = {}) {
+      window.posthog?.logger?.info(message, {
+        service: 'neuralflow-documentation',
+        component: 'documentation_home',
+        ...attributes,
+      });
+    },
+  };
+
+  window.posthog?.onFeatureFlags(() => {
+    documentationLogger.info('Documentation homepage ready');
+  });
+
+  document.getElementById('get-started-cta')?.addEventListener('click', () => {
+    documentationLogger.info('Documentation getting-started CTA selected');
+    window.posthog?.capture('documentation_started');
+  });
+</script>
