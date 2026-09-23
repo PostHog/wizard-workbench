@@ -330,7 +330,18 @@ To inject a single fault into the first matching gateway request, start phrocs w
 WIZARD_PROXY_SCENARIO=http_401 phrocs
 ```
 
-The scenario applies only to `POST` on the exact Anthropic Messages, OpenAI Responses, and Chat Completions paths at `ai-gateway.us.posthog.com`, `ai-gateway.eu.posthog.com`, or the `/wizard` prefix on local gateway hosts. Subsequent requests pass through, which lets a retry reach the gateway or provider simulator. Restart the proxy pane to reset the hit count. `malformed` returns broken JSON, `truncated` returns an incomplete SSE frame, and `midstream` returns an opening SSE frame followed by an error frame. These synthetic frames exercise client parsing; the gateway provider simulator is the source for deterministic upstream retry and recovery behavior.
+The scenario applies only to `POST` on the exact Anthropic Messages, OpenAI Responses, and Chat Completions paths at `ai-gateway.us.posthog.com`, `ai-gateway.eu.posthog.com`, or the `/v1` and `/wizard/v1` paths on local gateway hosts. The listed scenarios affect one request; subsequent requests pass through so retries can recover. Restart the proxy pane to reset the hit count. `malformed` returns broken JSON, `truncated` returns an incomplete SSE frame, and `midstream` returns an opening SSE frame followed by an error frame.
+
+Use `http_400_terminal` when the final result must reflect the injected fault. It faults up to eight matching requests in one proxy run, covering SDK retries while retaining exact-route scope. A one-shot 400 or 401 can be followed by a successful retry, so its first hit alone does not prove terminal propagation.
+
+To check both real SDK adapters with synthetic credentials and a loopback gateway, install `mitmdump` and this workbench's dependencies, then run:
+
+```bash
+python3 proxy/verify_wizard_faults.py --wizard ../wizard-functional-a3 \
+  --evidence ../wizard-functional-evidence/a3-fault-proxy.json
+```
+
+The verifier runs Anthropic then Pi against a synthetic loopback gateway. A verifier-only proxy guard rejects non-loopback HTTPS CONNECT and HTTP requests with 421 before proxy upstream traffic; a preflight also confirms that loopback requests still reach the fake gateway. Normal proxy sessions keep their pass-through behavior. The verifier requires each scoped proxy hit and retry to be injected, a failed `RunResult` with `PHW_AGENT_API_ERROR` and the fault message, a matching `✖` error on headless stdout, a matching `phw-error:` line on stderr, and a nonzero exit. This direct agent probe does not exercise the full TUI flow; use the credentialed snapshot route separately when authorized.
 
 For a no-credential canary, start the proxy pane with `WIZARD_PROXY_SCENARIO=http_401`, then run:
 

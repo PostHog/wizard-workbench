@@ -54,7 +54,7 @@ class FaultsTest(unittest.TestCase):
         self.assertIsNone(second.response)
 
     def test_both_harness_routes_and_local_gateway(self):
-        for host, path in [('ai-gateway.eu.posthog.com', '/v1/messages'), ('ai-gateway.us.posthog.com', '/v1/responses'), ('ai-gateway.us.posthog.com', '/v1/chat/completions'), ('localhost', '/wizard/v1/responses'), ('127.0.0.1', '/wizard/v1/messages')]:
+        for host, path in [('ai-gateway.eu.posthog.com', '/v1/messages'), ('ai-gateway.us.posthog.com', '/v1/responses'), ('ai-gateway.us.posthog.com', '/v1/chat/completions'), ('localhost', '/wizard/v1/responses'), ('127.0.0.1', '/wizard/v1/messages'), ('localhost', '/v1/responses'), ('127.0.0.1', '/v1/messages')]:
             with self.subTest(host=host, path=path):
                 flow = Flow(Request(host, path))
                 self.addon().request(flow)
@@ -66,6 +66,19 @@ class FaultsTest(unittest.TestCase):
                 flow = Flow(Request())
                 self.addon(name).request(flow)
                 self.assertEqual(flow.response.status_code, status)
+
+    def test_terminal_scenario_faults_every_retry(self):
+        addon = self.addon('http_400_terminal')
+        for hit in range(1, 9):
+            flow = Flow(Request('127.0.0.1', '/v1/messages'))
+            addon.request(flow)
+            self.assertEqual(flow.response.status_code, 400)
+            self.assertEqual(flow.response.headers['X-Wizard-Fault'], 'http_400_terminal')
+            self.assertEqual(addon.hits, hit)
+        beyond_limit = Flow(Request('127.0.0.1', '/v1/messages'))
+        addon.request(beyond_limit)
+        self.assertIsNone(beyond_limit.response)
+        self.assertEqual(addon.hits, 9)
 
     def test_invalid_scenario_fails_closed(self):
         with self.assertRaises(ValueError):
