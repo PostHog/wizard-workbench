@@ -4,6 +4,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import { Post } from "@/components/posts/Post";
 import { Spinner } from "@/components/Spinner";
+import { posthogLogger } from "@/lib/posthog-logger";
 
 import type { Item } from "@/shared/types";
 import { getItemDetails } from "@/api/endpoints";
@@ -29,11 +30,23 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
   const storyListQuery = useQuery({
     queryKey: ["storyIds", storyType],
     queryFn: async () => {
-      const getItemIds = MAP_STORY_TYPE_TO_STORY_ENDPOINTS[storyType];
-      const res = await getItemIds();
-      const topStories = await res.json();
+      try {
+        const getItemIds = MAP_STORY_TYPE_TO_STORY_ENDPOINTS[storyType];
+        const res = await getItemIds();
+        const topStories = await res.json();
 
-      return topStories;
+        posthogLogger.info("story feed loaded", {
+          story_type: storyType,
+          story_count: topStories.length,
+        });
+
+        return topStories;
+      } catch (error) {
+        posthogLogger.warn("story feed request failed", {
+          story_type: storyType,
+        });
+        throw error;
+      }
     },
   });
 
