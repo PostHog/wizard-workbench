@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { getTodos, createTodo } from '@/lib/data';
+import { flushPostHogLogs, logTodoMutation } from '@/instrumentation';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -33,6 +34,9 @@ export async function POST(request: NextRequest) {
       description: validatedData.description,
       completed: validatedData.completed,
     });
+
+    logTodoMutation('created');
+    after(flushPostHogLogs);
 
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {

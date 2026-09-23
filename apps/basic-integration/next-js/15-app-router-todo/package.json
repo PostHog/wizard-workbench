@@ -6,6 +6,10 @@
     "start": "next start"
   },
   "dependencies": {
+    "@opentelemetry/api-logs": "^0.222.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-logs": "^0.222.0",
     "@tailwindcss/postcss": "4.1.7",
     "@types/node": "^22.15.18",
     "@types/react": "19.1.4",
@@ -16,6 +20,7 @@
     "lucide-react": "^0.511.0",
     "next": "15.5.7",
     "postcss": "^8.5.3",
+    "posthog-js": "^1.434.12",
     "radix-ui": "^1.4.2",
     "react": "19.1.2",
     "react-dom": "19.1.2",
