@@ -9,8 +9,12 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
+    "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-logs": "^0.222.0",
     "koa": "^2.15.0",
+    "koa-bodyparser": "^4.4.0",
     "koa-router": "^13.0.0",
-    "koa-bodyparser": "^4.4.0"
+    "posthog-node": "^5.53.0"
   }
 }
