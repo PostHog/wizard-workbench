@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoTeams } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
+import { posthogLogger } from '../../../services/posthogLogger';
 
 import { getTeamsSuccess, createTeamSuccess, closeTeamModal } from './actions';
 import { getProjectsRequest } from '../projects/actions';
@@ -33,6 +35,8 @@ export function* createTeam({ payload }) {
       const slug = name.toLowerCase().replace(/\s+/g, '-');
       const newTeam = { id: Date.now(), name, slug };
       yield put(createTeamSuccess(newTeam));
+      posthog?.capture('team_created', { is_demo_mode: true });
+      posthogLogger.info('Team created in demo mode', { is_demo_mode: true });
       yield put(closeTeamModal());
       toast.showSuccess('Team created');
       return;
@@ -41,6 +45,8 @@ export function* createTeam({ payload }) {
     const response = yield call(api.post, 'teams', { name });
 
     yield put(createTeamSuccess(response.data));
+    posthog?.capture('team_created', { is_demo_mode: false });
+    posthogLogger.info('Team created', { is_demo_mode: false });
     yield put(closeTeamModal());
 
     toast.showSuccess('Team created');
@@ -53,6 +59,7 @@ export function* selectActiveTeam({ payload }) {
   const { team } = payload;
 
   yield call([AsyncStorage, 'setItem'], '@Omni:team', JSON.stringify(team));
+  posthog?.capture('team_selected', { team_id: team.id });
 
   yield put(getProjectsRequest());
 }
