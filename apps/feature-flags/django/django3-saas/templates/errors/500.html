@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Server Error - Django SaaS{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 3rem 0;">
+    <h1>500</h1>
+    <h2>Server Error</h2>
+    <p class="text-muted">Something went wrong on our end. Please try again later.</p>
+    <a href="{% url 'marketing:home' %}" class="btn btn-primary">Go Home</a>
+</div>
+{% endblock %}

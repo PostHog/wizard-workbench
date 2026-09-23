@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .metric-card { text-align: center; padding: 1.5rem; }
+    .metric-card h3 { font-size: 2rem; margin: 0 0 0.5rem 0; color: var(--primary); }
+    .metric-card p { margin: 0; color: var(--muted); font-size: 0.875rem; }
+    .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+    @media (max-width: 768px) { .content-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="metrics-grid">
+    <div class="card metric-card">
+        <h3>{{ metrics.project_count }}</h3>
+        <p>Total Projects</p>
+    </div>
+    <div class="card metric-card">
+        <h3>{{ metrics.active_projects }}</h3>
+        <p>Active Projects</p>
+    </div>
+    <div class="card metric-card">
+        <h3>{% if subscription %}{{ subscription.plan.name }}{% else %}Free{% endif %}</h3>
+        <p>Current Plan</p>
+    </div>
+    {% if subscription %}
+    <div class="card metric-card">
+        <h3>{{ metrics.days_remaining }}</h3>
+        <p>Days Remaining</p>
+    </div>
+    {% endif %}
+    <div class="card metric-card">
+        <h3>{{ metrics.activities_this_month }}</h3>
+        <p>Actions This Month</p>
+    </div>
+</div>
+
+{% if not subscription %}
+<div class="card" style="background: linear-gradient(135deg, var(--primary) 0%, #4158D0 100%); color: white; margin-bottom: 2rem;">
+    <div class="flex flex-between flex-center">
+        <div>
+            <h3 style="margin: 0 0 0.5rem 0; color: white;">Upgrade Your Plan</h3>
+            <p style="margin: 0; opacity: 0.9;">Get more projects and features with a paid plan.</p>
+        </div>
+        <a href="{% url 'billing:pricing' %}" class="btn" style="background: white; color: var(--primary);">View Plans</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="content-grid">
+    <div>
+        <div class="flex flex-between flex-center mb-1">
+            <h2>Recent Projects</h2>
+            <a href="{% url 'dashboard:projects' %}" class="btn btn-secondary btn-small">View All</a>
+        </div>
+
+        {% if projects %}
+            {% for project in projects %}
+            <div class="card">
+                <div class="flex flex-between flex-center">
+                    <h3 style="margin: 0;">{{ project.name }}</h3>
+                    <span class="badge {% if project.is_active %}badge-success{% else %}badge-warning{% endif %}">
+                        {% if project.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </div>
+                {% if project.description %}
+                    <p class="text-muted">{{ project.description|truncatewords:20 }}</p>
+                {% endif %}
+                <small class="text-muted">Created {{ project.created_at|date:"M d, Y" }}</small>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="card" style="text-align: center;">
+                <p class="text-muted">No projects yet.</p>
+                <a href="{% url 'dashboard:create_project' %}" class="btn btn-primary">Create your first project</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <div>
+        <h2>Recent Activity</h2>
+        {% if activities %}
+            {% for activity in activities %}
+            <div class="card">
+                <p style="margin: 0;">{{ activity.description }}</p>
+                <small class="text-muted">{{ activity.created_at|date:"M d, Y H:i" }}</small>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted">No recent activity.</p>
+        {% endif %}
+
+        {% if subscription %}
+        <h2 style="margin-top: 2rem;">Subscription</h2>
+        <div class="card">
+            <p><strong>Plan:</strong> {{ subscription.plan.name }}</p>
+            <p><strong>Status:</strong>
+                <span class="badge {% if subscription.status == 'active' %}badge-success{% elif subscription.status == 'past_due' %}badge-warning{% else %}badge-danger{% endif %}">
+                    {{ subscription.get_status_display }}
+                </span>
+            </p>
+            <p><strong>Renews:</strong> {{ subscription.current_period_end|date:"M d, Y" }}</p>
+            <a href="{% url 'billing:manage' %}" class="btn btn-secondary btn-small">Manage</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Cancel Subscription{% endblock %}
+
+{% block content %}
+<h1>Cancel Subscription</h1>
+
+<div class="card">
+    <h2>Are you sure?</h2>
+    <p>
+        You're about to cancel your <strong>{{ subscription.plan.name }}</strong> subscription.
+    </p>
+    <p class="text-muted">
+        You will continue to have access until {{ subscription.current_period_end|date:"M d, Y" }}.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, Cancel Subscription</button>
+        <a href="{% url 'billing:manage' %}" class="btn btn-secondary">Keep Subscription</a>
+    </form>
+</div>
+{% endblock %}
