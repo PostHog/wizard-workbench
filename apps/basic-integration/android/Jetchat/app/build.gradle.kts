@@ -15,7 +15,19 @@
  */
 
 
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+val postHogProperties = Properties().apply {
+    val envFile = rootProject.file(".env")
+    if (envFile.exists()) {
+        envFile.inputStream().use(::load)
+    }
+}
+val postHogProjectToken =
+    System.getenv("POSTHOG_PROJECT_TOKEN") ?: postHogProperties.getProperty("POSTHOG_PROJECT_TOKEN", "")
+val postHogHost =
+    System.getenv("POSTHOG_HOST") ?: postHogProperties.getProperty("POSTHOG_HOST", "")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -35,6 +47,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         vectorDrawables.useSupportLibrary = true
+
+        buildConfigField("String", "POSTHOG_PROJECT_TOKEN", "\"$postHogProjectToken\"")
+        buildConfigField("String", "POSTHOG_HOST", "\"$postHogHost\"")
     }
 
     signingConfigs {
@@ -75,6 +90,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -98,6 +114,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.androidx.activity.compose)
+    implementation("com.posthog:posthog-android:3.+")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
