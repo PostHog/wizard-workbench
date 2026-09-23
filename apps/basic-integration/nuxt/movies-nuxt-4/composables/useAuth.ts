@@ -39,6 +39,10 @@ export const useAuth = () => {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error)
     } finally {
+      if (import.meta.client) {
+        const { $posthog } = useNuxtApp()
+        $posthog?.reset()
+      }
       user.value = null
       cookie.value = null
       await navigateTo('/login')
