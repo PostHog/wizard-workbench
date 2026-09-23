@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { I18nService } from '@app/i18n';
+import { CredentialsService } from '@app/auth/services/credentials.service';
 import { Title } from '@angular/platform-browser';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
@@ -8,6 +9,7 @@ import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppUpdateService, Logger } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
+import { PostHogService } from '@core/services/posthog.service';
 
 @Component({
   selector: 'app-root',
@@ -24,10 +26,27 @@ export class AppComponent implements OnInit {
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly posthogService = inject(PostHogService);
+  private readonly credentialsService = inject(CredentialsService);
 
   title = 'angular-boilerplate';
 
   ngOnInit() {
+    this.posthogService.init(
+      environment.posthogProjectToken,
+      environment.posthogHost,
+      environment.production,
+    );
+
+    const credentials = this.credentialsService.credentials();
+    if (credentials?.id) {
+      this.posthogService.posthog.identify(credentials.id, {
+        email: credentials.email,
+        name: credentials.fullName.trim(),
+        roles: credentials.roles,
+      });
+    }
+
     // Setup logger
     if (environment.production) {
       Logger.enableProductionMode();
