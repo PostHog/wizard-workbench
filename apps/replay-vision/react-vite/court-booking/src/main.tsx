@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
+import './posthog'
 import { BookCourt } from './routes/BookCourt'
 import { Confirmation } from './routes/Confirmation'
 import { Courts } from './routes/Courts'
