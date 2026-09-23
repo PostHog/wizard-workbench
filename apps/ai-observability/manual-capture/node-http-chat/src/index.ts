@@ -1,8 +1,9 @@
+import { captureAiGeneration, captureAiToolSpan, createAiTraceId } from './ai-observability.js'
 import { lookupOrder } from './orders.js'
 import { posthog } from './posthog.js'
 
 const LLM_URL = process.env.LLM_URL ?? 'http://localhost:11434/v1/chat/completions'
-const MODEL = 'llama3.2'
+const MODEL = process.env.LLM_MODEL ?? 'llama3.2'
 
 type Message = {
     role: 'system' | 'user' | 'assistant' | 'tool'
@@ -35,25 +36,55 @@ const TOOLS = [
     },
 ]
 
-async function complete(messages: Message[]): Promise<Completion> {
-    const res = await fetch(LLM_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: MODEL, messages, tools: TOOLS }),
-    })
-    if (!res.ok) {
-        throw new Error(`model returned ${res.status}`)
-    }
-    const body = (await res.json()) as {
-        choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[]
-        usage?: { prompt_tokens: number; completion_tokens: number }
-    }
-    const message = body.choices[0]?.message
-    return {
-        text: message?.content ?? '',
-        toolCalls: message?.tool_calls ?? [],
-        promptTokens: body.usage?.prompt_tokens ?? 0,
-        completionTokens: body.usage?.completion_tokens ?? 0,
+async function complete(
+    messages: Message[],
+    { distinctId, sessionId, traceId }: { distinctId: string; sessionId: string; traceId: string }
+): Promise<Completion> {
+    const startedAt = performance.now()
+    let httpStatus: number | undefined
+
+    try {
+        const res = await fetch(LLM_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: MODEL, messages, tools: TOOLS }),
+        })
+        httpStatus = res.status
+        if (!res.ok) {
+            throw new Error(`model returned ${res.status}`)
+        }
+        const body = (await res.json()) as {
+            choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[]
+            usage?: { prompt_tokens: number; completion_tokens: number }
+        }
+        const message = body.choices[0]?.message
+        const completion = {
+            text: message?.content ?? '',
+            toolCalls: message?.tool_calls ?? [],
+            promptTokens: body.usage?.prompt_tokens ?? 0,
+            completionTokens: body.usage?.completion_tokens ?? 0,
+        }
+        captureAiGeneration({
+            distinctId,
+            sessionId,
+            traceId,
+            messages,
+            completion,
+            latency: (performance.now() - startedAt) / 1_000,
+            httpStatus,
+        })
+        return completion
+    } catch (error) {
+        captureAiGeneration({
+            distinctId,
+            sessionId,
+            traceId,
+            messages,
+            latency: (performance.now() - startedAt) / 1_000,
+            httpStatus,
+            error: String(error),
+        })
+        throw error
     }
 }
 
@@ -81,20 +112,32 @@ class Thread {
             { role: 'user', content: question },
         ]
 
-        let result = await complete(messages)
+        const traceId = createAiTraceId()
+        const captureContext = {
+            distinctId: this.userId,
+            sessionId: this.threadId,
+            traceId,
+        }
+        let result = await complete(messages, captureContext)
 
         if (result.toolCalls.length > 0) {
             messages.push({ role: 'assistant', content: '', tool_calls: result.toolCalls })
             for (const call of result.toolCalls) {
                 const args = JSON.parse(call.function.arguments) as { user_id?: string }
+                const toolStartedAt = performance.now()
                 const output = lookupOrder(args.user_id ?? this.userId)
+                captureAiToolSpan({
+                    ...captureContext,
+                    name: call.function.name,
+                    latency: (performance.now() - toolStartedAt) / 1_000,
+                })
                 messages.push({
                     role: 'tool',
                     tool_call_id: call.id,
                     content: JSON.stringify(output),
                 })
             }
-            result = await complete(messages)
+            result = await complete(messages, captureContext)
         }
 
         this.turns.push({ question, answer: result.text })
