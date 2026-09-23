@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
@@ -14,15 +15,47 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
+  const posthog = usePostHog()
+
+  const identifyUser = (identifiedUser: FakeUser) => {
+    if (
+      !import.meta.env.VITE_POSTHOG_PROJECT_TOKEN ||
+      !import.meta.env.VITE_POSTHOG_HOST
+    ) {
+      return
+    }
+
+    posthog?.identify(identifiedUser.id, {
+      email: identifiedUser.email,
+      username: identifiedUser.username,
+    })
+  }
+
+  const resetUserIdentity = () => {
+    if (
+      import.meta.env.VITE_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_POSTHOG_HOST
+    ) {
+      posthog?.reset()
+    }
+  }
 
   useEffect(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
+
+    if (currentUser) {
+      identifyUser(currentUser)
+    }
   }, [])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      if (user && user.id !== loggedInUser.id) {
+        resetUserIdentity()
+      }
+      identifyUser(loggedInUser)
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +65,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      if (user && user.id !== newUser.id) {
+        resetUserIdentity()
+      }
+      identifyUser(newUser)
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,26 +78,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    resetUserIdentity()
     fakeLogout()
     setUser(null)
   }
 
   // Sync user state when localStorage changes
   useEffect(() => {
-    const handleStorageChange = () => {
+    const synchronizeUser = () => {
       const currentUser = getCurrentUser()
+
+      if (currentUser?.id === user?.id) {
+        return
+      }
+
+      if (user) {
+        resetUserIdentity()
+      }
+
+      if (currentUser) {
+        identifyUser(currentUser)
+      }
+
       setUser(currentUser)
     }
-    window.addEventListener('storage', handleStorageChange)
-    const interval = setInterval(() => {
-      const currentUser = getCurrentUser()
-      if (currentUser?.id !== user?.id) {
-        setUser(currentUser)
-      }
-    }, 1000)
+
+    window.addEventListener('storage', synchronizeUser)
+    const interval = setInterval(synchronizeUser, 1000)
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('storage', synchronizeUser)
       clearInterval(interval)
     }
   }, [user?.id])
