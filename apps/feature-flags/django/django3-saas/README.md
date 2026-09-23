@@ -10,7 +10,12 @@ was copied from.
 Expected wizard outcome, graded by `services/wizard-ci/feature-flag-checks.ts`
 against the keys in `.wizard-ci/feature-flags.json`:
 
-- creates the backend example flag, inactive at 0% rollout; the templates hold
-  no scripts, so there is no frontend side and no frontend flag
-- keeps the key in one constants module and evaluates it once from another file
-- writes `posthog-feature-flags-report.md`
+- the backend example flag exists in the project, inactive at 0% rollout; the
+  templates hold no scripts, so there is no frontend side and no frontend flag
+- the key appears in exactly one changed file, its constants module, and
+  another changed file imports that module
+- no changed file holds a `wizard-example-*` key outside that list
+- `posthog-feature-flags-report.md` exists
+
+The flag checks cannot prove this run created the flag: CI never deletes the
+shared key, because parallel legs share it.

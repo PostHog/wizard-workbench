@@ -32,6 +32,7 @@ import {
   loadFeatureFlagsExpect,
   posthogAppHost,
   FEATURE_FLAGS_REPORT_FILE,
+  type FeatureFlagsExpect,
   type RemoteFlag,
 } from "./feature-flag-checks.js";
 import { runChild } from "./run-child.js";
@@ -261,7 +262,7 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   // run variation gets its own matrix leg without a second copy of the fixture.
   const expect = loadExpect(APPS_DIR, app);
   let sourceApp: string;
-  let featureFlagsExpect: ReturnType<typeof loadFeatureFlagsExpect>;
+  let featureFlagsExpect: FeatureFlagsExpect | null;
   try {
     sourceApp = resolveSourceApp(APPS_DIR, app, expect?.sourceApp);
     featureFlagsExpect = loadFeatureFlagsExpect(APPS_DIR, app);

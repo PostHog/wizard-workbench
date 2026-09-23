@@ -114,6 +114,20 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function moduleImportPattern(module: string): RegExp {
+  const escapedModule = escapeRegExp(module);
+  const jsSpecifier = `['"](?:[^'"\\n]*/)?${escapedModule}(?:\\.[cm]?[jt]sx?)?['"]`;
+  const jsImport = `(?:\\bfrom|\\brequire\\(|\\bimport\\()\\s*${jsSpecifier}`;
+  const pythonDottedPath = `(?:[\\w.]*\\.)?${escapedModule}`;
+  const pythonWhitespaceOrComments = `(?:\\s|#[^\\n]*\\n)*`;
+  const pythonPrecedingImportedNames = `(?:\\w+(?:\\s+as\\s+\\w+)?\\s*,${pythonWhitespaceOrComments})*`;
+  const pythonSubmoduleImport = `from[ \\t]+[\\w.]+[ \\t]+import[ \\t]+\\(?${pythonWhitespaceOrComments}${pythonPrecedingImportedNames}${escapedModule}\\b`;
+  const pythonPrecedingImportedModules = `(?:[\\w.]+(?:[ \\t]+as[ \\t]+\\w+)?[ \\t]*,[ \\t]*)*`;
+  const pythonModuleImport = `import[ \\t]+${pythonPrecedingImportedModules}${pythonDottedPath}\\b`;
+  const pythonImport = `^[ \\t]*(?:from[ \\t]+${pythonDottedPath}[ \\t]+import\\b|${pythonModuleImport}|${pythonSubmoduleImport})`;
+  return new RegExp(`${jsImport}|${pythonImport}`, "m");
+}
+
 function check(name: string, ok: boolean, detail: string): Check {
   return { name, ok, detail, advisory: false };
 }
@@ -148,9 +162,9 @@ function codeChecks(flagKey: string, sourceFiles: Map<string, string>): Check[] 
 
   const [constantsPath] = filePaths;
   const constantsModule = moduleName(constantsPath);
-  const moduleReference = new RegExp(`\\b${escapeRegExp(constantsModule)}\\b`);
+  const constantsModuleImport = moduleImportPattern(constantsModule);
   const users = [...sourceFiles]
-    .filter(([path, contents]) => path !== constantsPath && moduleReference.test(contents))
+    .filter(([path, contents]) => path !== constantsPath && constantsModuleImport.test(contents))
     .map(([path]) => path);
   return [
     inOneModule,

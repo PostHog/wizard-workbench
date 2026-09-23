@@ -130,6 +130,94 @@ describe("featureFlagChecks", () => {
     assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
   });
 
+  it("fails a constants module that other files only mention in a comment or string", () => {
+    const evidence = passingEvidence();
+    evidence.changedFileContentsByPath.set("app/page.tsx", "// set up feature-flags here\nexport default function Page() {}");
+    evidence.changedFileContentsByPath.set("app/api/route.ts", `export const label = "feature-flags";`);
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), [
+      `constants module for ${FRONTEND_KEY} used by another changed file`,
+      `constants module for ${BACKEND_KEY} used by another changed file`,
+    ]);
+  });
+
+  it("fails a Python constants module that other files only mention in a comment", () => {
+    const evidence: FeatureFlagEvidence = {
+      ...passingEvidence(),
+      expectedFlagKeys: [BACKEND_KEY],
+      changedFileContentsByPath: new Map([
+        ["config/posthog_flags.py", `BACKEND_FLAG = "${BACKEND_KEY}"`],
+        ["dashboard/views.py", "# see posthog_flags for the key\ndef index(request): pass"],
+      ]),
+    };
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), [
+      `constants module for ${BACKEND_KEY} used by another changed file`,
+    ]);
+  });
+
+  it("passes a Python constants module imported by its dotted path", () => {
+    const evidence: FeatureFlagEvidence = {
+      ...passingEvidence(),
+      expectedFlagKeys: [BACKEND_KEY],
+      changedFileContentsByPath: new Map([
+        ["config/posthog_flags.py", `BACKEND_FLAG = "${BACKEND_KEY}"`],
+        ["dashboard/views.py", "from config.posthog_flags import BACKEND_FLAG"],
+      ]),
+    };
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
+  });
+
+  for (const submoduleImport of [
+    "from config import posthog_flags",
+    "from . import posthog_flags",
+    "from .. import posthog_flags",
+    "from config import urls, posthog_flags",
+    "from config import posthog_flags as flags",
+    "from config import (\n    urls as routes,\n    posthog_flags,\n)",
+    "from config import (urls,  # routes\n    posthog_flags)",
+    "import os, posthog_flags",
+    "import os as operating_system, config.posthog_flags as flags",
+  ]) {
+    it(`passes a Python constants module imported as a submodule via ${JSON.stringify(submoduleImport)}`, () => {
+      const evidence: FeatureFlagEvidence = {
+        ...passingEvidence(),
+        expectedFlagKeys: [BACKEND_KEY],
+        changedFileContentsByPath: new Map([
+          ["config/posthog_flags.py", `BACKEND_FLAG = "${BACKEND_KEY}"`],
+          ["dashboard/views.py", submoduleImport],
+        ]),
+      };
+      assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
+    });
+  }
+
+  it("fails a Python constants module when another file imports a differently named submodule", () => {
+    const evidence: FeatureFlagEvidence = {
+      ...passingEvidence(),
+      expectedFlagKeys: [BACKEND_KEY],
+      changedFileContentsByPath: new Map([
+        ["config/posthog_flags.py", `BACKEND_FLAG = "${BACKEND_KEY}"`],
+        ["dashboard/views.py", "from config import posthog_flags_extra"],
+      ]),
+    };
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), [
+      `constants module for ${BACKEND_KEY} used by another changed file`,
+    ]);
+  });
+
+  it("fails a Python constants module when another file plainly imports a differently named module after others", () => {
+    const evidence: FeatureFlagEvidence = {
+      ...passingEvidence(),
+      expectedFlagKeys: [BACKEND_KEY],
+      changedFileContentsByPath: new Map([
+        ["config/posthog_flags.py", `BACKEND_FLAG = "${BACKEND_KEY}"`],
+        ["dashboard/views.py", "import os, posthog_flags_extra"],
+      ]),
+    };
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), [
+      `constants module for ${BACKEND_KEY} used by another changed file`,
+    ]);
+  });
+
   it("fails an example key the app does not expect", () => {
     const evidence = passingEvidence();
     evidence.expectedFlagKeys = [BACKEND_KEY];
@@ -171,7 +259,7 @@ describe("fetchFlagsByKey", () => {
     const fetchFlags = (async (url: string) => {
       requestedUrls.push(url);
       const results: RemoteFlag[] = [
-        { ...inactiveFlag(`${BACKEND_KEY}-old`) },
+        inactiveFlag(`${BACKEND_KEY}-old`),
         { ...inactiveFlag(BACKEND_KEY), deleted: true },
         inactiveFlag(BACKEND_KEY),
       ];

@@ -10,7 +10,11 @@ was copied from.
 Expected wizard outcome, graded by `services/wizard-ci/feature-flag-checks.ts`
 against the keys in `.wizard-ci/feature-flags.json`:
 
-- creates both example flags, inactive at 0% rollout
-- keeps both keys in one constants module and evaluates each once, on its own
-  side, from another file
-- writes `posthog-feature-flags-report.md`
+- both example flags exist in the project, inactive at 0% rollout
+- each key appears in exactly one changed file, its constants module, and
+  another changed file imports that module
+- no changed file holds a `wizard-example-*` key outside that list
+- `posthog-feature-flags-report.md` exists
+
+The flag checks cannot prove this run created the flags: CI never deletes the
+shared keys, because parallel legs share them.
