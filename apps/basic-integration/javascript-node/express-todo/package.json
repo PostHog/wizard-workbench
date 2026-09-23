@@ -8,6 +8,10 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
-    "express": "^4.21.0"
+    "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-logs": "^0.222.0",
+    "express": "^4.21.0",
+    "posthog-node": "^5.53.0"
   }
 }
