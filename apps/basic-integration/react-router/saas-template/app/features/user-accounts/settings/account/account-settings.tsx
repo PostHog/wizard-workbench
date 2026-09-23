@@ -1,6 +1,7 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { usePostHog } from "@posthog/react";
 import { IconUser } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
@@ -40,6 +41,7 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
   const { t } = useTranslation("settings", {
     keyPrefix: "userAccount",
   });
+  const posthog = usePostHog();
 
   const { form, fields } = useForm(
     coerceFormValue(updateUserAccountFormSchema),
@@ -55,15 +57,16 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
 
   return (
     <Form
-      encType="multipart/form-data"
-      method="POST"
-      {...form.props}
       aria-describedby={
         form.errors && form.errors.length > 0
           ? `${form.descriptionId} ${form.errorId}`
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      encType="multipart/form-data"
+      method="POST"
+      {...form.props}
+      onSubmit={() => posthog?.capture("user_account_updated")}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldLegend>

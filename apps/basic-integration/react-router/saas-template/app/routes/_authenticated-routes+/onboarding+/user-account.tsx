@@ -1,5 +1,6 @@
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { usePostHog } from "@posthog/react";
 import { IconUser } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { data, Form, useNavigation } from "react-router";
@@ -29,6 +30,7 @@ import { requireUserNeedsOnboarding } from "~/features/onboarding/onboarding-hel
 import { onboardingUserAccountAction } from "~/features/onboarding/user-account/onboarding-user-account-action.server";
 import { ONBOARDING_USER_ACCOUNT_INTENT } from "~/features/onboarding/user-account/onboarding-user-account-constants";
 import { onboardingUserAccountSchema } from "~/features/onboarding/user-account/onboarding-user-account-schemas";
+import { posthogLog } from "~/lib/posthog-logger.client";
 import { getPageTitle } from "~/utils/get-page-title.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -65,6 +67,7 @@ export default function UserAccountOnboardingRoute({
   loaderData,
 }: Route.ComponentProps) {
   const { t } = useTranslation("onboarding", { keyPrefix: "userAccount" });
+  const posthog = usePostHog();
   const { form, fields } = useForm(
     coerceFormValue(onboardingUserAccountSchema),
     {
@@ -75,7 +78,17 @@ export default function UserAccountOnboardingRoute({
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <Form encType="multipart/form-data" method="POST" {...form.props}>
+    <Form
+      encType="multipart/form-data"
+      method="POST"
+      {...form.props}
+      onSubmit={() => {
+        posthog?.capture("user_account_onboarding_submitted");
+        posthogLog.info(posthog, "user account onboarding submitted", {
+          workflow: "user_account_onboarding",
+        });
+      }}
+    >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>
           <div className="flex flex-col gap-1">

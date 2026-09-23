@@ -1,5 +1,6 @@
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { usePostHog } from "@posthog/react";
 import { IconBuilding } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { data, Form, useNavigation } from "react-router";
@@ -46,6 +47,7 @@ import {
   onboardingOrganizationSchema,
   REFERRAL_SOURCE_OPTIONS,
 } from "~/features/onboarding/organization/onboarding-organization-schemas";
+import { posthogLog } from "~/lib/posthog-logger.client";
 import { getPageTitle } from "~/utils/get-page-title.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -80,6 +82,7 @@ export default function OrganizationOnboardingRoute({
   actionData,
 }: Route.ComponentProps) {
   const { t } = useTranslation("onboarding", { keyPrefix: "organization" });
+  const posthog = usePostHog();
   const { form, fields } = useForm(
     coerceFormValue(onboardingOrganizationSchema),
     {
@@ -91,15 +94,21 @@ export default function OrganizationOnboardingRoute({
 
   return (
     <Form
-      encType="multipart/form-data"
-      method="POST"
-      {...form.props}
       aria-describedby={
         form.errors && form.errors.length > 0
           ? `${form.descriptionId} ${form.errorId}`
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      encType="multipart/form-data"
+      method="POST"
+      {...form.props}
+      onSubmit={() => {
+        posthog?.capture("organization_onboarding_submitted");
+        posthogLog.info(posthog, "organization onboarding submitted", {
+          workflow: "organization_onboarding",
+        });
+      }}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>

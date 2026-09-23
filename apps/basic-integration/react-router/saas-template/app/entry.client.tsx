@@ -1,10 +1,43 @@
+import { PostHogErrorBoundary, PostHogProvider } from "@posthog/react";
 import i18next from "i18next";
 import I18nextBrowserLanguageDetector from "i18next-browser-languagedetector";
 import Fetch from "i18next-fetch-backend";
+import posthog from "posthog-js";
 import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { I18nextProvider, initReactI18next } from "react-i18next";
 import { HydratedRouter } from "react-router/dom";
+
+const projectToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN;
+const host = import.meta.env.VITE_PUBLIC_POSTHOG_HOST;
+
+if (!projectToken) {
+  if (import.meta.env.DEV) {
+    throw new Error(
+      "VITE_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_PROJECT_TOKEN is configured",
+    );
+  }
+} else if (!host) {
+  if (import.meta.env.DEV) {
+    throw new Error(
+      "VITE_PUBLIC_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_HOST is configured",
+    );
+  }
+} else {
+  posthog.init(projectToken, {
+    api_host: host,
+    capture_exceptions: {
+      capture_console_errors: false,
+      capture_unhandled_errors: true,
+      capture_unhandled_rejections: true,
+    },
+    defaults: "2026-05-30",
+    logs: {
+      environment: import.meta.env.MODE,
+      serviceName: "saas-template-web",
+    },
+  });
+}
 
 async function hydrate() {
   await i18next
@@ -23,7 +56,15 @@ async function hydrate() {
       document,
       <I18nextProvider i18n={i18next}>
         <StrictMode>
-          <HydratedRouter />
+          {projectToken && host ? (
+            <PostHogProvider client={posthog}>
+              <PostHogErrorBoundary>
+                <HydratedRouter />
+              </PostHogErrorBoundary>
+            </PostHogProvider>
+          ) : (
+            <HydratedRouter />
+          )}
         </StrictMode>
       </I18nextProvider>,
     );

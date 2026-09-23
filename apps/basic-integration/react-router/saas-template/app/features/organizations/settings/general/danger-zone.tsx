@@ -1,4 +1,5 @@
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
@@ -39,6 +40,7 @@ function DeleteOrganizationDialogComponent({
   const { t } = useTranslation("organizations", {
     keyPrefix: "settings.general.dangerZone",
   });
+  const posthog = usePostHog();
 
   const localDeleteOrganizationFormSchema = useMemo(
     () =>
@@ -97,7 +99,11 @@ function DeleteOrganizationDialogComponent({
           <DialogDescription>{t("dialogDescription")}</DialogDescription>
         </DialogHeader>
 
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={() => posthog?.capture("organization_deletion_submitted")}
+        >
           <FieldSet disabled={isSubmitting}>
             <Field data-invalid={fields.confirmation.ariaInvalid}>
               <FieldLabel htmlFor={fields.confirmation.id}>
