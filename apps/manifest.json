@@ -93,6 +93,13 @@
       "label": "Error Tracking",
       "description": "Set up PostHog error tracking; installs the SDK first if the project doesn't have it, and wires source-map upload where the platform needs it",
       "ciCapable": false
+    },
+    {
+      "id": "feature-flags",
+      "dir": "feature-flags",
+      "label": "Feature Flags",
+      "description": "Create an example PostHog feature flag for each side of the app (frontend, backend) and wire one correct evaluation of each; installs the SDKs first if the project doesn't have them",
+      "ciCapable": true
     }
   ]
 }

@@ -22,6 +22,7 @@ import {
   readdirSync,
   statSync,
 } from "fs";
+import { ensureGatewayToken } from "../gateway-token/index.js";
 import { loadFixtures } from "../mcp-stub/fixtures.js";
 import { startMcpStub, type McpStub } from "../mcp-stub/index.js";
 import { readJournal } from "../mcp-stub/journal.js";
@@ -247,6 +248,18 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
     return 2;
   }
 
+  let gatewayToken: { tokenFile: string; gatewayUrl: string };
+  try {
+    gatewayToken = await ensureGatewayToken({
+      program: opts.program ?? "posthog-integration",
+      projectId,
+      tokenFile: process.env.WIZARD_CI_GATEWAY_TOKEN_FILE,
+    });
+  } catch (error) {
+    console.error(`✖ gateway token: ${(error as Error).message}`);
+    return 2;
+  }
+
   // A scenario may run against a sibling app's source tree (`sourceApp`), so a
   // run variation gets its own matrix leg without a second copy of the fixture.
   const expect = loadExpect(APPS_DIR, app);
@@ -292,6 +305,8 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   for (const k of Object.keys(childEnv))
     if (STRIP_HOST_AUTH.test(k)) delete childEnv[k];
   childEnv.POSTHOG_PERSONAL_API_KEY = apiKey;
+  childEnv.WIZARD_CI_GATEWAY_TOKEN_FILE = gatewayToken.tokenFile;
+  childEnv.WIZARD_CI_GATEWAY_URL = gatewayToken.gatewayUrl;
   childEnv.APP_DIR = appDir;
   childEnv.PROJECT_ID = projectId;
   childEnv.POSTHOG_REGION = region;
