@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { use, useState, Suspense } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
 import {
@@ -13,7 +13,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
-import { User } from '@/lib/db/schema';
+import type { User } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 import useSWR, { mutate } from 'swr';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -21,10 +22,43 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: user } = useSWR<User>('/api/user', fetcher);
+  const identifiedUserId = useRef<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (
+      !user ||
+      !process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+      !process.env.NEXT_PUBLIC_POSTHOG_HOST
+    ) {
+      return;
+    }
+
+    const userId = user.id.toString();
+    if (identifiedUserId.current === userId) {
+      return;
+    }
+
+    if (identifiedUserId.current) {
+      posthog.reset();
+    }
+
+    posthog.identify(userId, {
+      email: user.email,
+      name: user.name,
+      role: user.role
+    });
+    identifiedUserId.current = userId;
+  }, [user]);
 
   async function handleSignOut() {
     await signOut();
+    if (
+      process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      process.env.NEXT_PUBLIC_POSTHOG_HOST
+    ) {
+      posthog.reset();
+    }
     mutate('/api/user');
     router.push('/');
   }
