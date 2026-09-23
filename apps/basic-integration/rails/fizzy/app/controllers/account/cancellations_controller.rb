@@ -3,6 +3,12 @@ class Account::CancellationsController < ApplicationController
 
   def create
     Current.account.cancel
+
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "account_cancelled"
+    ) if Rails.configuration.x.posthog_enabled
+
     redirect_to session_menu_path(script_name: nil), notice: "Account deleted"
   end
 

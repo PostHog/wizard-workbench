@@ -28,6 +28,10 @@ class User < ApplicationRecord
     name != identity.email_address
   end
 
+  def posthog_distinct_id
+    id.to_s
+  end
+
   def verified?
     verified_at.present?
   end
