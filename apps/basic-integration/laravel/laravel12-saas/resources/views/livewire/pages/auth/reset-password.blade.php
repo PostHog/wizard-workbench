@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -31,7 +32,7 @@ new #[Layout('layouts.guest')] class extends Component
     /**
      * Reset the password for the given user.
      */
-    public function resetPassword(): void
+    public function resetPassword(PostHogService $posthog): void
     {
         $this->validate([
             'token' => ['required'],
@@ -44,13 +45,17 @@ new #[Layout('layouts.guest')] class extends Component
         // database. Otherwise we will parse the error and return the response.
         $status = Password::reset(
             $this->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user) {
+            function ($user) use ($posthog) {
                 $user->forceFill([
                     'password' => Hash::make($this->password),
                     'remember_token' => Str::random(60),
                 ])->save();
 
                 event(new PasswordReset($user));
+                $posthog->captureForDistinctId(
+                    (string) $user->getAuthIdentifier(),
+                    'password_reset_completed'
+                );
             }
         );
 
