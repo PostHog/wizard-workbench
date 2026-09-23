@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { Spinner } from '../components/Spinner'
@@ -10,6 +11,8 @@ export const Route = createFileRoute('/dashboard/invoices/')({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
+  const posthogLogger = posthog.logger
   const router = useRouter()
 
   const createInvoiceMutation = useMutation({
@@ -32,6 +35,8 @@ function InvoicesIndexComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
+            posthog.capture('invoice_creation_submitted')
+            posthogLogger.info('invoice_creation_submitted')
             createInvoiceMutation.mutate({
               title: formData.get('title') as string,
               body: formData.get('body') as string,
