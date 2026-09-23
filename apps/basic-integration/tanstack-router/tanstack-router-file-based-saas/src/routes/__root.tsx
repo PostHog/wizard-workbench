@@ -6,8 +6,10 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogErrorBoundary } from 'posthog-js/react'
 import { Spinner } from '../components/Spinner'
 import { Breadcrumbs } from '../components/Breadcrumbs'
+import { PostHogRoot } from '../posthog'
 import type { Auth } from '../utils/auth'
 
 function RouterSpinner() {
@@ -23,9 +25,10 @@ export const Route = createRootRouteWithContext<{
 
 function RootComponent() {
   return (
-    <>
-      <div className={`min-h-screen flex flex-col`}>
-        <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
+    <PostHogRoot>
+      <PostHogErrorBoundary>
+        <div className={`min-h-screen flex flex-col`}>
+          <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
             <div className={`w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center`}>
               <span className={`text-white font-bold text-sm`}>CF</span>
@@ -67,9 +70,10 @@ function RootComponent() {
           <div className={`flex-1 bg-white dark:bg-gray-900`}>
             <Outlet />
           </div>
+          </div>
         </div>
-      </div>
-      <TanStackRouterDevtools position="bottom-right" />
-    </>
+        <TanStackRouterDevtools position="bottom-right" />
+      </PostHogErrorBoundary>
+    </PostHogRoot>
   )
 }
