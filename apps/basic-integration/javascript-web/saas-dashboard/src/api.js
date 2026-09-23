@@ -6,6 +6,7 @@
  * fetch() calls to a backend.
  */
 import { store } from './store.js';
+import { captureEvent, identifyUser, posthogLog, resetUser } from './posthog.js';
 
 const DELAY_MS = 150;
 
@@ -17,16 +18,25 @@ export const api = {
   async login(email) {
     await delay();
 
+    const previousUserId = store.state.currentUser?.id;
     const success = store.login(email);
     if (!success) {
       throw new Error('Invalid credentials. Use a team member email.');
     }
-    return store.state.currentUser;
+
+    const user = store.state.currentUser;
+    if (previousUserId && previousUserId !== user.id) resetUser();
+    identifyUser(user);
+    captureEvent('user_logged_in');
+    posthogLog.info('user login completed');
+    return user;
   },
 
   async logout() {
     await delay(50);
+    captureEvent('user_logged_out');
     store.logout();
+    resetUser();
   },
 
   async getProjects() {
@@ -45,34 +55,46 @@ export const api = {
     await delay();
 
     if (!name.trim()) throw new Error('Project name is required');
-    return store.createProject(name.trim(), description.trim());
+    const project = store.createProject(name.trim(), description.trim());
+    captureEvent('project_created');
+    posthogLog.info('project created');
+    return project;
   },
 
   async deleteProject(id) {
     await delay();
     store.deleteProject(id);
+    captureEvent('project_deleted');
   },
 
   async addTask(projectId, title, priority) {
     await delay();
 
     if (!title.trim()) throw new Error('Task title is required');
-    return store.addTask(projectId, title.trim(), priority);
+    const task = store.addTask(projectId, title.trim(), priority);
+    if (task) captureEvent('task_created', { priority });
+    return task;
   },
 
   async updateTaskStatus(projectId, taskId, status) {
     await delay(50);
     store.updateTaskStatus(projectId, taskId, status);
+    captureEvent('task_status_changed', { status });
+    posthogLog.info('task status updated', { status });
   },
 
   async deleteTask(projectId, taskId) {
     await delay(50);
     store.deleteTask(projectId, taskId);
+    captureEvent('task_deleted');
   },
 
   async assignTask(projectId, taskId, assigneeId) {
     await delay(50);
     store.assignTask(projectId, taskId, assigneeId);
+    captureEvent('task_assigned', {
+      assignment_status: assigneeId ? 'assigned' : 'unassigned',
+    });
   },
 
   async getStats() {
@@ -87,7 +109,10 @@ export const api = {
 
   async updateSettings(updates) {
     await delay();
+    const setting = Object.keys(updates)[0];
+    const value = updates[setting];
     store.updateSettings(updates);
+    captureEvent('settings_updated', { setting, value });
     return store.state.settings;
   },
 

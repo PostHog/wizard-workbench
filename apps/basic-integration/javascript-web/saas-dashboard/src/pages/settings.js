@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
+import { captureEvent } from '../posthog.js';
 
 export async function renderSettings() {
   renderShell('settings');
@@ -98,6 +99,7 @@ export async function renderSettings() {
     // Reset
     document.getElementById('reset-data-btn').addEventListener('click', () => {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
+        captureEvent('workspace_data_reset');
         store.reset();
         store.login(user.email);
         renderSettings();
