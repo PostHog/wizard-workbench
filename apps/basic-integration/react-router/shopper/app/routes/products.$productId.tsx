@@ -4,6 +4,10 @@ import { getProductById } from "../data/products";
 import { useCart } from "../context/CartContext";
 import { useState } from "react";
 
+const hasPostHogConfig =
+  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+  import.meta.env.VITE_PUBLIC_POSTHOG_HOST;
+
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const productId = parseInt(params.productId);
   const product = getProductById(productId);
@@ -23,6 +27,17 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
+    }
+    if (hasPostHogConfig) {
+      void import("posthog-js").then(({ default: posthog }) => {
+        posthog.capture("product_added_to_cart", {
+          product_id: product.id,
+          category: product.category,
+          price: product.price,
+          quantity,
+          source: "product_detail",
+        });
+      });
     }
   };
 
