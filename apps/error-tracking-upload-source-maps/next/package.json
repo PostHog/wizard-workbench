@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@posthog/nextjs-config": "^1.10.0",
     "next": "16.2.6",
     "posthog-js": "^1.376.2",
     "react": "19.1.0",
