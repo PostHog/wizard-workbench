@@ -1,10 +1,16 @@
+import logging
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
+import posthog
 from .models import Project, ActivityLog
 from .forms import ProjectForm
+
+
+posthog_logger = logging.getLogger('posthog.exporter')
 
 
 @login_required
@@ -60,6 +66,12 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            posthog.capture('project_created', properties={
+                'is_active': project.is_active,
+            })
+            posthog_logger.info(
+                'project_created', extra={'project_active': project.is_active}
+            )
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +95,12 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            posthog.capture('project_updated', properties={
+                'is_active': project.is_active,
+            })
+            posthog_logger.info(
+                'project_updated', extra={'project_active': project.is_active}
+            )
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -97,6 +115,7 @@ def delete_project(request, pk):
 
     if request.method == 'POST':
         name = project.name
+        is_active = project.is_active
         project.delete()
 
         ActivityLog.objects.create(
@@ -105,6 +124,12 @@ def delete_project(request, pk):
             description=f'Deleted project: {name}'
         )
 
+        posthog.capture('project_deleted', properties={
+            'is_active': is_active,
+        })
+        posthog_logger.info(
+            'project_deleted', extra={'project_active': is_active}
+        )
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
 
