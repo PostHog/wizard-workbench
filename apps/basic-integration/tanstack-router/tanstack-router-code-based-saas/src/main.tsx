@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -84,7 +85,43 @@ function RouterSpinner() {
   return <Spinner show={isLoading} />
 }
 
+const posthogProjectToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
 function RootComponent() {
+  if (!posthogProjectToken || !posthogHost) {
+    if (import.meta.env.DEV) {
+      const missingVariable = !posthogProjectToken
+        ? 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN'
+        : 'VITE_PUBLIC_POSTHOG_HOST'
+      throw new Error(
+        `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+      )
+    }
+
+    return <RootContent />
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={posthogProjectToken}
+      options={{
+        api_host: posthogHost,
+        defaults: '2026-01-30',
+        capture_exceptions: true,
+        logs: {
+          serviceName: 'cloudflow-web',
+          environment: import.meta.env.MODE,
+        },
+        debug: import.meta.env.DEV,
+      }}
+    >
+      <RootContent />
+    </PostHogProvider>
+  )
+}
+
+function RootContent() {
   return (
     <>
       <div className={`min-h-screen flex flex-col`}>
@@ -433,9 +470,19 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      if (posthogProjectToken && posthogHost) {
+        posthog.capture('invoice_created')
+        posthog.logger.info('invoice creation completed', {
+          operation: 'invoice_create',
+          outcome: 'success',
+        })
+      }
+      return router.invalidate()
+    },
   })
 
   return (
@@ -517,9 +564,19 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      if (posthogProjectToken && posthogHost) {
+        posthog.capture('invoice_updated')
+        posthog.logger.info('invoice update completed', {
+          operation: 'invoice_update',
+          outcome: 'success',
+        })
+      }
+      return router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
