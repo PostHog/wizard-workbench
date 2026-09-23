@@ -6,9 +6,18 @@ import {
   useRouter,
 } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { usePostHog } from 'posthog-js/react'
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
+  const posthog = usePostHog()
   const router = useRouter()
+
+  useEffect(() => {
+    if (posthog.__loaded) {
+      posthog.captureException(error)
+    }
+  }, [error, posthog])
   const isRoot = useMatch({
     strict: false,
     select: (state) => state.id === rootRouteId,
