@@ -46,11 +46,16 @@
   },
   "type": "module",
   "dependencies": {
+    "@opentelemetry/api-logs": "^0.222.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-logs": "^0.222.0",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/auth-ui-svelte": "^0.2.9",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.2",
     "handlebars": "^4.7.8",
+    "posthog-js": "^1.433.7",
     "resend": "^3.5.0",
     "stripe": "^13.3.0"
   },

@@ -2,6 +2,7 @@
   import { enhance, applyAction } from "$app/forms"
   import { page } from "$app/stores"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import posthog from "posthog-js"
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -58,6 +59,9 @@
       loading = false
       if (result.type === "success") {
         showSuccess = true
+        posthog.capture(dangerous ? "account_deleted" : "account_settings_updated", {
+          operation: formTarget.replace("/account/api?/", ""),
+        })
       }
     }
   }

@@ -1,5 +1,6 @@
 import { PRIVATE_STRIPE_API_KEY } from "$env/static/private"
 import { error, redirect } from "@sveltejs/kit"
+import { capturePostHogServerLog } from "$lib/server/posthog-logs"
 import Stripe from "stripe"
 import {
   fetchSubscription,
@@ -57,6 +58,10 @@ export const load: PageServerLoad = async ({
       cancel_url: `${url.origin}/account/billing`,
     })
     checkoutUrl = stripeSession.url
+    await capturePostHogServerLog("subscription checkout session created", {
+      workflow: "subscription_checkout",
+      outcome: "redirect_ready",
+    })
   } catch (e) {
     console.error("Error creating checkout session", e)
     error(500, "Unknown Error (SSE): If issue persists please contact us.")

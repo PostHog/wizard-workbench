@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { capturePostHogServerLog } from "$lib/server/posthog-logs"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -68,6 +69,11 @@ export const actions = {
       console.error("Error saving contact request", insertError)
       return fail(500, { errors: { _: "Error saving" } })
     }
+
+    await capturePostHogServerLog("contact request persisted", {
+      workflow: "contact_form",
+      outcome: "saved",
+    })
 
     // Send email to admin
     await sendAdminEmail({
