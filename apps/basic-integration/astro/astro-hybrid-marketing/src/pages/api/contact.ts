@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { flushPostHogLogs, getPostHogLogger } from '../../lib/posthog-logs';
 
 export const prerender = false;
 
@@ -31,6 +32,12 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    getPostHogLogger()?.emit({
+      severityText: 'INFO',
+      body: 'contact_request_validated',
+      attributes: { route: 'contact_api' },
+    });
+
     // In a real app, you would:
     // 1. Send to a CRM or email service
     // 2. Store in a database
@@ -45,6 +52,13 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    getPostHogLogger()?.emit({
+      severityText: 'INFO',
+      body: 'contact_request_accepted',
+      attributes: { route: 'contact_api' },
+    });
+    await flushPostHogLogs();
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -53,6 +67,11 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    getPostHogLogger()?.emit({
+      severityText: 'ERROR',
+      body: 'contact_request_failed',
+    });
+    await flushPostHogLogs();
     console.error('Contact form error:', error);
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
