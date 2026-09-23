@@ -1,0 +1,5 @@
+{
+  "provider": "openai",
+  "package": "github.com/posthog/posthog-go/otel",
+  "otel_init_file": "main.go"
+}
