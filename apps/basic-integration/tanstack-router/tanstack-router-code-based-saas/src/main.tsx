@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogErrorBoundary, PostHogProvider, usePostHog } from 'posthog-js/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -34,7 +35,20 @@ import type { NotFoundRouteProps } from '@tanstack/react-router'
 import type { Invoice } from './mockTodos'
 import './styles.css'
 
-//
+const posthogApiKey = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
+if (!posthogApiKey && import.meta.env.DEV) {
+  throw new Error(
+    'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_PROJECT_TOKEN is configured',
+  )
+}
+
+if (!posthogHost && import.meta.env.DEV) {
+  throw new Error(
+    'VITE_PUBLIC_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_HOST is configured',
+  )
+}
 
 type UsersViewSortBy = 'name' | 'id' | 'email'
 
@@ -85,7 +99,7 @@ function RouterSpinner() {
 }
 
 function RootComponent() {
-  return (
+  const content = (
     <>
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
@@ -133,6 +147,27 @@ function RootComponent() {
       </div>
       <TanStackRouterDevtools position="bottom-right" />
     </>
+  )
+
+  if (!posthogApiKey || !posthogHost) {
+    return content
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={posthogApiKey}
+      options={{
+        api_host: posthogHost,
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
+      <PostHogErrorBoundary
+        fallback={<div className="p-8">Something went wrong. Please refresh and try again.</div>}
+      >
+        {content}
+      </PostHogErrorBoundary>
+    </PostHogProvider>
   )
 }
 
@@ -433,9 +468,15 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      if (posthogApiKey && posthogHost) {
+        posthog.capture('invoice_created')
+      }
+      return router.invalidate()
+    },
   })
 
   return (
@@ -517,9 +558,15 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      if (posthogApiKey && posthogHost) {
+        posthog.capture('invoice_updated')
+      }
+      return router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -1003,6 +1050,7 @@ const profileRoute = createRoute({
 
 function ProfileComponent() {
   const { username } = profileRoute.useRouteContext()
+  const posthog = usePostHog()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
 
@@ -1049,7 +1097,14 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => {
+                if (posthogApiKey && posthogHost) {
+                  posthog.capture('subscription_upgrade_clicked')
+                }
+              }}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Upgrade
             </button>
           </div>
@@ -1067,6 +1122,9 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                if (posthogApiKey && posthogHost) {
+                  posthog.capture('user_signed_out')
+                }
                 auth.logout()
                 router.invalidate()
               }}
@@ -1094,6 +1152,7 @@ const loginRoute = createRoute({
 
 function LoginComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
   })
@@ -1103,6 +1162,9 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    if (posthogApiKey && posthogHost) {
+      posthog.capture('user_signed_in')
+    }
     router.invalidate()
   }
 
@@ -1138,6 +1200,9 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                if (posthogApiKey && posthogHost) {
+                  posthog.capture('user_signed_out')
+                }
                 auth.logout()
                 router.invalidate()
               }}
