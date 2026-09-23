@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
 import { z } from 'zod';
+import { flushPostHogLogs, logTodoOperation } from '@/lib/posthog-logs';
 
 const todoSchema = z.object({
   title: z.string().min(1).max(255),
@@ -10,7 +11,7 @@ const todoSchema = z.object({
 
 // GET /api/todos - Get all todos
 // POST /api/todos - Create a new todo
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
       const allTodos = getTodos();
@@ -31,6 +32,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         completed: validatedData.completed,
       });
 
+      logTodoOperation('created');
+      await flushPostHogLogs();
       return res.status(201).json(newTodo);
     } catch (error) {
       if (error instanceof z.ZodError) {
