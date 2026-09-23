@@ -20,6 +20,11 @@ export const sendAdminEmail = async ({
     return
   }
 
+  if (!env.PRIVATE_RESEND_API_KEY) {
+    // email not configured.  Emails are optional so no error is thrown
+    return
+  }
+
   try {
     const resend = new Resend(env.PRIVATE_RESEND_API_KEY)
     const resp = await resend.emails.send({
