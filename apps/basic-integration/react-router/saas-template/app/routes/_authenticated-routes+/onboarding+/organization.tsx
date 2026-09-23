@@ -100,6 +100,16 @@ export default function OrganizationOnboardingRoute({
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        if (!event.defaultPrevented) {
+          document.dispatchEvent(
+            new CustomEvent("posthog:capture", {
+              detail: { name: "onboarding_organization_submitted" },
+            }),
+          );
+        }
+      }}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>

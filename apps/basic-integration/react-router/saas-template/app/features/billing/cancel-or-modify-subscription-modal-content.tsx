@@ -119,7 +119,17 @@ export function CancelOrModifySubscriptionModalContent({
 
   return (
     <>
-      <Form method="post" replace>
+      <Form
+        method="post"
+        onSubmit={() =>
+          document.dispatchEvent(
+            new CustomEvent("posthog:capture", {
+              detail: { name: "subscription_change_requested" },
+            }),
+          )
+        }
+        replace
+      >
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"

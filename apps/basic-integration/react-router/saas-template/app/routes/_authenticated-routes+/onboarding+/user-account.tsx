@@ -75,7 +75,21 @@ export default function UserAccountOnboardingRoute({
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <Form encType="multipart/form-data" method="POST" {...form.props}>
+    <Form
+      encType="multipart/form-data"
+      method="POST"
+      {...form.props}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        if (!event.defaultPrevented) {
+          document.dispatchEvent(
+            new CustomEvent("posthog:capture", {
+              detail: { name: "onboarding_account_submitted" },
+            }),
+          );
+        }
+      }}
+    >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>
           <div className="flex flex-col gap-1">

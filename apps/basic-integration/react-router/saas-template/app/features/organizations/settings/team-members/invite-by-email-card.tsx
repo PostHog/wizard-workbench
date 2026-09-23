@@ -70,7 +70,27 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(event) => {
+            form.props.onSubmit?.(event);
+            if (!event.defaultPrevented) {
+              document.dispatchEvent(
+                new CustomEvent("posthog:capture", {
+                  detail: {
+                    name: "team_invite_email_submitted",
+                    properties: {
+                      role: new FormData(event.currentTarget).get(
+                        fields.role.name,
+                      ),
+                    },
+                  },
+                }),
+              );
+            }
+          }}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

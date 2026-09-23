@@ -61,7 +61,21 @@ export function CreateOrganizationFormCard({
         </CardHeader>
 
         <CardContent>
-          <Form encType="multipart/form-data" method="POST" {...form.props}>
+          <Form
+            encType="multipart/form-data"
+            method="POST"
+            {...form.props}
+            onSubmit={(event) => {
+              form.props.onSubmit?.(event);
+              if (!event.defaultPrevented) {
+                document.dispatchEvent(
+                  new CustomEvent("posthog:capture", {
+                    detail: { name: "organization_creation_submitted" },
+                  }),
+                );
+              }
+            }}
+          >
             <FieldSet
               className="flex flex-col gap-6"
               disabled={isCreatingOrganization}

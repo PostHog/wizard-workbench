@@ -107,7 +107,17 @@ export function CreateSubscriptionModalContent({
   );
 
   return (
-    <Form method="post" replace>
+    <Form
+      method="post"
+      onSubmit={() =>
+        document.dispatchEvent(
+          new CustomEvent("posthog:capture", {
+            detail: { name: "subscription_checkout_started" },
+          }),
+        )
+      }
+      replace
+    >
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>

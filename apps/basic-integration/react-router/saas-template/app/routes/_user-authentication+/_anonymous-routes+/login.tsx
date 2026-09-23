@@ -116,7 +116,23 @@ export default function LoginRoute({
         </div>
 
         {/* Email Login Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(event) => {
+            form.props.onSubmit?.(event);
+            if (!event.defaultPrevented) {
+              document.dispatchEvent(
+                new CustomEvent("posthog:capture", {
+                  detail: {
+                    name: "login_submitted",
+                    properties: { authentication_method: "email" },
+                  },
+                }),
+              );
+            }
+          }}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -160,7 +176,19 @@ export default function LoginRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Login Form */}
-        <Form method="POST">
+        <Form
+          method="POST"
+          onSubmit={() =>
+            document.dispatchEvent(
+              new CustomEvent("posthog:capture", {
+                detail: {
+                  name: "login_submitted",
+                  properties: { authentication_method: "google" },
+                },
+              }),
+            )
+          }
+        >
           <Field>
             <Button
               name="intent"

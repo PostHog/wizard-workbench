@@ -47,7 +47,20 @@ export function ContactSalesTeam({
         </CardDescription>
       </CardHeader>
 
-      <Form method="POST" {...form.props}>
+      <Form
+        method="POST"
+        {...form.props}
+        onSubmit={(event) => {
+          form.props.onSubmit?.(event);
+          if (!event.defaultPrevented) {
+            document.dispatchEvent(
+              new CustomEvent("posthog:capture", {
+                detail: { name: "contact_sales_submitted" },
+              }),
+            );
+          }
+        }}
+      >
         <FieldSet className="space-y-6" disabled={isContactingSales}>
           <CardContent className="space-y-6">
             <Field data-invalid={fields.firstName.ariaInvalid}>
