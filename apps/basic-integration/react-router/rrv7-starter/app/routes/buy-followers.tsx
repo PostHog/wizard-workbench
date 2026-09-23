@@ -5,6 +5,7 @@ import type { Route } from './+types/buy-followers'
 import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { addFollowers, addPurchasedFollowers } from '@/lib/utils/localStorage'
+import { getPostHog } from '@/lib/posthog.client'
 import cn from '@/lib/utils/cn'
 
 export const meta: Route.MetaFunction = () => {
@@ -23,22 +24,45 @@ export default function BuyFollowers() {
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
 
+  const handlePackageSelection = (index: number) => {
+    const pkg = followerPackages[index]
+    const totalFollowers = pkg.amount + pkg.bonus
+
+    setSelectedPackage(index)
+
+    void getPostHog().then((posthog) => {
+      posthog?.capture('follower_package_selected', {
+        follower_count: totalFollowers,
+        bonus_follower_count: pkg.bonus,
+        price: pkg.price,
+      })
+    })
+  }
+
   const handlePurchase = () => {
     if (selectedPackage === null) return
     setPurchased(true)
-    
+
     setTimeout(() => {
       const pkg = followerPackages[selectedPackage]
       const totalFollowers = pkg.amount + pkg.bonus
-      
+
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
-      
+
+      void getPostHog().then((posthog) => {
+        posthog?.capture('follower_purchase_completed', {
+          follower_count: totalFollowers,
+          bonus_follower_count: pkg.bonus,
+          price: pkg.price,
+        })
+      })
+
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
       setSelectedPackage(null)
-      
+
       // Navigate to profile to see the updated count
       navigate('/profile')
     }, 1500)
@@ -75,7 +99,7 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => void handlePackageSelection(index)}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected
