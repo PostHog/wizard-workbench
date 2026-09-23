@@ -8,7 +8,16 @@ class Cards::AssignmentsController < ApplicationController
   end
 
   def create
-    if @card.toggle_assignment @board.users.active.find(params[:assignee_id])
+    assignee = @board.users.active.find(params[:assignee_id])
+    assignment_action = @card.assigned_to?(assignee) ? "removed" : "added"
+
+    if @card.toggle_assignment assignee
+      capture_posthog(
+        distinct_id: Current.user.posthog_distinct_id,
+        event: "card_assignment_changed",
+        properties: { assignment_action: assignment_action }
+      )
+
       respond_to do |format|
         format.turbo_stream
         format.json { head :no_content }

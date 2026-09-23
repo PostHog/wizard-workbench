@@ -27,6 +27,11 @@ class BoardsController < ApplicationController
 
   def create
     @board = Board.create! board_params.with_defaults(all_access: true)
+    capture_posthog(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "board_created"
+    )
+    PostHogLogCapture.info("board_created", attributes: { workflow: "board_creation" })
 
     respond_to do |format|
       format.html { redirect_to board_path(@board) }

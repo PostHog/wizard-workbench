@@ -6,6 +6,10 @@ class Users::JoinsController < ApplicationController
 
   def create
     Current.user.update!(user_params)
+    capture_posthog(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "profile_completed"
+    )
     redirect_to landing_path
   end
 

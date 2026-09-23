@@ -37,6 +37,13 @@ gem "zip_kit"
 gem "mittens"
 gem "useragent", bc: "useragent"
 
+# PostHog
+gem "posthog-ruby", "~> 3.0"
+gem "posthog-rails"
+gem "opentelemetry-sdk"
+gem "opentelemetry-exporter-otlp"
+gem "dotenv-rails"
+
 # Operations
 gem "autotuner"
 gem "mission_control-jobs"
