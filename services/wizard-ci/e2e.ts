@@ -12,10 +12,12 @@
  *   pnpm wizard-ci basic-integration/javascript-node/express-todo --e2e
  *   pnpm wizard-ci basic-integration/next-js/15-app-router-todo --e2e --project-id 228144
  */
-import { join, basename } from "path";
+import { tmpdir } from "os";
+import { join, basename, dirname } from "path";
 import {
   existsSync,
   mkdirSync,
+  mkdtempSync,
   rmSync,
   readFileSync,
   writeFileSync,
@@ -238,12 +240,36 @@ function readOrEmpty(file: string): string {
   }
 }
 
+function writeGatewayTokenFile(gatewayToken: string): string {
+  const tokenDir = mkdtempSync(join(tmpdir(), "wizard-e2e-gateway-"));
+  const tokenFile = join(tokenDir, "gateway-token");
+  writeFileSync(tokenFile, gatewayToken, { mode: 0o600 });
+  return tokenFile;
+}
+
+function guardGatewayTokenDir(tokenDir: string): () => void {
+  const removeTokenDirAndReraise = (signal: NodeJS.Signals) => {
+    releaseTokenDir();
+    process.kill(process.pid, signal);
+  };
+  const releaseTokenDir = () => {
+    process.removeListener("SIGINT", removeTokenDirAndReraise);
+    process.removeListener("SIGTERM", removeTokenDirAndReraise);
+    rmSync(tokenDir, { recursive: true, force: true });
+  };
+  process.on("SIGINT", removeTokenDirAndReraise);
+  process.on("SIGTERM", removeTokenDirAndReraise);
+  return releaseTokenDir;
+}
+
 /** Run a single app through the real-TUI e2e and assert. Returns exit code. */
 export async function runE2e(opts: E2eOptions): Promise<number> {
   const app = opts.app;
   const region = opts.region || process.env.POSTHOG_REGION || "us";
   const projectId = opts.projectId || process.env.POSTHOG_WIZARD_PROJECT_ID || "";
   const apiKey = process.env.POSTHOG_PERSONAL_API_KEY;
+  const gatewayTokenFile = process.env.WIZARD_CI_GATEWAY_TOKEN_FILE;
+  const gatewayToken = process.env.POSTHOG_GATEWAY_TOKEN?.trim();
 
   if (!app) {
     console.error("✖ --e2e requires an app: pnpm wizard-ci <app-path> --e2e");
@@ -255,6 +281,13 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   }
   if (!projectId) {
     console.error("✖ project id required: --project-id or POSTHOG_WIZARD_PROJECT_ID.");
+    return 2;
+  }
+  if (!gatewayTokenFile && !gatewayToken) {
+    console.error(
+      "✖ no gateway token: set POSTHOG_GATEWAY_TOKEN (a phs_ key with llm_gateway:read) " +
+        "or point WIZARD_CI_GATEWAY_TOKEN_FILE at a file holding one.",
+    );
     return 2;
   }
 
@@ -309,6 +342,7 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   const childEnv: NodeJS.ProcessEnv = { ...process.env };
   for (const k of Object.keys(childEnv))
     if (STRIP_HOST_AUTH.test(k)) delete childEnv[k];
+  delete childEnv.POSTHOG_GATEWAY_TOKEN;
   childEnv.POSTHOG_PERSONAL_API_KEY = apiKey;
   childEnv.APP_DIR = appDir;
   childEnv.PROJECT_ID = projectId;
@@ -365,12 +399,16 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   // synchronous spawn blocks the event loop that serves it — the wizard's MCP
   // client then gets no answer and the agent runs with no PostHog tool.
   let run: { status: number | null };
+  const childGatewayTokenFile = gatewayToken ? writeGatewayTokenFile(gatewayToken) : gatewayTokenFile ?? "";
+  childEnv.WIZARD_CI_GATEWAY_TOKEN_FILE = childGatewayTokenFile;
+  const releaseGatewayTokenDir = gatewayToken ? guardGatewayTokenDir(dirname(childGatewayTokenFile)) : () => {};
   try {
     run = await runChild("npx", ["tsx", harness], {
       cwd: repo,
       env: childEnv,
     });
   } finally {
+    releaseGatewayTokenDir();
     await stub?.stop();
   }
 
