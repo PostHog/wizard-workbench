@@ -218,6 +218,150 @@ describe("featureFlagChecks", () => {
     ]);
   });
 
+  function rubyEvidenceWithConstants(constantsContents: string, controllerContents: string): FeatureFlagEvidence {
+    return {
+      ...passingEvidence(),
+      expectedFlagKeys: [BACKEND_KEY],
+      changedFileContentsByPath: new Map([
+        ["app/models/post_hog_feature_flags.rb", constantsContents],
+        ["app/controllers/events_controller.rb", controllerContents],
+      ]),
+    };
+  }
+
+  function rubyEvidence(controllerContents: string): FeatureFlagEvidence {
+    return rubyEvidenceWithConstants(
+      `module PostHogFeatureFlags\n  WIZARD_EXAMPLE_BACKEND = "${BACKEND_KEY}"\nend`,
+      controllerContents,
+    );
+  }
+
+  const NESTED_RUBY_CONSTANTS = `module PostHog\n  module FeatureFlags\n    WIZARD_EXAMPLE_BACKEND = "${BACKEND_KEY}"\n  end\nend`;
+  const COMPACT_RUBY_CONSTANTS = `module PostHog::FeatureFlags\n  WIZARD_EXAMPLE_BACKEND = "${BACKEND_KEY}"\nend`;
+
+  it("fails a nested Ruby constants module when another file only references the outer namespace", () => {
+    const evidence = rubyEvidenceWithConstants(NESTED_RUBY_CONSTANTS, "client = PostHog::Client.new(api_key)");
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), [
+      `constants module for ${BACKEND_KEY} used by another changed file`,
+    ]);
+  });
+
+  it("passes a nested Ruby constants module that another file references by its full path", () => {
+    const evidence = rubyEvidenceWithConstants(
+      NESTED_RUBY_CONSTANTS,
+      "flags.enabled?(PostHog::FeatureFlags::WIZARD_EXAMPLE_BACKEND)",
+    );
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
+  });
+
+  it("passes a nested Ruby constants module that another file references by its innermost name", () => {
+    const evidence = rubyEvidenceWithConstants(
+      NESTED_RUBY_CONSTANTS,
+      "module PostHog\n  class Client\n    KEY = FeatureFlags::WIZARD_EXAMPLE_BACKEND\n  end\nend",
+    );
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
+  });
+
+  const NESTED_RUBY_CONSTANTS_AFTER_METHOD = `module PostHog\n  module FeatureFlags\n    def self.all\n      constants\n    end\n\n    WIZARD_EXAMPLE_BACKEND = "${BACKEND_KEY}"\n  end\nend`;
+  const RUBY_CONSTANTS_AFTER_SINGLETON_CLASS = `module PostHogFeatureFlags\n  class << self\n    def refresh; 1; end\n  end\n\n  WIZARD_EXAMPLE_BACKEND = "${BACKEND_KEY}"\nend`;
+  const RUBY_CONSTANTS_AFTER_DO_BLOCK = `module PostHogFeatureFlags\n  %w[a b].each do |name|\n    const_set(name, name)\n  end\n\n  WIZARD_EXAMPLE_BACKEND = "${BACKEND_KEY}"\nend`;
+
+  it("fails a nested Ruby constants module with a method before the key when another file only references the outer namespace", () => {
+    const evidence = rubyEvidenceWithConstants(
+      NESTED_RUBY_CONSTANTS_AFTER_METHOD,
+      "client = PostHog::Client.new(api_key)",
+    );
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), [
+      `constants module for ${BACKEND_KEY} used by another changed file`,
+    ]);
+  });
+
+  it("passes a nested Ruby constants module with a method before the key when another file references its full path", () => {
+    const evidence = rubyEvidenceWithConstants(
+      NESTED_RUBY_CONSTANTS_AFTER_METHOD,
+      "flags.enabled?(PostHog::FeatureFlags::WIZARD_EXAMPLE_BACKEND)",
+    );
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
+  });
+
+  const NESTED_RUBY_CONSTANTS_AFTER_MEMOIZED_BEGIN = `module PostHog\n  module FeatureFlags\n    def self.all\n      @all ||= begin\n        constants\n      end\n    end\n\n    WIZARD_EXAMPLE_BACKEND = "${BACKEND_KEY}"\n  end\nend`;
+  const NESTED_RUBY_CONSTANTS_AFTER_PRIVATE_DEF = `module PostHog\n  module FeatureFlags\n    private def helper\n      1\n    end\n\n    WIZARD_EXAMPLE_BACKEND = "${BACKEND_KEY}"\n  end\nend`;
+
+  for (const [blockForm, constantsContents] of [
+    ["a memoized begin block", NESTED_RUBY_CONSTANTS_AFTER_MEMOIZED_BEGIN],
+    ["a private def", NESTED_RUBY_CONSTANTS_AFTER_PRIVATE_DEF],
+  ]) {
+    it(`fails a nested Ruby constants module with ${blockForm} before the key when another file only references the outer namespace`, () => {
+      const evidence = rubyEvidenceWithConstants(constantsContents, "client = PostHog::Client.new(api_key)");
+      assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), [
+        `constants module for ${BACKEND_KEY} used by another changed file`,
+      ]);
+    });
+
+    it(`passes a nested Ruby constants module with ${blockForm} before the key when another file references its full path`, () => {
+      const evidence = rubyEvidenceWithConstants(
+        constantsContents,
+        "flags.enabled?(PostHog::FeatureFlags::WIZARD_EXAMPLE_BACKEND)",
+      );
+      assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
+    });
+  }
+
+  it("passes a Ruby constants module with a singleton class before the key when another file references it", () => {
+    const evidence = rubyEvidenceWithConstants(
+      RUBY_CONSTANTS_AFTER_SINGLETON_CLASS,
+      "flags.enabled?(PostHogFeatureFlags::WIZARD_EXAMPLE_BACKEND)",
+    );
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
+  });
+
+  it("passes a Ruby constants module with a do block before the key when another file references it", () => {
+    const evidence = rubyEvidenceWithConstants(
+      RUBY_CONSTANTS_AFTER_DO_BLOCK,
+      "flags.enabled?(PostHogFeatureFlags::WIZARD_EXAMPLE_BACKEND)",
+    );
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
+  });
+
+  it("passes a compact nested Ruby constants module that another file references by its full path", () => {
+    const evidence = rubyEvidenceWithConstants(
+      COMPACT_RUBY_CONSTANTS,
+      "flags.enabled?(PostHog::FeatureFlags::WIZARD_EXAMPLE_BACKEND)",
+    );
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
+  });
+
+  it("passes a Ruby constants module that another file references with a top-level qualifier", () => {
+    const evidence = rubyEvidence("flags.enabled?(::PostHogFeatureFlags::WIZARD_EXAMPLE_BACKEND)");
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
+  });
+
+  it("fails a Ruby constants module when another file references a same-named constant in a different namespace", () => {
+    const evidence = rubyEvidence("Other::PostHogFeatureFlags::WIZARD_EXAMPLE_BACKEND");
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), [
+      `constants module for ${BACKEND_KEY} used by another changed file`,
+    ]);
+  });
+
+  it("passes a Ruby constants module that another file references by its autoloaded name", () => {
+    const evidence = rubyEvidence("flags.enabled?(PostHogFeatureFlags::WIZARD_EXAMPLE_BACKEND)");
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), []);
+  });
+
+  it("fails a Ruby constants module that other files only mention in a comment", () => {
+    const evidence = rubyEvidence("# PostHogFeatureFlags holds the keys\nclass EventsController; end");
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), [
+      `constants module for ${BACKEND_KEY} used by another changed file`,
+    ]);
+  });
+
+  it("fails a Ruby constants module when another file references a longer namespace name", () => {
+    const evidence = rubyEvidence("MyPostHogFeatureFlags::WIZARD_EXAMPLE_BACKEND");
+    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), [
+      `constants module for ${BACKEND_KEY} used by another changed file`,
+    ]);
+  });
+
   it("fails an example key the app does not expect", () => {
     const evidence = passingEvidence();
     evidence.expectedFlagKeys = [BACKEND_KEY];

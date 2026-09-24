@@ -128,6 +128,54 @@ function moduleImportPattern(module: string): RegExp {
   return new RegExp(`${jsImport}|${pythonImport}`, "m");
 }
 
+const RUBY_NAMESPACE_OPENING = /^[ \t]*(?:module|class)[ \t]+([A-Z]\w*(?:::[A-Z]\w*)*)/;
+const RUBY_LINE_COMMENT = /#.*/;
+
+interface RubyOpenNamespace {
+  indent: number;
+  segments: string[];
+}
+
+function indentWidth(line: string): number {
+  return line.length - line.trimStart().length;
+}
+
+function rubyNamespacePathAroundFlagKey(constantsContents: string, flagKey: string): string[] {
+  const openNamespaces: RubyOpenNamespace[] = [];
+  for (const rawLine of constantsContents.split("\n")) {
+    const hasFlagKey = rawLine.includes(flagKey);
+    const line = rawLine.replace(RUBY_LINE_COMMENT, "");
+    if (!hasFlagKey && line.trim() === "") continue;
+    const indent = indentWidth(rawLine);
+    while (openNamespaces.length > 0 && openNamespaces[openNamespaces.length - 1].indent >= indent) {
+      openNamespaces.pop();
+    }
+    if (hasFlagKey) return openNamespaces.flatMap((openNamespace) => openNamespace.segments);
+    const namespaceOpening = RUBY_NAMESPACE_OPENING.exec(line);
+    if (namespaceOpening) openNamespaces.push({ indent, segments: namespaceOpening[1].split("::") });
+  }
+  return [];
+}
+
+function rubyReferencePattern(constantsContents: string, flagKey: string): RegExp | null {
+  const namespacePath = rubyNamespacePathAroundFlagKey(constantsContents, flagKey);
+  if (namespacePath.length === 0) return null;
+  const innermostName = namespacePath[namespacePath.length - 1];
+  const acceptedNames = [...new Set([namespacePath.join("::"), innermostName])].map(escapeRegExp);
+  return new RegExp(`(?<![\\w:])(?:::)?(?:${acceptedNames.join("|")})(?:::|\\.)\\w`);
+}
+
+function constantsModuleUsagePatterns(
+  constantsPath: string,
+  constantsContents: string,
+  flagKey: string,
+): RegExp[] {
+  const importPattern = moduleImportPattern(moduleName(constantsPath));
+  if (extname(constantsPath) !== ".rb") return [importPattern];
+  const referencePattern = rubyReferencePattern(constantsContents, flagKey);
+  return referencePattern ? [importPattern, referencePattern] : [importPattern];
+}
+
 function check(name: string, ok: boolean, detail: string): Check {
   return { name, ok, detail, advisory: false };
 }
@@ -160,11 +208,13 @@ function codeChecks(flagKey: string, sourceFiles: Map<string, string>): Check[] 
   );
   if (filesWithKey.length !== 1) return [inOneModule];
 
-  const [constantsPath] = filePaths;
-  const constantsModule = moduleName(constantsPath);
-  const constantsModuleImport = moduleImportPattern(constantsModule);
+  const [[constantsPath, constantsContents]] = filesWithKey;
+  const usagePatterns = constantsModuleUsagePatterns(constantsPath, constantsContents, flagKey);
   const users = [...sourceFiles]
-    .filter(([path, contents]) => path !== constantsPath && constantsModuleImport.test(contents))
+    .filter(
+      ([path, contents]) =>
+        path !== constantsPath && usagePatterns.some((usagePattern) => usagePattern.test(contents)),
+    )
     .map(([path]) => path);
   return [
     inOneModule,
