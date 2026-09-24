@@ -403,12 +403,17 @@ describe("computeScoresFromRubric", () => {
   it("does not give a perfect score when the manual capture ledger is absent", () => {
     const rubric: RubricData = {
       file_analysis: { fa_a: "yes" },
-      app_sanity: { as_a: "yes", as_manual_capture_ledger_delivered: "no" },
+      app_sanity: {
+        as_a: "yes", as_b: "yes", as_c: "yes", as_d: "yes", as_e: "yes",
+        as_f: "yes", as_g: "yes", as_h: "yes", as_i: "yes",
+        as_manual_capture_ledger_delivered: "no",
+      },
       posthog_implementation: { ph_generations_captured: "yes" },
       event_quality: { eq_events_would_render_as_tree: "yes" },
     };
     const scores = computeScoresFromRubric(rubric, "python", "server-only");
-    assert.ok(scores.confidence < 5);
+    assert.equal(scores.app_sanity, 5);
+    assert.equal(scores.confidence, 4);
   });
 });
 
