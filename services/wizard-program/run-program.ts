@@ -1,8 +1,8 @@
 /**
  * `pnpm wizard-program` — one real program run through the wizard's
- * `runProgram`, with no TUI, no store and no session. This process is the
- * host: it detects the framework and supplies the integration effects a CLI
- * host would.
+ * `runProgram`, with no TUI. This process is the host: it builds the run
+ * definition and program settings from the program's `ProgramConfig`, the way
+ * the wizard's legacy adapter does, and supplies the credentials.
  *
  *   WIZARD_REPO=<wizard checkout> APP_DIR=<app copy> PROJECT_ID=… \
  *   POSTHOG_KEY_FILE=… WIZARD_CI_GATEWAY_TOKEN_FILE=… \
@@ -12,8 +12,6 @@
  *   WIZARD_REPO=<wizard checkout> pnpm wizard-program --check
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import {
   CHECK,
   exitAfterCheck,
@@ -36,49 +34,69 @@ type ProgramRunOutcome = {
 type ProgramProgress =
   { kind: "run"; event: AgentProgress } | { kind: "program" };
 
+type FrameworkConfig = { metadata: { docsUrl: string } };
+
+/** The slice of `WizardSession` this route reads and writes. */
+type Session = {
+  installDir: string;
+  integration: string | null;
+  frameworkConfig: FrameworkConfig | null;
+};
+
+/** The slice of `ProgramConfig` a run is built from. */
+type ProgramConfig = {
+  steps: unknown[];
+  run?: object | ((session: Session) => Promise<object>);
+  requiresAi?: boolean;
+  agentFlow?: string;
+  allowedTools?: readonly string[];
+  disallowedTools?: readonly string[];
+  excludedTaskTypes?: unknown;
+  auditLedgerFile?: string;
+  auditSeedChecks?: readonly unknown[];
+  eventPlanFile?: string;
+};
+
 type Programs = {
   runProgram(
     programId: string,
     input: Record<string, unknown>,
-    options: {
-      integrationEffects: Record<string, unknown>;
-      onProgress: (progress: ProgramProgress) => void;
-    },
+    options: { onProgress: (progress: ProgramProgress) => void },
   ): Promise<ProgramRunOutcome>;
+  getProgramConfig(programId: string): ProgramConfig | undefined;
 };
-type Registry = { FRAMEWORK_REGISTRY: Record<string, unknown> };
+type ProgramSteps = {
+  postAuthGateSteps(steps: unknown[]): { id: string }[];
+};
+type Sessions = {
+  buildSession(args: { installDir: string; ci: boolean }): Session;
+};
+type Ui = { setUI(ui: unknown): void };
+type HeadlessUi = { HeadlessUI: new (store: unknown) => unknown };
+type Store = { WizardStore: new (programId: string) => { session: Session } };
+type Registry = { FRAMEWORK_REGISTRY: Record<string, FrameworkConfig> };
 type Detection = {
   detectFramework(installDir: string): Promise<string | undefined>;
 };
 
-type PackageJson = {
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-} | null;
-
-const effects = {
-  readPackageJson: (installDir: string) => {
-    const file = join(installDir, "package.json");
-    return Promise.resolve(
-      existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null,
-    );
-  },
-  hasDeclaredDependency: (name: string, packageJson: unknown) => {
-    const pkg = packageJson as PackageJson;
-    return Boolean(pkg?.dependencies?.[name] ?? pkg?.devDependencies?.[name]);
-  },
-  warn: (message: string) => console.warn(message),
-  setTag: () => undefined,
-  capture: () => undefined,
-  // A synthetic run never writes to a hosting provider.
-  uploadEnvironmentVariables: () => Promise.resolve([]),
-  requestDeepLink: () => Promise.resolve(null),
-  openDashboardDeepLink: () => undefined,
-};
-
 async function main(): Promise<void> {
-  const { runProgram } = await importWizard<Programs>("@programs", [
-    "runProgram",
+  const { runProgram, getProgramConfig } = await importWizard<Programs>(
+    "@programs",
+    ["runProgram", "getProgramConfig"],
+  );
+  const { postAuthGateSteps } = await importWizard<ProgramSteps>(
+    "@programs/program-step",
+    ["postAuthGateSteps"],
+  );
+  const { buildSession } = await importWizard<Sessions>("@lib/wizard-session", [
+    "buildSession",
+  ]);
+  const { setUI } = await importWizard<Ui>("@ui", ["setUI"]);
+  const { HeadlessUI } = await importWizard<HeadlessUi>("@ui/headless-ui", [
+    "HeadlessUI",
+  ]);
+  const { WizardStore } = await importWizard<Store>("@ui/tui/store", [
+    "WizardStore",
   ]);
   const { FRAMEWORK_REGISTRY } = await importWizard<Registry>(
     "@programs/registry",
@@ -93,29 +111,60 @@ async function main(): Promise<void> {
 
   const e2e = readE2eEnv(process.env);
   const programId = process.env.PROGRAM || "posthog-integration";
+  const programConfig = getProgramConfig(programId);
+  if (!programConfig?.run)
+    throw new Error(`${programId} is not a registered program with a run`);
+
+  // A program's `run(session)` can call `getUI()`. Install the headless UI
+  // the `--ci` runner installs, over a store that holds this session.
+  const session = buildSession({ installDir: e2e.appDir, ci: true });
+  const store = new WizardStore(programId);
+  store.session = session;
+  setUI(new HeadlessUI(store));
+
+  // posthog-integration's `run(session)` reads the framework off the session.
+  // A `--ci` run fills it in `ciPreRun`, which also logs in and can scan the
+  // repo with an agent, so this route detects the framework alone.
+  if (programId === "posthog-integration") {
+    const integration = await detectFramework(e2e.appDir);
+    if (!integration)
+      throw new Error(`No supported framework detected in ${e2e.appDir}`);
+    session.integration = integration;
+    session.frameworkConfig = FRAMEWORK_REGISTRY[integration];
+  }
+
   const credentials = await resolveE2eCredentials(e2e, shared);
+  const run =
+    typeof programConfig.run === "function"
+      ? await programConfig.run(session)
+      : programConfig.run;
 
-  const integration =
-    programId === "posthog-integration"
-      ? await detectFramework(e2e.appDir)
-      : undefined;
-  if (programId === "posthog-integration" && !integration)
-    throw new Error(`No supported framework detected in ${e2e.appDir}`);
-
+  // No hooks or seed tasks: postRun uploads env vars to a hosting provider,
+  // the outro builders feed a screen, and a CI session seeds no tasks.
   const outcome = await runProgram(
     programId,
     {
-      installDir: e2e.appDir,
+      installDir: session.installDir,
+      run,
+      program: {
+        requiresAi: programConfig.requiresAi,
+        agentFlow: programConfig.agentFlow,
+        allowedTools: programConfig.allowedTools,
+        disallowedTools: programConfig.disallowedTools,
+        excludedTaskTypes: programConfig.excludedTaskTypes,
+        auditLedgerFile: programConfig.auditLedgerFile,
+        auditSeedChecks: programConfig.auditSeedChecks,
+        eventPlanFile: programConfig.eventPlanFile,
+        postAuthGates: postAuthGateSteps(programConfig.steps).map(
+          (step) => step.id,
+        ),
+      },
       credentials,
-      integration: integration ?? null,
-      frameworkConfig: integration
-        ? FRAMEWORK_REGISTRY[integration]
-        : undefined,
-      frameworkContext: {},
+      integration: session.integration,
+      frameworkDocsUrl: session.frameworkConfig?.metadata.docsUrl,
       flags: { ci: true },
     },
     {
-      integrationEffects: effects,
       onProgress: (progress) => {
         // Program-data snapshots carry state, not a line to print.
         if (progress.kind !== "run") return;
@@ -128,7 +177,7 @@ async function main(): Promise<void> {
   writeE2eResult({
     route: "programs",
     programId,
-    integration: integration ?? null,
+    integration: session.integration,
     outcome: outcome.outcome,
     failure: outcome.failure?.message ?? null,
     settledRuns: outcome.settledRuns.length,
