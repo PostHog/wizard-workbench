@@ -22,6 +22,7 @@ import {
   readdirSync,
   statSync,
 } from "fs";
+import { ensureGatewayToken, resolveWizardRepo, type GatewayToken } from "../gateway-token/index.js";
 import { loadFixtures } from "../mcp-stub/fixtures.js";
 import { startMcpStub, type McpStub } from "../mcp-stub/index.js";
 import { readJournal } from "../mcp-stub/journal.js";
@@ -122,17 +123,6 @@ export interface E2eOptions {
   program?: string;
   /** CI trigger id — makes the run's source prefix unique per trigger. */
   triggerId?: string;
-}
-
-function wizardRepo(): string {
-  const p = process.env.WIZARD_PATH?.replace(/^~/, process.env.HOME || "");
-  if (p) return p;
-  // Default to a sibling wizard checkout next to the workbench.
-  for (const name of ["wizard-e2e", "wizard"]) {
-    const sibling = join(WORKBENCH, "..", name);
-    if (existsSync(sibling)) return sibling;
-  }
-  return `${process.env.HOME}/development/wizard`;
 }
 
 /** Where a run drops its real-TUI snapshots — shared with the snapshots flow. */
@@ -258,6 +248,45 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
     return 2;
   }
 
+  const program = opts.program ?? "posthog-integration";
+  let gatewayToken: GatewayToken;
+  try {
+    gatewayToken = await ensureGatewayToken({
+      program,
+      projectId,
+      region,
+      tokenFile: process.env.WIZARD_CI_GATEWAY_TOKEN_FILE,
+      wizardPath: resolveWizardRepo(),
+    });
+  } catch (error) {
+    console.error(`✖ gateway token: ${(error as Error).message}`);
+    return 2;
+  }
+
+  try {
+    return await runE2eWithGatewayToken({ opts, app, region, projectId, apiKey, program, gatewayToken });
+  } finally {
+    gatewayToken.dispose();
+  }
+}
+
+async function runE2eWithGatewayToken({
+  opts,
+  app,
+  region,
+  projectId,
+  apiKey,
+  program,
+  gatewayToken,
+}: {
+  opts: E2eOptions;
+  app: string;
+  region: string;
+  projectId: string;
+  apiKey: string;
+  program: string;
+  gatewayToken: GatewayToken;
+}): Promise<number> {
   // A scenario may run against a sibling app's source tree (`sourceApp`), so a
   // run variation gets its own matrix leg without a second copy of the fixture.
   const expect = loadExpect(APPS_DIR, app);
@@ -293,7 +322,7 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   mkdirSync(snapsDir, { recursive: true });
   rmSync(resultJson, { force: true });
 
-  const repo = wizardRepo();
+  const repo = resolveWizardRepo();
   const harness = join(repo, "scripts", "tui-snapshots.no-jest.ts");
   if (!existsSync(harness)) {
     console.error(`✖ wizard e2e harness not found: ${harness}\n  Set WIZARD_PATH to the wizard repo.`);
@@ -310,14 +339,15 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   for (const k of Object.keys(childEnv))
     if (STRIP_HOST_AUTH.test(k)) delete childEnv[k];
   childEnv.POSTHOG_PERSONAL_API_KEY = apiKey;
+  childEnv.WIZARD_CI_GATEWAY_TOKEN_FILE = gatewayToken.tokenFile;
+  if (gatewayToken.gatewayUrl && !childEnv.WIZARD_CI_GATEWAY_URL) childEnv.WIZARD_CI_GATEWAY_URL = gatewayToken.gatewayUrl;
   childEnv.APP_DIR = appDir;
   childEnv.PROJECT_ID = projectId;
   childEnv.POSTHOG_REGION = region;
   childEnv.SNAP_OUT = snapsDir;
   childEnv.E2E_RESULT_JSON = resultJson;
   childEnv.E2E_KEEP_SKILLS = opts.keepSkills ? "true" : "false";
-  // Which program the real-TUI host drives — defaults to integration.
-  if (opts.program) childEnv.PROGRAM = opts.program;
+  childEnv.PROGRAM = program;
 
   // ── Warehouse wiring: the stub MCP, the answers, the run variation ────
   let stub: McpStub | null = null;

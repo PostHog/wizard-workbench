@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "evaluate": "tsx services/pr-evaluator/index.ts",
+    "gateway-token": "tsx services/gateway-token/index.ts",
     "wizard-ci": "tsx services/wizard-ci/index.ts",
     "wizard-ci-snapshots": "tsx services/wizard-ci/snapshots.ts",
     "wizard-ci-snapshots-review": "tsx services/wizard-ci/snapshots-review.ts",
@@ -16,7 +17,8 @@
     "test:mcp-stub": "tsx --test services/mcp-stub/mcp-stub.test.ts",
     "test:warehouse-checks": "tsx --test services/wizard-ci/warehouse-checks.test.ts",
     "test:feature-flag-checks": "tsx --test services/wizard-ci/feature-flag-checks.test.ts",
-    "test:source-app": "tsx --test services/wizard-ci/source-app.test.ts"
+    "test:source-app": "tsx --test services/wizard-ci/source-app.test.ts",
+    "test:gateway-token": "tsx --test services/gateway-token/gateway-token.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.2.73",
