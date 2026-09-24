@@ -30,11 +30,11 @@ import {
 type ProgramRunOutcome = {
   outcome: string;
   failure?: { message: string };
-  settledRuns: unknown[];
-  runResults: { snapshot: { tasks: unknown[] } }[];
+  settledRuns: { result: { snapshot?: { tasks: unknown[] } } }[];
 };
 
-type ProgramProgress = { kind: "run"; event: AgentProgress } | { kind: "program" };
+type ProgramProgress =
+  { kind: "run"; event: AgentProgress } | { kind: "program" };
 
 type Programs = {
   runProgram(
@@ -47,7 +47,9 @@ type Programs = {
   ): Promise<ProgramRunOutcome>;
 };
 type Registry = { FRAMEWORK_REGISTRY: Record<string, unknown> };
-type Detection = { detectFramework(installDir: string): Promise<string | undefined> };
+type Detection = {
+  detectFramework(installDir: string): Promise<string | undefined>;
+};
 
 type PackageJson = {
   dependencies?: Record<string, string>;
@@ -57,7 +59,9 @@ type PackageJson = {
 const effects = {
   readPackageJson: (installDir: string) => {
     const file = join(installDir, "package.json");
-    return Promise.resolve(existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null);
+    return Promise.resolve(
+      existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null,
+    );
   },
   hasDeclaredDependency: (name: string, packageJson: unknown) => {
     const pkg = packageJson as PackageJson;
@@ -73,13 +77,17 @@ const effects = {
 };
 
 async function main(): Promise<void> {
-  const { runProgram } = await importWizard<Programs>("@programs", ["runProgram"]);
-  const { FRAMEWORK_REGISTRY } = await importWizard<Registry>("@programs/registry", [
-    "FRAMEWORK_REGISTRY",
+  const { runProgram } = await importWizard<Programs>("@programs", [
+    "runProgram",
   ]);
-  const { detectFramework } = await importWizard<Detection>("@programs/detection/framework", [
-    "detectFramework",
-  ]);
+  const { FRAMEWORK_REGISTRY } = await importWizard<Registry>(
+    "@programs/registry",
+    ["FRAMEWORK_REGISTRY"],
+  );
+  const { detectFramework } = await importWizard<Detection>(
+    "@programs/detection/framework",
+    ["detectFramework"],
+  );
   const shared = await importSharedModules();
   if (CHECK) exitAfterCheck("wizard-program");
 
@@ -88,7 +96,9 @@ async function main(): Promise<void> {
   const credentials = await resolveE2eCredentials(e2e, shared);
 
   const integration =
-    programId === "posthog-integration" ? await detectFramework(e2e.appDir) : undefined;
+    programId === "posthog-integration"
+      ? await detectFramework(e2e.appDir)
+      : undefined;
   if (programId === "posthog-integration" && !integration)
     throw new Error(`No supported framework detected in ${e2e.appDir}`);
 
@@ -98,7 +108,9 @@ async function main(): Promise<void> {
       installDir: e2e.appDir,
       credentials,
       integration: integration ?? null,
-      frameworkConfig: integration ? FRAMEWORK_REGISTRY[integration] : undefined,
+      frameworkConfig: integration
+        ? FRAMEWORK_REGISTRY[integration]
+        : undefined,
       frameworkContext: {},
       flags: { ci: true },
     },
@@ -120,7 +132,9 @@ async function main(): Promise<void> {
     outcome: outcome.outcome,
     failure: outcome.failure?.message ?? null,
     settledRuns: outcome.settledRuns.length,
-    tasks: outcome.runResults.flatMap((run) => run.snapshot.tasks),
+    tasks: outcome.settledRuns.flatMap(
+      (run) => run.result.snapshot?.tasks ?? [],
+    ),
   });
   console.log(`${programId}: ${outcome.outcome}`);
   if (outcome.outcome !== "success") process.exitCode = 1;
