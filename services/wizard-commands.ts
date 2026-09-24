@@ -48,7 +48,7 @@ const MANIFEST_PATH = join(__dirname, "..", "apps", "manifest.json");
 
 /**
  * Map a command id to its wizard program id where they differ — used to locate
- * the program's e2e test definition (`src/lib/programs/<program>/test/e2e.json`)
+ * the program's e2e test definition (`src/programs/<program>/test/e2e.json`)
  * in the wizard repo.
  */
 const COMMAND_PROGRAM: Record<string, string> = {
@@ -67,13 +67,18 @@ export function commandToProgram(id: string): string {
   return COMMAND_PROGRAM[id] ?? id;
 }
 
+const WIZARD_PROGRAM_DIRS_BEFORE_AND_AFTER_LAYER_REFACTOR = [
+  join("src", "programs"),
+  join("src", "lib", "programs"),
+];
+
 /** Whether the wizard repo ships an e2e.json flow definition for this command. */
 function hasE2eDefinition(commandId: string): boolean {
   const wizardPath = process.env.WIZARD_PATH;
   if (!wizardPath) return false;
   const program = COMMAND_PROGRAM[commandId] ?? commandId;
-  return existsSync(
-    join(wizardPath, "src", "lib", "programs", program, "test", "e2e.json"),
+  return WIZARD_PROGRAM_DIRS_BEFORE_AND_AFTER_LAYER_REFACTOR.some((programsDir) =>
+    existsSync(join(wizardPath, programsDir, program, "test", "e2e.json")),
   );
 }
 

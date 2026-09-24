@@ -25,7 +25,18 @@ import {
 import { loadFixtures } from "../mcp-stub/fixtures.js";
 import { startMcpStub, type McpStub } from "../mcp-stub/index.js";
 import { readJournal } from "../mcp-stub/journal.js";
+import {
+  changedFiles,
+  featureFlagChecks,
+  fetchFlagsByKey,
+  loadFeatureFlagsExpect,
+  posthogAppHost,
+  FEATURE_FLAGS_REPORT_FILE,
+  type FeatureFlagsExpect,
+  type RemoteFlag,
+} from "./feature-flag-checks.js";
 import { runChild } from "./run-child.js";
+import { resolveSourceApp } from "./source-app.js";
 import {
   checksPassed,
   formatCheck,
@@ -250,7 +261,15 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   // A scenario may run against a sibling app's source tree (`sourceApp`), so a
   // run variation gets its own matrix leg without a second copy of the fixture.
   const expect = loadExpect(APPS_DIR, app);
-  const sourceApp = expect?.sourceApp ?? app;
+  let sourceApp: string;
+  let featureFlagsExpect: FeatureFlagsExpect | null;
+  try {
+    sourceApp = resolveSourceApp(APPS_DIR, app, expect?.sourceApp);
+    featureFlagsExpect = loadFeatureFlagsExpect(APPS_DIR, app);
+  } catch (error) {
+    console.error(`✖ ${(error as Error).message}`);
+    return 2;
+  }
   const appSrc = join(APPS_DIR, sourceApp);
   if (!existsSync(appSrc)) {
     console.error(`✖ app not found: apps/${sourceApp}`);
@@ -283,9 +302,8 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
 
   console.log(`\n=== wizard-ci --e2e: ${app}  (project ${projectId}, ${region}) ===`);
   console.log(`    policy: skip mcp · skip slack · ${opts.keepSkills ? "keep" : "delete"} skills · continue past health issues`);
-  if (expect) {
-    console.log(`    expectations: apps/${app}/.wizard-ci/expect.json${sourceApp === app ? "" : `  (source: apps/${sourceApp})`}`);
-  }
+  if (expect) console.log(`    expectations: apps/${app}/.wizard-ci/expect.json`);
+  if (sourceApp !== app) console.log(`    source: apps/${sourceApp}`);
   console.log("");
 
   const childEnv: NodeJS.ProcessEnv = { ...process.env };
@@ -395,10 +413,23 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
     });
   }
 
+  let featureFlags: Check[] = [];
+  if (featureFlagsExpect) {
+    featureFlags = await gradeFeatureFlags({
+      flagKeys: featureFlagsExpect.flagKeys,
+      sourceDir: appSrc,
+      appDir,
+      region,
+      projectId,
+      apiKey,
+    });
+  }
+
   const passed =
     (!!expect || run.status === 0) &&
     checks.every(([, ok]) => ok) &&
-    checksPassed(warehouse);
+    checksPassed(warehouse) &&
+    checksPassed(featureFlags);
 
   if (result) {
     writeFileSync(resultJson, JSON.stringify({ ...result, app, passed }, null, 2));
@@ -424,8 +455,42 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
     console.log(`journal    : ${journalPath}`);
   }
 
+  if (featureFlagsExpect) {
+    console.log("");
+    for (const c of featureFlags) console.log(formatCheck(c));
+  }
+
   console.log(`\n${passed ? "✓ E2E PASS" : "✗ E2E FAIL"} — ${app}\n`);
   return passed ? 0 : 1;
+}
+
+async function gradeFeatureFlags(args: {
+  flagKeys: string[];
+  sourceDir: string;
+  appDir: string;
+  region: string;
+  projectId: string;
+  apiKey: string;
+}): Promise<Check[]> {
+  let remoteFlagsByKey = new Map<string, RemoteFlag>();
+  let flagsApiError: string | null = null;
+  try {
+    remoteFlagsByKey = await fetchFlagsByKey({
+      host: posthogAppHost(args.region),
+      projectId: args.projectId,
+      apiKey: args.apiKey,
+      flagKeys: args.flagKeys,
+    });
+  } catch (error) {
+    flagsApiError = (error as Error).message;
+  }
+  return featureFlagChecks({
+    expectedFlagKeys: args.flagKeys,
+    changedFileContentsByPath: changedFiles(args.sourceDir, args.appDir),
+    remoteFlagsByKey,
+    flagsApiError,
+    isReportWritten: existsSync(join(args.appDir, FEATURE_FLAGS_REPORT_FILE)),
+  });
 }
 
 /**
