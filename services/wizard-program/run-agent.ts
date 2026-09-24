@@ -6,8 +6,7 @@
  * context-mill are involved.
  *
  *   WIZARD_REPO=<wizard checkout> PROJECT_ID=… POSTHOG_KEY_FILE=… \
- *   WIZARD_CI_GATEWAY_TOKEN_FILE=… [E2E_RESULT_JSON=result.json] \
- *   pnpm wizard-agent
+ *   [E2E_RESULT_JSON=result.json] pnpm wizard-agent
  *
  *   WIZARD_REPO=<wizard checkout> pnpm wizard-agent --check
  */
@@ -37,10 +36,15 @@ type Agent = {
     options: { onProgress: (event: AgentProgress) => void },
   ): Promise<{ outcome: string; failure?: { message: string } }>;
   RunOutcome: { Success: string };
-  DEFAULT_AGENT_BINDING: unknown;
+};
+type Constants = {
+  Sequence: { linear: string };
+  Harness: { anthropic: string };
+  HAIKU_MODEL: string;
 };
 type Fflate = { zipSync(files: Record<string, Uint8Array>): Uint8Array };
 
+const PROGRAM_ID = "e2e-agent";
 const SKILL_ID = "quack";
 const QUACK_FILE = join("quack", "quack.txt");
 const SKILL_MD = `---
@@ -84,10 +88,11 @@ async function serveQuackSkill(fflate: Fflate): Promise<{ url: string; close: ()
 }
 
 async function main(): Promise<void> {
-  const { runAgent, RunOutcome, DEFAULT_AGENT_BINDING } = await importWizard<Agent>("@agent", [
-    "runAgent",
-    "RunOutcome",
-    "DEFAULT_AGENT_BINDING",
+  const { runAgent, RunOutcome } = await importWizard<Agent>("@agent", ["runAgent", "RunOutcome"]);
+  const { Sequence, Harness, HAIKU_MODEL } = await importWizard<Constants>("@shared/constants", [
+    "Sequence",
+    "Harness",
+    "HAIKU_MODEL",
   ]);
   const shared = await importSharedModules();
   const fflate = requireWizardDependency<Fflate>("fflate");
@@ -99,7 +104,7 @@ async function main(): Promise<void> {
   const skills = await serveQuackSkill(fflate);
 
   const config = {
-    programId: "e2e-agent",
+    programId: PROGRAM_ID,
     run: {
       integrationLabel: SKILL_ID,
       skillId: SKILL_ID,
@@ -110,7 +115,11 @@ async function main(): Promise<void> {
       docsUrl: "https://posthog.com/docs",
     },
     composed: false,
-    binding: DEFAULT_AGENT_BINDING,
+    // Bound the way agentic detection binds its direct runAgent call: linear
+    // Haiku on the Anthropic harness.
+    binding: { sequence: Sequence.linear, harness: Harness.anthropic, model: HAIKU_MODEL },
+    // Only the orchestrator reads it; this run is linear.
+    switchboard: { program: PROGRAM_ID, composed: false, flags: {}, flagPayloads: {} },
     skillsBaseUrl: skills.url,
     wizardFlags: {},
     wizardFlagPayloads: {},
@@ -123,7 +132,6 @@ async function main(): Promise<void> {
       {
         installDir: workDir,
         credentials: credentials.posthog,
-        inferenceAuth: credentials.inferenceAuth,
         project: credentials.project,
         apiUser: credentials.apiUser,
         skillId: SKILL_ID,

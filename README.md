@@ -312,11 +312,10 @@ WIZARD_REPO=~/development/wizard pnpm wizard-agent --check
 
 # One program on an app copy. PROGRAM picks it and defaults to posthog-integration.
 WIZARD_REPO=… APP_DIR=/tmp/app-copy PROJECT_ID=… POSTHOG_KEY_FILE=… \
-  WIZARD_CI_GATEWAY_TOKEN_FILE=… pnpm wizard-program
+  pnpm wizard-program
 
 # One agent run on a local `quack` skill, in its own empty directory.
-WIZARD_REPO=… PROJECT_ID=… POSTHOG_KEY_FILE=… \
-  WIZARD_CI_GATEWAY_TOKEN_FILE=… pnpm wizard-agent
+WIZARD_REPO=… PROJECT_ID=… POSTHOG_KEY_FILE=… pnpm wizard-agent
 ```
 
 - The scripts start tsx with `--tsconfig "$WIZARD_REPO/tsconfig.json"`, so the
@@ -324,7 +323,8 @@ WIZARD_REPO=… PROJECT_ID=… POSTHOG_KEY_FILE=… \
   that checkout. Set `WIZARD_REPO` in the shell: the scripts read it before tsx
   starts, so `.env` cannot set it. It is separate from `WIZARD_PATH`.
 - Runs without `--check` are live and credentialed. `POSTHOG_PERSONAL_API_KEY`
-  works in place of `POSTHOG_KEY_FILE`.
+  works in place of `POSTHOG_KEY_FILE`. The wizard's runner mints its own
+  gateway token from that key.
 - Point `APP_DIR` at a copy, never at a fixture in `apps/`. The run edits it.
 - Set `E2E_RESULT_JSON` to a path to get the result as JSON.
 

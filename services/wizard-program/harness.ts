@@ -9,8 +9,8 @@
  * against that checkout, here and inside every wizard file.
  *
  * Every route reads the same env: a PostHog personal key from
- * `POSTHOG_PERSONAL_API_KEY` or `POSTHOG_KEY_FILE`, a project from `PROJECT_ID`,
- * and an already-issued gateway token through `WIZARD_CI_GATEWAY_TOKEN_FILE`.
+ * `POSTHOG_PERSONAL_API_KEY` or `POSTHOG_KEY_FILE`, and a project from
+ * `PROJECT_ID`. The wizard's runner mints its own gateway token from that key.
  * The program route also takes `APP_DIR`. The agent route makes its own empty
  * directory. `--check` exits once the wizard modules load, before any of that
  * env is read and before any request.
@@ -29,7 +29,6 @@ export type E2eEnv = {
   appDir: string;
   apiKey: string;
   projectId: number;
-  gatewayTokenFile: string;
 };
 
 /** The progress events the wizard's `AgentProgress` carries, typed here by hand. */
@@ -61,9 +60,6 @@ export type SharedModules = {
     ): Promise<{ api_token: string }>;
     fetchUserData(apiKey: string, baseUrl: string): Promise<unknown>;
   };
-  gateway: {
-    createCiGatewayAuth(token: string, projectId: number, url: string): unknown;
-  };
   hosts: {
     HostResolution: {
       fromAccessToken(
@@ -81,7 +77,6 @@ export type E2eCredentials = {
     host: unknown;
     projectId: number;
   };
-  inferenceAuth: { resolve: () => Promise<unknown> };
   project: unknown;
   apiUser: unknown;
 };
@@ -144,10 +139,6 @@ export async function importSharedModules(): Promise<SharedModules> {
       "fetchProjectData",
       "fetchUserData",
     ]),
-    gateway: await importWizard<SharedModules["gateway"]>(
-      "@shared/ci-gateway-auth",
-      ["createCiGatewayAuth"],
-    ),
     hosts: await importWizard<SharedModules["hosts"]>(
       "@shared/host-resolution",
       ["HostResolution"],
@@ -192,11 +183,8 @@ export function readE2eEnv(
   const projectId = Number(env.PROJECT_ID);
   if (!Number.isInteger(projectId) || projectId <= 0)
     missing.push("PROJECT_ID: a positive project id");
-  const gatewayTokenFile = env.WIZARD_CI_GATEWAY_TOKEN_FILE?.trim() ?? "";
-  if (!gatewayTokenFile)
-    missing.push("WIZARD_CI_GATEWAY_TOKEN_FILE: an already-issued gateway token");
   if (missing.length > 0) throw new Error(`Missing e2e inputs:\n- ${missing.join("\n- ")}`);
-  return { appDir, apiKey, projectId, gatewayTokenFile };
+  return { appDir, apiKey, projectId };
 }
 
 /**
@@ -207,19 +195,12 @@ export function readE2eEnv(
 export async function resolveE2eCredentials(
   e2e: E2eEnv,
   shared: SharedModules,
-  env: NodeJS.ProcessEnv = process.env,
 ): Promise<E2eCredentials> {
   const host = await shared.hosts.HostResolution.fromAccessToken(e2e.apiKey, {
     region: "us",
   });
   const project = await shared.api.fetchProjectData(e2e.apiKey, e2e.projectId, host.appHost);
   const apiUser = await shared.api.fetchUserData(e2e.apiKey, host.appHost).catch(() => null);
-  const token = readFileSync(e2e.gatewayTokenFile, "utf8");
-  const gateway = shared.gateway.createCiGatewayAuth(
-    token,
-    e2e.projectId,
-    env.WIZARD_CI_GATEWAY_URL || "https://ai-gateway.us.posthog.com",
-  );
   return {
     posthog: {
       accessToken: e2e.apiKey,
@@ -227,7 +208,6 @@ export async function resolveE2eCredentials(
       host,
       projectId: e2e.projectId,
     },
-    inferenceAuth: { resolve: () => Promise.resolve(gateway) },
     project,
     apiUser,
   };

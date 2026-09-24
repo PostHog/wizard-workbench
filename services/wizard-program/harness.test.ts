@@ -18,7 +18,6 @@ const complete = {
   APP_DIR: appDir,
   POSTHOG_PERSONAL_API_KEY: "phx_inline",
   PROJECT_ID: "228144",
-  WIZARD_CI_GATEWAY_TOKEN_FILE: "/tokens/gateway",
 };
 
 it("prefers the inline key and falls back to the key file when it is blank", () => {
@@ -39,7 +38,6 @@ it("reads a complete env", () => {
     appDir,
     apiKey: "phx_inline",
     projectId: 228144,
-    gatewayTokenFile: "/tokens/gateway",
   });
 });
 
@@ -51,7 +49,6 @@ for (const [name, override] of [
   ["APP_DIR", { APP_DIR: join(appDir, "missing") }],
   ["POSTHOG_PERSONAL_API_KEY", { POSTHOG_PERSONAL_API_KEY: "" }],
   ["PROJECT_ID", { PROJECT_ID: "0" }],
-  ["WIZARD_CI_GATEWAY_TOKEN_FILE", { WIZARD_CI_GATEWAY_TOKEN_FILE: " " }],
 ] as const) {
   it(`names a missing ${name}`, () => {
     assert.throws(() => readE2eEnv({ ...complete, ...override }), new RegExp(name));

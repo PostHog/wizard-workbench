@@ -5,9 +5,8 @@
  * the wizard's legacy adapter does, and supplies the credentials.
  *
  *   WIZARD_REPO=<wizard checkout> APP_DIR=<app copy> PROJECT_ID=… \
- *   POSTHOG_KEY_FILE=… WIZARD_CI_GATEWAY_TOKEN_FILE=… \
- *   [PROGRAM=posthog-integration] [E2E_RESULT_JSON=result.json] \
- *   pnpm wizard-program
+ *   POSTHOG_KEY_FILE=… [PROGRAM=posthog-integration] \
+ *   [E2E_RESULT_JSON=result.json] pnpm wizard-program
  *
  *   WIZARD_REPO=<wizard checkout> pnpm wizard-program --check
  */
@@ -43,18 +42,22 @@ type Session = {
   frameworkConfig: FrameworkConfig | null;
 };
 
+/** The UI effects a program's `run(session, host)` may call. */
+type ProgramRunHost = {
+  getFrameworkContext(key: string): unknown;
+  setFrameworkContext(key: string, value: unknown): void;
+  warn(message: string): void;
+};
+
 /** The slice of `ProgramConfig` a run is built from. */
 type ProgramConfig = {
   steps: unknown[];
-  run?: object | ((session: Session) => Promise<object>);
+  run?: object | ((session: Session, host: ProgramRunHost) => Promise<object>);
   requiresAi?: boolean;
   agentFlow?: string;
   allowedTools?: readonly string[];
   disallowedTools?: readonly string[];
   excludedTaskTypes?: unknown;
-  auditLedgerFile?: string;
-  auditSeedChecks?: readonly unknown[];
-  eventPlanFile?: string;
 };
 
 type Programs = {
@@ -71,7 +74,14 @@ type ProgramSteps = {
 type Sessions = {
   buildSession(args: { installDir: string; ci: boolean }): Session;
 };
-type Ui = { setUI(ui: unknown): void };
+type Ui = {
+  setUI(ui: unknown): void;
+  getUI(): {
+    getFrameworkContext(key: string): unknown;
+    setFrameworkContext(key: string, value: unknown): void;
+    log: { warn(message: string): void };
+  };
+};
 type HeadlessUi = { HeadlessUI: new (store: unknown) => unknown };
 type Store = { WizardStore: new (programId: string) => { session: Session } };
 type Registry = { FRAMEWORK_REGISTRY: Record<string, FrameworkConfig> };
@@ -91,7 +101,7 @@ async function main(): Promise<void> {
   const { buildSession } = await importWizard<Sessions>("@lib/wizard-session", [
     "buildSession",
   ]);
-  const { setUI } = await importWizard<Ui>("@ui", ["setUI"]);
+  const { setUI, getUI } = await importWizard<Ui>("@ui", ["setUI", "getUI"]);
   const { HeadlessUI } = await importWizard<HeadlessUi>("@ui/headless-ui", [
     "HeadlessUI",
   ]);
@@ -134,9 +144,15 @@ async function main(): Promise<void> {
   }
 
   const credentials = await resolveE2eCredentials(e2e, shared);
+  // The legacy adapter's run host: each effect reaches `getUI()` at call time.
+  const host: ProgramRunHost = {
+    getFrameworkContext: (key) => getUI().getFrameworkContext(key),
+    setFrameworkContext: (key, value) => getUI().setFrameworkContext(key, value),
+    warn: (message) => getUI().log.warn(message),
+  };
   const run =
     typeof programConfig.run === "function"
-      ? await programConfig.run(session)
+      ? await programConfig.run(session, host)
       : programConfig.run;
 
   // No hooks or seed tasks: postRun uploads env vars to a hosting provider,
@@ -152,9 +168,6 @@ async function main(): Promise<void> {
         allowedTools: programConfig.allowedTools,
         disallowedTools: programConfig.disallowedTools,
         excludedTaskTypes: programConfig.excludedTaskTypes,
-        auditLedgerFile: programConfig.auditLedgerFile,
-        auditSeedChecks: programConfig.auditSeedChecks,
-        eventPlanFile: programConfig.eventPlanFile,
         postAuthGates: postAuthGateSteps(programConfig.steps).map(
           (step) => step.id,
         ),
