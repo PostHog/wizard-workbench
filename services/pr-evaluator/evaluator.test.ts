@@ -61,6 +61,7 @@ it("uses the AI observability criterion keys in the output rubric", async () => 
   assert.deepEqual(Object.keys(rubric.app_sanity), [
     "as_builds", "as_preserves_existing", "as_minimal_changes", "as_no_syntax_errors",
     "as_correct_imports", "as_env_documented", "as_dependency_version_valid", "as_flushes_before_exit",
+    "as_manual_capture_ledger_delivered",
   ]);
   assert.deepEqual(Object.keys(rubric.posthog_implementation), [
     "ph_instrumentation_initialized_once", "ph_generations_captured", "ph_trace_groups_the_request",
@@ -68,7 +69,8 @@ it("uses the AI observability criterion keys in the output rubric", async () => 
     "ph_identity_scope_correct", "ph_no_hand_authored_spans", "ph_additive_only",
   ]);
   assert.deepEqual(Object.keys(rubric.event_quality), [
-    "eq_events_would_render_as_tree", "eq_person_attribution", "eq_span_parenting",
+    "eq_events_would_render_as_tree", "eq_output_choices_have_role", "eq_stream_terminal_parsed",
+    "eq_person_attribution", "eq_span_parenting",
     "eq_no_fabricated_structure", "eq_privacy_respected",
   ]);
   const statedCriteria = [...prompt.matchAll(/^- \*\*((?:fa|as|ph|eq)_[a-z_]+)\*\*/gm)].map((match) => match[1]);
@@ -381,6 +383,32 @@ describe("computeScoresFromRubric", () => {
     assert.equal(scores.confidence, 3);
     assert.equal(scores.framework, "django");
     assert.equal(scores.arch_type, "server-only");
+  });
+
+  it("caps AI quality when a generation outcome or output shape is wrong", () => {
+    const rubric: RubricData = {
+      file_analysis: { fa_a: "yes" },
+      app_sanity: { as_a: "yes" },
+      posthog_implementation: { ph_generations_captured: "yes" },
+      event_quality: {
+        eq_events_would_render_as_tree: "yes",
+        eq_output_choices_have_role: "no",
+        eq_stream_terminal_parsed: "yes",
+      },
+    };
+    const scores = computeScoresFromRubric(rubric, "python", "server-only");
+    assert.equal(scores.confidence, 3);
+  });
+
+  it("does not give a perfect score when the manual capture ledger is absent", () => {
+    const rubric: RubricData = {
+      file_analysis: { fa_a: "yes" },
+      app_sanity: { as_a: "yes", as_manual_capture_ledger_delivered: "no" },
+      posthog_implementation: { ph_generations_captured: "yes" },
+      event_quality: { eq_events_would_render_as_tree: "yes" },
+    };
+    const scores = computeScoresFromRubric(rubric, "python", "server-only");
+    assert.ok(scores.confidence < 5);
   });
 });
 

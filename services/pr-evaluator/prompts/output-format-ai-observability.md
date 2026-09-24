@@ -41,6 +41,7 @@ Write your review following this Markdown structure:
 | **No syntax or type errors** |	Yes / No | Description |
 | **Correct imports/exports** |	Yes / No | Description |
 | **Minimal, focused changes** | Yes / No | Description |
+| **Manual capture ledger and report** | Yes / No / N/A | Check the report exists and reconciles every README inference path |
 | **Pre-existing issues** | None / List | Issues that exist in the base app, not introduced by this PR |
 
 #### Issues
@@ -66,6 +67,8 @@ Write your review following this Markdown structure:
 | **Tool spans** | Yes / No / N/A | Check executed tools and parent links |
 | **Stream and error outcomes** | Yes / No | Check completion, provider errors, and cancellation |
 | **Provider token fields** | Yes / No | Trace source fields to emitted token properties |
+| **Output choice roles** | Yes / No / N/A | Inspect actual response shapes for a `role` on every manual output choice |
+| **Protocol terminal events** | Yes / No / N/A | Parse each stream's terminal signal, including valid SSE formatting and WebSocket upstream paths |
 
 #### Issues
 - **Issue title**: Description of high severity issue. Description of fix. [CRITICAL]
@@ -119,7 +122,8 @@ Write your review following this Markdown structure:
     "as_correct_imports": "yes or no",
     "as_env_documented": "yes or no",
     "as_dependency_version_valid": "yes or no",
-    "as_flushes_before_exit": "yes or no or n/a"
+    "as_flushes_before_exit": "yes or no or n/a",
+    "as_manual_capture_ledger_delivered": "yes or no or n/a"
   },
   "posthog_implementation": {
     "ph_instrumentation_initialized_once": "yes or no",
@@ -134,6 +138,8 @@ Write your review following this Markdown structure:
   },
   "event_quality": {
     "eq_events_would_render_as_tree": "yes or no",
+    "eq_output_choices_have_role": "yes or no or n/a",
+    "eq_stream_terminal_parsed": "yes or no or n/a",
     "eq_person_attribution": "yes or no",
     "eq_span_parenting": "yes or no or n/a",
     "eq_no_fabricated_structure": "yes or no",
@@ -142,7 +148,7 @@ Write your review following this Markdown structure:
 }
 RUBRIC -->
 
-IMPORTANT: In the RUBRIC block above, replace each placeholder with exactly "yes", "no", or "n/a" (lowercase). These keys are the AI observability criteria. Use "n/a" only where the rubric permits it: `as_flushes_before_exit` for long-running servers, `ph_no_hand_authored_spans` when the app has no tools or spans, and `eq_span_parenting` when no manual spans are captured. The manual capture path also permits "n/a" for `fa_imports_valid`.
+IMPORTANT: In the RUBRIC block above, replace each placeholder with exactly "yes", "no", or "n/a" (lowercase). These keys are the AI observability criteria. Use "n/a" only where the rubric permits it: `as_flushes_before_exit` for long-running servers, `as_manual_capture_ledger_delivered` outside manual capture, `ph_no_hand_authored_spans` when the app has no tools or spans, `eq_span_parenting` when no manual spans are captured, `eq_output_choices_have_role` when the event is built by an SDK or instrumentor, and `eq_stream_terminal_parsed` when no streams are manually captured. The manual capture path also permits "n/a" for `fa_imports_valid`.
 
 <!-- SCORES
 {
