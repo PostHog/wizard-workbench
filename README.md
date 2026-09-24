@@ -83,6 +83,7 @@ services/
 ├── wizard-ci/        # Automated wizard runs with PR creation
 ├── wizard-run/       # Interactive wizard runner
 ├── mcp-stub/         # Stub PostHog MCP server for warehouse e2e runs
+├── wizard-program/   # Headless runProgram / runAgent against a wizard checkout
 ├── wizard-commands.ts # Registry of wizard commands (integration, revenue, …)
 └── github/           # GitHub/git utilities
 ```
@@ -297,6 +298,35 @@ You can activate `wizard-ci.yml` in a few ways:
 1. **Manual** - Run from GitHub Actions UI
 2. **Schedule** - Runs on cron
 3. **Dispatch** - Webhook call via `repository_dispatch` with event type `wizard-ci-trigger`
+
+## Headless wizard runs
+
+`services/wizard-program/` runs one wizard program through `runProgram`, or one
+agent through `runAgent`, in this process with no TUI. It imports them from the
+wizard checkout in `WIZARD_REPO`.
+
+```bash
+# Resolve the wizard modules and exit. Reads no credentials, makes no request.
+WIZARD_REPO=~/development/wizard pnpm wizard-program --check
+WIZARD_REPO=~/development/wizard pnpm wizard-agent --check
+
+# One program on an app copy. PROGRAM picks it and defaults to posthog-integration.
+WIZARD_REPO=… APP_DIR=/tmp/app-copy PROJECT_ID=… POSTHOG_KEY_FILE=… \
+  WIZARD_CI_GATEWAY_TOKEN_FILE=… pnpm wizard-program
+
+# One agent run on a local `quack` skill, in its own empty directory.
+WIZARD_REPO=… PROJECT_ID=… POSTHOG_KEY_FILE=… \
+  WIZARD_CI_GATEWAY_TOKEN_FILE=… pnpm wizard-agent
+```
+
+- The scripts start tsx with `--tsconfig "$WIZARD_REPO/tsconfig.json"`, so the
+  wizard's path aliases (`@programs`, `@agent`, `@shared/*`) resolve against
+  that checkout. Set `WIZARD_REPO` in the shell: the scripts read it before tsx
+  starts, so `.env` cannot set it. It is separate from `WIZARD_PATH`.
+- Runs without `--check` are live and credentialed. `POSTHOG_PERSONAL_API_KEY`
+  works in place of `POSTHOG_KEY_FILE`.
+- Point `APP_DIR` at a copy, never at a fixture in `apps/`. The run edits it.
+- Set `E2E_RESULT_JSON` to a path to get the result as JSON.
 
 ---
 
