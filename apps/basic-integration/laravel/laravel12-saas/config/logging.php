@@ -62,6 +62,11 @@ return [
             'driver' => 'larabug',
         ],
 
+        'posthog' => [
+            'driver' => 'custom',
+            'via' => App\Logging\CreatePostHogLogger::class,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),
