@@ -1,4 +1,8 @@
+import { emitPostHogLog } from '~/server/utils/posthog-logs'
+
 export default defineEventHandler(async (event) => {
+  const startedAt = Date.now()
+
   try {
     const body = await readBody(event)
     const { username, password } = body
@@ -19,6 +23,12 @@ export default defineEventHandler(async (event) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
+    })
+
+    await emitPostHogLog('authentication request completed', {
+      route: 'auth_login',
+      outcome: 'success',
+      duration_ms: Date.now() - startedAt,
     })
 
     return {
