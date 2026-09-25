@@ -22,4 +22,6 @@ class Config:
     MS_TRANSLATOR_KEY = os.environ.get('MS_TRANSLATOR_KEY')
     ELASTICSEARCH_URL = os.environ.get('ELASTICSEARCH_URL')
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://'
+    POSTHOG_API_KEY = os.environ.get('POSTHOG_API_KEY')
+    POSTHOG_HOST = os.environ.get('POSTHOG_HOST')
     POSTS_PER_PAGE = 25

@@ -14,6 +14,9 @@ gunicorn
 langdetect
 PyJWT
 python-dotenv
+posthog==7.60.1
+opentelemetry-sdk==1.45.0
+opentelemetry-exporter-otlp-proto-http==1.45.0
 redis
 requests
 rq

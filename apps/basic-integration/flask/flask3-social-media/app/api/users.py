@@ -1,6 +1,6 @@
 import sqlalchemy as sa
 from flask import request, url_for, abort
-from app import db
+from app import db, posthog_client
 from app.models import User
 from app.api import bp
 from app.api.auth import token_auth
@@ -76,6 +76,18 @@ def update_user(id):
         db.session.scalar(sa.select(User).where(
             User.email == data['email'])):
         return bad_request('please use a different email address')
+    updated_fields = {
+        'username_changed': data.get('username') != user.username
+        if 'username' in data else False,
+        'email_changed': data.get('email') != user.email
+        if 'email' in data else False,
+        'about_me_updated': data.get('about_me') != user.about_me
+        if 'about_me' in data else False,
+    }
     user.from_dict(data, new_user=False)
     db.session.commit()
+    if posthog_client is not None:
+        posthog_client.capture(
+            'profile_updated',
+            properties={'update_source': 'api', **updated_fields})
     return user.to_dict()

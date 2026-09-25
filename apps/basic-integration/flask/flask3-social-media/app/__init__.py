@@ -1,10 +1,12 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+from flask import Flask, g, request, current_app
+from posthog import Posthog
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
@@ -33,9 +35,40 @@ login.login_message = _l('Please log in to access this page.')
 mail = Mail()
 moment = Moment()
 babel = Babel()
+posthog_client = None
+posthog_log_handler = None
+posthog_log_provider = None
+posthog_logs_logger = logging.getLogger('posthog.export')
+posthog_logs_logger.setLevel(logging.INFO)
+posthog_logs_logger.propagate = False
+
+
+def configure_posthog_log_capture(posthog_api_key, posthog_host):
+    """Export only this integration's dedicated logger through OTLP."""
+    global posthog_log_handler, posthog_log_provider
+
+    if posthog_log_handler is not None:
+        return
+
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import \
+        OTLPLogExporter
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+
+    posthog_log_provider = LoggerProvider()
+    posthog_log_provider.add_log_record_processor(BatchLogRecordProcessor(
+        OTLPLogExporter(
+            endpoint=f'{posthog_host.rstrip("/")}/i/v1/logs',
+            headers={'Authorization': f'Bearer {posthog_api_key}'},
+        )))
+    posthog_log_handler = LoggingHandler(logger_provider=posthog_log_provider)
+    posthog_logs_logger.addHandler(posthog_log_handler)
+    atexit.register(posthog_log_provider.shutdown)
 
 
 def create_app(config_class=Config):
+    global posthog_client
+
     app = Flask(__name__)
     app.config.from_object(config_class)
 
@@ -53,6 +86,55 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    posthog_api_key = app.config['POSTHOG_API_KEY']
+    posthog_host = app.config['POSTHOG_HOST']
+    if not posthog_api_key or not posthog_host:
+        if app.debug:
+            missing_var = 'POSTHOG_API_KEY' if not posthog_api_key else 'POSTHOG_HOST'
+            raise RuntimeError(
+                f'{missing_var} variable required by PostHog is missing or '
+                f'un-configured, this causes events to be silently missed. '
+                f'This error stops appearing once {missing_var} is configured')
+    else:
+        posthog_client = Posthog(
+            posthog_api_key,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        atexit.register(posthog_client.shutdown)
+        configure_posthog_log_capture(posthog_api_key, posthog_host)
+        posthog_logs_logger.info('PostHog log capture initialized')
+
+    @app.before_request
+    def start_posthog_request_context():
+        if posthog_client is None:
+            return
+
+        context = posthog_client.new_context(fresh=True)
+        context.__enter__()
+        g.posthog_context = context
+
+        if current_user.is_authenticated:
+            posthog_client.identify_context(str(current_user.id))
+        else:
+            distinct_id = request.headers.get('X-POSTHOG-DISTINCT-ID')
+            if distinct_id:
+                posthog_client.identify_context(distinct_id)
+
+        session_id = request.headers.get('X-POSTHOG-SESSION-ID')
+        if session_id:
+            posthog_client.set_context_session(session_id)
+
+    @app.teardown_request
+    def end_posthog_request_context(error=None):
+        context = g.pop('posthog_context', None)
+        if context is not None:
+            context.__exit__(
+                type(error) if error is not None else None,
+                error,
+                error.__traceback__ if error is not None else None,
+            )
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
