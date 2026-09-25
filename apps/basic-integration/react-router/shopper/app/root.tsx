@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -44,6 +45,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    void import("./posthog.client").then(({ initPostHog }) => initPostHog());
+  }, []);
+
   return (
     <CartProvider>
       <div className="min-h-screen bg-gray-50">
@@ -55,6 +60,16 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  useEffect(() => {
+    if (!(error instanceof Error)) return;
+
+    void import("./posthog.client").then(({ default: posthog, initPostHog }) => {
+      if (initPostHog()) {
+        posthog.captureException(error);
+      }
+    });
+  }, [error]);
+
   let message = "Oops!";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;

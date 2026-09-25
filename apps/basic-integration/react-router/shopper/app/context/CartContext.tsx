@@ -21,13 +21,34 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const addToCart = (product: Product) => {
+    const existingItem = cart.find((item) => item.id === product.id);
+    const resultingQuantity = (existingItem?.quantity ?? 0) + 1;
+
+    void Promise.all([
+      import("../posthog.client"),
+      import("../posthog-logger.client"),
+    ]).then(([{ default: posthog, initPostHog }, { storefrontLogger }]) => {
+      if (initPostHog()) {
+        posthog.capture("product_added_to_cart", {
+          product_id: product.id,
+          category: product.category,
+          unit_price: product.price,
+          resulting_quantity: resultingQuantity,
+        });
+        storefrontLogger.info("cart item added", {
+          event: "cart_item_added",
+          product_id: product.id,
+          category: product.category,
+          resulting_quantity: resultingQuantity,
+        });
+      }
+    });
+
     setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.id === product.id);
-      if (existingItem) {
+      const previousItem = prevCart.find((item) => item.id === product.id);
+      if (previousItem) {
         return prevCart.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
       return [...prevCart, { ...product, quantity: 1 }];

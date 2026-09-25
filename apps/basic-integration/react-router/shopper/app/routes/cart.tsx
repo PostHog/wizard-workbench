@@ -5,11 +5,51 @@ export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
 
   const handleRemoveFromCart = (item: CartItem) => {
+    void import("../posthog.client").then(({ default: posthog, initPostHog }) => {
+      if (initPostHog()) {
+        posthog.capture("cart_item_removed", {
+          product_id: item.id,
+          category: item.category,
+          unit_price: item.price,
+          quantity_removed: item.quantity,
+        });
+      }
+    });
     removeFromCart(item.id);
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      handleRemoveFromCart(item);
+      return;
+    }
+
+    void import("../posthog.client").then(({ default: posthog, initPostHog }) => {
+      if (initPostHog()) {
+        posthog.capture("cart_quantity_changed", {
+          product_id: item.id,
+          category: item.category,
+          unit_price: item.price,
+          previous_quantity: item.quantity,
+          new_quantity: newQuantity,
+        });
+      }
+    });
     updateQuantity(item.id, newQuantity);
+  };
+
+  const handleCheckoutStart = () => {
+    const cartTotal = getCartTotal();
+    const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
+
+    void import("../posthog.client").then(({ default: posthog, initPostHog }) => {
+      if (initPostHog()) {
+        posthog.capture("checkout_started", {
+          item_count: itemCount,
+          cart_total: cartTotal,
+        });
+      }
+    });
   };
 
   if (cart.length === 0) {
@@ -154,6 +194,7 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={handleCheckoutStart}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout
