@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { notFound } from '@tanstack/react-router'
+import { getPostHogWorkflowLogger } from './posthog-logs.server'
 
 export type Invoice = {
   id: number
@@ -130,7 +131,16 @@ export const createInvoiceFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     console.info('Creating invoice...', data)
-    return createInvoice(data)
+    const invoice = createInvoice(data)
+    getPostHogWorkflowLogger().emit({
+      severityText: 'INFO',
+      body: 'Invoice creation completed',
+      attributes: {
+        workflow: 'invoice',
+        action: 'created',
+      },
+    })
+    return invoice
   })
 
 export const markInvoicePaid = createServerFn({ method: 'POST' })
@@ -145,5 +155,13 @@ export const markInvoicePaid = createServerFn({ method: 'POST' })
     if (!invoice) {
       throw new Error('Invoice not found')
     }
+    getPostHogWorkflowLogger().emit({
+      severityText: 'INFO',
+      body: 'Invoice payment marked completed',
+      attributes: {
+        workflow: 'invoice',
+        action: 'marked_paid',
+      },
+    })
     return invoice
   })
