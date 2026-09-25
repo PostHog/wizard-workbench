@@ -10,6 +10,7 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import PostHog
 import Settings
 import Shared
 import SwiftUI
@@ -79,9 +80,7 @@ struct MainContentView: View {
                                 viewModel: settingsViewModel,
                                 isAuthenticated: sessionService.authenticationState == .authenticated,
                                 currentUsername: sessionService.username,
-                                onLogin: { username, password in
-                                    _ = try await sessionService.authenticate(username: username, password: password)
-                                },
+                                onLogin: authenticate,
                                 onLogout: {
                                     sessionService.unauthenticate()
                                 },
@@ -101,9 +100,7 @@ struct MainContentView: View {
             LoginView(
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
-                onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
-                },
+                onLogin: authenticate,
                 onLogout: {
                     sessionService.unauthenticate()
                 },
@@ -117,9 +114,7 @@ struct MainContentView: View {
                 viewModel: settingsViewModel,
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
-                onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
-                },
+                onLogin: authenticate,
                 onLogout: {
                     sessionService.unauthenticate()
                 },
@@ -142,6 +137,23 @@ struct MainContentView: View {
             if onboardingCoordinator.shouldShowOnboarding() {
                 showOnboarding = true
             }
+        }
+    }
+
+    private func authenticate(username: String, password: String) async throws {
+        do {
+            _ = try await sessionService.authenticate(username: username, password: password)
+            PostHogSDK.shared.capture("account_login_completed")
+            PostHogSDK.shared.logger?.info(
+                "authentication_completed",
+                attributes: ["outcome": "succeeded"]
+            )
+        } catch {
+            PostHogSDK.shared.logger?.warn(
+                "authentication_completed",
+                attributes: ["outcome": "failed"]
+            )
+            throw error
         }
     }
 
