@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import { getTodos, createTodo } from '@/lib/data';
+import { flushPostHogLogs, getPostHogLogger } from '@/instrumentation';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -33,6 +36,16 @@ export async function POST(request: NextRequest) {
       description: validatedData.description,
       completed: validatedData.completed,
     });
+
+    getPostHogLogger()?.emit({
+      body: 'Todo created',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        event: 'todo.created',
+        has_description: Boolean(validatedData.description),
+      },
+    });
+    after(flushPostHogLogs);
 
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {

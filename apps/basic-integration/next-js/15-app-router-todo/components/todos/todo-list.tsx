@@ -2,10 +2,33 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+const posthogToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+const missingPostHogVariable = !posthogToken
+  ? 'NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN'
+  : !posthogHost
+    ? 'NEXT_PUBLIC_POSTHOG_HOST'
+    : undefined;
+
+if (missingPostHogVariable && process.env.NODE_ENV === 'development') {
+  throw new Error(
+    `${missingPostHogVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingPostHogVariable} is configured`
+  );
+}
+
+if (posthogToken && posthogHost && !posthog.__loaded) {
+  posthog.init(posthogToken, {
+    api_host: posthogHost,
+    defaults: '2026-01-30',
+    debug: process.env.NODE_ENV === 'development',
+  });
+}
 
 export function TodoList() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -42,6 +65,11 @@ export function TodoList() {
       if (response.ok) {
         const newTodo = await response.json();
         setTodos([...todos, newTodo]);
+        if (posthogToken && posthogHost) {
+          posthog.capture('todo_created', {
+            has_description: Boolean(description.trim()),
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to add todo:', error);
@@ -61,6 +89,9 @@ export function TodoList() {
       if (response.ok) {
         const updatedTodo = await response.json();
         setTodos(todos.map((todo) => (todo.id === id ? updatedTodo : todo)));
+        if (posthogToken && posthogHost) {
+          posthog.capture('todo_completion_updated', { completed });
+        }
       }
     } catch (error) {
       console.error('Failed to update todo:', error);
@@ -75,6 +106,9 @@ export function TodoList() {
 
       if (response.ok) {
         setTodos(todos.filter((todo) => todo.id !== id));
+        if (posthogToken && posthogHost) {
+          posthog.capture('todo_deleted');
+        }
       }
     } catch (error) {
       console.error('Failed to delete todo:', error);
