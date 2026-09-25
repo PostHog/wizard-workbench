@@ -9,7 +9,12 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
+    "@hono/node-server": "^1.13.0",
+    "@opentelemetry/api-logs": "^0.222.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-logs": "^0.222.0",
     "hono": "^4.6.0",
-    "@hono/node-server": "^1.13.0"
+    "posthog-node": "^5.54.0"
   }
 }

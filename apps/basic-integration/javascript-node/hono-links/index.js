@@ -1,7 +1,17 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
+import { posthogLogger } from './posthog-logs.js';
 
 const app = new Hono();
+
+app.onError((error, c) => {
+  if (posthog) {
+    posthog.captureException(error, c.req.header('x-posthog-distinct-id'));
+  }
+
+  return c.json({ error: 'Internal Server Error' }, 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +57,27 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_created',
+      properties: {
+        tag_count: tags.length,
+        has_description: Boolean(description),
+      },
+    });
+  }
+
+  posthogLogger.emit({
+    severityText: 'INFO',
+    body: 'link created',
+    attributes: {
+      operation: 'link_created',
+      tag_count: tags.length,
+      has_description: Boolean(description),
+    },
+  });
+
   return c.json(link, 201);
 });
 
@@ -76,6 +107,32 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  const updatedFields = ['url', 'title', 'description', 'tags', 'favorite'].filter(
+    (field) => body[field] !== undefined
+  );
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_updated',
+      properties: {
+        updated_fields: updatedFields,
+        tag_count: link.tags.length,
+        is_favorite: link.favorite,
+      },
+    });
+  }
+
+  posthogLogger.emit({
+    severityText: 'INFO',
+    body: 'link updated',
+    attributes: {
+      operation: 'link_updated',
+      updated_field_count: updatedFields.length,
+      tag_count: link.tags.length,
+      is_favorite: link.favorite,
+    },
+  });
+
   return c.json(link);
 });
 
@@ -87,7 +144,28 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [link] = links.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_deleted',
+      properties: {
+        tag_count: link.tags.length,
+        was_favorite: link.favorite,
+      },
+    });
+  }
+
+  posthogLogger.emit({
+    severityText: 'INFO',
+    body: 'link deleted',
+    attributes: {
+      operation: 'link_deleted',
+      tag_count: link.tags.length,
+      was_favorite: link.favorite,
+    },
+  });
+
   return c.body(null, 204);
 });
 
