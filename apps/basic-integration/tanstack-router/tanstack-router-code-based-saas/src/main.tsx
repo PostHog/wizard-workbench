@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogErrorBoundary, PostHogProvider, usePostHog } from 'posthog-js/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -73,11 +74,49 @@ function UsersNotFoundComponent({ data }: NotFoundRouteProps) {
   )
 }
 
+const posthogToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
 const rootRoute = createRootRouteWithContext<{
   auth: Auth
 }>()({
-  component: RootComponent,
+  component: PostHogRoot,
 })
+
+function PostHogRoot() {
+  if (!posthogToken || !posthogHost) {
+    if (import.meta.env.DEV) {
+      const missingVariable = !posthogToken
+        ? 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN'
+        : 'VITE_PUBLIC_POSTHOG_HOST'
+      throw new Error(
+        `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+      )
+    }
+
+    return <RootComponent />
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={posthogToken}
+      options={{
+        api_host: posthogHost,
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+        defaults: '2026-01-30',
+        logs: {
+          serviceName: 'cloudflow-web',
+          environment: import.meta.env.MODE,
+        },
+      }}
+    >
+      <PostHogErrorBoundary>
+        <RootComponent />
+      </PostHogErrorBoundary>
+    </PostHogProvider>
+  )
+}
 
 function RouterSpinner() {
   const isLoading = useRouterState({ select: (s) => s.status === 'pending' })
@@ -433,9 +472,16 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      router.invalidate()
+      if (posthogToken && posthogHost) {
+        posthog.capture('invoice_created')
+        posthog.logger.info('invoice created', { operation: 'invoice_create' })
+      }
+    },
   })
 
   return (
@@ -517,9 +563,16 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      router.invalidate()
+      if (posthogToken && posthogHost) {
+        posthog.capture('invoice_updated')
+        posthog.logger.info('invoice updated', { operation: 'invoice_update' })
+      }
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -1094,6 +1147,7 @@ const loginRoute = createRoute({
 
 function LoginComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
   })
@@ -1103,6 +1157,10 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    if (posthogToken && posthogHost) {
+      posthog.capture('user_signed_in')
+      posthog.logger.info('demo sign-in completed', { operation: 'demo_sign_in' })
+    }
     router.invalidate()
   }
 
