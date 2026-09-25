@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { use, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
 import {
@@ -15,8 +15,27 @@ import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+function IdentifyUser() {
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    posthog.identify(`user:${user.id}`, {
+      email: user.email,
+      name: user.name,
+      role: user.role
+    });
+  }, [user?.email, user?.id, user?.name, user?.role]);
+
+  return null;
+}
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,6 +44,7 @@ function UserMenu() {
 
   async function handleSignOut() {
     await signOut();
+    posthog.reset();
     mutate('/api/user');
     router.push('/');
   }
@@ -99,6 +119,7 @@ function Header() {
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <section className="flex flex-col min-h-screen">
+      <IdentifyUser />
       <Header />
       {children}
     </section>

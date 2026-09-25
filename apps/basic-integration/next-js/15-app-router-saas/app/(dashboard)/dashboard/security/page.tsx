@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Lock, Trash2, Loader2 } from 'lucide-react';
 import { useActionState } from 'react';
 import { updatePassword, deleteAccount } from '@/app/(login)/actions';
+import posthog from 'posthog-js';
 
 type PasswordState = {
   currentPassword?: string;
@@ -23,10 +24,23 @@ type DeleteState = {
 };
 
 export default function SecurityPage() {
+  const updatePasswordWithAnalytics = async (
+    previousState: PasswordState,
+    formData: FormData
+  ) => {
+    const nextState = await updatePassword(previousState, formData);
+
+    if ('success' in nextState && nextState.success) {
+      posthog.capture('password_updated');
+    }
+
+    return nextState;
+  };
+
   const [passwordState, passwordAction, isPasswordPending] = useActionState<
     PasswordState,
     FormData
-  >(updatePassword, {});
+  >(updatePasswordWithAnalytics, {});
 
   const [deleteState, deleteAction, isDeletePending] = useActionState<
     DeleteState,

@@ -3,10 +3,18 @@ import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
+import {
+  flushPostHogLogs,
+  logStripeCheckoutCompleted,
+  logStripeCheckoutProcessingFailed,
+} from '@/lib/posthog-logs';
 import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
+  after(flushPostHogLogs);
+
   const searchParams = request.nextUrl.searchParams;
   const sessionId = searchParams.get('session_id');
 
@@ -89,8 +97,10 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    logStripeCheckoutCompleted();
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
+    logStripeCheckoutProcessingFailed();
     console.error('Error handling successful checkout:', error);
     return NextResponse.redirect(new URL('/error', request.url));
   }

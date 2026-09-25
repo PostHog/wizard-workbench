@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -61,7 +62,11 @@ function ManageSubscription() {
               </p>
             </div>
             <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={() => posthog.capture('subscription_portal_opened')}
+              >
                 Manage Subscription
               </Button>
             </form>
@@ -95,10 +100,22 @@ function TeamMembersSkeleton() {
 
 function TeamMembers() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
+  const removeTeamMemberWithAnalytics = async (
+    previousState: ActionState,
+    formData: FormData
+  ) => {
+    const nextState = await removeTeamMember(previousState, formData);
+
+    if ('success' in nextState && nextState.success) {
+      posthog.capture('team_member_removed');
+    }
+
+    return nextState;
+  };
   const [removeState, removeAction, isRemovePending] = useActionState<
     ActionState,
     FormData
-  >(removeTeamMember, {});
+  >(removeTeamMemberWithAnalytics, {});
 
   const getUserDisplayName = (user: Pick<User, 'id' | 'name' | 'email'>) => {
     return user.name || user.email || 'Unknown User';
@@ -190,10 +207,24 @@ function InviteTeamMemberSkeleton() {
 function InviteTeamMember() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const isOwner = user?.role === 'owner';
+  const inviteTeamMemberWithAnalytics = async (
+    previousState: ActionState,
+    formData: FormData
+  ) => {
+    const nextState = await inviteTeamMember(previousState, formData);
+
+    if ('success' in nextState && nextState.success) {
+      posthog.capture('team_member_invited', {
+        role: formData.get('role') === 'owner' ? 'owner' : 'member'
+      });
+    }
+
+    return nextState;
+  };
   const [inviteState, inviteAction, isInvitePending] = useActionState<
     ActionState,
     FormData
-  >(inviteTeamMember, {});
+  >(inviteTeamMemberWithAnalytics, {});
 
   return (
     <Card>
