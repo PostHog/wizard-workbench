@@ -314,7 +314,8 @@ WIZARD_REPO=~/development/wizard pnpm wizard-agent --check
 WIZARD_REPO=… APP_DIR=/tmp/app-copy PROJECT_ID=… POSTHOG_KEY_FILE=… \
   pnpm wizard-program
 
-# One agent run on a local `quack` skill, in its own empty directory.
+# One agent run on a local `quack` skill, in its own empty directory. PROGRAM
+# sets the program id the gateway token is minted under, default posthog-integration.
 WIZARD_REPO=… PROJECT_ID=… POSTHOG_KEY_FILE=… pnpm wizard-agent
 ```
 

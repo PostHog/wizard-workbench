@@ -6,7 +6,7 @@
  * context-mill are involved.
  *
  *   WIZARD_REPO=<wizard checkout> PROJECT_ID=… POSTHOG_KEY_FILE=… \
- *   [E2E_RESULT_JSON=result.json] pnpm wizard-agent
+ *   [PROGRAM=posthog-integration] [E2E_RESULT_JSON=result.json] pnpm wizard-agent
  *
  *   WIZARD_REPO=<wizard checkout> pnpm wizard-agent --check
  */
@@ -44,7 +44,10 @@ type Constants = {
 };
 type Fflate = { zipSync(files: Record<string, Uint8Array>): Uint8Array };
 
-const PROGRAM_ID = "e2e-agent";
+// The runner mints the gateway token under this id, and the gateway may refuse
+// an id it does not know. Agentic detection passes its caller's real program
+// id, so this defaults to a real one too.
+const PROGRAM_ID = process.env.PROGRAM || "posthog-integration";
 const SKILL_ID = "quack";
 const QUACK_FILE = join("quack", "quack.txt");
 const SKILL_MD = `---
