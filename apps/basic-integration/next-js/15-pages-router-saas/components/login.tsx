@@ -57,6 +57,14 @@ export function Login({
           return;
         }
 
+        if (result.success) {
+          const { default: posthog } = await import('posthog-js');
+          posthog.capture(
+            mode === 'signin' ? 'user_signed_in' : 'user_signed_up',
+            { authentication_method: 'password' }
+          );
+        }
+
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {

@@ -86,10 +86,20 @@ function PricingCard({
 
         const result = await response.json();
 
-        if (result.redirectTo) {
-          router.push(result.redirectTo);
-        } else if (result.url) {
-          window.location.href = result.url;
+        if (result.redirectTo || result.url) {
+          void import('posthog-js').then(({ default: posthog }) => {
+            posthog.capture('checkout_started', {
+              plan_name: name,
+              billing_interval: interval,
+              trial_days: trialDays
+            });
+          });
+
+          if (result.redirectTo) {
+            router.push(result.redirectTo);
+          } else {
+            window.location.href = result.url;
+          }
         }
       } catch (err) {
         console.error('Checkout error:', err);

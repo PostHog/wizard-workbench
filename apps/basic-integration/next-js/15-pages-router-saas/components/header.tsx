@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
 import {
@@ -20,14 +20,48 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: user } = useSWR<User>('/api/user', fetcher);
+  const identifiedUserId = useRef<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    void import('posthog-js').then(({ default: posthog }) => {
+      const userId = String(user.id);
+      if (identifiedUserId.current === userId) {
+        return;
+      }
+
+      if (identifiedUserId.current !== null) {
+        posthog.reset();
+      }
+
+      posthog.identify(userId, {
+        email: user.email,
+        name: user.name || undefined,
+        role: user.role
+      });
+      identifiedUserId.current = userId;
+    });
+  }, [user]);
 
   async function handleSignOut() {
     try {
       // Call sign-out API to delete HttpOnly session cookie
-      await fetch('/api/auth/sign-out', {
+      const response = await fetch('/api/auth/sign-out', {
         method: 'POST'
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to sign out');
+      }
+
+      const { default: posthog } = await import('posthog-js');
+      posthog.capture('user_signed_out');
+      posthog.reset();
+      identifiedUserId.current = null;
 
       // Clear SWR cache
       mutate('/api/user', null, false);

@@ -36,6 +36,9 @@ function ManageSubscription() {
       const result = await response.json();
 
       if (response.ok && result.url) {
+        void import('posthog-js').then(({ default: posthog }) => {
+          posthog.capture('subscription_portal_opened');
+        });
         window.location.href = result.url;
       }
     } catch (err) {
@@ -101,6 +104,10 @@ function TeamMembers() {
           setError(result.error || 'Failed to remove member');
           return;
         }
+
+        void import('posthog-js').then(({ default: posthog }) => {
+          posthog.capture('team_member_removed');
+        });
 
         // Refresh team data
         mutate('/api/team');
@@ -208,6 +215,12 @@ function InviteTeamMember() {
         }
 
         setSuccess(result.success);
+        void import('posthog-js').then(({ default: posthog }) => {
+          posthog.capture('team_invitation_sent', {
+            invited_role: data.role
+          });
+        });
+
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {

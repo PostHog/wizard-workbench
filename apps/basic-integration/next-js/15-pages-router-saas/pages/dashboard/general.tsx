@@ -54,6 +54,11 @@ export default function GeneralPage() {
 
         setSuccess(result.success);
         setName(result.name);
+        void import('posthog-js').then(({ default: posthog }) => {
+          posthog.capture('account_updated', {
+            settings_section: 'general'
+          });
+        });
       } catch (err) {
         setError('An unexpected error occurred. Please try again.');
       }

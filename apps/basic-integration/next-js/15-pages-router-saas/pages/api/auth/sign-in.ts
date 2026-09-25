@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { posthogLog } from '@/lib/observability/posthog-logs';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -96,6 +97,10 @@ export default async function handler(
     ]);
 
     if (redirect === 'checkout' && foundTeam) {
+      await posthogLog('User sign-in completed before checkout', {
+        route: 'api/auth/sign-in',
+        checkout_redirect: true
+      });
       const checkoutResult = await createCheckoutSession({
         team: foundTeam,
         priceId,
@@ -104,6 +109,10 @@ export default async function handler(
       return res.status(200).json(checkoutResult);
     }
 
+    await posthogLog('User sign-in completed', {
+      route: 'api/auth/sign-in',
+      checkout_redirect: false
+    });
     return res.status(200).json({ success: true, redirectTo: '/dashboard' });
   } catch (error) {
     console.error('Sign in error:', error);
