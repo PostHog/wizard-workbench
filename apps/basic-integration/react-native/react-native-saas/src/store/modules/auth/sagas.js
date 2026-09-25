@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
+import { posthog } from '../../../config/posthog';
+import { posthogLogger } from '../../../services/posthogLogger';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
 
 import {
@@ -33,6 +35,14 @@ export function* init() {
   yield put(initCheckSuccess());
 }
 
+function identifyAuthenticatedUser(email) {
+  // The session API currently exposes no stable user ID. Email is the only
+  // available identifier, so it is used as the documented fallback.
+  posthog?.identify(email, {
+    $set: { email },
+  });
+}
+
 export function* signIn({ payload }) {
   try {
     const { email, password } = payload;
@@ -41,6 +51,11 @@ export function* signIn({ payload }) {
     if (email === 'demo@test.com' && password === 'demo') {
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
       yield put(signInSuccess(DEMO_TOKEN));
+      identifyAuthenticatedUser(email);
+      posthog?.capture('user_signed_in', { authentication_method: 'demo' });
+      posthogLogger.info('Authentication succeeded', {
+        authentication_method: 'demo',
+      });
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
       toast.showSuccess('Welcome to demo mode!');
@@ -53,6 +68,11 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+    identifyAuthenticatedUser(email);
+    posthog?.capture('user_signed_in', { authentication_method: 'password' });
+    posthogLogger.info('Authentication succeeded', {
+      authentication_method: 'password',
+    });
     NavigationService.navigate('Main');
   } catch (err) {
     toast.showError('Invalid credentials');
@@ -60,6 +80,9 @@ export function* signIn({ payload }) {
 }
 
 export function* signOut() {
+  posthog?.capture('user_signed_out');
+  posthogLogger.info('Authentication signed out');
+  posthog?.reset();
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
