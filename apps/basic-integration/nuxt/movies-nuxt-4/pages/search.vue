@@ -10,6 +10,7 @@ const router = useRouter()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
+const { $posthog } = useNuxtApp()
 
 const items = ref<Media[]>([])
 const currentSearch = ref(input.value)
@@ -19,6 +20,8 @@ function search() {
     return
 
   currentSearch.value = input.value.toString()
+  $posthog?.capture('search_performed')
+  $posthog?.logger.info('search_started')
   count.value = undefined
   items.value = []
   router.replace({ query: { s: input.value } })
@@ -34,6 +37,7 @@ async function fetch(page: number) {
   }
   catch (e: any) {
     error.value = e
+    $posthog?.logger.warn('search_request_failed', { page })
   }
 }
 

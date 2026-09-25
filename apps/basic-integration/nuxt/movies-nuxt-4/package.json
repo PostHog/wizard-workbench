@@ -19,6 +19,12 @@
   },
   "dependencies": {
     "@nuxtjs/html-validator": "^1.8.2",
+    "@opentelemetry/api-logs": "^0.222.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-logs": "^0.222.0",
+    "posthog-js": "^1.434.14",
+    "posthog-node": "^5.54.0",
     "vue-router-better-scroller": "^0.0.0"
   },
   "devDependencies": {
