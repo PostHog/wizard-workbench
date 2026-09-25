@@ -32,6 +32,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import type { Organization } from "~/generated/browser";
+import { posthogClient } from "~/lib/posthog-logger.client";
 
 const ONE_MB = 1_000_000;
 
@@ -85,6 +86,7 @@ export function GeneralOrganizationSettings({
     <Form
       encType="multipart/form-data"
       method="POST"
+      onSubmit={() => posthogClient.capture("organization_settings_submitted")}
       {...form.props}
       aria-describedby={
         form.errors && form.errors.length > 0

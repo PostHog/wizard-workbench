@@ -42,6 +42,7 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import type { Organization } from "~/generated/browser";
+import { posthogClient } from "~/lib/posthog-logger.client";
 import { cn } from "~/lib/utils";
 
 type PendingDowngradeBannerProps = {
@@ -631,6 +632,9 @@ export function BillingPage({
                 <Button
                   disabled={isSubmitting}
                   name="intent"
+                  onClick={() =>
+                    posthogClient.capture("subscription_cancellation_requested")
+                  }
                   type="submit"
                   value={CANCEL_SUBSCRIPTION_INTENT}
                   variant="destructive"

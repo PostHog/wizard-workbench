@@ -23,6 +23,7 @@ import {
 } from "~/components/ui/card";
 import { inputClassName } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
+import { posthogClient } from "~/lib/posthog-logger.client";
 import { cn } from "~/lib/utils";
 
 export type InviteLinkCardProps = {
@@ -112,6 +113,10 @@ export function InviteLinkCard({
                 )}
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
+                  posthogClient.capture("team_invite_link_copied");
+                  posthogClient.info("Team invite link copied", {
+                    workflow: "team_invite",
+                  });
                   setLinkCopied(true);
                 }}
                 size="icon"

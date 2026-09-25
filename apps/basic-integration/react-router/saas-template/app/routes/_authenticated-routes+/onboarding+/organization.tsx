@@ -46,6 +46,7 @@ import {
   onboardingOrganizationSchema,
   REFERRAL_SOURCE_OPTIONS,
 } from "~/features/onboarding/organization/onboarding-organization-schemas";
+import { posthogClient } from "~/lib/posthog-logger.client";
 import { getPageTitle } from "~/utils/get-page-title.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -93,6 +94,9 @@ export default function OrganizationOnboardingRoute({
     <Form
       encType="multipart/form-data"
       method="POST"
+      onSubmit={() =>
+        posthogClient.capture("onboarding_organization_submitted")
+      }
       {...form.props}
       aria-describedby={
         form.errors && form.errors.length > 0

@@ -28,6 +28,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import type { UserAccount } from "~/generated/browser";
+import { posthogClient } from "~/lib/posthog-logger.client";
 
 const ONE_MB = 1_000_000;
 
@@ -57,6 +58,7 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
     <Form
       encType="multipart/form-data"
       method="POST"
+      onSubmit={() => posthogClient.capture("user_account_settings_submitted")}
       {...form.props}
       aria-describedby={
         form.errors && form.errors.length > 0
