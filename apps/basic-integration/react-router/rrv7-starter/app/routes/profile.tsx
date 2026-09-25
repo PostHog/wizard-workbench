@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { usePostHog } from '@posthog/react'
 import { fakeUser } from '@/lib/data/fake-data'
 import { fakeFollowers } from '@/lib/data/fake-data'
 import type { Route } from './+types/profile'
 import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
+import { posthogLogger } from '@/lib/utils/posthog-logger'
 import cn from '@/lib/utils/cn'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
@@ -44,6 +46,7 @@ export const meta: Route.MetaFunction = () => {
 }
 
 export default function Profile() {
+  const posthog = usePostHog()
   const [followers, setFollowers] = useState(fakeUser.followers)
   const [following, setFollowing] = useState(fakeUser.following)
   const [posts, setPosts] = useState(fakeUser.posts)
@@ -146,6 +149,12 @@ export default function Profile() {
                   onFollow={() => {
                     const newFollowing = getFollowing() + 1
                     setFollowing(newFollowing)
+                    posthog?.capture('follower_followed', {
+                      total_following: newFollowing,
+                    })
+                    posthogLogger.info(posthog, 'follower followed', {
+                      total_following: newFollowing,
+                    })
                   }}
                 />
               </div>
