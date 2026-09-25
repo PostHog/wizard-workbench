@@ -4,13 +4,53 @@ import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
 
+function captureCountryAction(
+  event: string,
+  countryName: string,
+  onCaptured: () => void,
+) {
+  if (
+    !import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+    !import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    onCaptured();
+    return;
+  }
+
+  void import("posthog-js")
+    .then(({ default: posthog }) => {
+      posthog.capture(event, { country_name: countryName });
+    })
+    .finally(onCaptured);
+}
+
+function logCountryLoaderOutcome(
+  level: "info" | "warn" | "error",
+  message: string,
+  attributes: Record<string, number | string | undefined>,
+) {
+  if (
+    !import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+    !import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    return;
+  }
+
+  void import("posthog-js").then(({ default: posthog }) => {
+    posthog.logger[level](message, attributes);
+  });
+}
+
 export async function clientLoader() {
+  let responseStatus: number | undefined;
+
   try {
     // REST Countries API v3.1 requires fields parameter
     // Request only the fields we need to reduce payload size
     const res = await fetch(
       "https://restcountries.com/v3.1/all?fields=name,region,population,cca3,flags"
     );
+    responseStatus = res.status;
     if (!res.ok) {
       throw new Error(`Failed to fetch countries: ${res.status} ${res.statusText}`);
     }
@@ -19,15 +59,28 @@ export async function clientLoader() {
     // Check if API returned an error object
     if (data.status === 404 || (data.message && !Array.isArray(data))) {
       console.error("API Error:", data.message || data.status);
+      logCountryLoaderOutcome("warn", "country catalog response rejected", {
+        outcome: "invalid_response",
+        response_status: responseStatus,
+      });
       return [];
     }
     
     // Ensure we return an array
     const countries = Array.isArray(data) ? data : [];
     console.log(`Loaded ${countries.length} countries from API`);
+    logCountryLoaderOutcome("info", "country catalog loaded", {
+      outcome: "success",
+      country_count: countries.length,
+      response_status: responseStatus,
+    });
     return countries;
   } catch (error) {
     console.error("Error loading countries:", error);
+    logCountryLoaderOutcome("error", "country catalog request failed", {
+      outcome: "request_failed",
+      response_status: responseStatus,
+    });
     // Return empty array on error to prevent crashes
     return [];
   }
@@ -110,6 +163,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
             const countryName = country.name.common;
             const isClaimed = user?.claimedCountries.includes(countryName);
             const isLiked = user?.likedCountries.includes(countryName);
+            const isVisited = user?.visitedCountries.includes(countryName);
             
             return (
               <li
@@ -137,8 +191,17 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
+                        if (isClaimed) {
+                          window.location.reload();
+                          return;
+                        }
+
                         claimCountry(countryName);
-                        window.location.reload();
+                        captureCountryAction(
+                          "country_claimed",
+                          countryName,
+                          () => window.location.reload(),
+                        );
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isClaimed
@@ -150,8 +213,17 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        if (isLiked) {
+                          window.location.reload();
+                          return;
+                        }
+
                         likeCountry(countryName);
-                        window.location.reload();
+                        captureCountryAction(
+                          "country_liked",
+                          countryName,
+                          () => window.location.reload(),
+                        );
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isLiked
@@ -163,8 +235,17 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        if (isVisited) {
+                          window.location.reload();
+                          return;
+                        }
+
                         visitCountry(countryName);
-                        window.location.reload();
+                        captureCountryAction(
+                          "country_visited",
+                          countryName,
+                          () => window.location.reload(),
+                        );
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
                     >
