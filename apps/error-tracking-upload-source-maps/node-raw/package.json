@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && posthog-cli --dotenv-file .env sourcemap process --directory ./dist --release-name node-raw",
     "start": "node --env-file=.env dist/index.js"
   },
   "dependencies": {
