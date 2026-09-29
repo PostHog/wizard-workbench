@@ -1,2 +1,3 @@
-# PostHog-less weather assistant. Anthropic SDK only.
+# Weather assistant dependencies.
 anthropic>=0.40.0
+posthog
