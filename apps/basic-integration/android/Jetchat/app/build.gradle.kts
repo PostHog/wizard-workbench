@@ -15,12 +15,28 @@
  */
 
 
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose)
 }
+
+val postHogProperties = Properties().apply {
+    val envFile = rootProject.file(".env")
+    if (envFile.exists()) {
+        envFile.inputStream().use(::load)
+    }
+}
+val postHogApiKey = providers.environmentVariable("POSTHOG_API_KEY")
+    .orElse(providers.gradleProperty("POSTHOG_API_KEY"))
+    .orElse(postHogProperties.getProperty("POSTHOG_API_KEY").orEmpty())
+    .getOrElse("")
+val postHogHost = providers.environmentVariable("POSTHOG_HOST")
+    .orElse(providers.gradleProperty("POSTHOG_HOST"))
+    .orElse(postHogProperties.getProperty("POSTHOG_HOST").orEmpty())
+    .getOrElse("")
 
 android {
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -35,6 +51,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         vectorDrawables.useSupportLibrary = true
+        buildConfigField("String", "POSTHOG_API_KEY", "\"$postHogApiKey\"")
+        buildConfigField("String", "POSTHOG_HOST", "\"$postHogHost\"")
     }
 
     signingConfigs {
@@ -75,6 +93,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -88,6 +107,8 @@ android {
 }
 
 dependencies {
+    implementation("com.posthog:posthog-android:3.+")
+
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)
