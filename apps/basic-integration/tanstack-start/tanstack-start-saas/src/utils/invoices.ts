@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { notFound } from '@tanstack/react-router'
+import { recordInvoiceLog } from './posthog-logs.server'
 
 export type Invoice = {
   id: number
@@ -130,7 +131,9 @@ export const createInvoiceFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     console.info('Creating invoice...', data)
-    return createInvoice(data)
+    const invoice = createInvoice(data)
+    await recordInvoiceLog('invoice_created', invoice.id)
+    return invoice
   })
 
 export const markInvoicePaid = createServerFn({ method: 'POST' })
@@ -145,5 +148,6 @@ export const markInvoicePaid = createServerFn({ method: 'POST' })
     if (!invoice) {
       throw new Error('Invoice not found')
     }
+    await recordInvoiceLog('invoice_marked_paid', invoice.id)
     return invoice
   })
