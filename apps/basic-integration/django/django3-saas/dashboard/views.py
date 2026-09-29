@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
+from config.apps import get_posthog_client, get_posthog_log_logger
 from .models import Project, ActivityLog
 from .forms import ProjectForm
 
@@ -60,6 +61,17 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            posthog_client = get_posthog_client()
+            if posthog_client:
+                posthog_client.capture('project_created', properties={
+                    'has_description': bool(project.description),
+                })
+            posthog_logger = get_posthog_log_logger()
+            if posthog_logger:
+                posthog_logger.info(
+                    'Project created',
+                    extra={'has_description': bool(project.description)},
+                )
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +95,11 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            posthog_client = get_posthog_client()
+            if posthog_client:
+                posthog_client.capture('project_updated', properties={
+                    'has_description': bool(project.description),
+                })
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -105,6 +122,9 @@ def delete_project(request, pk):
             description=f'Deleted project: {name}'
         )
 
+        posthog_client = get_posthog_client()
+        if posthog_client:
+            posthog_client.capture('project_deleted')
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
 
