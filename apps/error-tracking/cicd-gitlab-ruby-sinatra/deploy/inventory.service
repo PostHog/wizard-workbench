@@ -1,0 +1,16 @@
+# Installed on the server as /etc/systemd/system/inventory.service.
+[Unit]
+Description=Inventory API
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/srv/inventory/current
+EnvironmentFile=/srv/inventory/shared/inventory.env
+Environment=RACK_ENV=production
+ExecStart=/usr/local/bin/bundle exec puma -C config/puma.rb
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

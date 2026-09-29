@@ -1,0 +1,44 @@
+stages:
+  - test
+  - deploy
+
+default:
+  image: ruby:3.3
+
+test:
+  stage: test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  cache:
+    key:
+      files:
+        - Gemfile.lock
+    paths:
+      - vendor/bundle
+  script:
+    - bundle config set --local path vendor/bundle
+    - bundle install --jobs 4
+    - bundle exec rake test
+
+deploy:
+  stage: deploy
+  image: ruby:3.3-slim
+  environment: production
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends openssh-client git
+    - eval "$(ssh-agent -s)"
+    - echo "$DEPLOY_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && echo "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+  script:
+    - >-
+      ssh deploy@$DEPLOY_HOST
+      "cd /srv/inventory/current &&
+      git fetch --quiet origin &&
+      git checkout --quiet --force $CI_COMMIT_SHA &&
+      bundle config set --local deployment true &&
+      bundle config set --local without test &&
+      bundle install --jobs 4 &&
+      sudo systemctl restart inventory"
