@@ -10,6 +10,7 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import PostHog
 import Settings
 import Shared
 import SwiftUI
@@ -80,11 +81,9 @@ struct MainContentView: View {
                                 isAuthenticated: sessionService.authenticationState == .authenticated,
                                 currentUsername: sessionService.username,
                                 onLogin: { username, password in
-                                    _ = try await sessionService.authenticate(username: username, password: password)
+                                    try await signIn(username: username, password: password)
                                 },
-                                onLogout: {
-                                    sessionService.unauthenticate()
-                                },
+                                onLogout: recordSignOut,
                                 onShowOnboarding: {
                                     showOnboarding = true
                                 }
@@ -102,11 +101,9 @@ struct MainContentView: View {
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
+                    try await signIn(username: username, password: password)
                 },
-                onLogout: {
-                    sessionService.unauthenticate()
-                },
+                onLogout: recordSignOut,
                 textSize: settingsViewModel.textSize
             )
             .textScaling(for: settingsViewModel.textSize)
@@ -118,11 +115,9 @@ struct MainContentView: View {
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
+                    try await signIn(username: username, password: password)
                 },
-                onLogout: {
-                    sessionService.unauthenticate()
-                },
+                onLogout: recordSignOut,
                 onShowOnboarding: {
                     showOnboarding = true
                 }
@@ -133,6 +128,8 @@ struct MainContentView: View {
         .sheet(isPresented: $showOnboarding) {
             onboardingCoordinator
                 .makeOnboardingView {
+                    PostHogSDK.shared.capture("onboarding_completed")
+                    PostHogAppLogger.info("onboarding_completed")
                     showOnboarding = false
                 }
                 .textScaling(for: settingsViewModel.textSize)
@@ -143,6 +140,18 @@ struct MainContentView: View {
                 showOnboarding = true
             }
         }
+    }
+
+    private func signIn(username: String, password: String) async throws {
+        _ = try await sessionService.authenticate(username: username, password: password)
+        PostHogSDK.shared.capture("sign_in_succeeded")
+        PostHogAppLogger.info("sign_in_succeeded")
+    }
+
+    private func recordSignOut() {
+        sessionService.unauthenticate()
+        PostHogSDK.shared.capture("signed_out")
+        PostHogAppLogger.info("signed_out")
     }
 
     private var isPresentingModal: Bool {

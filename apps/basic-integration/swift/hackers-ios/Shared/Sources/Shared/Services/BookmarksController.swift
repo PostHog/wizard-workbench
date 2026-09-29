@@ -7,6 +7,7 @@
 
 import Domain
 import Foundation
+import PostHog
 
 public final class BookmarksController: @unchecked Sendable {
     private let bookmarksUseCase: any BookmarksUseCase
@@ -63,6 +64,10 @@ public final class BookmarksController: @unchecked Sendable {
                 name: .bookmarksDidChange,
                 object: nil,
                 userInfo: ["postId": post.id, "isBookmarked": newState]
+            )
+            PostHogSDK.shared.capture(
+                newState ? "bookmark_added" : "bookmark_removed",
+                properties: ["post_id": post.id]
             )
             return newState
         } catch {
