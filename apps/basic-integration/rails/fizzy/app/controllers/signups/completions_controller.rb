@@ -23,6 +23,11 @@ class Signups::CompletionsController < ApplicationController
     end
 
     def welcome_to_account
+      capture_posthog_event(
+        distinct_id: @signup.user.posthog_distinct_id,
+        event: "account_created"
+      )
+
       respond_to do |format|
         format.html do
           flash[:welcome_letter] = true

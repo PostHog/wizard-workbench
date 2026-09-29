@@ -16,6 +16,12 @@ class User < ApplicationRecord
   has_many :pinned_cards, through: :pins, source: :card
   has_many :data_exports, class_name: "User::DataExport", dependent: :destroy
 
+  # Used by posthog-rails to associate automatic error reports with this user.
+  # User IDs are UUIDs and remain stable if the user changes their name or email.
+  def posthog_distinct_id
+    id.to_s
+  end
+
   def deactivate
     transaction do
       accesses.destroy_all
