@@ -1,6 +1,7 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
+import { PostHogLogService } from './posthog-log.service';
 
 export interface Project {
   id: string;
@@ -33,6 +34,8 @@ export interface Activity {
   providedIn: 'root',
 })
 export class DataService {
+  private readonly posthogLog = inject(PostHogLogService);
+
   /** Projects signal */
   readonly projects = signal<Project[]>([
     {
@@ -112,6 +115,7 @@ export class DataService {
     };
     this.projects.update((current) => [newProject, ...current]);
     this.addActivity('You', 'created project', project.name);
+    this.posthogLog.projectCreated(project.status, this.projects().length);
     return newProject;
   }
 
@@ -124,6 +128,7 @@ export class DataService {
     this.projects.update((current) => current.filter((p) => p.id !== id));
     if (project) {
       this.addActivity('You', 'deleted project', project.name);
+      this.posthogLog.projectDeleted(this.projects().length);
     }
   }
 
@@ -144,6 +149,7 @@ export class DataService {
     };
     this.members.update((current) => [newMember, ...current]);
     this.addActivity('You', 'added team member', member.name);
+    this.posthogLog.teamMemberAdded(member.role, this.members().length);
     return newMember;
   }
 
