@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
+import { logToPostHog } from "~/lib/posthog-logger.client";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
 
 export async function clientLoader() {
@@ -19,15 +20,18 @@ export async function clientLoader() {
     // Check if API returned an error object
     if (data.status === 404 || (data.message && !Array.isArray(data))) {
       console.error("API Error:", data.message || data.status);
+      logToPostHog("warn", "country catalog returned an API error");
       return [];
     }
     
     // Ensure we return an array
     const countries = Array.isArray(data) ? data : [];
     console.log(`Loaded ${countries.length} countries from API`);
+    logToPostHog("info", "country catalog loaded", { country_count: countries.length });
     return countries;
   } catch (error) {
     console.error("Error loading countries:", error);
+    logToPostHog("error", "country catalog request failed");
     // Return empty array on error to prevent crashes
     return [];
   }
@@ -37,6 +41,22 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
   const { user } = useAuth();
   const [search, setSearch] = useState<string>("");
   const [region, setRegion] = useState<string>("");
+
+  const captureCountryAction = (
+    event: "country_claimed" | "country_liked" | "country_visited",
+    countryName: string,
+  ): Promise<void> => {
+    if (
+      !import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+      !import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+    ) {
+      return Promise.resolve();
+    }
+
+    return import("posthog-js").then(({ default: posthog }) => {
+      posthog.capture(event, { country_name: countryName });
+    });
+  };
 
   // Handler for search input
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,6 +130,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
             const countryName = country.name.common;
             const isClaimed = user?.claimedCountries.includes(countryName);
             const isLiked = user?.likedCountries.includes(countryName);
+            const isVisited = user?.visitedCountries.includes(countryName);
             
             return (
               <li
@@ -137,8 +158,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
+                        if (isClaimed) {
+                          window.location.reload();
+                          return;
+                        }
+
                         claimCountry(countryName);
-                        window.location.reload();
+                        void captureCountryAction("country_claimed", countryName).finally(() => {
+                          window.location.reload();
+                        });
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isClaimed
@@ -150,8 +178,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        if (isLiked) {
+                          window.location.reload();
+                          return;
+                        }
+
                         likeCountry(countryName);
-                        window.location.reload();
+                        void captureCountryAction("country_liked", countryName).finally(() => {
+                          window.location.reload();
+                        });
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isLiked
@@ -163,8 +198,15 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        if (isVisited) {
+                          window.location.reload();
+                          return;
+                        }
+
                         visitCountry(countryName);
-                        window.location.reload();
+                        void captureCountryAction("country_visited", countryName).finally(() => {
+                          window.location.reload();
+                        });
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
                     >
