@@ -19,6 +19,11 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
+
+const isPostHogConfigured = Boolean(
+  process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST
+);
 
 type ActionState = {
   error?: string;
@@ -154,7 +159,14 @@ function TeamMembers() {
                 </div>
               </div>
               {index > 1 ? (
-                <form action={removeAction}>
+                <form
+                  action={removeAction}
+                  onSubmit={() => {
+                    if (isPostHogConfigured) {
+                      posthog.capture('team_member_removed');
+                    }
+                  }}
+                >
                   <input type="hidden" name="memberId" value={member.id} />
                   <Button
                     type="submit"
@@ -201,7 +213,17 @@ function InviteTeamMember() {
         <CardTitle>Invite Team Member</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={inviteAction} className="space-y-4">
+        <form
+          action={inviteAction}
+          className="space-y-4"
+          onSubmit={(event) => {
+            if (isPostHogConfigured) {
+              posthog.capture('team_member_invite_submitted', {
+                invited_role: new FormData(event.currentTarget).get('role')
+              });
+            }
+          }}
+        >
           <div>
             <Label htmlFor="email" className="mb-2">
               Email
