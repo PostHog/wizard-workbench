@@ -1,7 +1,30 @@
 import { FunctionTool, InMemorySessionService, LlmAgent, Runner } from '@google/adk'
+import { PostHogADKPlugin } from '@posthog/ai/adk'
+import { PostHog } from 'posthog-node'
 import { z } from 'zod'
 
 import { getWeather } from './weather.js'
+
+const posthogProjectApiKey = process.env.POSTHOG_PROJECT_API_KEY
+const posthogHost = process.env.POSTHOG_HOST
+const missingPostHogVariable = !posthogProjectApiKey
+    ? 'POSTHOG_PROJECT_API_KEY'
+    : !posthogHost
+        ? 'POSTHOG_HOST'
+        : undefined
+
+if (missingPostHogVariable && process.env.NODE_ENV !== 'production') {
+    throw new Error(
+        `${missingPostHogVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingPostHogVariable} is configured`,
+    )
+}
+
+const posthog = posthogProjectApiKey && posthogHost
+    ? new PostHog(posthogProjectApiKey, {
+        host: posthogHost,
+        enableExceptionAutocapture: true,
+    })
+    : undefined
 
 const APP_NAME = 'wb-aio-google-adk-node-weather'
 const USER_ID = 'user_123'
@@ -24,7 +47,12 @@ const agent = new LlmAgent({
 })
 
 const sessionService = new InMemorySessionService()
-const runner = new Runner({ appName: APP_NAME, agent, sessionService })
+const runner = new Runner({
+    appName: APP_NAME,
+    agent,
+    sessionService,
+    plugins: posthog ? [new PostHogADKPlugin({ client: posthog, privacyMode: false })] : [],
+})
 
 /** Answer one question inside the shared session. ADK runs the tool loop itself. */
 async function ask(question: string): Promise<void> {
@@ -47,7 +75,10 @@ async function main(): Promise<void> {
     await ask('How about Boston?')
 }
 
-main().catch((err) => {
-    console.error(`fatal: ${String(err)}`)
-    process.exit(1)
-})
+main()
+    .then(() => posthog?.shutdown())
+    .catch(async (err) => {
+        console.error(`fatal: ${String(err)}`)
+        await posthog?.shutdown()
+        process.exit(1)
+    })
