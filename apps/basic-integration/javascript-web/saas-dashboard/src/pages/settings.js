@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import { posthog, isPostHogConfigured } from '../posthog.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
 
@@ -100,6 +101,7 @@ export async function renderSettings() {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
         store.reset();
         store.login(user.email);
+        if (isPostHogConfigured) posthog.capture('workspace_data_reset');
         renderSettings();
       }
     });
