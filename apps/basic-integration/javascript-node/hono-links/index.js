@@ -1,7 +1,17 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
+import { posthogLogger } from './posthog-logs.js';
 
 const app = new Hono();
+
+app.onError((error, c) => {
+  if (posthog) {
+    posthog.captureException(error, 'anonymous');
+  }
+
+  return c.json({ error: 'Internal Server Error' }, 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +57,27 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_created',
+      properties: {
+        tag_count: tags.length,
+        has_description: Boolean(description),
+      },
+    });
+  }
+
+  posthogLogger?.emit({
+    severityText: 'INFO',
+    body: 'link creation completed',
+    attributes: {
+      operation: 'link_created',
+      tag_count: tags.length,
+      has_description: Boolean(description),
+    },
+  });
+
   return c.json(link, 201);
 });
 
@@ -76,6 +107,28 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  if (posthog) {
+    posthog.capture({
+      event: 'link_updated',
+      properties: {
+        updated_fields: Object.keys(body),
+        tag_count: link.tags.length,
+        is_favorite: link.favorite,
+      },
+    });
+  }
+
+  posthogLogger?.emit({
+    severityText: 'INFO',
+    body: 'link update completed',
+    attributes: {
+      operation: 'link_updated',
+      updated_field_count: Object.keys(body).length,
+      tag_count: link.tags.length,
+      is_favorite: link.favorite,
+    },
+  });
+
   return c.json(link);
 });
 
@@ -87,7 +140,29 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
+  const deletedLink = links[index];
   links.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_deleted',
+      properties: {
+        was_favorite: deletedLink.favorite,
+        tag_count: deletedLink.tags.length,
+      },
+    });
+  }
+
+  posthogLogger?.emit({
+    severityText: 'INFO',
+    body: 'link deletion completed',
+    attributes: {
+      operation: 'link_deleted',
+      was_favorite: deletedLink.favorite,
+      tag_count: deletedLink.tags.length,
+    },
+  });
+
   return c.body(null, 204);
 });
 
