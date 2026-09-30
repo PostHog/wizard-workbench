@@ -83,6 +83,11 @@ class NavActivity : AppCompatActivity() {
                         LoginScreen(
                             onLogin = { username, password ->
                                 viewModel.login(username, password)
+                                JetchatApplication.capturePostHogEvent("user_logged_in")
+                                JetchatApplication.capturePostHogLog(
+                                    "demo login completed",
+                                    mapOf("action" to "login"),
+                                )
                             },
                         )
                     } else {
@@ -91,6 +96,11 @@ class NavActivity : AppCompatActivity() {
                             selectedMenu = selectedMenu,
                             username = loggedInUsername,
                             onChatClicked = {
+                                JetchatApplication.capturePostHogEvent("chat_selected")
+                                JetchatApplication.capturePostHogLog(
+                                    "chat selection completed",
+                                    mapOf("action" to "chat_selection"),
+                                )
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
                                     drawerState.close()
@@ -98,6 +108,7 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onProfileClicked = {
+                                JetchatApplication.capturePostHogEvent("profile_opened")
                                 val bundle = bundleOf("userId" to it)
                                 findNavController().navigate(R.id.nav_profile, bundle)
                                 scope.launch {
@@ -106,6 +117,11 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onLogoutClicked = {
+                                JetchatApplication.capturePostHogEvent("user_logged_out")
+                                JetchatApplication.capturePostHogLog(
+                                    "demo logout completed",
+                                    mapOf("action" to "logout"),
+                                )
                                 viewModel.logout()
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
