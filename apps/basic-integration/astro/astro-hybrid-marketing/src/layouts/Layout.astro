@@ -1,6 +1,7 @@
 ---
 import Navigation from '../components/Navigation.astro';
 import Footer from '../components/Footer.astro';
+import PostHog from '../components/posthog.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -19,6 +20,7 @@ const { title, description = 'NeuralFlow AI - Transform your workflow with intel
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title} | NeuralFlow AI</title>
+    <PostHog />
   </head>
   <body>
     <Navigation />
@@ -26,5 +28,21 @@ const { title, description = 'NeuralFlow AI - Transform your workflow with intel
       <slot />
     </main>
     <Footer />
+    <script is:inline>
+      document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element
+          ? event.target.closest('[data-posthog-event]')
+          : null;
+        const eventName = target?.getAttribute('data-posthog-event');
+
+        if (!target || !eventName) return;
+
+        window.posthog?.capture(eventName, {
+          page: window.location.pathname,
+          placement: target.getAttribute('data-posthog-placement') || undefined,
+          plan: target.getAttribute('data-posthog-plan') || undefined,
+        });
+      });
+    </script>
   </body>
 </html>
