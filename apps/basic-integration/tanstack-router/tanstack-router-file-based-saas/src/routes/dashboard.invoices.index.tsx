@@ -1,9 +1,11 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { Spinner } from '../components/Spinner'
 import { useMutation } from '../hooks/useMutation'
 import { postInvoice } from '../utils/mockTodos'
 import type { Invoice } from '../utils/mockTodos'
+import { posthogAppLogger } from '../utils/posthogLogger'
 
 export const Route = createFileRoute('/dashboard/invoices/')({
   component: InvoicesIndexComponent,
@@ -11,6 +13,7 @@ export const Route = createFileRoute('/dashboard/invoices/')({
 
 function InvoicesIndexComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
 
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
@@ -28,14 +31,24 @@ function InvoicesIndexComponent() {
         </div>
 
         <form
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
-            createInvoiceMutation.mutate({
+            const invoice = await createInvoiceMutation.mutate({
               title: formData.get('title') as string,
               body: formData.get('body') as string,
             })
+
+            if (invoice) {
+              posthog?.capture('invoice_created', {
+                invoice_id: invoice.id,
+              })
+              posthogAppLogger.info(posthog, 'invoice created', {
+                event: 'invoice_created',
+                invoice_id: invoice.id,
+              })
+            }
           }}
           className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-4"
         >
