@@ -11,11 +11,14 @@ import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link2, MessageSquareText } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { posthogLogger } from "@/lib/posthog-logger";
 
 export const Post = ({ id, title, url, score, text, kids }: Item) => {
+  const posthog = usePostHog();
   const QC = useQueryClient();
 
   const isExternal = useMemo(() => {
@@ -34,6 +37,15 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
+          const destination = isExternal ? "external" : "discussion";
+          posthog?.capture("story_opened", {
+            story_id: id,
+            destination,
+          });
+          posthogLogger.info("story opened", {
+            story_id: id,
+            destination,
+          });
           if (isExternal) Linking.openURL(url);
           else await navigateToDetails();
         }}
@@ -66,6 +78,14 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog?.capture("discussion_opened", {
+              story_id: id,
+              source: "story_card",
+            });
+            posthogLogger.info("discussion opened", {
+              story_id: id,
+              source: "story_card",
+            });
             await navigateToDetails();
           }}
         >
@@ -86,6 +106,10 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           <Pressable
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              posthog?.capture("external_link_opened", {
+                story_id: id,
+                source: "story_card",
+              });
               Linking.openURL(url);
             }}
           >

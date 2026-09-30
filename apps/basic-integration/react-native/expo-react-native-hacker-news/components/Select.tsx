@@ -10,9 +10,11 @@ import { BlurView } from "expo-blur";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 import { ListFilter, LucideIcon } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import { Colors } from "@/constants/Colors";
 import { StoryType } from "@/constants/stories";
+import { posthogLogger } from "@/lib/posthog-logger";
 
 export type Option = {
   id: StoryType;
@@ -37,6 +39,7 @@ export const StoriesSelect = ({
   options,
   defaultOpen = false,
 }: Props) => {
+  const posthog = usePostHog();
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const selectedOption = useMemo(
@@ -86,6 +89,12 @@ export const StoriesSelect = ({
                 key={item.id}
                 style={[styles.option, isSelected && styles.optionSelected]}
                 onPress={() => {
+                  posthog?.capture("story_feed_selected", {
+                    story_type: item.id,
+                  });
+                  posthogLogger.info("story feed selected", {
+                    story_type: item.id,
+                  });
                   onChange(item.id);
                   setIsOpen(false);
                 }}
