@@ -1,3 +1,5 @@
+import { emitPostHogLog } from '~/server/utils/posthog-logger'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -21,12 +23,14 @@ export default defineEventHandler(async (event) => {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
+    await emitPostHogLog('Authentication login succeeded', 'auth_login')
+
     return {
       success: true,
       user: sanitizedUsername,
     }
   } catch (error: any) {
-    if (error.statusCode) {
+    if (error.statusCode || error.message?.includes('variable required by PostHog is missing or un-configured')) {
       throw error
     }
     throw createError({

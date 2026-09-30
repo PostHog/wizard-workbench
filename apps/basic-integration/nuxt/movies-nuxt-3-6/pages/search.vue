@@ -3,6 +3,7 @@ import type { Media } from '~/types'
 
 const route = useRoute()
 const router = useRouter()
+const { $posthog } = useNuxtApp()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
@@ -14,6 +15,7 @@ function search() {
   if (currentSearch.value === input.value)
     return
 
+  $posthog?.capture('search_performed')
   currentSearch.value = input.value.toString()
   count.value = undefined
   items.value = []
