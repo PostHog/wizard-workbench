@@ -10,11 +10,12 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import Foundation
+import PostHog
 import Settings
 import Shared
 import SwiftUI
 import UIKit
-import Foundation
 
 @MainActor
 struct MainContentView: View {
@@ -81,11 +82,17 @@ struct MainContentView: View {
                                 currentUsername: sessionService.username,
                                 onLogin: { username, password in
                                     _ = try await sessionService.authenticate(username: username, password: password)
+                                    PostHogSDK.shared.capture("login_succeeded", properties: ["entry_point": "settings"])
+                                    PostHogSDK.shared.logger?.info("Authentication completed", attributes: ["entry_point": "settings"])
                                 },
                                 onLogout: {
+                                    PostHogSDK.shared.capture("logout_completed", properties: ["entry_point": "settings"])
+                                    PostHogSDK.shared.logger?.info("Logout completed", attributes: ["entry_point": "settings"])
                                     sessionService.unauthenticate()
                                 },
                                 onShowOnboarding: {
+                                    PostHogSDK.shared.capture("onboarding_started", properties: ["entry_point": "settings"])
+                                    PostHogSDK.shared.logger?.info("Onboarding opened", attributes: ["entry_point": "settings"])
                                     showOnboarding = true
                                 }
                             )
@@ -103,8 +110,12 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    PostHogSDK.shared.capture("login_succeeded", properties: ["entry_point": "login_sheet"])
+                    PostHogSDK.shared.logger?.info("Authentication completed", attributes: ["entry_point": "login_sheet"])
                 },
                 onLogout: {
+                    PostHogSDK.shared.capture("logout_completed", properties: ["entry_point": "login_sheet"])
+                    PostHogSDK.shared.logger?.info("Logout completed", attributes: ["entry_point": "login_sheet"])
                     sessionService.unauthenticate()
                 },
                 textSize: settingsViewModel.textSize
@@ -119,11 +130,17 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    PostHogSDK.shared.capture("login_succeeded", properties: ["entry_point": "settings"])
+                    PostHogSDK.shared.logger?.info("Authentication completed", attributes: ["entry_point": "settings"])
                 },
                 onLogout: {
+                    PostHogSDK.shared.capture("logout_completed", properties: ["entry_point": "settings"])
+                    PostHogSDK.shared.logger?.info("Logout completed", attributes: ["entry_point": "settings"])
                     sessionService.unauthenticate()
                 },
                 onShowOnboarding: {
+                    PostHogSDK.shared.capture("onboarding_started", properties: ["entry_point": "settings"])
+                    PostHogSDK.shared.logger?.info("Onboarding opened", attributes: ["entry_point": "settings"])
                     showOnboarding = true
                 }
             )
@@ -133,6 +150,8 @@ struct MainContentView: View {
         .sheet(isPresented: $showOnboarding) {
             onboardingCoordinator
                 .makeOnboardingView {
+                    PostHogSDK.shared.capture("onboarding_dismissed")
+                    PostHogSDK.shared.logger?.info("Onboarding dismissed")
                     showOnboarding = false
                 }
                 .textScaling(for: settingsViewModel.textSize)
