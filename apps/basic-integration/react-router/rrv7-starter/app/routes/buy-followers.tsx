@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePostHog } from '@posthog/react'
 import { useNavigate } from 'react-router'
 import { followerPackages } from '@/lib/data/fake-data'
 import type { Route } from './+types/buy-followers'
@@ -6,6 +7,7 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { addFollowers, addPurchasedFollowers } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import { posthogLog } from '@/lib/utils/posthog-log'
 
 export const meta: Route.MetaFunction = () => {
   const siteUrl = SITE_URL || 'https://clouthub.fake'
@@ -20,8 +22,27 @@ export const meta: Route.MetaFunction = () => {
 
 export default function BuyFollowers() {
   const navigate = useNavigate()
+  const posthog = usePostHog()
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
+
+  const handlePackageSelect = (index: number) => {
+    const pkg = followerPackages[index]
+    const totalFollowers = pkg.amount + pkg.bonus
+    setSelectedPackage(index)
+    posthog?.capture('follower_package_selected', {
+      package_index: index,
+      follower_count: totalFollowers,
+      bonus_follower_count: pkg.bonus,
+      price: pkg.price,
+    })
+    posthogLog.info(posthog, 'Follower package selected', {
+      action: 'follower_package_selected',
+      bonus_follower_count: pkg.bonus,
+      follower_count: totalFollowers,
+      package_index: index,
+    })
+  }
 
   const handlePurchase = () => {
     if (selectedPackage === null) return
@@ -34,6 +55,18 @@ export default function BuyFollowers() {
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+      posthog?.capture('fake_followers_purchase_completed', {
+        package_index: selectedPackage,
+        follower_count: totalFollowers,
+        bonus_follower_count: pkg.bonus,
+        price: pkg.price,
+      })
+      posthogLog.info(posthog, 'Simulated follower purchase completed', {
+        action: 'fake_followers_purchase_completed',
+        bonus_follower_count: pkg.bonus,
+        follower_count: totalFollowers,
+        package_index: selectedPackage,
+      })
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
@@ -75,7 +108,7 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => handlePackageSelect(index)}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected
