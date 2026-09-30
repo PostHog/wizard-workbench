@@ -11,8 +11,19 @@ const isDocs = currentPath.startsWith('/docs');
     <ul class="nav-links">
       <li><a href="/docs" class:list={["nav-link", { active: isDocs }]}>Documentation</a></li>
       <li><a href="/docs/api" class="nav-link">API Reference</a></li>
-      <li><a href="https://github.com" class="nav-link" target="_blank">GitHub</a></li>
+      <li><a href="https://github.com" class="nav-link" target="_blank" data-github-link>GitHub</a></li>
       <li><a href="#" class="nav-cta">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.querySelector('[data-github-link]')?.addEventListener('click', () => {
+    window.posthog?.capture('github_link_clicked', {
+      source: 'global_navigation',
+    });
+    window.posthog?.logger?.info('GitHub navigation selected', {
+      source: 'global_navigation',
+    });
+  });
+</script>
