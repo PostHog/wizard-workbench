@@ -6,10 +6,39 @@ export default function Cart() {
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+    void import("../posthog.client").then(({ default: posthog }) => {
+      posthog?.capture("cart_item_removed", {
+        product_id: item.id,
+        category: item.category,
+        price: item.price,
+        quantity: item.quantity,
+      });
+    });
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+    void import("../posthog.client").then(({ default: posthog }) => {
+      posthog?.capture(
+        newQuantity <= 0 ? "cart_item_removed" : "cart_quantity_updated",
+        {
+          product_id: item.id,
+          category: item.category,
+          price: item.price,
+          previous_quantity: item.quantity,
+          quantity: newQuantity,
+        }
+      );
+    });
+  };
+
+  const handleCheckoutStart = () => {
+    void import("../posthog.client").then(({ default: posthog }) => {
+      posthog?.capture("checkout_started", {
+        cart_item_count: cart.reduce((count, item) => count + item.quantity, 0),
+        cart_total: getCartTotal(),
+      });
+    });
   };
 
   if (cart.length === 0) {
@@ -154,6 +183,7 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={handleCheckoutStart}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout

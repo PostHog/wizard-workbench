@@ -24,6 +24,15 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
     }
+    void import("../posthog.client").then(({ default: posthog }) => {
+      posthog?.capture("product_added_to_cart", {
+        product_id: product.id,
+        category: product.category,
+        price: product.price,
+        quantity,
+        source: "product_detail",
+      });
+    });
   };
 
   return (

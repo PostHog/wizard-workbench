@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -43,9 +44,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+function PostHogInitializer() {
+  useEffect(() => {
+    void import("./posthog.client");
+  }, []);
+
+  return null;
+}
+
+function PostHogErrorCapture({ error }: { error: unknown }) {
+  useEffect(() => {
+    if (!(error instanceof Error)) {
+      return;
+    }
+
+    void import("./posthog.client").then(({ default: posthog }) => {
+      posthog?.captureException(error);
+    });
+  }, [error]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <CartProvider>
+      <PostHogInitializer />
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <Outlet />
@@ -72,6 +96,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 
   return (
     <main className="pt-16 p-4 container mx-auto">
+      <PostHogErrorCapture error={error} />
       <h1>{message}</h1>
       <p>{details}</p>
       {stack && (
