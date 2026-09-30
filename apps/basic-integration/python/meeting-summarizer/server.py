@@ -19,10 +19,13 @@ from datetime import datetime, timedelta
 from threading import Lock
 import traceback
 import mimetypes
+from functools import wraps
 
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+from posthog_client import posthog_client
+from posthog_logs import posthog_logs
 
 
 # Session management
@@ -62,6 +65,22 @@ class SessionManager:
         with self.lock:
             if session_id in self.sessions:
                 del self.sessions[session_id]
+
+
+def posthog_request_context(handler):
+    """Bind authenticated identity to every request's PostHog context."""
+    @wraps(handler)
+    def wrapped(self, *args, **kwargs):
+        if not posthog_client:
+            return handler(self, *args, **kwargs)
+
+        with posthog_client.new_context(fresh=True):
+            user = self._get_current_user()
+            if user:
+                posthog_client.identify_context(user.user_id)
+            return handler(self, *args, **kwargs)
+
+    return wrapped
 
 
 class SaaSHandler(BaseHTTPRequestHandler):
@@ -138,6 +157,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
             self._set_headers(500)
             self.wfile.write(b'Internal server error')
 
+    @posthog_request_context
     def do_GET(self):
         """Handle GET requests"""
         try:
@@ -223,6 +243,16 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 meeting_id = path.split('/')[-1]
                 meeting = self.db.get_meeting(meeting_id)
                 if meeting and meeting.user_id == user.user_id:
+                    if posthog_client:
+                        posthog_client.capture(
+                            event='meeting_viewed',
+                            properties={
+                                'meeting_id': meeting.meeting_id,
+                                'duration_minutes': meeting.duration_minutes,
+                                'action_items_count': len(meeting.action_items),
+                                'key_points_count': len(meeting.key_points),
+                            },
+                        )
                     self._send_json(meeting.to_dict())
                 else:
                     self._send_json({'error': 'Meeting not found'}, 404)
@@ -246,6 +276,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
             logging.error(f"Error in GET request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
+    @posthog_request_context
     def do_POST(self):
         """Handle POST requests"""
         try:
@@ -274,6 +305,18 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
 
+                    if posthog_client:
+                        posthog_client.identify_context(user.user_id)
+                        posthog_client.set(
+                            distinct_id=user.user_id,
+                            properties={
+                                'email': user.email,
+                                'username': user.username,
+                                'full_name': user.full_name,
+                            },
+                        )
+                        posthog_client.capture(event='user_logged_in')
+
                     # Send response with session cookie
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
@@ -296,7 +339,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
             # API: Logout
             if path == '/api/auth/logout':
+                current_user = self._get_current_user()
                 session_id = self._get_session_id()
+                if current_user and posthog_client:
+                    posthog_client.capture(event='user_logged_out')
                 if session_id:
                     self.sessions.delete_session(session_id)
 
@@ -370,6 +416,29 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    if posthog_client:
+                        posthog_client.capture(
+                            event='meeting_created',
+                            properties={
+                                'meeting_id': meeting.meeting_id,
+                                'transcript_word_count': len(transcript.split()),
+                                'duration_minutes': meeting.duration_minutes,
+                                'action_items_count': len(meeting.action_items),
+                                'key_points_count': len(meeting.key_points),
+                                'participants_count': len(meeting.participants),
+                            },
+                        )
+                    posthog_logs.info(
+                        'meeting_created',
+                        extra={
+                            'event': 'meeting_created',
+                            'transcript_word_count': len(transcript.split()),
+                            'duration_minutes': meeting.duration_minutes,
+                            'action_items_count': len(meeting.action_items),
+                            'key_points_count': len(meeting.key_points),
+                            'participants_count': len(meeting.participants),
+                        },
+                    )
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -383,6 +452,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
             logging.error(f"Error in POST request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
+    @posthog_request_context
     def do_PUT(self):
         """Handle PUT requests"""
         try:
@@ -412,6 +482,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
             logging.error(f"Error in PUT request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
+    @posthog_request_context
     def do_DELETE(self):
         """Handle DELETE requests"""
         try:
@@ -449,6 +520,23 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    if posthog_client:
+                        posthog_client.capture(
+                            event='meeting_deleted',
+                            properties={
+                                'meeting_id': meeting.meeting_id,
+                                'duration_minutes': meeting.duration_minutes,
+                                'action_items_count': len(meeting.action_items),
+                            },
+                        )
+                    posthog_logs.info(
+                        'meeting_deleted',
+                        extra={
+                            'event': 'meeting_deleted',
+                            'duration_minutes': meeting.duration_minutes,
+                            'action_items_count': len(meeting.action_items),
+                        },
+                    )
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
@@ -566,6 +654,10 @@ def main():
 
     # Create and start server
     server = HTTPServer((host, port), SaaSHandler)
+    posthog_logs.info(
+        'service_started',
+        extra={'event': 'service_started', 'port': port},
+    )
     logging.info(f"")
     logging.info(f"═══════════════════════════════════════════════════")
     logging.info(f"  AI Meeting Summarizer")
