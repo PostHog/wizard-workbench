@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { logPostHogIntegrationEvent, SeverityNumber } from '@/instrumentation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,9 +26,19 @@ export default async function handler(
     }
 
     const result = await createCheckoutSession({ team, priceId, userId: user.id });
+    await logPostHogIntegrationEvent(
+      'checkout_session_created',
+      SeverityNumber.INFO,
+      { route: '/api/stripe/create-checkout', outcome: 'created' }
+    );
     return res.status(200).json(result);
   } catch (error) {
     console.error('Checkout error:', error);
+    await logPostHogIntegrationEvent(
+      'checkout_session_creation_failed',
+      SeverityNumber.ERROR,
+      { route: '/api/stripe/create-checkout', outcome: 'failed' }
+    );
     return res.status(500).json({ error: 'Failed to create checkout session' });
   }
 }

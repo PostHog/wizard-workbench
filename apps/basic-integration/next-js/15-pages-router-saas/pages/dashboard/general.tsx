@@ -52,6 +52,8 @@ export default function GeneralPage() {
           return;
         }
 
+        const { default: posthog } = await import('posthog-js');
+        posthog.capture('account_updated');
         setSuccess(result.success);
         setName(result.name);
       } catch (err) {

@@ -57,6 +57,16 @@ export function Login({
           return;
         }
 
+        if (result.user) {
+          const { default: posthog } = await import('posthog-js');
+          posthog.identify(String(result.user.id), {
+            email: result.user.email,
+            name: result.user.name || undefined,
+            role: result.user.role
+          });
+          posthog.capture('authentication_completed', { method: mode });
+        }
+
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
