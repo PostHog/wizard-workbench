@@ -14,8 +14,8 @@ import Layout from '../layouts/Layout.astro';
         and automated insights. Built for teams that move fast.
       </p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Start Free Trial</a>
-        <a href="/docs" class="btn btn-secondary">Read the Docs</a>
+        <a href="#" id="hero-trial-cta" class="btn btn-primary">Start Free Trial</a>
+        <a href="/docs" id="hero-docs-cta" class="btn btn-secondary">Read the Docs</a>
       </div>
     </div>
   </section>
@@ -61,3 +61,21 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.getElementById('hero-trial-cta')?.addEventListener('click', () => {
+    window.posthog?.capture('trial_cta_clicked', { placement: 'homepage_hero' });
+    window.posthog?.logger?.info('marketing CTA selected', {
+      cta: 'trial',
+      placement: 'homepage_hero',
+    });
+  });
+
+  document.getElementById('hero-docs-cta')?.addEventListener('click', () => {
+    window.posthog?.capture('documentation_cta_clicked', { placement: 'homepage_hero' });
+    window.posthog?.logger?.info('marketing CTA selected', {
+      cta: 'documentation',
+      placement: 'homepage_hero',
+    });
+  });
+</script>
