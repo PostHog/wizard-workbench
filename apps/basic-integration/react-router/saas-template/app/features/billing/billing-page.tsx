@@ -1,4 +1,5 @@
 import type { SubmissionResult } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import { IconCircleX } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
@@ -166,6 +167,7 @@ export function BillingPage({
   const [isPlanManagementModalOpen, setIsPlanManagementModalOpen] =
     useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const posthog = usePostHog();
   const hydrated = useHydrated();
 
   const formattedDate = useMemo(() => {
@@ -631,6 +633,7 @@ export function BillingPage({
                 <Button
                   disabled={isSubmitting}
                   name="intent"
+                  onClick={() => posthog?.capture("subscription_cancel_requested")}
                   type="submit"
                   value={CANCEL_SUBSCRIPTION_INTENT}
                   variant="destructive"

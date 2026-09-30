@@ -11,6 +11,7 @@ import { ServerRouter } from "react-router";
 
 import { getInstance } from "./features/localization/i18next-middleware.server";
 import { getEnv, init } from "./utils/env.server";
+import { logServerRenderReady } from "./utils/posthog-logger.server";
 import { NonceProvider } from "./utils/nonce-provider";
 
 init();
@@ -21,6 +22,8 @@ export const streamTimeout = 5000;
 const oneSecond = 1000;
 const nonceLength = 16;
 const MODE = process.env.NODE_ENV ?? "development";
+const posthogHost = process.env.VITE_PUBLIC_POSTHOG_HOST;
+const posthogAssetHost = posthogHost?.replace(".i.", "-assets.i.");
 
 let mockServerInitialized = false;
 
@@ -87,6 +90,7 @@ export default async function handleRequest(
         nonce,
         [readyOption]() {
           shellRendered = true;
+          logServerRenderReady(readyOption);
           const body = new PassThrough({
             final(callback) {
               clearTimeout(timeoutId);
@@ -107,6 +111,7 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    posthogHost,
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],
@@ -120,9 +125,11 @@ export default async function handleRequest(
                     "'strict-dynamic'",
                     "'self'",
                     `'nonce-${nonce}'`,
+                    posthogAssetHost,
                   ],
                   // Inline event handlers with nonce
                   "script-src-attr": [`'nonce-${nonce}'`],
+                  "worker-src": ["blob:"],
                 },
               },
               // Report-only in dev/test, enforce in production

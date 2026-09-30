@@ -1,6 +1,7 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { usePostHog } from "@posthog/react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
 
@@ -68,6 +69,7 @@ export function GeneralOrganizationSettings({
   const { t } = useTranslation("organizations", {
     keyPrefix: "settings.general",
   });
+  const posthog = usePostHog();
 
   const { form, fields } = useForm(
     coerceFormValue(updateOrganizationFormSchema),
@@ -86,6 +88,12 @@ export function GeneralOrganizationSettings({
       encType="multipart/form-data"
       method="POST"
       {...form.props}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        if (!event.defaultPrevented) {
+          posthog?.capture("organization_settings_updated");
+        }
+      }}
       aria-describedby={
         form.errors && form.errors.length > 0
           ? `${form.descriptionId} ${form.errorId}`

@@ -1,10 +1,43 @@
+import { PostHogErrorBoundary, PostHogProvider } from "@posthog/react";
 import i18next from "i18next";
 import I18nextBrowserLanguageDetector from "i18next-browser-languagedetector";
 import Fetch from "i18next-fetch-backend";
+import posthog from "posthog-js";
 import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { I18nextProvider, initReactI18next } from "react-i18next";
 import { HydratedRouter } from "react-router/dom";
+
+import { posthogLogger } from "./utils/posthog-logger.client";
+
+const posthogProjectToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN;
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST;
+
+if (!posthogProjectToken || !posthogHost) {
+  const missingVariable = posthogProjectToken
+    ? "VITE_PUBLIC_POSTHOG_HOST"
+    : "VITE_PUBLIC_POSTHOG_PROJECT_TOKEN";
+
+  if (import.meta.env.DEV) {
+    throw new Error(
+      `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+    );
+  }
+} else {
+  posthog.init(posthogProjectToken, {
+    api_host: posthogHost,
+    capture_exceptions: {
+      capture_console_errors: false,
+      capture_unhandled_errors: true,
+      capture_unhandled_rejections: true,
+    },
+    defaults: "2026-01-30",
+    logs: {
+      environment: import.meta.env.MODE,
+      serviceName: "saas-template-web",
+    },
+  });
+}
 
 async function hydrate() {
   await i18next
@@ -18,12 +51,18 @@ async function hydrate() {
       interpolation: { escapeValue: false },
     });
 
+  posthogLogger.info("client hydration started", { runtime: "browser" });
+
   startTransition(() => {
     hydrateRoot(
       document,
       <I18nextProvider i18n={i18next}>
         <StrictMode>
-          <HydratedRouter />
+          <PostHogProvider client={posthog}>
+            <PostHogErrorBoundary>
+              <HydratedRouter />
+            </PostHogErrorBoundary>
+          </PostHogProvider>
         </StrictMode>
       </I18nextProvider>,
     );

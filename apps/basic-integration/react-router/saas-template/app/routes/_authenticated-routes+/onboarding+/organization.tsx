@@ -1,5 +1,6 @@
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { usePostHog } from "@posthog/react";
 import { IconBuilding } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { data, Form, useNavigation } from "react-router";
@@ -80,6 +81,7 @@ export default function OrganizationOnboardingRoute({
   actionData,
 }: Route.ComponentProps) {
   const { t } = useTranslation("onboarding", { keyPrefix: "organization" });
+  const posthog = usePostHog();
   const { form, fields } = useForm(
     coerceFormValue(onboardingOrganizationSchema),
     {
@@ -94,6 +96,12 @@ export default function OrganizationOnboardingRoute({
       encType="multipart/form-data"
       method="POST"
       {...form.props}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        if (!event.defaultPrevented) {
+          posthog?.capture("onboarding_organization_submitted");
+        }
+      }}
       aria-describedby={
         form.errors && form.errors.length > 0
           ? `${form.descriptionId} ${form.errorId}`
