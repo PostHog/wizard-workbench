@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { logTodoMutation, flushPostHogLogs } from '@/instrumentation';
 import { getTodos, createTodo } from '@/lib/data';
 import { z } from 'zod';
 
@@ -33,6 +34,9 @@ export async function POST(request: NextRequest) {
       description: validatedData.description,
       completed: validatedData.completed,
     });
+
+    logTodoMutation('created', newTodo.completed);
+    after(flushPostHogLogs);
 
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
