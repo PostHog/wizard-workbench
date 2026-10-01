@@ -7,6 +7,7 @@ import {
   updateTeamSubscription
 } from '@/lib/db/queries';
 import { stripeStub } from './stripe-stub';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 // Use stub if STRIPE_MODE=stub or if STRIPE_SECRET_KEY is missing/invalid
 const useStub =
@@ -56,6 +57,9 @@ export async function createCheckoutSession({
     }
   });
 
+  await captureServerEvent(String(user.id), 'checkout_started', {
+    has_existing_customer: Boolean(team.stripeCustomerId)
+  });
   redirect(session.url!);
 }
 
@@ -120,11 +124,18 @@ export async function createCustomerPortalSession(team: Team) {
     });
   }
 
-  return stripe.billingPortal.sessions.create({
+  const portalSession = await stripe.billingPortal.sessions.create({
     customer: team.stripeCustomerId,
     return_url: `${process.env.BASE_URL}/dashboard`,
     configuration: configuration.id
   });
+  const user = await getUser();
+
+  if (user) {
+    await captureServerEvent(String(user.id), 'subscription_portal_opened');
+  }
+
+  return portalSession;
 }
 
 export async function handleSubscriptionChange(

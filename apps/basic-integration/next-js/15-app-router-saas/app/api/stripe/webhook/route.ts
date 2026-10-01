@@ -1,6 +1,8 @@
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { emitPostHogLog, flushPostHogLogs } from '@/lib/posthog-logs';
 
 // Use a dummy webhook secret for stub mode
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_stub_secret';
@@ -15,6 +17,10 @@ export async function POST(request: NextRequest) {
     event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed.', err);
+    emitPostHogLog('stripe_webhook_signature_verification_failed', SeverityNumber.WARN, {
+      endpoint: 'stripe_webhook',
+    });
+    after(flushPostHogLogs);
     return NextResponse.json(
       { error: 'Webhook signature verification failed.' },
       { status: 400 }
@@ -26,10 +32,15 @@ export async function POST(request: NextRequest) {
     case 'customer.subscription.deleted':
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+      emitPostHogLog('stripe_subscription_change_processed', SeverityNumber.INFO, {
+        event_type: event.type,
+        subscription_status: subscription.status,
+      });
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
 
+  after(flushPostHogLogs);
   return NextResponse.json({ received: true });
 }

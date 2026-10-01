@@ -2,9 +2,12 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { emitPostHogLog, flushPostHogLogs } from '@/lib/posthog-logs';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -89,6 +92,13 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    await captureServerEvent(String(user[0].id), 'checkout_completed', {
+      subscription_status: subscription.status
+    });
+    emitPostHogLog('stripe_checkout_completed', SeverityNumber.INFO, {
+      subscription_status: subscription.status,
+    });
+    after(flushPostHogLogs);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
