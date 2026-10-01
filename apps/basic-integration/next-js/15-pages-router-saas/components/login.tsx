@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +25,26 @@ export function Login({
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  async function identifyAuthenticatedUser() {
+    const response = await fetch('/api/user');
+    if (!response.ok) return;
+
+    const user = (await response.json()) as {
+      id: number;
+      email: string;
+      name: string | null;
+      role: string;
+    } | null;
+
+    if (!user || typeof user.id !== 'number') return;
+
+    posthog.identify(String(user.id), {
+      email: user.email,
+      ...(user.name ? { name: user.name } : {}),
+      role: user.role
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,6 +77,10 @@ export function Login({
           setPassword(result.password || data.password);
           return;
         }
+
+        await identifyAuthenticatedUser();
+
+        posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up');
 
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
