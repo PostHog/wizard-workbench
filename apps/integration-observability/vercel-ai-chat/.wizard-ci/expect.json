@@ -1,0 +1,6 @@
+{
+  "program": "posthog-integration",
+  "seeded": true,
+  "sourceApp": "ai-observability/vercel-ai/nextjs-support-chat",
+  "expectAbort": null
+}
