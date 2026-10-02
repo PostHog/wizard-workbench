@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Local development server with the reloader. Creates .venv on first run.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if [ ! -d .venv ]; then
+  python3 -m venv .venv
+  .venv/bin/pip install -r requirements-dev.txt
+fi
+exec .venv/bin/flask --app app run --debug --port 8000

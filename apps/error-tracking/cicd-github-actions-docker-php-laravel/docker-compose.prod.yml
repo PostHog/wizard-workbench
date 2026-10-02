@@ -1,0 +1,30 @@
+# Production stack on the server. The deploy workflow copies this file and the
+# nginx config to /srv/shop, and the server keeps its secrets in /srv/shop/app.env.
+services:
+  app:
+    image: ghcr.io/posthog/shop-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: app.env
+    volumes:
+      - public:/var/www/html/public
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      LOG_CHANNEL: stderr
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - public:/var/www/html/public:ro
+
+volumes:
+  public:

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Local development server. Loads .env when it exists.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
+exec bundle exec rackup --port 4567
