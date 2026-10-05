@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconPlus, IconSelector } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { Form, Link, useLocation } from "react-router";
@@ -41,6 +42,7 @@ export function OrganizationSwitcher({
   currentOrganization,
 }: OrganizationSwitcherProps) {
   const { isMobile } = useSidebar();
+  const posthog = usePostHog();
   const { t } = useTranslation("organizations", {
     keyPrefix: "layout.organizationSwitcher",
   });
@@ -114,6 +116,9 @@ export function OrganizationSwitcher({
                     render={
                       <button
                         name="intent"
+                        onClick={() =>
+                          posthog?.capture("organization_switched")
+                        }
                         type="submit"
                         value={SWITCH_ORGANIZATION_INTENT}
                       />

@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import {
   IconAlertTriangle,
   IconClipboardCheck,
@@ -37,6 +38,7 @@ export function InviteLinkCard({
   const { t, i18n } = useTranslation("organizations", {
     keyPrefix: "settings.teamMembers.inviteLink",
   });
+  const posthog = usePostHog();
 
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -113,6 +115,7 @@ export function InviteLinkCard({
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
                   setLinkCopied(true);
+                  posthog?.capture("invite_link_copied");
                 }}
                 size="icon"
                 variant="ghost"
@@ -166,6 +169,7 @@ export function InviteLinkCard({
                   className="w-full"
                   disabled={disabled}
                   name="intent"
+                  onClick={() => posthog?.capture("invite_link_regenerated")}
                   type="submit"
                   value="createNewInviteLink"
                 >
@@ -184,6 +188,7 @@ export function InviteLinkCard({
                 <Button
                   disabled={isDeactivatingLink}
                   name="intent"
+                  onClick={() => posthog?.capture("invite_link_deactivated")}
                   type="submit"
                   value="deactivateInviteLink"
                   variant="outline"
@@ -220,6 +225,7 @@ export function InviteLinkCard({
               className="w-full"
               disabled={disabled}
               name="intent"
+              onClick={() => posthog?.capture("invite_link_created")}
               type="submit"
               value="createNewInviteLink"
             >

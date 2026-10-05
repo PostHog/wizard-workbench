@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { data, Form, href, Link, redirect } from "react-router";
 import { z } from "zod";
 
@@ -177,6 +178,8 @@ export const meta: Route.MetaFunction = ({ loaderData }) => [
 ];
 
 export default function PastesRoute({ loaderData, params }: Route.ComponentProps) {
+  const posthog = usePostHog();
+  const posthogLogger = posthog?.logger;
   const { pastes, pasteLimits } = loaderData;
 
   return (
@@ -246,7 +249,16 @@ export default function PastesRoute({ loaderData, params }: Route.ComponentProps
       {/* Create Paste Form */}
       <div id="create-paste" className="mt-8 rounded-lg border bg-card p-6">
         <h2 className="mb-4 text-xl font-semibold">Create New Paste</h2>
-        <Form method="post" className="space-y-4">
+        <Form
+          className="space-y-4"
+          method="post"
+          onSubmit={() => {
+            posthog?.capture("paste_creation_submitted");
+            posthogLogger?.info("paste creation submitted", {
+              event: "paste_creation_submitted",
+            });
+          }}
+        >
           <input type="hidden" name="intent" value="create" />
           <div>
             <label htmlFor="title" className="mb-2 block text-sm font-medium">

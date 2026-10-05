@@ -1,10 +1,15 @@
+import { usePostHog } from "@posthog/react";
 import { IconLayoutList } from "@tabler/icons-react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useMatch } from "react-router";
 
 import type { Route } from "./+types/_onboarding-layout";
 import { TalentMap } from "~/features/onboarding/talent-map";
-import { authMiddleware } from "~/features/user-authentication/user-authentication-middleware.server";
+import {
+  authContext,
+  authMiddleware,
+} from "~/features/user-authentication/user-authentication-middleware.server";
 import { cn } from "~/lib/utils";
 
 export const middleware = [authMiddleware];
@@ -15,16 +20,30 @@ export const middleware = [authMiddleware];
  * We disable animations in test mode to significantly speed up Playwright tests
  * and prevent WebGL-related GPU stalls in CI environments.
  */
-export async function loader() {
+export async function loader({ context }: Route.LoaderArgs) {
+  const { user } = context.get(authContext);
+
   return {
     shouldShowAnimations: process.env.NODE_ENV !== "test",
+    user: {
+      email: user.email ?? null,
+      id: user.id,
+    },
   };
 }
 
 export default function OnboardingLayout({ loaderData }: Route.ComponentProps) {
+  const posthog = usePostHog();
   const { t } = useTranslation("onboarding", { keyPrefix: "layout" });
   const isUserRoute = useMatch("/onboarding/user-account");
   const { shouldShowAnimations } = loaderData;
+
+  useEffect(() => {
+    posthog?.identify(
+      loaderData.user.id,
+      loaderData.user.email ? { email: loaderData.user.email } : undefined,
+    );
+  }, [loaderData.user.email, loaderData.user.id, posthog]);
 
   return (
     <main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2">
