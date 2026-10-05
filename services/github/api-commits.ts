@@ -256,7 +256,7 @@ export async function createSignedCommit(opts: ApiCommitOptions): Promise<ApiCom
   let headOid = baseSha;
   let commitUrl = "";
   for (const [index, group] of batches.entries()) {
-    const response = await octokit.graphql<CreateCommitResponse>(CREATE_COMMIT_MUTATION, {
+    const commit = await commitBatch(octokit, { repoOwner, repoName, branch, headOid }, {
       input: {
         branch: {
           repositoryNameWithOwner: `${repoOwner}/${repoName}`,
@@ -273,11 +273,60 @@ export async function createSignedCommit(opts: ApiCommitOptions): Promise<ApiCom
         expectedHeadOid: headOid,
       },
     });
-    headOid = response.createCommitOnBranch.commit.oid;
-    commitUrl = response.createCommitOnBranch.commit.url;
+    headOid = commit.oid;
+    commitUrl = commit.url;
   }
 
   return { commitSha: headOid, commitUrl };
+}
+
+type CommitOctokit = Pick<Octokit, "graphql"> & { rest: { git: Pick<Octokit["rest"]["git"], "getRef"> } };
+
+interface BatchTarget {
+  repoOwner: string;
+  repoName: string;
+  branch: string;
+  headOid: string;
+}
+
+const COMMIT_ATTEMPTS = 3;
+
+/**
+ * Run one createCommitOnBranch mutation, retrying GitHub's 5xx responses.
+ *
+ * A 502 or 504 can arrive after GitHub already wrote the commit, or while the
+ * write is still landing. Resending the same mutation would then fail on
+ * `expectedHeadOid`, so after each 5xx wait, then check the branch: if it
+ * moved off `headOid`, that commit is ours.
+ */
+export async function commitBatch(
+  octokit: CommitOctokit,
+  target: BatchTarget,
+  variables: Record<string, unknown>,
+  retryDelayMs = 2_000,
+): Promise<{ oid: string; url: string }> {
+  const { repoOwner, repoName, branch, headOid } = target;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const response = await octokit.graphql<CreateCommitResponse>(CREATE_COMMIT_MUTATION, variables);
+      return response.createCommitOnBranch.commit;
+    } catch (error) {
+      const status = (error as { status?: number }).status ?? 0;
+      if (status < 500) throw error;
+      console.warn(`      createCommitOnBranch returned ${status} (attempt ${attempt}/${COMMIT_ATTEMPTS})`);
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs * attempt));
+      const landed = await branchHead(octokit, target).catch(() => null);
+      if (landed && landed !== headOid) {
+        return { oid: landed, url: `https://github.com/${repoOwner}/${repoName}/commit/${landed}` };
+      }
+      if (attempt >= COMMIT_ATTEMPTS) throw error;
+    }
+  }
+}
+
+async function branchHead(octokit: CommitOctokit, { repoOwner, repoName, branch }: BatchTarget): Promise<string> {
+  const { data } = await octokit.rest.git.getRef({ owner: repoOwner, repo: repoName, ref: `heads/${branch}` });
+  return data.object.sha;
 }
 
 // ============================================================================

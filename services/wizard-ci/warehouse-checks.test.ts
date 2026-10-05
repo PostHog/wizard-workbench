@@ -901,6 +901,13 @@ describe("report written", () => {
     assert.equal(c.ok, true);
     assert.match(c.detail, /not expected/);
   });
+
+  it("is not expected when a seeded run's program declares no report file", () => {
+    const checks = grade(expectation({ seeded: true }), result({ reportFile: undefined }));
+    const c = named(checks, "report written");
+    assert.equal(c.ok, true);
+    assert.match(c.detail, /not expected/);
+  });
 });
 
 describe("abort", () => {

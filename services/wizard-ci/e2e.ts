@@ -69,7 +69,9 @@ const INJECTED_CREDENTIALS: Record<string, string> = {
   E2E_PG_DATABASE: "e2e_fixture_db",
   E2E_PG_USER: "e2e_fixture_user",
   E2E_PG_PASSWORD: "e2e-fixture-placeholder-password",
-  E2E_STRIPE_API_KEY: "sk_test_e2efixtureplaceholder000000",
+  // The data-warehouse-source skill asks for a restricted key and the agent
+  // refuses an `sk_` secret key, so the fixture has to look like one.
+  E2E_STRIPE_API_KEY: "rk_live_e2e_fixture_placeholder_0000",
   // The catch-all the wizard profile routes every other credential-shaped
   // question to — a Hugging Face access token, a bare `api_key`. Without it
   // those questions reach the `e2e` sentinel, and the create they feed fails.
@@ -140,6 +142,21 @@ function wizardRepo(): string {
 /** Where a run drops its real-TUI snapshots — shared with the snapshots flow. */
 export function snapsDirFor(app: string): string {
   return `/tmp/wizard-e2e-${basename(app)}-snaps`;
+}
+
+/**
+ * The seeded data-source step runs inside the install program, whose e2e
+ * profile has no `askAnswers`. Without the warehouse program's credential
+ * rules every Stripe question falls to the sentinel and nothing is created,
+ * so hand the child those rules through `E2E_ANSWERS_FILE`.
+ */
+function writeSeededAnswersFile(repo: string, app: string): string {
+  const profile = JSON.parse(
+    readFileSync(join(repo, "src", "programs", "warehouse-source", "test", "e2e.json"), "utf8"),
+  ) as { profile?: { askAnswers?: unknown[] } };
+  const file = `/tmp/wizard-e2e-${basename(app)}-answers.json`;
+  writeFileSync(file, JSON.stringify(profile.profile?.askAnswers ?? []));
+  return file;
 }
 
 /**
@@ -387,6 +404,7 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
         childEnv.WIZARD_CI_FLAG_OVERRIDES,
         SEEDED_FLAG_OVERRIDES,
       );
+      childEnv.E2E_ANSWERS_FILE = writeSeededAnswersFile(repo, app);
     }
     console.log(`    stub mcp: ${stub.url}  journal: ${journalPath}`);
     if (expect.attemptedFailOk.length) {
