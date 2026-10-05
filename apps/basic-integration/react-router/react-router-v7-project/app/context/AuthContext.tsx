@@ -1,6 +1,29 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react'
 import type { FakeUser } from '~/lib/utils/auth'
-import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
+import { getCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
+
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+)
+
+function identifyUser(user: FakeUser) {
+  if (!isPostHogConfigured) return
+
+  void import('posthog-js').then(({ default: posthog }) => {
+    posthog.identify(user.id, {
+      email: user.email,
+      username: user.username,
+    })
+  })
+}
+
+function resetPostHog() {
+  if (!isPostHogConfigured) return
+
+  void import('posthog-js').then(({ default: posthog }) => {
+    posthog.reset()
+  })
+}
 
 interface AuthContextType {
   user: FakeUser | null
@@ -14,15 +37,26 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
+  const identifiedUserId = useRef<string | null>(null)
 
   useEffect(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
+
+    if (currentUser && identifiedUserId.current !== currentUser.id) {
+      identifyUser(currentUser)
+      identifiedUserId.current = currentUser.id
+    }
   }, [])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      if (user && user.id !== loggedInUser.id) {
+        resetPostHog()
+      }
+      identifyUser(loggedInUser)
+      identifiedUserId.current = loggedInUser.id
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +66,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      if (user && user.id !== newUser.id) {
+        resetPostHog()
+      }
+      identifyUser(newUser)
+      identifiedUserId.current = newUser.id
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,6 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    resetPostHog()
+    identifiedUserId.current = null
     fakeLogout()
     setUser(null)
   }
