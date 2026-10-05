@@ -8,6 +8,7 @@ import { Spinner } from "@/components/Spinner";
 import type { Item } from "@/shared/types";
 import { getItemDetails } from "@/api/endpoints";
 import { ITEMS_PER_PAGE } from "@/constants/pagination";
+import { posthogLog } from "@/lib/posthog";
 import {
   type StoryType,
   MAP_STORY_TYPE_TO_STORY_ENDPOINTS,
@@ -29,11 +30,24 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
   const storyListQuery = useQuery({
     queryKey: ["storyIds", storyType],
     queryFn: async () => {
-      const getItemIds = MAP_STORY_TYPE_TO_STORY_ENDPOINTS[storyType];
-      const res = await getItemIds();
-      const topStories = await res.json();
+      try {
+        const getItemIds = MAP_STORY_TYPE_TO_STORY_ENDPOINTS[storyType];
+        const res = await getItemIds();
+        const topStories = await res.json();
 
-      return topStories;
+        posthogLog.info("story_feed_loaded", {
+          story_type: storyType,
+          story_count: topStories.length,
+        });
+
+        return topStories;
+      } catch (error) {
+        posthogLog.error("story_feed_load_failed", {
+          story_type: storyType,
+          error_type: error instanceof Error ? error.name : "unknown_error",
+        });
+        throw error;
+      }
     },
   });
 
@@ -42,18 +56,33 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
     queryFn: async ({ pageParam = 0 }) => {
       if (!storyListQuery.data) return [];
 
-      const pageIds = storyListQuery.data.slice(
-        pageParam,
-        pageParam + ITEMS_PER_PAGE
-      );
-      const detailsResponses = await Promise.all(
-        pageIds.map((id) => getItemDetails(id))
-      );
-      const posts = await Promise.all(
-        detailsResponses.map((res) => res.json())
-      );
+      try {
+        const pageIds = storyListQuery.data.slice(
+          pageParam,
+          pageParam + ITEMS_PER_PAGE
+        );
+        const detailsResponses = await Promise.all(
+          pageIds.map((id) => getItemDetails(id))
+        );
+        const posts = await Promise.all(
+          detailsResponses.map((res) => res.json())
+        );
 
-      return posts;
+        posthogLog.info("story_page_loaded", {
+          story_type: storyType,
+          page_offset: pageParam,
+          story_count: posts.length,
+        });
+
+        return posts;
+      } catch (error) {
+        posthogLog.error("story_page_load_failed", {
+          story_type: storyType,
+          page_offset: pageParam,
+          error_type: error instanceof Error ? error.name : "unknown_error",
+        });
+        throw error;
+      }
     },
     getNextPageParam: (lastPage, allPages) => {
       if (!storyListQuery.data) return undefined;
