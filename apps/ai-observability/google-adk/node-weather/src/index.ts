@@ -1,4 +1,6 @@
 import { FunctionTool, InMemorySessionService, LlmAgent, Runner } from '@google/adk'
+import { PostHogADKPlugin } from '@posthog/ai/adk'
+import { PostHog } from 'posthog-node'
 import { z } from 'zod'
 
 import { getWeather } from './weather.js'
@@ -6,6 +8,25 @@ import { getWeather } from './weather.js'
 const APP_NAME = 'wb-aio-google-adk-node-weather'
 const USER_ID = 'user_123'
 const SESSION_ID = 'thread_abc'
+const posthogApiKey = process.env.POSTHOG_API_KEY
+const posthogHost = process.env.POSTHOG_HOST
+
+if (process.env.NODE_ENV !== 'production') {
+    if (!posthogApiKey) {
+        throw new Error('POSTHOG_API_KEY variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_API_KEY is configured')
+    }
+
+    if (!posthogHost) {
+        throw new Error('POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured')
+    }
+}
+
+const posthog = posthogApiKey && posthogHost
+    ? new PostHog(posthogApiKey, {
+        host: posthogHost,
+        enableExceptionAutocapture: true,
+    })
+    : null
 
 const weatherTool = new FunctionTool({
     name: 'get_weather',
@@ -24,7 +45,12 @@ const agent = new LlmAgent({
 })
 
 const sessionService = new InMemorySessionService()
-const runner = new Runner({ appName: APP_NAME, agent, sessionService })
+const runner = new Runner({
+    appName: APP_NAME,
+    agent,
+    sessionService,
+    plugins: posthog ? [new PostHogADKPlugin({ client: posthog, privacyMode: false })] : [],
+})
 
 /** Answer one question inside the shared session. ADK runs the tool loop itself. */
 async function ask(question: string): Promise<void> {
@@ -47,7 +73,10 @@ async function main(): Promise<void> {
     await ask('How about Boston?')
 }
 
-main().catch((err) => {
-    console.error(`fatal: ${String(err)}`)
-    process.exit(1)
-})
+main()
+    .then(() => posthog?.shutdown())
+    .catch(async (err) => {
+        console.error(`fatal: ${String(err)}`)
+        await posthog?.shutdown()
+        process.exitCode = 1
+    })
