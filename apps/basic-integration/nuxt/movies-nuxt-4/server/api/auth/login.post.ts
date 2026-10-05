@@ -1,3 +1,5 @@
+import { getPostHogLogger } from '~/server/utils/posthog-logs'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -19,6 +21,12 @@ export default defineEventHandler(async (event) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
+    })
+
+    getPostHogLogger(useRuntimeConfig().public.posthog)?.emit({
+      severityText: 'INFO',
+      body: 'demo login completed',
+      attributes: { route: 'auth_login', outcome: 'success' },
     })
 
     return {
