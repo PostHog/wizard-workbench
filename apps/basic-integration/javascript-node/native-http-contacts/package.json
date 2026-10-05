@@ -5,8 +5,15 @@
   "description": "A native Node.js HTTP contacts API for testing the javascript_node wizard skill",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "start": "node --env-file-if-exists=.env index.js",
+    "dev": "node --env-file-if-exists=.env --watch index.js"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@opentelemetry/api-logs": "^0.222.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-logs": "^0.222.0",
+    "@opentelemetry/sdk-node": "^0.222.0",
+    "posthog-node": "^5.55.0"
+  }
 }
