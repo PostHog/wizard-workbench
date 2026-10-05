@@ -38,6 +38,13 @@
       await update({ reset: false })
       await applyAction(result)
       loading = false
+      if (result.type === "success") {
+        void import("posthog-js").then(({ default: posthog }) => {
+          const posthogLog = posthog.logger
+          posthog.capture("profile_created")
+          posthogLog.info("profile created", { flow: "profile_creation" })
+        })
+      }
     }
   }
 </script>

@@ -50,6 +50,13 @@
     saveButtonTitle = "Save",
   }: Props = $props()
 
+  const eventForFormTarget: Record<string, string> = {
+    "/account/api?/updateProfile": "profile_updated",
+    "/account/api?/updateEmail": "email_change_requested",
+    "/account/api?/updatePassword": "password_changed",
+    "/account/api?/toggleEmailSubscription": "email_subscription_updated",
+  }
+
   const handleSubmit: SubmitFunction = () => {
     loading = true
     return async ({ update, result }) => {
@@ -58,6 +65,12 @@
       loading = false
       if (result.type === "success") {
         showSuccess = true
+        const event = eventForFormTarget[formTarget]
+        if (event) {
+          void import("posthog-js").then(({ default: posthog }) => {
+            posthog.capture(event)
+          })
+        }
       }
     }
   }

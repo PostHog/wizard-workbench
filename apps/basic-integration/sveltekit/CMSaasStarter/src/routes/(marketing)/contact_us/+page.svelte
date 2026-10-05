@@ -62,6 +62,13 @@
       loading = false
       if (result.type === "success") {
         showSuccess = true
+        void import("posthog-js").then(({ default: posthog }) => {
+          const posthogLog = posthog.logger
+          posthog.capture("contact_request_submitted")
+          posthogLog.info("contact request submitted", {
+            flow: "contact_request",
+          })
+        })
       } else if (result.type === "failure") {
         errors = result.data?.errors ?? {}
       } else if (result.type === "error") {

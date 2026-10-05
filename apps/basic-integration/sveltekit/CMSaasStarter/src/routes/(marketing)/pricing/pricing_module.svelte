@@ -15,6 +15,31 @@
     currentPlanId = "",
     center = true,
   }: Props = $props()
+
+  const handlePlanSelection = (event: MouseEvent, planId: string) => {
+    event.preventDefault()
+    const destination = event.currentTarget instanceof HTMLAnchorElement
+      ? event.currentTarget.href
+      : null
+
+    void import("posthog-js")
+      .then(
+        ({ default: posthog }) => {
+          const posthogLog = posthog.logger
+          posthog.capture("plan_selected", { plan_id: planId })
+          posthogLog.info("plan selected", {
+            flow: "plan_selection",
+            plan_id: planId,
+          })
+        },
+        () => undefined,
+      )
+      .then(() => {
+        if (destination) {
+          window.location.assign(destination)
+        }
+      })
+  }
 </script>
 
 <div
@@ -57,6 +82,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={(event) => handlePlanSelection(event, plan.id)}
               >
                 {callToAction}
               </a>

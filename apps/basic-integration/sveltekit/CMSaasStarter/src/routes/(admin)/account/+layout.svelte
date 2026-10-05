@@ -10,13 +10,20 @@
   })
 
   onMount(() => {
-    const { data } = supabase.auth.onAuthStateChange((event, _session) => {
+    void import("posthog-js").then(({ default: posthog }) => {
+      posthog.identify(data.user.id, {
+        email: data.user.email,
+        name: data.profile?.full_name ?? undefined,
+      })
+    })
+
+    const { data: authState } = supabase.auth.onAuthStateChange((event, _session) => {
       if (_session?.expires_at !== session?.expires_at) {
         invalidate("supabase:auth")
       }
     })
 
-    return () => data.subscription.unsubscribe()
+    return () => authState.subscription.unsubscribe()
   })
 </script>
 

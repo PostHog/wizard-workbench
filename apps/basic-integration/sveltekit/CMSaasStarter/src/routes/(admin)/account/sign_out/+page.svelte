@@ -13,7 +13,13 @@
       if (error) {
         message = "There was an issue signing out."
       } else {
-        goto("/")
+        void import("posthog-js").then(
+          ({ default: posthog }) => {
+            posthog.reset()
+            goto("/")
+          },
+          () => goto("/"),
+        )
       }
     })
   })
