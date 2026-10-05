@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { getTodos, createTodo } from '@/lib/data';
+import { logTodoOperation, flushPostHogLogs } from '@/lib/posthog-logs';
+import { captureTodoEvent } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -32,6 +34,16 @@ export async function POST(request: NextRequest) {
       title: validatedData.title,
       description: validatedData.description,
       completed: validatedData.completed,
+    });
+
+    await captureTodoEvent('todo_created', {
+      initial_completion_state: newTodo.completed,
+    });
+    logTodoOperation('todo_created', {
+      completion_state: newTodo.completed,
+    });
+    after(async () => {
+      await flushPostHogLogs();
     });
 
     return NextResponse.json(newTodo, { status: 201 });
