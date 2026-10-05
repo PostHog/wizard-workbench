@@ -12,6 +12,10 @@ Flask-SQLAlchemy
 Flask-WTF
 gunicorn
 langdetect
+opentelemetry-api
+opentelemetry-exporter-otlp
+opentelemetry-sdk
+posthog
 PyJWT
 python-dotenv
 redis
