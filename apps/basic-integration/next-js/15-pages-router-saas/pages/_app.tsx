@@ -2,6 +2,7 @@ import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
 import { Manrope } from 'next/font/google';
 import { SWRConfig } from 'swr';
+import '@/lib/posthog';
 
 const manrope = Manrope({ subsets: ['latin'] });
 
