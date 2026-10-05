@@ -7,8 +7,11 @@
  *   router.navigate('/dashboard')
  */
 
+import { posthog } from './posthog.js';
+
 const routes = [];
 let notFoundHandler = null;
+let isInitialRoute = true;
 
 function matchRoute(path) {
   for (const route of routes) {
@@ -46,6 +49,10 @@ function resolve() {
   const match = matchRoute(path);
 
   if (match) {
+    if (!isInitialRoute) {
+      posthog?.capture('$pageview');
+    }
+    isInitialRoute = false;
     match.handler(match.params);
   } else if (notFoundHandler) {
     notFoundHandler();
