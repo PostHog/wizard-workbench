@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogErrorBoundary, PostHogProvider, usePostHog } from 'posthog-js/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -84,10 +85,54 @@ function RouterSpinner() {
   return <Spinner show={isLoading} />
 }
 
+function PostHogRoot({ children }: { children: React.ReactNode }) {
+  const apiKey = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+  const apiHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
+  if (!apiKey) {
+    if (import.meta.env.DEV) {
+      throw new Error(
+        'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_PROJECT_TOKEN is configured',
+      )
+    }
+
+    return <>{children}</>
+  }
+
+  if (!apiHost) {
+    if (import.meta.env.DEV) {
+      throw new Error(
+        'VITE_PUBLIC_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_HOST is configured',
+      )
+    }
+
+    return <>{children}</>
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={apiKey}
+      options={{
+        api_host: apiHost,
+        defaults: '2026-01-30',
+        capture_exceptions: true,
+        logs: {
+          serviceName: 'cloudflow-web',
+          environment: import.meta.env.MODE,
+        },
+        debug: import.meta.env.DEV,
+      }}
+    >
+      <PostHogErrorBoundary>{children}</PostHogErrorBoundary>
+    </PostHogProvider>
+  )
+}
+
 function RootComponent() {
   return (
-    <>
-      <div className={`min-h-screen flex flex-col`}>
+    <PostHogRoot>
+      <>
+        <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
             <div className={`w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center`}>
@@ -131,8 +176,9 @@ function RootComponent() {
           </div>
         </div>
       </div>
-      <TanStackRouterDevtools position="bottom-right" />
-    </>
+        <TanStackRouterDevtools position="bottom-right" />
+      </>
+    </PostHogRoot>
   )
 }
 
@@ -433,9 +479,14 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      posthog?.capture('invoice_created')
+      posthog?.logger.info('invoice created')
+      return router.invalidate()
+    },
   })
 
   return (
@@ -517,9 +568,14 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      posthog?.capture('invoice_updated')
+      posthog?.logger.info('invoice updated')
+      return router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -1003,6 +1059,7 @@ const profileRoute = createRoute({
 
 function ProfileComponent() {
   const { username } = profileRoute.useRouteContext()
+  const posthog = usePostHog()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
 
@@ -1067,6 +1124,7 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                posthog?.capture('user_logged_out')
                 auth.logout()
                 router.invalidate()
               }}
@@ -1098,11 +1156,14 @@ function LoginComponent() {
     select: ({ auth }) => ({ auth, status: auth.status }),
   })
   const search = useSearch({ from: loginRoute.fullPath })
+  const posthog = usePostHog()
   const [username, setUsername] = React.useState('')
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog?.capture('user_logged_in')
+    posthog?.logger.info('user signed in')
     router.invalidate()
   }
 
@@ -1138,6 +1199,7 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog?.capture('user_logged_out')
                 auth.logout()
                 router.invalidate()
               }}
