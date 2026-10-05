@@ -1,14 +1,16 @@
 """AI generation API routes."""
 
+import logging
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
 
 router = APIRouter(prefix="/api")
+posthog_logs_logger = logging.getLogger("posthog.exporter")
 
 
 # Credit costs per generation type
@@ -42,6 +44,7 @@ class CreditsResponse(BaseModel):
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_content(
     request: GenerateRequest,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -75,6 +78,28 @@ async def generate_content(
         result=mock_content,
         credits_used=credits_needed,
     )
+
+    posthog_client = getattr(http_request.app.state, "posthog", None)
+    if posthog_client:
+        posthog_client.capture(
+            "content_generated",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
+
+    if getattr(http_request.app.state, "posthog_logs_enabled", False):
+        posthog_logs_logger.info(
+            "content generation completed",
+            extra={
+                "event": "content_generation_completed",
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
 
     return GenerateResponse(
         id=generation.id,
