@@ -809,6 +809,12 @@ export function warehouseChecks(evidence: WarehouseEvidence): Check[] {
       checks.push(
         add("report written", true, "not expected — this run aborts before the report"),
       );
+    } else if (expect.seeded && !result.reportFile) {
+      // The seeded data-source step runs inside the install program, which
+      // writes its own report and declares no warehouse report file.
+      checks.push(
+        add("report written", true, "not expected — the seeded step declares no report file"),
+      );
     } else {
       const file = result.reportFile;
       const missingFromReport = [...succeeded].filter(

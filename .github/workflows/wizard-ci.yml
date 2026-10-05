@@ -990,16 +990,16 @@ jobs:
         if: always() && (needs.notify-start.outputs.thread_ts != '' || needs.discover.outputs.input_notify_pr == 'true')
         id: job-id
         run: |
-          # Fetch the current job ID from the GitHub API
-          JOB_ID=$(curl -s -H "Authorization: Bearer $APP_TOKEN" \
-            "$GITHUB_API_URL/repos/$GITHUB_REPO/actions/runs/$GITHUB_RUN_ID/jobs" \
-            | jq -r --arg app "$APP" '.jobs[] | select(.name | contains($app)) | .id' | head -1)
+          # Fetch the current job ID from the GitHub API. A full run has more
+          # jobs than one page holds, so page through all of them, and match
+          # the name exactly: `next-stripe` is a prefix of `next-stripe-declined`.
+          JOB_ID=$(gh api --paginate "repos/$GITHUB_REPO/actions/runs/$GITHUB_RUN_ID/jobs?per_page=100" \
+            | jq -r --arg name "wizard-ci ($APP)" '.jobs[] | select(.name == $name) | .id' | head -1)
           echo "job_id=$JOB_ID" >> $GITHUB_OUTPUT
           echo "Job ID: $JOB_ID"
         env:
-          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           APP: ${{ matrix.app }}
-          GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
 

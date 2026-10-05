@@ -49,3 +49,6 @@ jobs:
 
       - name: Test the PR evaluator
         run: pnpm test:evaluator
+
+      - name: Test the signed-commit helpers
+        run: pnpm test:api-commits
