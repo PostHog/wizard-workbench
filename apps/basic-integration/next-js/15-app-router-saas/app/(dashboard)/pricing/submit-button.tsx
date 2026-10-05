@@ -2,15 +2,21 @@
 
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 import { useFormStatus } from 'react-dom';
 
-export function SubmitButton() {
+export function SubmitButton({ planName }: { planName: string }) {
   const { pending } = useFormStatus();
 
   return (
     <Button
       type="submit"
       disabled={pending}
+      onClick={() =>
+        posthog.capture('subscription_checkout_started', {
+          plan_name: planName
+        })
+      }
       variant="outline"
       className="w-full rounded-full"
     >
