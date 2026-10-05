@@ -9,6 +9,8 @@ class Cards::AssignmentsController < ApplicationController
 
   def create
     if @card.toggle_assignment @board.users.active.find(params[:assignee_id])
+      capture_posthog_event("card_assignment_changed")
+
       respond_to do |format|
         format.turbo_stream
         format.json { head :no_content }

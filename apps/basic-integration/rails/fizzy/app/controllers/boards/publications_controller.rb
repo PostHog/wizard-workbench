@@ -5,10 +5,12 @@ class Boards::PublicationsController < ApplicationController
 
   def create
     @board.publish
+    capture_posthog_event("board_published")
   end
 
   def destroy
     @board.unpublish
+    capture_posthog_event("board_unpublished")
     @board.reload
   end
 end
