@@ -18,6 +18,7 @@ public final class ContentSharePresenter: @unchecked Sendable {
     public func sharePost(_ post: Post) {
         let items: [Any] = [post.title, post.url]
         showShareSheet(items: items)
+        AppAnalytics.record("post_share_started")
     }
 
     @MainActor

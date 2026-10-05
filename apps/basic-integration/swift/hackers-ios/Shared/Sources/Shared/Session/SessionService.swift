@@ -72,6 +72,8 @@ public final class SessionService: AuthenticationServiceProtocol {
             guard let self else { return }
             try? await authenticationUseCase.logout()
             await MainActor.run { self.user = nil }
+            AppAnalytics.record("logout_completed")
+            NotificationCenter.default.post(name: .userDidLogout, object: nil)
         }
     }
 

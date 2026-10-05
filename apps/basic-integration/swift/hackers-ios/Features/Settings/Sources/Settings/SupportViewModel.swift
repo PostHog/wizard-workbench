@@ -81,8 +81,12 @@ public final class SupportViewModel: @unchecked Sendable {
             do {
                 let result = try await self.supportUseCase.purchase(productId: product.id)
                 self.handle(result: result, for: product)
-                if result == .success, product.kind == .subscription {
-                    self.isSubscribed = true
+                if result == .success {
+                    let productKind = product.kind == .subscription ? "subscription" : "tip"
+                    AppAnalytics.record("support_purchase_completed", properties: ["product_kind": productKind])
+                    if product.kind == .subscription {
+                        self.isSubscribed = true
+                    }
                 }
             } catch {
                 self.alertInfo = AlertInfo(
@@ -102,6 +106,9 @@ public final class SupportViewModel: @unchecked Sendable {
                 let result = try await self.supportUseCase.restorePurchases()
                 await self.updateSubscriptionStatus()
                 self.handleRestore(result: result)
+                if result == .success {
+                    AppAnalytics.record("purchases_restored")
+                }
             } catch {
                 self.alertInfo = AlertInfo(
                     title: "Restore Failed",

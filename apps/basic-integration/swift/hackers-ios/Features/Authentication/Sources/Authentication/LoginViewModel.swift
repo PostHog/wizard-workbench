@@ -6,6 +6,7 @@
 //
 
 import Domain
+import Shared
 import SwiftUI
 
 @MainActor
@@ -61,6 +62,7 @@ public final class LoginViewModel {
             try await onLogin(username, password)
             isAuthenticated = true
             currentUsername = username
+            AppAnalytics.record("login_succeeded")
             return true
         } catch {
             showAlert = true
