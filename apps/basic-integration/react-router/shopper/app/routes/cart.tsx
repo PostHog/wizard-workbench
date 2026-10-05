@@ -6,10 +6,33 @@ export default function Cart() {
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+    window.__posthogCapture?.("cart_item_removed", {
+      product_id: item.id,
+      product_category: item.category,
+      price: item.price,
+      quantity: item.quantity,
+    });
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+
+    if (newQuantity <= 0) {
+      window.__posthogCapture?.("cart_item_removed", {
+        product_id: item.id,
+        product_category: item.category,
+        price: item.price,
+        quantity: item.quantity,
+      });
+      return;
+    }
+
+    window.__posthogCapture?.("cart_quantity_updated", {
+      product_id: item.id,
+      product_category: item.category,
+      previous_quantity: item.quantity,
+      quantity: newQuantity,
+    });
   };
 
   if (cart.length === 0) {
@@ -154,6 +177,16 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={() =>
+                window.__posthogCapture?.("checkout_started", {
+                  cart_item_count: cart.reduce(
+                    (count, item) => count + item.quantity,
+                    0,
+                  ),
+                  cart_total: getCartTotal(),
+                  currency: "USD",
+                })
+              }
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout

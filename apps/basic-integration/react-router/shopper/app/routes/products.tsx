@@ -19,6 +19,13 @@ export default function Products({ loaderData }: Route.ComponentProps) {
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+    window.__posthogCapture?.("product_added", {
+      product_id: product.id,
+      product_category: product.category,
+      price: product.price,
+      quantity: 1,
+      source: "product_catalog",
+    });
   };
 
   const handleSearch = (term: string) => {

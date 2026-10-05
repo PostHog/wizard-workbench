@@ -24,6 +24,13 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
     }
+    window.__posthogCapture?.("product_added", {
+      product_id: product.id,
+      product_category: product.category,
+      price: product.price,
+      quantity,
+      source: "product_detail",
+    });
   };
 
   return (

@@ -41,8 +41,26 @@ export default function Checkout() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
+    const orderTotal = getCartTotal() * 1.1;
+    const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
+
+    window.__posthogLog?.("checkout_submitted", {
+      currency: "USD",
+      item_count: itemCount,
+      order_total: orderTotal,
+    });
 
     setTimeout(() => {
+      window.__posthogLog?.("checkout_completed", {
+        currency: "USD",
+        item_count: itemCount,
+        order_total: orderTotal,
+      });
+      window.__posthogCapture?.("order_completed", {
+        currency: "USD",
+        item_count: itemCount,
+        order_total: orderTotal,
+      });
       clearCart();
       setIsProcessing(false);
       alert("Order placed successfully! Thank you for your purchase.");
