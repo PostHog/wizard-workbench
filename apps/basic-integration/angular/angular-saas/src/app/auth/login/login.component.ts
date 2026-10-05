@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { environment } from '@env/environment';
 import { AuthenticationService } from '@app/auth/services/authentication.service';
+import { PostHogService } from '@core/services';
 
 @Component({
   selector: 'app-login',
@@ -16,6 +17,7 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthenticationService);
+  private readonly posthogService = inject(PostHogService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -39,6 +41,7 @@ export class LoginComponent {
       .subscribe({
         next: (res) => {
           if (res) {
+            this.posthogService.posthog.capture('login_succeeded');
             console.log('Login successful');
             this.router.navigate([this.route.snapshot.queryParams['redirect'] || '/dashboard'], { replaceUrl: true }).then(() => {
               console.log('Navigated to dashboard');

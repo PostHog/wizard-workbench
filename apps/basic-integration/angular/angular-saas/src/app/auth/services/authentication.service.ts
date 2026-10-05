@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PostHogLogService, PostHogService } from '@core/services';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,9 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly posthogLogService = inject(PostHogLogService);
 
   /**
    * Authenticates the user.
@@ -41,9 +44,42 @@ export class AuthenticationService {
       firstName,
       lastName,
     });
-    this._credentialsService.setCredentials(credentials, context.remember);
+    this.credentialsService.setCredentials(credentials, context.remember);
+    this.identify(credentials);
+    this.posthogLogService.loginCompleted();
 
     return of(credentials);
+  }
+
+  /** Identifies a restored authenticated session after PostHog initialization. */
+  identifyCurrentUser(): void {
+    const credentials = this.credentialsService.credentials();
+    if (credentials) {
+      this.identify(credentials);
+    }
+  }
+
+  private identify(credentials: Credentials): void {
+    if (!credentials.id) {
+      return;
+    }
+
+    const personProperties: Record<string, string> = {
+      username: credentials.username,
+    };
+    const name = `${credentials.firstName ?? ''} ${credentials.lastName ?? ''}`.trim();
+
+    if (credentials.email) {
+      personProperties['email'] = credentials.email;
+    }
+    if (name) {
+      personProperties['name'] = name;
+    }
+    if (credentials.roles.length > 0) {
+      personProperties['role'] = credentials.roles[0];
+    }
+
+    this.posthogService.posthog.identify(credentials.id, personProperties);
   }
 
   /**
@@ -86,6 +122,8 @@ export class AuthenticationService {
    * @return True if the user was logged out successfully.
    */
   logout(): Observable<any> {
+    this.posthogService.posthog.capture('logout_completed');
+    this.posthogService.posthog.reset();
     return of(true);
   }
 }
