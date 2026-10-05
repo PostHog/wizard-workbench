@@ -7,7 +7,7 @@ export const checkoutRouter = Router();
 // POST /api/checkout — create a Stripe Checkout session
 checkoutRouter.post("/", async (req, res) => {
   try {
-    const { priceId, userId, customerEmail } = req.body;
+    const { priceId, userId, customerEmail, posthogDistinctId } = req.body;
 
     if (!priceId) {
       res.status(400).json({ error: "priceId is required" });
@@ -21,8 +21,16 @@ checkoutRouter.post("/", async (req, res) => {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${frontendUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${frontendUrl}/?canceled=true`,
-      client_reference_id: userId,
+      client_reference_id: posthogDistinctId,
       customer_email: customerEmail,
+      ...(posthogDistinctId
+        ? {
+            metadata: { posthog_person_distinct_id: posthogDistinctId },
+            subscription_data: {
+              metadata: { posthog_person_distinct_id: posthogDistinctId },
+            },
+          }
+        : {}),
     });
 
     res.json({ url: session.url });
