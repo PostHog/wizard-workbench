@@ -1,7 +1,14 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
+import { posthogLogs, shutdownPosthogLogs } from './posthog-logs.js';
 
 const app = new Hono();
+
+app.onError((error, c) => {
+  posthog?.captureException(error);
+  return c.json({ error: 'Internal server error' }, 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +54,18 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+  posthog?.capture({
+    event: 'link_created',
+    properties: {
+      tag_count: tags.length,
+      has_description: Boolean(description),
+    },
+  });
+  posthogLogs?.emit({
+    severityText: 'INFO',
+    body: 'link created',
+    attributes: { operation: 'link_created', tag_count: tags.length },
+  });
   return c.json(link, 201);
 });
 
@@ -76,6 +95,21 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  posthog?.capture({
+    event: 'link_updated',
+    properties: {
+      changed_fields: Object.keys(body).filter((field) =>
+        ['url', 'title', 'description', 'tags', 'favorite'].includes(field)
+      ),
+      tag_count: link.tags.length,
+      favorite: link.favorite,
+    },
+  });
+  posthogLogs?.emit({
+    severityText: 'INFO',
+    body: 'link updated',
+    attributes: { operation: 'link_updated', tag_count: link.tags.length, favorite: link.favorite },
+  });
   return c.json(link);
 });
 
@@ -88,6 +122,12 @@ app.delete('/api/links/:id', (c) => {
   }
 
   links.splice(index, 1);
+  posthog?.capture({ event: 'link_deleted' });
+  posthogLogs?.emit({
+    severityText: 'INFO',
+    body: 'link deleted',
+    attributes: { operation: 'link_deleted' },
+  });
   return c.body(null, 204);
 });
 
@@ -104,6 +144,15 @@ app.get('/api/tags', (c) => {
 
 const PORT = process.env.PORT || 3002;
 
-serve({ fetch: app.fetch, port: PORT }, () => {
+const server = serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Hono links API running on http://localhost:${PORT}`);
 });
+
+const shutdown = () => {
+  server.close(async () => {
+    await Promise.all([posthog?.shutdown(), shutdownPosthogLogs()]);
+  });
+};
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
