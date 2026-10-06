@@ -1,4 +1,6 @@
 import { createServer } from 'node:http';
+import { posthog } from './posthog.js';
+import { posthogLogger, posthogLogProvider } from './logs.js';
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -47,6 +49,12 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      posthog?.capture({ event: 'group_created' });
+      posthogLogger?.emit({
+        severityText: 'INFO',
+        body: 'Group created through the API',
+        attributes: { operation: 'group_create' },
+      });
       return json(res, 201, group);
     }
 
@@ -90,6 +98,15 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      posthog?.capture({
+        event: 'contact_created',
+        properties: { group_id: contact.group_id },
+      });
+      posthogLogger?.emit({
+        severityText: 'INFO',
+        body: 'Contact created through the API',
+        attributes: { operation: 'contact_create' },
+      });
       return json(res, 201, contact);
     }
 
@@ -114,6 +131,19 @@ const server = createServer(async (req, res) => {
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      posthog?.capture({
+        event: 'contact_updated',
+        properties: {
+          changed_fields: ['name', 'email', 'phone', 'company', 'group_id'].filter(
+            (field) => body[field] !== undefined
+          ),
+        },
+      });
+      posthogLogger?.emit({
+        severityText: 'INFO',
+        body: 'Contact updated through the API',
+        attributes: { operation: 'contact_update' },
+      });
       return json(res, 200, contact);
     }
 
@@ -123,13 +153,23 @@ const server = createServer(async (req, res) => {
       const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
-      contacts.splice(index, 1);
+      const [contact] = contacts.splice(index, 1);
+      posthog?.capture({
+        event: 'contact_deleted',
+        properties: { group_id: contact.group_id },
+      });
+      posthogLogger?.emit({
+        severityText: 'INFO',
+        body: 'Contact deleted through the API',
+        attributes: { operation: 'contact_delete' },
+      });
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    posthog?.captureException(err, 'server');
     json(res, 500, { error: 'Internal server error' });
   }
 });
@@ -138,4 +178,18 @@ const PORT = process.env.PORT || 3004;
 
 server.listen(PORT, () => {
   console.log(`Native HTTP contacts API running on http://localhost:${PORT}`);
+  posthogLogger?.emit({
+    severityText: 'INFO',
+    body: 'Native HTTP contacts API started',
+    attributes: { operation: 'server_start' },
+  });
 });
+
+async function shutdown() {
+  await new Promise((resolve) => server.close(resolve));
+  await Promise.all([posthog?.shutdown(), posthogLogProvider?.shutdown()]);
+  process.exit(0);
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
