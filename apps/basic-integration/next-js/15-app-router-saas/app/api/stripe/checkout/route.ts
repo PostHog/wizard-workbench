@@ -2,11 +2,17 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
+import { emitPostHogInfoLog } from '@/lib/posthog-logs';
+import { loggerProvider } from '@/instrumentation';
 import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
+  after(async () => {
+    await loggerProvider?.forceFlush();
+  });
+
   const searchParams = request.nextUrl.searchParams;
   const sessionId = searchParams.get('session_id');
 
@@ -15,6 +21,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    emitPostHogInfoLog('checkout_return_processing_started');
+
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['customer', 'subscription'],
     });
@@ -88,9 +96,12 @@ export async function GET(request: NextRequest) {
       })
       .where(eq(teams.id, userTeam[0].teamId));
 
+    emitPostHogInfoLog('checkout_subscription_activated');
+
     await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
+    emitPostHogInfoLog('checkout_return_processing_failed');
     console.error('Error handling successful checkout:', error);
     return NextResponse.redirect(new URL('/error', request.url));
   }
