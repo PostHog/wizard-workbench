@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { loggerProvider, posthogLogsLogger } from '@/instrumentation';
 import { getTodos, createTodo } from '@/lib/data';
 import { z } from 'zod';
 
@@ -32,6 +34,15 @@ export async function POST(request: NextRequest) {
       title: validatedData.title,
       description: validatedData.description,
       completed: validatedData.completed,
+    });
+
+    posthogLogsLogger?.emit({
+      body: 'todo_created',
+      severityNumber: SeverityNumber.INFO,
+      attributes: { has_description: Boolean(validatedData.description) },
+    });
+    after(async () => {
+      await loggerProvider?.forceFlush();
     });
 
     return NextResponse.json(newTodo, { status: 201 });
