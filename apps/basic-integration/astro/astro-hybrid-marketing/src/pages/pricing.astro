@@ -24,7 +24,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Basic integrations</li>
             <li>Email support</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
+          <a href="#" id="starter-trial-cta" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
         </div>
 
         <div class="pricing-card featured">
@@ -40,7 +40,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Advanced analytics</li>
             <li>Custom workflows</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
+          <a href="#" id="pro-trial-cta" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
         </div>
 
         <div class="pricing-card">
@@ -57,9 +57,23 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="/contact" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="/contact" id="enterprise-contact-sales-cta" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
 </Layout>
+
+<script>
+  document.getElementById('starter-trial-cta')?.addEventListener('click', () => {
+    window.posthog?.capture('free_trial_cta_clicked', { plan: 'starter', source: 'pricing' });
+  });
+
+  document.getElementById('pro-trial-cta')?.addEventListener('click', () => {
+    window.posthog?.capture('free_trial_cta_clicked', { plan: 'pro', source: 'pricing' });
+  });
+
+  document.getElementById('enterprise-contact-sales-cta')?.addEventListener('click', () => {
+    window.posthog?.capture('contact_sales_cta_clicked', { plan: 'enterprise', source: 'pricing' });
+  });
+</script>

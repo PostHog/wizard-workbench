@@ -1,4 +1,8 @@
 import type { APIRoute } from 'astro';
+import {
+  logContactSubmissionAccepted,
+  logContactSubmissionFailed,
+} from '../../lib/posthog-logs';
 
 export const prerender = false;
 
@@ -45,6 +49,8 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    await logContactSubmissionAccepted();
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -54,6 +60,7 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contact form error:', error);
+    await logContactSubmissionFailed();
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

@@ -1,4 +1,5 @@
 ---
+import PostHog from '../components/posthog.astro';
 import Navigation from '../components/Navigation.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/global.css';
@@ -19,6 +20,7 @@ const { title, description = 'NeuralFlow AI - Transform your workflow with intel
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title} | NeuralFlow AI</title>
+    <PostHog />
   </head>
   <body>
     <Navigation />
