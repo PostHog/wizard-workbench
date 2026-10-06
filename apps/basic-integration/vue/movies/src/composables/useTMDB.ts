@@ -1,6 +1,7 @@
 import type { Credits, Media, MediaType, PageResult, Person } from '../types'
 import { LRUCache } from 'lru-cache'
 import { hash as ohash } from 'ohash'
+import { posthogLogger } from './posthogLogger'
 
 const apiBaseUrl = 'https://movies-proxy.vercel.app'
 
@@ -22,11 +23,29 @@ async function _fetchTMDB(url: string, params: Record<string, string | number | 
   const queryString = searchParams.toString()
   const fullUrl = `${apiBaseUrl}/tmdb/${url}${queryString ? `?${queryString}` : ''}`
   
-  const response = await fetch(fullUrl)
-  if (!response.ok) {
-    throw new Error(`TMDB API error: ${response.statusText}`)
+  try {
+    const response = await fetch(fullUrl)
+    if (!response.ok) {
+      posthogLogger.warn('tmdb_request_failed', {
+        operation: url.split('/')[0],
+        status_code: response.status,
+      })
+      throw new Error(`TMDB API error: ${response.statusText}`)
+    }
+
+    posthogLogger.info('tmdb_request_succeeded', {
+      operation: url.split('/')[0],
+      status_code: response.status,
+    })
+    return response.json()
+  } catch (error) {
+    if (!(error instanceof Error && error.message.startsWith('TMDB API error:'))) {
+      posthogLogger.warn('tmdb_request_failed', {
+        operation: url.split('/')[0],
+      })
+    }
+    throw error
   }
-  return response.json()
 }
 
 export function fetchTMDB(url: string, params: Record<string, string | number | boolean | undefined> = {}): Promise<any> {

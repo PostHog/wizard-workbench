@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import posthog from 'posthog-js'
 
 const AUTH_KEY = 'auth-user'
 
@@ -27,6 +28,7 @@ export function useAuth() {
   }
 
   const logout = async () => {
+    posthog.reset()
     user.value = null
     localStorage.removeItem(AUTH_KEY)
     await router.push('/login')
