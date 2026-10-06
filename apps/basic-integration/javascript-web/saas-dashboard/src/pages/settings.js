@@ -1,6 +1,11 @@
+import posthog from 'posthog-js';
 import { api } from '../api.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
+
+const posthogEnabled = Boolean(
+  import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST,
+);
 
 export async function renderSettings() {
   renderShell('settings');
@@ -100,6 +105,7 @@ export async function renderSettings() {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
         store.reset();
         store.login(user.email);
+        if (posthogEnabled) posthog.capture('workspace_data_reset');
         renderSettings();
       }
     });

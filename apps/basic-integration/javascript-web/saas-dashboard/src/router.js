@@ -6,7 +6,11 @@
  *   router.on('/projects/:id', renderProject)
  *   router.navigate('/dashboard')
  */
+import posthog from 'posthog-js';
 
+const posthogEnabled = Boolean(
+  import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST,
+);
 const routes = [];
 let notFoundHandler = null;
 
@@ -68,7 +72,10 @@ export const router = {
   getCurrentPath,
 
   start() {
-    window.addEventListener('hashchange', resolve);
+    window.addEventListener('hashchange', () => {
+      resolve();
+      if (posthogEnabled) posthog.capture('$pageview');
+    });
     resolve();
   },
 };
