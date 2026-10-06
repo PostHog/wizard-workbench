@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -55,6 +56,29 @@ export function Login({
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
           return;
+        }
+
+        if (result.user) {
+          const identifyUser = () => {
+            posthog.identify(String(result.user.id), {
+              email: result.user.email,
+              ...(result.user.name ? { name: result.user.name } : {}),
+              role: result.user.role
+            });
+            posthog.capture(mode === 'signin' ? 'account_signed_in' : 'account_signed_up', {
+              checkout_requested: Boolean(data.priceId)
+            });
+          };
+          const posthogWindow = window as Window & { posthogInitialized?: boolean };
+
+          if (posthogWindow.posthogInitialized) {
+            identifyUser();
+          } else if (
+            process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+            process.env.NEXT_PUBLIC_POSTHOG_HOST
+          ) {
+            window.addEventListener('posthog_initialized', identifyUser, { once: true });
+          }
         }
 
         if (result.success && result.redirectTo) {
