@@ -151,15 +151,22 @@ cp .env.example .env
 | `COMMANDMENTS_PATH` | No | Path to context-mill's `context/commandments.yaml`. The PR evaluator reads it when the GitHub fetch fails, then falls back to a vendored copy. |
 | `MCP_PATH` | Yes | Path to MCP service (e.g., `~/development/posthog/services/mcp`) |
 | `WIZARD_PATH` | Yes | Path to your local wizard repo (e.g., `~/development/wizard`) |
-| `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key (`phx_`) for wizard CI mode |
+| `POSTHOG_PERSONAL_API_KEY` | For development | PostHog personal API key (`phx_`). Gives the wizard PostHog API and MCP access in CI mode, `--e2e` and `mcp-stub:record`. |
 | `POSTHOG_WIZARD_PROJECT_ID` | For `--e2e` | The project the personal API key is scoped to. Used by `pnpm wizard-ci --e2e` (or pass `--project-id`) and `pnpm wizard-ci-snapshots`. |
-| `POSTHOG_GATEWAY_TOKEN` | For evaluation and `--e2e` | AI gateway key for model calls: a `phs_` project secret key with the `llm_gateway:read` scope. The PR evaluator and `pnpm wizard-ci --e2e` fail without it. |
+| `POSTHOG_GATEWAY_TOKEN` | For development | The gateway service key for model calls: a `phs_` project secret key with the `llm_gateway:read` scope. It's in 1Password. Set it to `op://<vault>/<item>/credential` and run with `op run --env-file .env -- pnpm ...`. The PR evaluator and `pnpm wizard-ci --e2e` fail without it. |
 | `POSTHOG_REGION` | No | PostHog region (`us` or `eu`). Defaults to `us`. `wizard-run` and `benchmark` also take a `--region` flag. The workflow takes a `posthog_region` input. |
 
 These `*_PATH` vars say **where the repos live** — which binary and which
 servers get started. They're separate from the wizard's own `--local-*` flags,
 which say **where a wizard run points**. See
 [Pointing at prod vs. local backends](#pointing-at-prod-vs-local-backends).
+
+When you develop, pass both keys: the personal API key for MCP access and the
+gateway service key from 1Password. For example:
+
+```bash
+op run --env-file .env -- pnpm wizard-ci <app-path> --e2e
+```
 
 Make sure you've set up and installed dependencies for all required repos.
 
@@ -291,7 +298,7 @@ no gateway to return, so local PostHog needs the local AI gateway too.
 7. Log in at http://localhost:8010/login with the "Login tools" panel. The
    default user is `test@posthog.com`.
 
-No manual key and no wizard build change are needed. The wizard build reads
+Interactive runs against local PostHog mint their own gateway token, and no wizard build change is needed. The wizard build reads
 `WIZARD_BUILD_NODE_ENV` (`tsdown.config.ts`). The `wizard-build-dev` pane already
 runs `WIZARD_BUILD_NODE_ENV=development pnpm build:watch`.
 
