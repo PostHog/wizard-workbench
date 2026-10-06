@@ -1,6 +1,8 @@
 <script lang="ts">
   import { applyAction, enhance } from "$app/forms"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import { posthogLog } from "$lib/posthog_logs"
+  import posthog from "posthog-js"
   import "../../../../app.css"
 
   interface User {
@@ -38,6 +40,10 @@
       await update({ reset: false })
       await applyAction(result)
       loading = false
+      if (result.type === "success") {
+        posthog.capture("profile_created")
+        posthogLog.profileCreated()
+      }
     }
   }
 </script>

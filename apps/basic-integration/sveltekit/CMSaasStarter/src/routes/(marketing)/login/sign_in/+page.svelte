@@ -2,6 +2,7 @@
   import { Auth } from "@supabase/auth-ui-svelte"
   import { sharedAppearance, oauthProviders } from "../login_config"
   import { goto } from "$app/navigation"
+  import posthog from "posthog-js"
   import { onMount } from "svelte"
   import { page } from "$app/stores"
 
@@ -9,9 +10,15 @@
   let { supabase } = data
 
   onMount(() => {
-    supabase.auth.onAuthStateChange((event) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       // Redirect to account after successful login
-      if (event == "SIGNED_IN") {
+      if (event == "SIGNED_IN" && session?.user.id) {
+        posthog.identify(
+          session.user.id,
+          session.user.email ? { email: session.user.email } : undefined,
+        )
+        posthog.capture("user_signed_in")
+
         // Delay needed because order of callback not guaranteed.
         // Give the layout callback priority to update state or
         // we'll just bounch back to login when /account tries to load
@@ -20,6 +27,8 @@
         }, 1)
       }
     })
+
+    return () => authListener.subscription.unsubscribe()
   })
 </script>
 
