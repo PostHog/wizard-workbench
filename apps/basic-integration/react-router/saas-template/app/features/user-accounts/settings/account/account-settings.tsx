@@ -4,6 +4,7 @@ import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconUser } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
+import { usePostHog } from "posthog-js/react";
 
 import { UPDATE_USER_ACCOUNT_INTENT } from "./account-settings-constants";
 import { updateUserAccountFormSchema } from "./account-settings-schemas";
@@ -49,6 +50,11 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
   );
 
   const navigation = useNavigation();
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    globalThis.ENV.VITE_PUBLIC_POSTHOG_HOST &&
+      globalThis.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN,
+  );
   const isSubmitting =
     navigation.state === "submitting" &&
     navigation.formData?.get("intent") === UPDATE_USER_ACCOUNT_INTENT;
@@ -58,6 +64,12 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
       encType="multipart/form-data"
       method="POST"
       {...form.props}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        if (!event.defaultPrevented && isPostHogConfigured) {
+          posthog?.capture("account_settings_saved");
+        }
+      }}
       aria-describedby={
         form.errors && form.errors.length > 0
           ? `${form.descriptionId} ${form.errorId}`

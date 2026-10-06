@@ -4,6 +4,7 @@ import type { ComponentProps } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, href, Link, useNavigation } from "react-router";
+import { usePostHog } from "posthog-js/react";
 
 import type { Interval, Tier } from "./billing-constants";
 import {
@@ -47,6 +48,11 @@ export function CreateSubscriptionModalContent({
     keyPrefix: "noCurrentPlanModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    globalThis.ENV.VITE_PUBLIC_POSTHOG_HOST &&
+      globalThis.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN,
+  );
 
   const navigation = useNavigation();
   const isSubmitting =
@@ -97,6 +103,18 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () => {
+        if (isPostHogConfigured) {
+          posthog?.logger.info("subscription checkout started", {
+            billing_interval: interval,
+            tier,
+          });
+          posthog?.capture("subscription_checkout_started", {
+            billing_interval: interval,
+            tier,
+          });
+        }
+      },
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };

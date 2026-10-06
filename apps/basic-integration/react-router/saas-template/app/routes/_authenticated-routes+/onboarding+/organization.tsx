@@ -3,6 +3,7 @@ import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconBuilding } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { data, Form, useNavigation } from "react-router";
+import { usePostHog } from "posthog-js/react";
 
 import type { Route } from "./+types/organization";
 import {
@@ -87,6 +88,11 @@ export default function OrganizationOnboardingRoute({
     },
   );
   const navigation = useNavigation();
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    globalThis.ENV.VITE_PUBLIC_POSTHOG_HOST &&
+      globalThis.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN,
+  );
   const isSubmitting = navigation.state === "submitting";
 
   return (
@@ -94,6 +100,12 @@ export default function OrganizationOnboardingRoute({
       encType="multipart/form-data"
       method="POST"
       {...form.props}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        if (!event.defaultPrevented && isPostHogConfigured) {
+          posthog?.capture("onboarding_organization_submitted");
+        }
+      }}
       aria-describedby={
         form.errors && form.errors.length > 0
           ? `${form.descriptionId} ${form.errorId}`

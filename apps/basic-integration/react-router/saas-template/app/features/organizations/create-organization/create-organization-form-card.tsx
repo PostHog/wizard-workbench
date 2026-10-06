@@ -4,6 +4,7 @@ import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconBuilding } from "@tabler/icons-react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, href, Link } from "react-router";
+import { usePostHog } from "posthog-js/react";
 
 import { CREATE_ORGANIZATION_INTENT } from "./create-organization-constants";
 import { createOrganizationFormSchema } from "./create-organization-schemas";
@@ -45,6 +46,11 @@ export function CreateOrganizationFormCard({
   lastResult,
 }: CreateOrganizationFormCardProps) {
   const { t } = useTranslation("organizations", { keyPrefix: "new.form" });
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    globalThis.ENV.VITE_PUBLIC_POSTHOG_HOST &&
+      globalThis.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN,
+  );
   const { form, fields } = useForm(
     coerceFormValue(createOrganizationFormSchema),
     {
@@ -61,7 +67,17 @@ export function CreateOrganizationFormCard({
         </CardHeader>
 
         <CardContent>
-          <Form encType="multipart/form-data" method="POST" {...form.props}>
+          <Form
+            encType="multipart/form-data"
+            method="POST"
+            {...form.props}
+            onSubmit={(event) => {
+              form.props.onSubmit?.(event);
+              if (!event.defaultPrevented && isPostHogConfigured) {
+                posthog?.capture("organization_created");
+              }
+            }}
+          >
             <FieldSet
               className="flex flex-col gap-6"
               disabled={isCreatingOrganization}

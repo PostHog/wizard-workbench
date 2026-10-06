@@ -3,6 +3,7 @@ import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
+import { usePostHog } from "posthog-js/react";
 
 import { UPDATE_ORGANIZATION_INTENT } from "./general-settings-constants";
 import { updateOrganizationFormSchema } from "./general-settings-schemas";
@@ -77,6 +78,11 @@ export function GeneralOrganizationSettings({
   );
 
   const navigation = useNavigation();
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    globalThis.ENV.VITE_PUBLIC_POSTHOG_HOST &&
+      globalThis.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN,
+  );
   const isSubmitting =
     navigation.state === "submitting" &&
     navigation.formData?.get("intent") === UPDATE_ORGANIZATION_INTENT;
@@ -86,6 +92,12 @@ export function GeneralOrganizationSettings({
       encType="multipart/form-data"
       method="POST"
       {...form.props}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        if (!event.defaultPrevented && isPostHogConfigured) {
+          posthog?.capture("organization_settings_saved");
+        }
+      }}
       aria-describedby={
         form.errors && form.errors.length > 0
           ? `${form.descriptionId} ${form.errorId}`

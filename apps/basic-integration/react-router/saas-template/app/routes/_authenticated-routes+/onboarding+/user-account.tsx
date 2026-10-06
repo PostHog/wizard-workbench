@@ -3,6 +3,7 @@ import { coerceFormValue } from "@conform-to/zod/v4/future";
 import { IconUser } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { data, Form, useNavigation } from "react-router";
+import { usePostHog } from "posthog-js/react";
 
 import type { Route } from "./+types/user-account";
 import {
@@ -72,10 +73,25 @@ export default function UserAccountOnboardingRoute({
     },
   );
   const navigation = useNavigation();
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    globalThis.ENV.VITE_PUBLIC_POSTHOG_HOST &&
+      globalThis.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN,
+  );
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <Form encType="multipart/form-data" method="POST" {...form.props}>
+    <Form
+      encType="multipart/form-data"
+      method="POST"
+      {...form.props}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        if (!event.defaultPrevented && isPostHogConfigured) {
+          posthog?.capture("onboarding_user_account_submitted");
+        }
+      }}
+    >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>
           <div className="flex flex-col gap-1">

@@ -4,7 +4,35 @@ import Fetch from "i18next-fetch-backend";
 import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { I18nextProvider, initReactI18next } from "react-i18next";
+import posthog from "posthog-js";
+import { PostHogErrorBoundary, PostHogProvider } from "posthog-js/react";
 import { HydratedRouter } from "react-router/dom";
+
+const posthogProjectToken = window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN;
+const posthogHost = window.ENV.VITE_PUBLIC_POSTHOG_HOST;
+
+if (!posthogProjectToken || !posthogHost) {
+  if (import.meta.env.DEV) {
+    const missingVariable = posthogProjectToken
+      ? "VITE_PUBLIC_POSTHOG_HOST"
+      : "VITE_PUBLIC_POSTHOG_PROJECT_TOKEN";
+    throw new Error(
+      `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+    );
+  }
+} else {
+  posthog.init(posthogProjectToken, {
+    api_host: posthogHost,
+    defaults: "2026-05-30",
+    logs: {
+      environment: import.meta.env.MODE,
+      serviceName: "saas-template-web",
+    },
+  });
+  posthog.logger.info("posthog log capture initialized", {
+    runtime: "browser",
+  });
+}
 
 async function hydrate() {
   await i18next
@@ -23,7 +51,11 @@ async function hydrate() {
       document,
       <I18nextProvider i18n={i18next}>
         <StrictMode>
-          <HydratedRouter />
+          <PostHogProvider client={posthog}>
+            <PostHogErrorBoundary>
+              <HydratedRouter />
+            </PostHogErrorBoundary>
+          </PostHogProvider>
         </StrictMode>
       </I18nextProvider>,
     );

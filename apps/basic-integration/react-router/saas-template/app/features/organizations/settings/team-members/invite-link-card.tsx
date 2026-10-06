@@ -7,6 +7,7 @@ import copyToClipboard from "copy-to-clipboard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
+import { usePostHog } from "posthog-js/react";
 
 import {
   CREATE_NEW_INVITE_LINK_INTENT,
@@ -39,6 +40,11 @@ export function InviteLinkCard({
   });
 
   const [linkCopied, setLinkCopied] = useState(false);
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    globalThis.ENV.VITE_PUBLIC_POSTHOG_HOST &&
+      globalThis.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN,
+  );
 
   // Focus management, so that the input's auto focus the link if it changes.
   const mounted = useRef<boolean | null>(null);
@@ -112,6 +118,9 @@ export function InviteLinkCard({
                 )}
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
+                  if (isPostHogConfigured) {
+                    posthog?.capture("invite_link_copied");
+                  }
                   setLinkCopied(true);
                 }}
                 size="icon"
@@ -166,6 +175,11 @@ export function InviteLinkCard({
                   className="w-full"
                   disabled={disabled}
                   name="intent"
+                  onClick={() => {
+                    if (isPostHogConfigured) {
+                      posthog?.capture("invite_link_created");
+                    }
+                  }}
                   type="submit"
                   value="createNewInviteLink"
                 >
@@ -184,6 +198,11 @@ export function InviteLinkCard({
                 <Button
                   disabled={isDeactivatingLink}
                   name="intent"
+                  onClick={() => {
+                    if (isPostHogConfigured) {
+                      posthog?.capture("invite_link_deactivated");
+                    }
+                  }}
                   type="submit"
                   value="deactivateInviteLink"
                   variant="outline"
@@ -220,6 +239,11 @@ export function InviteLinkCard({
               className="w-full"
               disabled={disabled}
               name="intent"
+              onClick={() => {
+                if (isPostHogConfigured) {
+                  posthog?.capture("invite_link_created");
+                }
+              }}
               type="submit"
               value="createNewInviteLink"
             >

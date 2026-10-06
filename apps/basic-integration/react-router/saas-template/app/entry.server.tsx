@@ -22,6 +22,31 @@ const oneSecond = 1000;
 const nonceLength = 16;
 const MODE = process.env.NODE_ENV ?? "development";
 
+function getPostHogCspSources(): {
+  apiHost?: string;
+  assetsHost?: string;
+} {
+  const posthogHost = process.env.VITE_PUBLIC_POSTHOG_HOST;
+
+  if (!posthogHost) {
+    return {};
+  }
+
+  try {
+    const url = new URL(posthogHost);
+    const domain = url.hostname.split(".").slice(-2).join(".");
+
+    return {
+      apiHost: url.origin,
+      assetsHost: `https://*.${domain}`,
+    };
+  } catch {
+    return {};
+  }
+}
+
+const posthogCspSources = getPostHogCspSources();
+
 let mockServerInitialized = false;
 
 async function initializeMockServer() {
@@ -107,6 +132,7 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    posthogCspSources.apiHost,
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],
@@ -120,7 +146,9 @@ export default async function handleRequest(
                     "'strict-dynamic'",
                     "'self'",
                     `'nonce-${nonce}'`,
+                    posthogCspSources.assetsHost,
                   ],
+                  "worker-src": ["'self'", "blob:"],
                   // Inline event handlers with nonce
                   "script-src-attr": [`'nonce-${nonce}'`],
                 },

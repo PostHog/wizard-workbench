@@ -5,6 +5,7 @@ import {
 } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { Form, href, Link } from "react-router";
+import { usePostHog } from "posthog-js/react";
 import { useHydrated } from "remix-utils/use-hydrated";
 
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
@@ -34,6 +35,11 @@ export type NavUserProps = {
 
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar();
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    globalThis.ENV.VITE_PUBLIC_POSTHOG_HOST &&
+      globalThis.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN,
+  );
   const { t } = useTranslation("organizations", {
     keyPrefix: "layout.navUser",
   });
@@ -115,7 +121,14 @@ export function NavUser({ user }: NavUserProps) {
 
             <DropdownMenuSeparator />
 
-            <Form action="/logout" method="post" replace>
+            <Form
+              action="/logout"
+              method="post"
+              onSubmit={() => {
+                if (isPostHogConfigured) posthog?.reset();
+              }}
+              replace
+            >
               <DropdownMenuItem
                 render={
                   <button

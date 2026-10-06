@@ -3,6 +3,7 @@ import { useForm } from "@conform-to/react/future";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
+import { usePostHog } from "posthog-js/react";
 import { useHydrated } from "remix-utils/use-hydrated";
 
 import { INVITE_BY_EMAIL_INTENT } from "./team-members-constants";
@@ -59,6 +60,11 @@ export function EmailInviteCard({
   }, [successEmail, intent]);
 
   const hydrated = useHydrated();
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    globalThis.ENV.VITE_PUBLIC_POSTHOG_HOST &&
+      globalThis.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN,
+  );
   const disabled = isInvitingByEmail || organizationIsFull;
 
   return (
@@ -70,7 +76,16 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(event) => {
+            form.props.onSubmit?.(event);
+            if (!event.defaultPrevented && isPostHogConfigured) {
+              posthog?.capture("team_invite_submitted");
+            }
+          }}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">
