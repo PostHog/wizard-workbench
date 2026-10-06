@@ -1,3 +1,5 @@
+import { posthogLog } from '~/server/utils/posthog-logs'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -5,6 +7,14 @@ export default defineEventHandler(async (event) => {
 
     // Validate input
     if (!username?.trim() || !password?.trim()) {
+      posthogLog.emit({
+        severityText: 'WARN',
+        body: 'auth_login_rejected',
+        attributes: {
+          auth_action: 'login',
+          rejection_reason: 'missing_credentials',
+        },
+      })
       throw createError({
         statusCode: 400,
         message: 'Username and password are required',
@@ -19,6 +29,14 @@ export default defineEventHandler(async (event) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
+    })
+
+    posthogLog.emit({
+      severityText: 'INFO',
+      body: 'auth_login_completed',
+      attributes: {
+        auth_action: 'login',
+      },
     })
 
     return {
