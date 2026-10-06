@@ -5,6 +5,7 @@ import type { Route } from './+types/buy-followers'
 import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { addFollowers, addPurchasedFollowers } from '@/lib/utils/localStorage'
+import { getPostHog, posthogLogger } from '@/lib/posthog.client'
 import cn from '@/lib/utils/cn'
 
 export const meta: Route.MetaFunction = () => {
@@ -23,17 +24,44 @@ export default function BuyFollowers() {
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
 
+  const handlePackageSelection = async (index: number) => {
+    const pkg = followerPackages[index]
+    setSelectedPackage(index)
+
+    const posthog = await getPostHog()
+    posthog?.capture('follower_package_selected', {
+      package_followers: pkg.amount + pkg.bonus,
+      package_price: pkg.price,
+    })
+    await posthogLogger.info('follower package selected', {
+      event: 'follower_package_selected',
+      package_followers: pkg.amount + pkg.bonus,
+      package_price: pkg.price,
+    })
+  }
+
   const handlePurchase = () => {
     if (selectedPackage === null) return
     setPurchased(true)
     
-    setTimeout(() => {
+    setTimeout(async () => {
       const pkg = followerPackages[selectedPackage]
       const totalFollowers = pkg.amount + pkg.bonus
       
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+
+      const posthog = await getPostHog()
+      posthog?.capture('fake_followers_purchased', {
+        purchased_followers: totalFollowers,
+        package_price: pkg.price,
+      })
+      await posthogLogger.info('fake follower purchase completed', {
+        event: 'fake_followers_purchased',
+        purchased_followers: totalFollowers,
+        package_price: pkg.price,
+      })
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
@@ -75,7 +103,7 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => void handlePackageSelection(index)}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected

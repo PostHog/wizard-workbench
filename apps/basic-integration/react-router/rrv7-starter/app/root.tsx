@@ -8,6 +8,7 @@ import {
   useOutlet,
   type MetaFunction,
 } from 'react-router'
+import { useEffect } from 'react'
 import gsap from 'gsap'
 
 import type { Route } from './+types/root'
@@ -16,7 +17,9 @@ import { RouteTransitionManager } from '@joycostudio/transitions'
 import routes from './routes'
 import { promisifyGsap } from '@/lib/gsap'
 import { Header } from '@/components/header'
+import { PostHogInitializer } from '@/components/posthog-initializer'
 import Footer from '@/components/footer'
+import { getPostHog } from '@/lib/posthog.client'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
@@ -89,7 +92,9 @@ export default function App() {
   const location = useLocation()
 
   return (
-    <RouteTransitionManager
+    <>
+      <PostHogInitializer />
+      <RouteTransitionManager
       appear
       routes={routes}
       pathname={location.pathname}
@@ -127,11 +132,18 @@ export default function App() {
           {element}
         </main>
       )}
-    </RouteTransitionManager>
+      </RouteTransitionManager>
+    </>
   )
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  useEffect(() => {
+    if (error instanceof Error) {
+      void getPostHog().then((posthog) => posthog?.captureException(error))
+    }
+  }, [error])
+
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined
