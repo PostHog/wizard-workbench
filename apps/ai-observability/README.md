@@ -27,7 +27,7 @@ Each app exists to test one thing the others don't:
 - `google-adk/node-weather` — framework plugin; identity comes from ADK's own ids
 - `opentelemetry/go-weather` — Go; no wrapper SDK exists, so the posthog-go OTel bridge
 
-The five weather apps implement the identical `get_weather` round trip from
+The six weather apps implement the identical `get_weather` round trip from
 [Anthropic's tool-use docs](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview#how-tool-use-works),
 so a diff between any two isolates one variable: the SDK, the language, or the
 conversation structure.

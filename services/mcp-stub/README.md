@@ -49,7 +49,7 @@ answer would hide the drift these tests exist to find.
 Streamable HTTP, stateless, on `$MCP_STUB_PORT` (default 8799) at `/mcp`.
 
 That matches both of the wizard's clients. The pi harness uses
-`StreamableHTTPClientTransport` in `src/lib/agent/runner/harness/pi/mcp.ts`,
+`StreamableHTTPClientTransport` in `src/agent/runner/harness/pi/mcp.ts`,
 with the same URL-plus-bearer config it hands to `pi-mcp-adapter`. The anthropic
 harness hands that config to the Claude Agent SDK, which connects from the CLI
 it spawns. Stateless means a fresh `Server` and transport per request and no
