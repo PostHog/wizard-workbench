@@ -5,6 +5,7 @@ class Cards::StepsController < ApplicationController
 
   def create
     @step = @card.steps.create!(step_params)
+    capture_posthog_event("step_created")
 
     respond_to do |format|
       format.turbo_stream

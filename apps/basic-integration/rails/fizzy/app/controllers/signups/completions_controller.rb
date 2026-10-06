@@ -11,6 +11,8 @@ class Signups::CompletionsController < ApplicationController
     @signup = Signup.new(signup_params)
 
     if @signup.complete
+      capture_posthog_event("account_created", user: @signup.user)
+      capture_posthog_log("Account signup completed")
       welcome_to_account
     else
       invalid_signup

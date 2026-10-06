@@ -24,6 +24,10 @@ class User < ApplicationRecord
     end
   end
 
+  def posthog_distinct_id
+    id.to_s
+  end
+
   def setup?
     name != identity.email_address
   end
