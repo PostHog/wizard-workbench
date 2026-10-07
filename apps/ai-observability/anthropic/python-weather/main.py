@@ -2,13 +2,28 @@
 registered `get_weather` tool before answering, so one question is either one
 model call or two with a tool execution between them."""
 
+import atexit
 import os
+import uuid
 
 import anthropic
+from posthog import Posthog
+from posthog.ai.anthropic import Anthropic
 
 from weather import get_weather
 
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+posthog_client = Posthog(
+    os.environ["POSTHOG_API_KEY"],
+    host=os.environ["POSTHOG_HOST"],
+    privacy_mode=False,
+    enable_exception_autocapture=True,
+)
+atexit.register(posthog_client.shutdown)
+
+client = Anthropic(
+    api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
+    posthog_client=posthog_client,
+)
 
 MODEL = "claude-opus-5"
 
@@ -40,6 +55,8 @@ def _text(response: anthropic.types.Message) -> str:
 
 def ask(question: str) -> str:
     """Answer one question, running the tool if the model asks for it."""
+    session_id = str(uuid.uuid4())
+    trace_id = str(uuid.uuid4())
     messages: list[dict] = [{"role": "user", "content": question}]
 
     response = client.messages.create(
@@ -48,6 +65,9 @@ def ask(question: str) -> str:
         tools=TOOLS,
         tool_choice=TOOL_CHOICE,
         messages=messages,
+        posthog_distinct_id=USER_ID,
+        posthog_trace_id=trace_id,
+        posthog_properties={"$ai_session_id": session_id},
     )
 
     tool_use = next((b for b in response.content if b.type == "tool_use"), None)
@@ -72,6 +92,9 @@ def ask(question: str) -> str:
         tools=TOOLS,
         tool_choice=TOOL_CHOICE,
         messages=messages,
+        posthog_distinct_id=USER_ID,
+        posthog_trace_id=trace_id,
+        posthog_properties={"$ai_session_id": session_id},
     )
     return _text(followup)
 
