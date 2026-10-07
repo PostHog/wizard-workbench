@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { Observable, of, tap } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PostHogLogService, PostHogService } from '@core/services';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,9 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  private readonly _credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly posthogLogger = inject(PostHogLogService);
 
   /**
    * Authenticates the user.
@@ -41,9 +44,34 @@ export class AuthenticationService {
       firstName,
       lastName,
     });
+    const currentCredentials = this._credentialsService.credentials();
+    if (currentCredentials && currentCredentials.id !== credentials.id) {
+      this.posthogService.posthog.reset();
+    }
+
     this._credentialsService.setCredentials(credentials, context.remember);
+    this.identify(credentials);
+    this.posthogService.posthog.capture('login_succeeded');
+    this.posthogLogger.info('authentication_completed', { authentication_method: 'password' });
 
     return of(credentials);
+  }
+
+  /**
+   * Identifies an authenticated user after PostHog has been initialized.
+   */
+  identify(credentials: Credentials | null): void {
+    if (!credentials?.id) {
+      return;
+    }
+
+    this.posthogService.posthog.identify(credentials.id, {
+      username: credentials.username,
+      email: credentials.email,
+      first_name: credentials.firstName,
+      last_name: credentials.lastName,
+      roles: credentials.roles,
+    });
   }
 
   /**
@@ -86,6 +114,11 @@ export class AuthenticationService {
    * @return True if the user was logged out successfully.
    */
   logout(): Observable<any> {
-    return of(true);
+    return of(true).pipe(
+      tap(() => {
+        this.posthogService.posthog.capture('logout_completed');
+        this.posthogService.posthog.reset();
+      }),
+    );
   }
 }
