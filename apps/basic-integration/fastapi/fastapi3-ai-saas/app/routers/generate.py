@@ -7,8 +7,11 @@ from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
+from app.posthog import get_posthog_client
+from app.posthog_logs import get_posthog_logger
 
 router = APIRouter(prefix="/api")
+posthog_logger = get_posthog_logger()
 
 
 # Credit costs per generation type
@@ -54,6 +57,25 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        client = get_posthog_client()
+        if client is not None:
+            client.capture(
+                "content_generation_blocked",
+                properties={
+                    "generation_type": request.generation_type,
+                    "credits_needed": credits_needed,
+                    "credits_available": current_user.credits,
+                },
+            )
+        posthog_logger.warning(
+            "content generation blocked",
+            extra={
+                "event": "content_generation_blocked",
+                "generation_type": request.generation_type,
+                "credits_needed": credits_needed,
+                "credits_available": current_user.credits,
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -74,6 +96,28 @@ async def generate_content(
         prompt=request.prompt,
         result=mock_content,
         credits_used=credits_needed,
+    )
+
+    client = get_posthog_client()
+    if client is not None:
+        client.capture(
+            "content_generated",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+                "prompt_length": len(request.prompt),
+            },
+        )
+    posthog_logger.info(
+        "content generation completed",
+        extra={
+            "event": "content_generation_completed",
+            "generation_type": request.generation_type,
+            "credits_used": credits_needed,
+            "credits_remaining": current_user.credits,
+            "prompt_length": len(request.prompt),
+        },
     )
 
     return GenerateResponse(
