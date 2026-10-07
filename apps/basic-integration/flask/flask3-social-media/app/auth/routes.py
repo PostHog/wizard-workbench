@@ -3,7 +3,7 @@ from urllib.parse import urlsplit
 from flask_login import login_user, logout_user, current_user
 from flask_babel import _
 import sqlalchemy as sa
-from app import db
+from app import db, identify_posthog_user, posthog_client
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, \
     ResetPasswordRequestForm, ResetPasswordForm
@@ -23,6 +23,12 @@ def login():
             flash(_('Invalid username or password'))
             return redirect(url_for('auth.login'))
         login_user(user, remember=form.remember_me.data)
+        identify_posthog_user(user, set_person_properties=True)
+        if posthog_client:
+            posthog_client.capture('user_logged_in', properties={
+                'login_method': 'password',
+                'remember_me': form.remember_me.data,
+            })
         next_page = request.args.get('next')
         if not next_page or urlsplit(next_page).netloc != '':
             next_page = url_for('main.index')
@@ -32,6 +38,8 @@ def login():
 
 @bp.route('/logout')
 def logout():
+    if current_user.is_authenticated and posthog_client:
+        posthog_client.capture('user_logged_out')
     logout_user()
     return redirect(url_for('main.index'))
 
@@ -46,6 +54,11 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
+        identify_posthog_user(user, set_person_properties=True)
+        if posthog_client:
+            posthog_client.capture('user_registered', properties={
+                'registration_method': 'web_form',
+            })
         flash(_('Congratulations, your registration is complete!'))
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html', title=_('Register'),
