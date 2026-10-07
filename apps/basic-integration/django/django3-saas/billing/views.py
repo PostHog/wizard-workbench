@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import timedelta
+from accounts.apps import posthog_client, posthog_logs_logger
 from .models import Plan, Subscription
 
 # Check if Stripe is configured
@@ -55,6 +56,18 @@ def subscribe(request, plan_slug):
                     },
                     allow_promotion_codes=True,
                 )
+                if posthog_client is not None:
+                    posthog_client.capture('subscription_checkout_started', properties={
+                        'plan_slug': plan.slug,
+                        'billing_interval': plan.interval,
+                    })
+                posthog_logs_logger.info(
+                    'subscription checkout started',
+                    extra={
+                        'event': 'subscription.checkout_started',
+                        'billing_interval': plan.interval,
+                    },
+                )
                 return redirect(checkout_session.url)
             except Exception as e:
                 messages.error(request, f'Payment error: {str(e)}')
@@ -70,6 +83,12 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            if posthog_client is not None:
+                posthog_client.capture('subscription_started', properties={
+                    'plan_slug': plan.slug,
+                    'billing_interval': plan.interval,
+                    'subscription_source': 'demo',
+                })
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -130,6 +149,12 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+                if posthog_client is not None:
+                    posthog_client.capture('subscription_plan_changed', properties={
+                        'plan_slug': plan.slug,
+                        'billing_interval': plan.interval,
+                        'subscription_source': 'stripe',
+                    })
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
                 messages.error(request, f'Error changing plan: {str(e)}')
@@ -137,6 +162,12 @@ def change_plan(request, plan_slug):
             # Demo mode
             subscription.plan = plan
             subscription.save()
+            if posthog_client is not None:
+                posthog_client.capture('subscription_plan_changed', properties={
+                    'plan_slug': plan.slug,
+                    'billing_interval': plan.interval,
+                    'subscription_source': 'demo',
+                })
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -171,6 +202,12 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        if posthog_client is not None:
+            posthog_client.capture('subscription_canceled', properties={
+                'subscription_source': (
+                    'demo' if subscription.stripe_subscription_id.startswith('sub_demo_') else 'stripe'
+                ),
+            })
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -269,6 +306,17 @@ def _handle_checkout_completed(session):
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
     )
+
+    if posthog_client is not None:
+        posthog_client.capture(
+            'subscription_started',
+            distinct_id=str(user.pk),
+            properties={
+                'plan_slug': plan.slug,
+                'billing_interval': plan.interval,
+                'subscription_source': 'stripe',
+            },
+        )
 
 
 def _handle_subscription_updated(subscription_data):

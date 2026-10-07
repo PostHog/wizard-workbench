@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
+from accounts.apps import posthog_client, posthog_logs_logger
 from .models import Project, ActivityLog
 from .forms import ProjectForm
 
@@ -60,6 +61,18 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            if posthog_client is not None:
+                posthog_client.capture('project_created', properties={
+                    'is_active': project.is_active,
+                })
+            posthog_logs_logger.info(
+                'project creation completed',
+                extra={
+                    'event': 'project.creation_completed',
+                    'is_active': project.is_active,
+                },
+            )
+
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +96,11 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            if posthog_client is not None:
+                posthog_client.capture('project_updated', properties={
+                    'is_active': project.is_active,
+                })
+
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -104,6 +122,9 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+
+        if posthog_client is not None:
+            posthog_client.capture('project_deleted')
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
