@@ -40,6 +40,7 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.compose.jetchat.auth.LoginScreen
 import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.launch
 
 /**
@@ -83,6 +84,11 @@ class NavActivity : AppCompatActivity() {
                         LoginScreen(
                             onLogin = { username, password ->
                                 viewModel.login(username, password)
+                                capturePostHogEvent("user_logged_in")
+                                PostHogAppLogger.info(
+                                    "demo_login_completed",
+                                    mapOf("auth_flow" to "demo"),
+                                )
                             },
                         )
                     } else {
@@ -106,6 +112,8 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onLogoutClicked = {
+                                capturePostHogEvent("user_logged_out")
+                                PostHogAppLogger.info("demo_logout_completed")
                                 viewModel.logout()
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
@@ -129,6 +137,15 @@ class NavActivity : AppCompatActivity() {
     /**
      * See https://issuetracker.google.com/142847973
      */
+    private fun capturePostHogEvent(event: String) {
+        if (
+            !BuildConfig.POSTHOG_PROJECT_TOKEN.isNullOrBlank() &&
+            !BuildConfig.POSTHOG_HOST.isNullOrBlank()
+        ) {
+            PostHogAndroid.getInstance().capture(event)
+        }
+    }
+
     private fun findNavController(): NavController {
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment

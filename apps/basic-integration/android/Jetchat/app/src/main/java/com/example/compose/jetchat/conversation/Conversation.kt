@@ -86,11 +86,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.compose.jetchat.BuildConfig
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
+import com.example.compose.jetchat.PostHogAppLogger
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.launch
 
 /**
@@ -134,8 +137,13 @@ fun ConversationContent(
                     return false
                 }
 
+                val messageContent = clipData.getItemAt(0).text.toString()
+                captureMessageSent(
+                    deliveryMethod = "drag_and_drop",
+                    characterCount = messageContent.length,
+                )
                 uiState.addMessage(
-                    Message(authorMe, clipData.getItemAt(0).text.toString(), timeNow),
+                    Message(authorMe, messageContent, timeNow),
                 )
 
                 return true
@@ -200,6 +208,10 @@ fun ConversationContent(
             )
             UserInput(
                 onMessageSent = { content ->
+                    captureMessageSent(
+                        deliveryMethod = "text",
+                        characterCount = content.length,
+                    )
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )
@@ -558,6 +570,28 @@ fun ChannelBarPrev() {
 @Composable
 fun DayHeaderPrev() {
     DayHeader("Aug 6")
+}
+
+private fun captureMessageSent(deliveryMethod: String, characterCount: Int) {
+    if (
+        !BuildConfig.POSTHOG_PROJECT_TOKEN.isNullOrBlank() &&
+        !BuildConfig.POSTHOG_HOST.isNullOrBlank()
+    ) {
+        PostHogAndroid.getInstance().capture(
+            "message_sent",
+            mapOf(
+                "delivery_method" to deliveryMethod,
+                "character_count" to characterCount,
+            ),
+        )
+        PostHogAppLogger.info(
+            "message_delivery_completed",
+            mapOf(
+                "delivery_method" to deliveryMethod,
+                "character_count" to characterCount,
+            ),
+        )
+    }
 }
 
 private val JumpToBottomThreshold = 56.dp
