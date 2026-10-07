@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import { isPostHogConfigured, posthog } from '../posthog.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
 
@@ -84,20 +85,32 @@ export async function renderSettings() {
     document.getElementById('theme-select').addEventListener('change', async (e) => {
       await api.updateSettings({ theme: e.target.value });
       document.body.dataset.theme = e.target.value;
+      if (isPostHogConfigured) {
+        posthog.capture('theme_changed', { theme: e.target.value });
+      }
     });
 
     // Notifications
     document.getElementById('email-notif').addEventListener('change', async (e) => {
       await api.updateSettings({ emailNotifications: e.target.checked });
+      if (isPostHogConfigured) {
+        posthog.capture('email_notifications_changed', { enabled: e.target.checked });
+      }
     });
 
     document.getElementById('weekly-digest').addEventListener('change', async (e) => {
       await api.updateSettings({ weeklyDigest: e.target.checked });
+      if (isPostHogConfigured) {
+        posthog.capture('weekly_digest_changed', { enabled: e.target.checked });
+      }
     });
 
     // Reset
     document.getElementById('reset-data-btn').addEventListener('click', () => {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
+        if (isPostHogConfigured) {
+          posthog.capture('data_reset');
+        }
         store.reset();
         store.login(user.email);
         renderSettings();
