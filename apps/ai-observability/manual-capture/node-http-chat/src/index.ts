@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { lookupOrder } from './orders.js'
 import { posthog } from './posthog.js'
 
@@ -18,6 +19,14 @@ type Completion = {
     toolCalls: ToolCall[]
     promptTokens: number
     completionTokens: number
+    spanId: string
+}
+
+type AiContext = {
+    traceId: string
+    sessionId: string
+    distinctId: string
+    parentId?: string
 }
 
 const TOOLS = [
@@ -35,7 +44,8 @@ const TOOLS = [
     },
 ]
 
-async function complete(messages: Message[]): Promise<Completion> {
+async function complete(messages: Message[], context: AiContext): Promise<Completion> {
+    const startedAt = performance.now()
     const res = await fetch(LLM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,11 +59,42 @@ async function complete(messages: Message[]): Promise<Completion> {
         usage?: { prompt_tokens: number; completion_tokens: number }
     }
     const message = body.choices[0]?.message
+    const text = message?.content ?? ''
+    const toolCalls = message?.tool_calls ?? []
+    const spanId = randomUUID()
+
+    posthog.capture({
+        distinctId: context.distinctId,
+        event: '$ai_generation',
+        properties: {
+            $ai_trace_id: context.traceId,
+            $ai_session_id: context.sessionId,
+            $ai_span_id: spanId,
+            $ai_parent_id: context.parentId ?? context.traceId,
+            $ai_model: MODEL,
+            $ai_provider: 'ollama',
+            $ai_request_url: LLM_URL,
+            $ai_input: messages,
+            $ai_input_tokens: body.usage?.prompt_tokens ?? 0,
+            $ai_output_choices: [
+                {
+                    role: 'assistant',
+                    content: text,
+                    ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {}),
+                },
+            ],
+            $ai_output_tokens: body.usage?.completion_tokens ?? 0,
+            $ai_latency: (performance.now() - startedAt) / 1000,
+            $ai_tools: TOOLS,
+        },
+    })
+
     return {
-        text: message?.content ?? '',
-        toolCalls: message?.tool_calls ?? [],
+        text,
+        toolCalls,
         promptTokens: body.usage?.prompt_tokens ?? 0,
         completionTokens: body.usage?.completion_tokens ?? 0,
+        spanId,
     }
 }
 
@@ -81,20 +122,44 @@ class Thread {
             { role: 'user', content: question },
         ]
 
-        let result = await complete(messages)
+        const aiContext = {
+            traceId: randomUUID(),
+            sessionId: this.threadId,
+            distinctId: this.userId,
+        }
+        let result = await complete(messages, aiContext)
 
         if (result.toolCalls.length > 0) {
+            const generationSpanId = result.spanId
+            let parentId = generationSpanId
             messages.push({ role: 'assistant', content: '', tool_calls: result.toolCalls })
             for (const call of result.toolCalls) {
+                const startedAt = performance.now()
                 const args = JSON.parse(call.function.arguments) as { user_id?: string }
                 const output = lookupOrder(args.user_id ?? this.userId)
+                const spanId = randomUUID()
+
+                posthog.capture({
+                    distinctId: this.userId,
+                    event: '$ai_span',
+                    properties: {
+                        $ai_trace_id: aiContext.traceId,
+                        $ai_session_id: aiContext.sessionId,
+                        $ai_span_id: spanId,
+                        $ai_parent_id: generationSpanId,
+                        $ai_span_name: call.function.name,
+                        $ai_latency: (performance.now() - startedAt) / 1000,
+                    },
+                })
+
                 messages.push({
                     role: 'tool',
                     tool_call_id: call.id,
                     content: JSON.stringify(output),
                 })
+                parentId = spanId
             }
-            result = await complete(messages)
+            result = await complete(messages, { ...aiContext, parentId })
         }
 
         this.turns.push({ question, answer: result.text })
