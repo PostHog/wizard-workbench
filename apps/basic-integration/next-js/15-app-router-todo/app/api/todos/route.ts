@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTodos, createTodo } from '@/lib/data';
+import { logTodoMutation } from '@/lib/posthog-logs';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
       completed: validatedData.completed,
     });
 
+    await logTodoMutation('created');
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
