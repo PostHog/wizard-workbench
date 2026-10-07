@@ -1,7 +1,63 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { PostHog } from 'posthog-node';
+import { logs } from '@opentelemetry/api-logs';
+import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
+import { resourceFromAttributes } from '@opentelemetry/resources';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 
+try {
+  process.loadEnvFile();
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+}
+
+const posthogProjectToken = process.env.POSTHOG_PROJECT_TOKEN;
+const posthogHost = process.env.POSTHOG_HOST;
+
+if ((!posthogProjectToken || !posthogHost) && process.env.NODE_ENV !== 'production') {
+  const missingVariable = posthogProjectToken ? 'POSTHOG_HOST' : 'POSTHOG_PROJECT_TOKEN';
+  throw new Error(
+    `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`
+  );
+}
+
+export const posthog = posthogProjectToken && posthogHost
+  ? new PostHog(posthogProjectToken, {
+      host: posthogHost,
+      enableExceptionAutocapture: true,
+    })
+  : null;
+
+const posthogLogSdk = posthogProjectToken && posthogHost
+  ? new NodeSDK({
+      resource: resourceFromAttributes({
+        'service.name': 'hono-links',
+      }),
+      logRecordProcessors: [
+        new BatchLogRecordProcessor(
+          new OTLPLogExporter({
+            url: new URL('/i/v1/logs', posthogHost).toString(),
+            headers: {
+              Authorization: `Bearer ${posthogProjectToken}`,
+            },
+          })
+        ),
+      ],
+    })
+  : null;
+
+posthogLogSdk?.start();
+
+const posthogLogger = logs.getLogger('hono-links-posthog');
 const app = new Hono();
+
+app.onError((error, c) => {
+  posthog?.captureException(error, 'hono-links-server');
+  posthogLogger.emit({ severityText: 'ERROR', body: 'request_failed' });
+  return c.json({ error: 'Internal Server Error' }, 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +103,18 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+  posthog?.capture({
+    event: 'link_created',
+    properties: {
+      tag_count: tags.length,
+      has_description: Boolean(description),
+    },
+  });
+  posthogLogger.emit({
+    severityText: 'INFO',
+    body: 'link_created',
+    attributes: { tag_count: tags.length, has_description: Boolean(description) },
+  });
   return c.json(link, 201);
 });
 
@@ -76,6 +144,19 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  const updatedFields = ['url', 'title', 'description', 'tags', 'favorite'].filter(
+    (field) => body[field] !== undefined
+  );
+  posthog?.capture({
+    event: 'link_updated',
+    properties: { updated_fields: updatedFields },
+  });
+  posthogLogger.emit({
+    severityText: 'INFO',
+    body: 'link_updated',
+    attributes: { updated_field_count: updatedFields.length },
+  });
+
   return c.json(link);
 });
 
@@ -88,6 +169,8 @@ app.delete('/api/links/:id', (c) => {
   }
 
   links.splice(index, 1);
+  posthog?.capture({ event: 'link_deleted' });
+  posthogLogger.emit({ severityText: 'INFO', body: 'link_deleted' });
   return c.body(null, 204);
 });
 
@@ -104,6 +187,15 @@ app.get('/api/tags', (c) => {
 
 const PORT = process.env.PORT || 3002;
 
-serve({ fetch: app.fetch, port: PORT }, () => {
+const server = serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Hono links API running on http://localhost:${PORT}`);
+  posthogLogger.emit({ severityText: 'INFO', body: 'server_started' });
 });
+
+const shutdown = async () => {
+  await new Promise((resolve) => server.close(resolve));
+  await Promise.all([posthog?.shutdown(), posthogLogSdk?.shutdown()]);
+};
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
