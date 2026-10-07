@@ -32,6 +32,7 @@ import {
   localeCookie,
 } from "./features/localization/i18next-middleware.server";
 import { useToast } from "./hooks/use-toast";
+import { createClient } from "./lib/supabase/client";
 import { cn } from "./lib/utils";
 import { ClientHintCheck, getHints } from "./utils/client-hints";
 import { combineHeaders } from "./utils/combine-headers.server";
@@ -185,6 +186,57 @@ export default function App({ loaderData: { locale } }: Route.ComponentProps) {
       i18n.changeLanguage(locale);
     }
   }, [i18n, locale]);
+
+  useEffect(() => {
+    if (
+      !import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+      !import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+    )
+      return;
+
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+
+    void import("posthog-js").then(({ default: posthog }) => {
+      if (cancelled) return;
+
+      const supabase = createClient();
+      let identifiedUserId: string | undefined;
+
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        const user = session?.user;
+
+        if (!user) {
+          if (identifiedUserId) {
+            posthog.reset();
+            identifiedUserId = undefined;
+          }
+          return;
+        }
+
+        if (identifiedUserId === user.id) return;
+
+        if (identifiedUserId) {
+          posthog.reset();
+        }
+
+        posthog.identify(user.id, {
+          ...(user.email ? { email: user.email } : {}),
+          ...(typeof user.user_metadata.full_name === "string"
+            ? { name: user.user_metadata.full_name }
+            : {}),
+        });
+        identifiedUserId = user.id;
+      });
+
+      unsubscribe = () => data.subscription.unsubscribe();
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, []);
 
   return <Outlet />;
 }

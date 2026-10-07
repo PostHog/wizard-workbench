@@ -30,6 +30,7 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { capturePosthogEvent } from "~/lib/posthog.client";
 
 export type CreateSubscriptionModalContentProps = {
   /** how many seats your org is currently using */
@@ -97,6 +98,9 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () => {
+        capturePosthogEvent("checkout_started", { interval, tier });
+      },
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };
