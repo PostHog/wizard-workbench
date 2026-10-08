@@ -1,8 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { PostHog } from 'posthog-node'
 
 import { getWeather } from './weather.js'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' })
+const posthog = new PostHog(process.env.POSTHOG_API_KEY!, {
+    host: process.env.POSTHOG_HOST,
+    privacyMode: false,
+    enableExceptionAutocapture: true,
+})
 
 const MODEL = 'claude-opus-5'
 
@@ -40,14 +46,39 @@ class Conversation {
 
     /** Answer one question, running the tool if the model asks for it. */
     async ask(question: string): Promise<string> {
+        const traceId = crypto.randomUUID()
         this.messages.push({ role: 'user', content: question })
+        const firstRequestMessages = this.messages.slice()
+        const firstGenerationStartedAt = Date.now()
 
         const response = await client.messages.create({
             model: MODEL,
             max_tokens: 1024,
             tools,
             tool_choice: toolChoice,
-            messages: this.messages,
+            messages: firstRequestMessages,
+        })
+
+        const firstGenerationId = crypto.randomUUID()
+        posthog.capture({
+            distinctId: this.userId,
+            event: '$ai_generation',
+            properties: {
+                $ai_trace_id: traceId,
+                $ai_session_id: this.threadId,
+                $ai_span_id: firstGenerationId,
+                $ai_span_name: 'messages.create',
+                $ai_model: MODEL,
+                $ai_provider: 'anthropic',
+                $ai_input: firstRequestMessages,
+                $ai_input_tokens: response.usage.input_tokens,
+                $ai_output_choices: [{ role: 'assistant', content: response.content }],
+                $ai_output_tokens: response.usage.output_tokens,
+                $ai_latency: (Date.now() - firstGenerationStartedAt) / 1000,
+                $ai_max_tokens: 1024,
+                $ai_tools: tools,
+                $ai_stop_reason: response.stop_reason,
+            },
         })
 
         const toolUse = response.content.find(
@@ -61,7 +92,24 @@ class Conversation {
         }
 
         const { location } = toolUse.input as { location: string }
+        const toolStartedAt = Date.now()
         const result = getWeather(location)
+        const toolSpanId = crypto.randomUUID()
+
+        posthog.capture({
+            distinctId: this.userId,
+            event: '$ai_span',
+            properties: {
+                $ai_trace_id: traceId,
+                $ai_session_id: this.threadId,
+                $ai_span_id: toolSpanId,
+                $ai_parent_id: firstGenerationId,
+                $ai_span_name: toolUse.name,
+                $ai_input_state: toolUse.input,
+                $ai_output_state: result,
+                $ai_latency: (Date.now() - toolStartedAt) / 1000,
+            },
+        })
 
         this.messages.push(
             { role: 'assistant', content: response.content },
@@ -70,13 +118,37 @@ class Conversation {
                 content: [{ type: 'tool_result', tool_use_id: toolUse.id, content: result }],
             }
         )
+        const followupRequestMessages = this.messages.slice()
+        const followupStartedAt = Date.now()
 
         const followup = await client.messages.create({
             model: MODEL,
             max_tokens: 1024,
             tools,
             tool_choice: toolChoice,
-            messages: this.messages,
+            messages: followupRequestMessages,
+        })
+
+        posthog.capture({
+            distinctId: this.userId,
+            event: '$ai_generation',
+            properties: {
+                $ai_trace_id: traceId,
+                $ai_session_id: this.threadId,
+                $ai_span_id: crypto.randomUUID(),
+                $ai_parent_id: toolSpanId,
+                $ai_span_name: 'messages.create',
+                $ai_model: MODEL,
+                $ai_provider: 'anthropic',
+                $ai_input: followupRequestMessages,
+                $ai_input_tokens: followup.usage.input_tokens,
+                $ai_output_choices: [{ role: 'assistant', content: followup.content }],
+                $ai_output_tokens: followup.usage.output_tokens,
+                $ai_latency: (Date.now() - followupStartedAt) / 1000,
+                $ai_max_tokens: 1024,
+                $ai_tools: tools,
+                $ai_stop_reason: followup.stop_reason,
+            },
         })
 
         const answer = textOf(followup)
@@ -91,7 +163,10 @@ async function main(): Promise<void> {
     console.log(await thread.ask('How about Boston?'))
 }
 
-main().catch((err) => {
-    console.error(`fatal: ${String(err)}`)
-    process.exit(1)
-})
+main()
+    .then(() => posthog.shutdown())
+    .catch(async (err) => {
+        await posthog.shutdown()
+        console.error(`fatal: ${String(err)}`)
+        process.exitCode = 1
+    })
