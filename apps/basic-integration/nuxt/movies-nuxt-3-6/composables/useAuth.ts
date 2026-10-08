@@ -1,4 +1,5 @@
 export const useAuth = () => {
+  const { $posthog: posthog } = useNuxtApp()
   const cookie = useCookie<string | null>('auth-user', {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
@@ -41,6 +42,8 @@ export const useAuth = () => {
     } finally {
       user.value = null
       cookie.value = null
+      posthog?.capture('logout_completed')
+      posthog?.reset()
       await navigateTo('/login')
     }
   }
