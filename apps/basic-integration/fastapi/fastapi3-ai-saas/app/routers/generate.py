@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
+from app.posthog import get_posthog_client
+from app.posthog_logs import logger as posthog_log
 
 router = APIRouter(prefix="/api")
 
@@ -54,6 +56,24 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        posthog_log.warning(
+            "Content generation blocked by insufficient credits",
+            extra={
+                "generation_type": request.generation_type,
+                "credits_available": current_user.credits,
+                "credits_required": credits_needed,
+            },
+        )
+        posthog_client = get_posthog_client()
+        if posthog_client is not None:
+            posthog_client.capture(
+                "content_generation_blocked_insufficient_credits",
+                properties={
+                    "generation_type": request.generation_type,
+                    "credits_available": current_user.credits,
+                    "credits_required": credits_needed,
+                },
+            )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -75,6 +95,26 @@ async def generate_content(
         result=mock_content,
         credits_used=credits_needed,
     )
+
+    posthog_log.info(
+        "Content generation completed",
+        extra={
+            "generation_type": request.generation_type,
+            "credits_used": credits_needed,
+            "credits_remaining": current_user.credits,
+        },
+    )
+
+    posthog_client = get_posthog_client()
+    if posthog_client is not None:
+        posthog_client.capture(
+            "content_generation_completed",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
 
     return GenerateResponse(
         id=generation.id,
