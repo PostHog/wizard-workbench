@@ -2,6 +2,7 @@ import { openai } from '@ai-sdk/openai'
 import { generateText, stepCountIs, tool } from 'ai'
 import { z } from 'zod'
 
+import { posthogSpanProcessor } from '@/instrumentation'
 import { lookupOrder } from '@/lib/orders'
 
 export async function POST(req: Request): Promise<Response> {
@@ -23,7 +24,17 @@ export async function POST(req: Request): Promise<Response> {
             }),
         },
         stopWhen: stepCountIs(3),
+        experimental_telemetry: {
+            isEnabled: true,
+            functionId: 'support_chat',
+            metadata: {
+                '$ai_session_id': threadId,
+                'posthog.distinct_id': userId,
+            },
+        },
     })
+
+    await posthogSpanProcessor?.forceFlush()
 
     return Response.json({ answer: text, userId, threadId })
 }
