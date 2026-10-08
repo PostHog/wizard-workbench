@@ -1,4 +1,6 @@
 import type { APIRoute } from 'astro';
+import { flushPostHogLogs, getPostHogLogLogger } from '../../lib/posthog-logs';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -45,6 +47,31 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    const posthog = getPostHogServer();
+    if (posthog) {
+      posthog.capture({
+        event: 'contact_form_submitted',
+        properties: {
+          interest: data.interest,
+          source: 'api',
+        },
+      });
+      await posthog.flush().catch(() => undefined);
+    }
+
+    getPostHogLogLogger()?.emit({
+      severityText: 'INFO',
+      body: 'contact form accepted',
+      attributes: {
+        event: 'contact_form_processed',
+        outcome: 'accepted',
+        interest: data.interest,
+        source: 'api',
+        response_status: 200,
+      },
+    });
+    await flushPostHogLogs().catch(() => undefined);
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -54,6 +81,28 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contact form error:', error);
+
+    getPostHogLogLogger()?.emit({
+      severityText: 'ERROR',
+      body: 'contact form request failed',
+      attributes: {
+        event: 'contact_form_processed',
+        outcome: 'failed',
+        error_type: error instanceof Error ? error.name : 'unknown_error',
+        source: 'api',
+        response_status: 500,
+      },
+    });
+    await flushPostHogLogs().catch(() => undefined);
+
+    const posthog = getPostHogServer();
+    const distinctId = request.headers.get('X-PostHog-Distinct-Id');
+    if (posthog && distinctId) {
+      const exception = error instanceof Error ? error : new Error('Contact form request failed');
+      posthog.captureException(exception, distinctId);
+      await posthog.flush().catch(() => undefined);
+    }
+
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
