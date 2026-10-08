@@ -2,8 +2,9 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
+import { logCheckoutLifecycle, posthogLogProvider } from '@/instrumentation';
 import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
@@ -13,6 +14,15 @@ export async function GET(request: NextRequest) {
   if (!sessionId) {
     return NextResponse.redirect(new URL('/pricing', request.url));
   }
+
+  after(async () => {
+    await posthogLogProvider?.forceFlush();
+  });
+
+  logCheckoutLifecycle('stripe_checkout_completion_started', {
+    endpoint: '/api/stripe/checkout',
+    payment_provider: 'stripe'
+  });
 
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -89,8 +99,16 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    logCheckoutLifecycle('stripe_checkout_completion_succeeded', {
+      endpoint: '/api/stripe/checkout',
+      payment_provider: 'stripe'
+    });
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
+    logCheckoutLifecycle('stripe_checkout_completion_failed', {
+      endpoint: '/api/stripe/checkout',
+      payment_provider: 'stripe'
+    });
     console.error('Error handling successful checkout:', error);
     return NextResponse.redirect(new URL('/error', request.url));
   }
