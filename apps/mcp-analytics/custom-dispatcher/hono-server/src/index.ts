@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server'
+import { PostHogMCP } from '@posthog/mcp'
 import { Hono } from 'hono'
 
 // A custom MCP dispatcher: it speaks the MCP JSON-RPC protocol directly over
@@ -34,6 +35,18 @@ const TOOLS = [
     },
 ]
 
+const posthogProjectToken = process.env.POSTHOG_PROJECT_TOKEN
+const posthogHost = process.env.POSTHOG_HOST
+if (!posthogProjectToken || !posthogHost) {
+    throw new Error('POSTHOG_PROJECT_TOKEN and POSTHOG_HOST must be set')
+}
+
+const posthog = new PostHogMCP(posthogProjectToken, {
+    host: posthogHost,
+    captureModel: true,
+})
+const ADVERTISED_TOOLS = posthog.prepareToolList(TOOLS)
+
 function runTool(name: string, args: Record<string, unknown>): unknown {
     switch (name) {
         case 'echo':
@@ -48,7 +61,16 @@ function runTool(name: string, args: Record<string, unknown>): unknown {
 const app = new Hono()
 
 app.post('/mcp', async (c) => {
+    const startedAt = Date.now()
     const body = (await c.req.json()) as JsonRpcRequest
+    const protocolVersion = c.req.header('MCP-Protocol-Version')
+    const requestAnalytics = {
+        protocolVersion,
+        clientUserAgent: c.req.header('User-Agent'),
+        vendorClient: c.req.header('X-Anthropic-Client'),
+        serverName: 'workbench-hono-dispatcher',
+        serverVersion: '1.0.0',
+    }
 
     if (body.method === 'initialize') {
         return c.json({
@@ -63,21 +85,71 @@ app.post('/mcp', async (c) => {
     }
 
     if (body.method === 'tools/list') {
-        return c.json({ jsonrpc: '2.0', id: body.id, result: { tools: TOOLS } })
+        const result = { tools: ADVERTISED_TOOLS }
+        posthog.captureToolsList({
+            ...requestAnalytics,
+            toolNames: ADVERTISED_TOOLS.map((tool) => tool.name),
+            parameters: body.params,
+            response: result,
+            durationMs: Date.now() - startedAt,
+            isError: false,
+        })
+        return c.json({ jsonrpc: '2.0', id: body.id, result })
     }
 
     if (body.method === 'tools/call') {
         const params = body.params ?? {}
         const name = String(params.name)
-        const args = (params.arguments as Record<string, unknown>) ?? {}
+        const originalTool = TOOLS.find((tool) => tool.name === name)
+        const preparedCall = posthog.prepareToolCall(
+            name,
+            (params.arguments as Record<string, unknown>) ?? {},
+            {
+                originalTool,
+                requestMeta: params._meta as Record<string, unknown> | undefined,
+            },
+        )
         try {
-            return c.json({ jsonrpc: '2.0', id: body.id, result: runTool(name, args) })
-        } catch (err) {
-            return c.json({
-                jsonrpc: '2.0',
-                id: body.id,
-                result: { isError: true, content: [{ type: 'text', text: String(err) }] },
+            const preparedResult = posthog.prepareToolResult(
+                runTool(name, preparedCall.args ?? {}),
+                preparedCall,
+            )
+            posthog.captureToolCall({
+                ...requestAnalytics,
+                toolName: name,
+                toolDescription: originalTool?.description,
+                parameters: preparedCall.args,
+                response: preparedResult.result,
+                durationMs: Date.now() - startedAt,
+                isError: false,
+                intent: preparedCall.intent,
+                intentSource: preparedCall.intentSource,
+                llmModel: preparedCall.llmModel,
+                llmModelSource: preparedCall.llmModelSource,
+                sessionId: preparedResult.sessionId,
+                conversationId: preparedResult.conversationId,
             })
+            return c.json({ jsonrpc: '2.0', id: body.id, result: preparedResult.result })
+        } catch (err) {
+            const result = { isError: true, content: [{ type: 'text', text: String(err) }] }
+            const preparedResult = posthog.prepareToolResult(result, preparedCall)
+            posthog.captureToolCall({
+                ...requestAnalytics,
+                toolName: name,
+                toolDescription: originalTool?.description,
+                parameters: preparedCall.args,
+                response: preparedResult.result,
+                durationMs: Date.now() - startedAt,
+                isError: true,
+                error: err,
+                intent: preparedCall.intent,
+                intentSource: preparedCall.intentSource,
+                llmModel: preparedCall.llmModel,
+                llmModelSource: preparedCall.llmModelSource,
+                sessionId: preparedResult.sessionId,
+                conversationId: preparedResult.conversationId,
+            })
+            return c.json({ jsonrpc: '2.0', id: body.id, result: preparedResult.result })
         }
     }
 
@@ -89,3 +161,8 @@ app.post('/mcp', async (c) => {
 })
 
 serve({ fetch: app.fetch, port: 3000 })
+
+process.on('SIGTERM', async () => {
+    await posthog.shutdown()
+    process.exit(0)
+})
