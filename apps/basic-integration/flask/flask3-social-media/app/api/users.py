@@ -1,6 +1,6 @@
 import sqlalchemy as sa
 from flask import request, url_for, abort
-from app import db
+from app import db, identify_posthog_user, posthog_client
 from app.models import User
 from app.api import bp
 from app.api.auth import token_auth
@@ -57,6 +57,9 @@ def create_user():
     user.from_dict(data, new_user=True)
     db.session.add(user)
     db.session.commit()
+    identify_posthog_user(user, set_properties=True)
+    if posthog_client:
+        posthog_client.capture('api_user_registered')
     return user.to_dict(), 201, {'Location': url_for('api.get_user',
                                                      id=user.id)}
 
@@ -78,4 +81,6 @@ def update_user(id):
         return bad_request('please use a different email address')
     user.from_dict(data, new_user=False)
     db.session.commit()
+    if posthog_client:
+        posthog_client.capture('api_profile_updated')
     return user.to_dict()
