@@ -5,6 +5,8 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Project, ActivityLog
 from .forms import ProjectForm
+from config.posthog import get_posthog_client
+from config.posthog_logs import posthog_logger
 
 
 @login_required
@@ -60,6 +62,24 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            client = get_posthog_client()
+            if client:
+                client.capture(
+                    'project_created',
+                    properties={
+                        'has_description': bool(project.description),
+                        'is_active': project.is_active,
+                    },
+                )
+
+            posthog_logger.info(
+                'project created',
+                extra={
+                    'event': 'project.created',
+                    'has_description': bool(project.description),
+                    'is_active': project.is_active,
+                },
+            )
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +103,24 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            client = get_posthog_client()
+            if client:
+                client.capture(
+                    'project_updated',
+                    properties={
+                        'has_description': bool(project.description),
+                        'is_active': project.is_active,
+                    },
+                )
+
+            posthog_logger.info(
+                'project updated',
+                extra={
+                    'event': 'project.updated',
+                    'has_description': bool(project.description),
+                    'is_active': project.is_active,
+                },
+            )
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -97,6 +135,7 @@ def delete_project(request, pk):
 
     if request.method == 'POST':
         name = project.name
+        was_active = project.is_active
         project.delete()
 
         ActivityLog.objects.create(
@@ -105,6 +144,20 @@ def delete_project(request, pk):
             description=f'Deleted project: {name}'
         )
 
+        client = get_posthog_client()
+        if client:
+            client.capture(
+                'project_deleted',
+                properties={'was_active': was_active},
+            )
+
+        posthog_logger.info(
+            'project deleted',
+            extra={
+                'event': 'project.deleted',
+                'was_active': was_active,
+            },
+        )
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
 

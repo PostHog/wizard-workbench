@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import timedelta
 from .models import Plan, Subscription
+from config.posthog import get_posthog_client
 
 # Check if Stripe is configured
 STRIPE_CONFIGURED = bool(getattr(settings, 'STRIPE_SECRET_KEY', ''))
@@ -55,6 +56,16 @@ def subscribe(request, plan_slug):
                     },
                     allow_promotion_codes=True,
                 )
+                client = get_posthog_client()
+                if client:
+                    client.capture(
+                        'subscription_checkout_started',
+                        properties={
+                            'plan_slug': plan.slug,
+                            'billing_provider': 'stripe',
+                            'plan_interval': plan.interval,
+                        },
+                    )
                 return redirect(checkout_session.url)
             except Exception as e:
                 messages.error(request, f'Payment error: {str(e)}')
@@ -70,6 +81,16 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            client = get_posthog_client()
+            if client:
+                client.capture(
+                    'subscription_activated',
+                    properties={
+                        'plan_slug': plan.slug,
+                        'billing_provider': 'demo',
+                        'plan_interval': plan.interval,
+                    },
+                )
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -87,6 +108,12 @@ def success(request):
     if STRIPE_CONFIGURED and session_id:
         try:
             session = stripe.checkout.Session.retrieve(session_id)
+            client = get_posthog_client()
+            if client:
+                client.capture(
+                    'subscription_checkout_completed',
+                    properties={'billing_provider': 'stripe'},
+                )
             messages.success(request, 'Subscription successful! Welcome aboard.')
         except Exception:
             messages.warning(request, 'Could not verify payment. Please check your subscription status.')
@@ -130,6 +157,16 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+                client = get_posthog_client()
+                if client:
+                    client.capture(
+                        'subscription_plan_changed',
+                        properties={
+                            'plan_slug': plan.slug,
+                            'billing_provider': 'stripe',
+                            'plan_interval': plan.interval,
+                        },
+                    )
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
                 messages.error(request, f'Error changing plan: {str(e)}')
@@ -137,6 +174,16 @@ def change_plan(request, plan_slug):
             # Demo mode
             subscription.plan = plan
             subscription.save()
+            client = get_posthog_client()
+            if client:
+                client.capture(
+                    'subscription_plan_changed',
+                    properties={
+                        'plan_slug': plan.slug,
+                        'billing_provider': 'demo',
+                        'plan_interval': plan.interval,
+                    },
+                )
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -171,6 +218,18 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        client = get_posthog_client()
+        if client:
+            client.capture(
+                'subscription_canceled',
+                properties={
+                    'plan_slug': subscription.plan.slug,
+                    'billing_provider': (
+                        'demo' if subscription.stripe_subscription_id.startswith('sub_demo_') else 'stripe'
+                    ),
+                    'plan_interval': subscription.plan.interval,
+                },
+            )
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
