@@ -1,0 +1,147 @@
+> AI agents: this is one page from PostHog's docs. Full index of Markdown docs for LLMs: https://posthog.com/llms.txt
+
+# Custom events and metadata
+
+Use an event properties callback (`eventProperties` in TypeScript, `event_properties` in Python and Ruby, `WithProperties` in Go) to add metadata to captured events. Use `analytics.capture()` for events that are not MCP requests.
+
+## Add metadata to every event
+
+Pass a callback to attach extra properties to automatically captured MCP events. The callback receives request context, such as headers, transport, and the request ID.
+
+### TypeScript
+
+```typescript
+import { instrument, getRequestHeaders } from "@posthog/mcp"
+
+const analytics = instrument(server, posthog, {
+  eventProperties: async (request, extra) => ({
+    $app_version: process.env.GIT_SHA ?? "unknown",
+    request_id: getRequestHeaders(extra)?.["x-request-id"],
+  }),
+})
+```
+
+### Python
+
+```python
+import os
+from posthog.mcp import instrument, get_request_headers
+from posthog.mcp.types import MCPAnalyticsOptions
+
+def event_properties(request, extra):
+    return {
+        "$app_version": os.environ.get("GIT_SHA", "unknown"),
+        "request_id": (get_request_headers(extra) or {}).get("x-request-id"),
+    }
+
+analytics = instrument(server, posthog, MCPAnalyticsOptions(event_properties=event_properties))
+```
+
+### Go
+
+```go
+posthogmcpsdk.Instrument(server, posthogmcp.New(client),
+    posthogmcpsdk.WithProperties(func(ctx context.Context, req *mcp.CallToolRequest, result *mcp.CallToolResult, err error) (posthog.Properties, error) {
+        props := posthog.NewProperties().Set("$app_version", os.Getenv("GIT_SHA"))
+        if req.Extra != nil {
+            props.Set("request_id", req.Extra.Header.Get("X-Request-Id"))
+        }
+        return props, nil
+    }),
+)
+```
+
+### Ruby
+
+```ruby
+analytics = PostHog::MCP.instrument(
+  server, posthog,
+  event_properties: ->(_request, extra) { { "$app_version" => ENV.fetch("GIT_SHA", "unknown"), "request_id" => extra["headers"]["x-request-id"] } }
+)
+```
+
+In TypeScript, `getRequestHeaders` reads headers on both MCP SDK majors – see [MCP SDK v2](/docs/mcp-analytics/installation/typescript.md#read-request-headers-on-both-sdk-majors).
+
+The returned object is spread flat onto the event's properties alongside the built-in `$mcp_*` keys:
+
+JSON
+
+```json
+{
+  "event": "$mcp_tool_call",
+  "properties": {
+    "$mcp_tool_name": "search_events",
+    "$app_version": "a1b2c3d",
+    "region": "iad",
+    "request_id": "req_…"
+  }
+}
+```
+
+Return constants from the callback to add the same values to captured MCP events. This is similar to `posthog.register(...)` in other SDKs. Return values from the request context when metadata must vary between calls.
+
+For group analytics, return `groups` from [`identify`](/docs/mcp-analytics/identifying-users.md). The SDK adds `$groups` to events for the session.
+
+The Go SDK drops returned keys that start with `$mcp_` or equal `$groups`, `$set`, `$process_person_profile`, `$session_id`, or `$exception_level`.
+
+Returned values must be JSON-serializable. The SDK catches callback errors and sends them to your `logger`. These errors do not interrupt tool execution.
+
+## Send a custom event
+
+Use `analytics.capture()` for events that aren't MCP requests, such as UI feedback or workflow milestones. It uses the SDK's sanitization, current server session and identity, and `beforeSend` hook. In TypeScript it returns a promise, and in Python it returns a coroutine, so `await` it. In Ruby it runs synchronously and returns `nil`.
+
+Custom capture has no request context and doesn't run the event properties callback. Pass custom metadata in `properties`.
+
+You name the event. It's sent verbatim – it's your event, so it is **not** `$`\-prefixed.
+
+### TypeScript
+
+```typescript
+const analytics = instrument(server, posthog)
+
+await analytics.capture({
+  event: "feedback_submitted",
+  properties: { rating: 5 },
+})
+```
+
+### Python
+
+```python
+analytics = instrument(server, posthog)
+
+await analytics.capture("feedback_submitted", {"rating": 5})
+```
+
+### Ruby
+
+```ruby
+analytics = PostHog::MCP.instrument(server, posthog)
+
+analytics.capture("feedback_submitted", { rating: 5 })
+```
+
+The Go SDK has no analytics handle. Call `client.Enqueue(posthog.Capture{...})` on your `posthog-go` client instead. That path has no SDK redaction.
+
+PostHog receives:
+
+-   One event under the verbatim `event` name you passed, with your `properties` merged in.
+-   The current server session and cached identity apply. These may differ from the session of a concurrent tool request.
+
+`capture()` is a method on the handle that `instrument()` returns, so you call it on the instrumented server's analytics handle directly.
+
+## Which one to use
+
+| You want to... | Use |
+| --- | --- |
+| Attach the same properties to every auto-captured event | The event properties callback |
+| Emit a one-off event that isn't an MCP request | `analytics.capture()` |
+| Attach data only to matching requests | Check the request in the callback and return properties only for matches. |
+
+### Still have questions?
+
+Ask PostHog AI
+
+### Was this page useful?
+
+HelpfulCould be better
