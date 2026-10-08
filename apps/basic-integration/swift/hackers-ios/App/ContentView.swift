@@ -10,11 +10,12 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import Foundation
+import PostHog
 import Settings
 import Shared
 import SwiftUI
 import UIKit
-import Foundation
 
 @MainActor
 struct MainContentView: View {
@@ -79,15 +80,9 @@ struct MainContentView: View {
                                 viewModel: settingsViewModel,
                                 isAuthenticated: sessionService.authenticationState == .authenticated,
                                 currentUsername: sessionService.username,
-                                onLogin: { username, password in
-                                    _ = try await sessionService.authenticate(username: username, password: password)
-                                },
-                                onLogout: {
-                                    sessionService.unauthenticate()
-                                },
-                                onShowOnboarding: {
-                                    showOnboarding = true
-                                }
+                                onLogin: authenticate,
+                                onLogout: logout,
+                                onShowOnboarding: showOnboardingSheet
                             )
                         }
                     }
@@ -101,12 +96,8 @@ struct MainContentView: View {
             LoginView(
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
-                onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
-                },
-                onLogout: {
-                    sessionService.unauthenticate()
-                },
+                onLogin: authenticate,
+                onLogout: logout,
                 textSize: settingsViewModel.textSize
             )
             .textScaling(for: settingsViewModel.textSize)
@@ -117,24 +108,16 @@ struct MainContentView: View {
                 viewModel: settingsViewModel,
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
-                onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
-                },
-                onLogout: {
-                    sessionService.unauthenticate()
-                },
-                onShowOnboarding: {
-                    showOnboarding = true
-                }
+                onLogin: authenticate,
+                onLogout: logout,
+                onShowOnboarding: showOnboardingSheet
             )
             .textScaling(for: settingsViewModel.textSize)
             .toastOverlay(toastPresenter)
         }
         .sheet(isPresented: $showOnboarding) {
             onboardingCoordinator
-                .makeOnboardingView {
-                    showOnboarding = false
-                }
+                .makeOnboardingView(onDismiss: onDismissOnboarding)
                 .textScaling(for: settingsViewModel.textSize)
                 .toastOverlay(toastPresenter)
         }
@@ -147,6 +130,34 @@ struct MainContentView: View {
 
     private var isPresentingModal: Bool {
         navigationStore.showingLogin || navigationStore.showingSettings || showOnboarding
+    }
+
+    private func authenticate(username: String, password: String) async throws {
+        _ = try await sessionService.authenticate(username: username, password: password)
+        PostHogSDK.shared.capture("login_succeeded")
+        PostHogSDK.shared.logger?.info(
+            "authentication_completed",
+            attributes: ["authentication_outcome": "succeeded"]
+        )
+    }
+
+    private func logout() {
+        sessionService.unauthenticate {
+            PostHogSDK.shared.capture("logout_completed")
+            PostHogSDK.shared.logger?.info(
+                "logout_completed",
+                attributes: ["lifecycle_event": "logout_completed"]
+            )
+        }
+    }
+
+    private func showOnboardingSheet() {
+        showOnboarding = true
+    }
+
+    private func onDismissOnboarding() {
+        showOnboarding = false
+        PostHogSDK.shared.capture("onboarding_dismissed")
     }
 
     private var isPadLayout: Bool {
