@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { useAuth } from '~/context/AuthContext'
+import { capturePostHog } from '~/lib/posthog.client'
 import type { Route } from './+types/signup'
 
 export default function Signup() {
@@ -24,6 +25,7 @@ export default function Signup() {
         setIsLoading(false)
 
         if (newUser) {
+          void capturePostHog('user_signed_up')
           navigate('/profile')
         } else {
           setError('Signup failed! (But this is fake, so it should always work)')

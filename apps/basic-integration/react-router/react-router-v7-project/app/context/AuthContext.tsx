@@ -12,17 +12,49 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function isPostHogConfigured() {
+  return Boolean(
+    import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+  )
+}
+
+function identifyUser(user: FakeUser, previousUserId?: string) {
+  if (!isPostHogConfigured()) return
+
+  void import('posthog-js').then(({ default: posthog }) => {
+    if (previousUserId && previousUserId !== user.id) {
+      posthog.reset()
+    }
+    posthog.identify(user.id, {
+      email: user.email,
+      username: user.username,
+    })
+  })
+}
+
+function resetPostHog() {
+  if (!isPostHogConfigured()) return
+
+  void import('posthog-js').then(({ default: posthog }) => {
+    posthog.reset()
+  })
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
 
   useEffect(() => {
     const currentUser = getCurrentUser()
+    if (currentUser) {
+      identifyUser(currentUser)
+    }
     setUser(currentUser)
   }, [])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      identifyUser(loggedInUser, user?.id)
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      identifyUser(newUser, user?.id)
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,29 +74,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    resetPostHog()
     fakeLogout()
     setUser(null)
   }
 
   // Sync user state when localStorage changes
   useEffect(() => {
-    const handleStorageChange = () => {
+    const syncCurrentUser = (refreshState = false) => {
       const currentUser = getCurrentUser()
+      if (currentUser?.id === user?.id) {
+        if (refreshState) setUser(currentUser)
+        return
+      }
+
+      if (currentUser) {
+        identifyUser(currentUser, user?.id)
+      } else if (user) {
+        resetPostHog()
+      }
       setUser(currentUser)
     }
+    const handleStorageChange = () => syncCurrentUser(true)
     window.addEventListener('storage', handleStorageChange)
-    const interval = setInterval(() => {
-      const currentUser = getCurrentUser()
-      if (currentUser?.id !== user?.id) {
-        setUser(currentUser)
-      }
-    }, 1000)
+    const interval = setInterval(syncCurrentUser, 1000)
     
     return () => {
       window.removeEventListener('storage', handleStorageChange)
       clearInterval(interval)
     }
-  }, [user?.id])
+  }, [user])
 
   return (
     <AuthContext.Provider

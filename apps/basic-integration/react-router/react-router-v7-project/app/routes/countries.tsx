@@ -3,6 +3,7 @@ import type { Route } from "./+types/countries";
 import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
+import { capturePostHog } from "~/lib/posthog.client";
 
 export async function clientLoader() {
   try {
@@ -136,8 +137,11 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
-                        claimCountry(countryName);
+                      onClick={async () => {
+                        if (!isClaimed) {
+                          claimCountry(countryName);
+                          await capturePostHog("country_claimed", { country_name: countryName });
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -149,8 +153,11 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
-                        likeCountry(countryName);
+                      onClick={async () => {
+                        if (!isLiked) {
+                          likeCountry(countryName);
+                          await capturePostHog("country_liked", { country_name: countryName });
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -162,8 +169,11 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
-                        visitCountry(countryName);
+                      onClick={async () => {
+                        if (!user.visitedCountries.includes(countryName)) {
+                          visitCountry(countryName);
+                          await capturePostHog("country_visited", { country_name: countryName });
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
