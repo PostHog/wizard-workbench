@@ -36,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.compose.jetchat.PostHogAppLogger
+import com.example.compose.jetchat.capturePostHogEvent
 import com.example.compose.jetchat.theme.JetchatTheme
 
 @Composable
@@ -81,7 +83,11 @@ fun LoginScreen(
             )
 
             Button(
-                onClick = { onLogin(username, password) },
+                onClick = {
+                    capturePostHogEvent("login_submitted")
+                    PostHogAppLogger.info("login submission started", mapOf("event" to "login_submitted"))
+                    onLogin(username, password)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp),
