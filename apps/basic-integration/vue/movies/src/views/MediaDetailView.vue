@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute } from 'vue-router'
 import type { Media } from '../types'
 import { getMedia, getRecommendations } from '../composables/useTMDB'
 import { formatTime, formatVote, getTrailer } from '../composables/utils'
+import { posthogLog } from '../services/posthogLogger'
 import MediaCard from '../components/media/MediaCard.vue'
 import CarouselBase from '../components/carousel/CarouselBase.vue'
 
@@ -61,6 +63,9 @@ const recommendations = ref<Media[]>([])
 const loading = ref(false)
 const showModal = ref(false)
 const trailerUrl = computed(() => item.value ? getTrailer(item.value) : null)
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+)
 
 async function loadMedia() {
   loading.value = true
@@ -81,10 +86,26 @@ async function loadMedia() {
       recommendations.value = recs.results || []
     } catch (recError) {
       recommendations.value = []
+      posthogLog.warn('media recommendations unavailable', {
+        error_type: recError instanceof Error ? recError.name : 'unknown_error',
+        media_id: media.id,
+        media_type: type.value,
+      })
     }
+
+    posthogLog.info('media details loaded', {
+      media_id: media.id,
+      media_type: type.value,
+      recommendation_count: recommendations.value.length,
+    })
   } catch (error) {
     // Keep fake data if real data fails
     console.error('Error loading media:', error)
+    posthogLog.error('media details failed to load', {
+      error_type: error instanceof Error ? error.name : 'unknown_error',
+      media_id: id.value,
+      media_type: type.value,
+    })
   } finally {
     loading.value = false
   }
@@ -100,7 +121,14 @@ watch(() => route.fullPath, () => {
 }, { immediate: false })
 
 function playTrailer() {
-  if (trailerUrl.value) {
+  if (trailerUrl.value && item.value) {
+    if (isPostHogConfigured) {
+      posthog.capture('trailer_started', {
+        media_id: item.value.id,
+        media_type: type.value,
+        surface: 'detail',
+      })
+    }
     showModal.value = true
   }
 }
