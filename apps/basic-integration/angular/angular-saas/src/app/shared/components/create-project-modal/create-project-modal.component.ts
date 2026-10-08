@@ -3,6 +3,8 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ModalComponent } from '../modal/modal.component';
 import { DataService } from '@app/@core/services/data.service';
 import { HotToastService } from '@ngxpert/hot-toast';
+import { PosthogLogService } from '@app/@core/services/posthog-log.service';
+import { PosthogService } from '@app/@core/services/posthog.service';
 
 @Component({
   selector: 'app-create-project-modal',
@@ -120,6 +122,8 @@ import { HotToastService } from '@ngxpert/hot-toast';
 export class CreateProjectModalComponent {
   private readonly dataService = inject(DataService);
   private readonly toast = inject(HotToastService);
+  private readonly posthogService = inject(PosthogService);
+  private readonly posthogLogService = inject(PosthogLogService);
   private readonly fb = inject(FormBuilder);
 
   isOpen = input(false);
@@ -138,6 +142,8 @@ export class CreateProjectModalComponent {
     const { name, description, status } = this.projectForm.getRawValue();
 
     this.dataService.addProject({ name, description, status });
+    this.posthogService.client?.capture('project_created', { status });
+    this.posthogLogService.info('Project creation completed', { project_status: status });
 
     this.toast.success(`Project "${name}" created!`);
     this.projectForm.reset({ name: '', description: '', status: 'active' });
