@@ -115,7 +115,12 @@ export function NavUser({ user }: NavUserProps) {
 
             <DropdownMenuSeparator />
 
-            <Form action="/logout" method="post" replace>
+            <Form
+              action="/logout"
+              data-posthog-reset-on-submit
+              method="post"
+              replace
+            >
               <DropdownMenuItem
                 render={
                   <button
