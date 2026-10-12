@@ -50,6 +50,55 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
     setRegion(newRegion);
   };
 
+  const captureCountryAction = async (
+    event: "country_claimed" | "country_liked" | "country_visited",
+    countryName: string,
+    countryCode: string,
+  ) => {
+    const [{ default: posthog }, { default: posthogLogs }] = await Promise.all([
+      import("~/lib/posthog.client"),
+      import("~/lib/posthog-logs.client"),
+    ]);
+
+    posthog?.capture(event, {
+      country_name: countryName,
+      country_code: countryCode,
+    });
+    posthogLogs.info(`${event} completed`, { country_code: countryCode });
+  };
+
+  const handleCountryClaim = async (
+    countryName: string,
+    countryCode: string,
+    isClaimed: boolean | undefined,
+  ) => {
+    if (!isClaimed) {
+      claimCountry(countryName);
+      await captureCountryAction("country_claimed", countryName, countryCode);
+    }
+    window.location.reload();
+  };
+
+  const handleCountryLike = async (
+    countryName: string,
+    countryCode: string,
+    isLiked: boolean | undefined,
+  ) => {
+    if (!isLiked) {
+      likeCountry(countryName);
+      await captureCountryAction("country_liked", countryName, countryCode);
+    }
+    window.location.reload();
+  };
+
+  const handleCountryVisit = async (countryName: string, countryCode: string) => {
+    if (!user?.visitedCountries.includes(countryName)) {
+      visitCountry(countryName);
+      await captureCountryAction("country_visited", countryName, countryCode);
+    }
+    window.location.reload();
+  };
+
   // Ensure loaderData is an array, fallback to empty array
   const countries = Array.isArray(loaderData) ? loaderData : [];
 
@@ -136,10 +185,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
-                        claimCountry(countryName);
-                        window.location.reload();
-                      }}
+                      onClick={() => handleCountryClaim(countryName, country.cca3, isClaimed)}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isClaimed
                           ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
@@ -149,10 +195,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
-                        likeCountry(countryName);
-                        window.location.reload();
-                      }}
+                      onClick={() => handleCountryLike(countryName, country.cca3, isLiked)}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
                         isLiked
                           ? 'bg-red-100 text-red-700'
@@ -162,10 +205,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
-                        visitCountry(countryName);
-                        window.location.reload();
-                      }}
+                      onClick={() => handleCountryVisit(countryName, country.cca3)}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
                     >
                       ✈️
