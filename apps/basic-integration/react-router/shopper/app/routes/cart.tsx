@@ -1,15 +1,42 @@
 import { Link } from "react-router";
 import { useCart, type CartItem } from "../context/CartContext";
+import { capturePostHogEvent, logPostHogInfo } from "../posthog.client";
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+    capturePostHogEvent("cart_item_removed", {
+      product_id: item.id,
+      product_category: item.category,
+      product_price: item.price,
+      quantity: item.quantity,
+    });
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+    capturePostHogEvent("cart_quantity_updated", {
+      product_id: item.id,
+      product_category: item.category,
+      previous_quantity: item.quantity,
+      quantity: newQuantity,
+    });
+  };
+
+  const handleCheckoutStart = () => {
+    const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
+    const cartValue = getCartTotal();
+
+    capturePostHogEvent("checkout_started", {
+      item_count: itemCount,
+      cart_value: cartValue,
+    });
+    logPostHogInfo("checkout started", {
+      item_count: itemCount,
+      cart_value: cartValue,
+    });
   };
 
   if (cart.length === 0) {
@@ -154,6 +181,7 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={handleCheckoutStart}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout
