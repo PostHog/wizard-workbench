@@ -195,7 +195,7 @@ function printReport(report: CoverageResult): void {
 async function main(): Promise<void> {
   const argumentsList = process.argv.slice(2);
   if (argumentsList.includes("--help")) {
-    console.log("Usage: pnpm docs-eval:coverage [--json] [--help]\nChecks BK docs, handbook, and pricing coverage in the project named by POSTHOG_DOCS_EVAL_PROJECT_ID.\nRequires POSTHOG_PERSONAL_API_KEY and POSTHOG_DOCS_EVAL_PROJECT_ID; POSTHOG_REGION defaults to us.\nPOSTHOG_DOCS_EVAL_EVENTS_PROJECT_ID selects the events project for sample.ts.\nExit codes: 0 pass, 1 coverage failure, 2 configuration/API error.");
+    console.log("Usage: pnpm docs-eval:coverage [--json] [--help]\nChecks BK docs, handbook, and pricing coverage in the project named by POSTHOG_DOCS_EVAL_PROJECT_ID.\nRequires POSTHOG_DOCS_EVAL_API_KEY and POSTHOG_DOCS_EVAL_PROJECT_ID; POSTHOG_REGION defaults to us.\nPOSTHOG_DOCS_EVAL_EVENTS_PROJECT_ID selects the events project for sample.ts.\nExit codes: 0 pass, 1 coverage failure, 2 configuration/API error.");
     return;
   }
   const isJson = argumentsList.includes("--json");

@@ -171,7 +171,7 @@ async function sample(options: SampleOptions): Promise<number> {
 async function main(): Promise<void> {
   const argumentsList = process.argv.slice(2);
   if (argumentsList.includes("--help")) {
-    console.log("Usage: pnpm docs-eval:sample [--days 14] [--seed 1] [--per-harness 30] [--help]\nSamples MCP docs-search calls from the events project into data/raw-sample.json.\nRequires POSTHOG_PERSONAL_API_KEY and POSTHOG_DOCS_EVAL_EVENTS_PROJECT_ID; POSTHOG_REGION defaults to us.\nExit codes: 0 at least 100 distinct queries, 1 insufficient queries, 2 configuration/API error.");
+    console.log("Usage: pnpm docs-eval:sample [--days 14] [--seed 1] [--per-harness 30] [--help]\nSamples MCP docs-search calls from the events project into data/raw-sample.json.\nRequires POSTHOG_DOCS_EVAL_API_KEY and POSTHOG_DOCS_EVAL_EVENTS_PROJECT_ID; POSTHOG_REGION defaults to us.\nExit codes: 0 at least 100 distinct queries, 1 insufficient queries, 2 configuration/API error.");
     return;
   }
   try {

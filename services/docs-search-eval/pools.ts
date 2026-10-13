@@ -246,7 +246,7 @@ async function savePools(pools: PoolsFile): Promise<void> {
 async function main(): Promise<void> {
   const argumentsList = process.argv.slice(2);
   if (argumentsList.includes("--help")) {
-    console.log("Usage: pnpm docs-eval:pools [--max-rows <n>] [--fresh] [--help]\nRequires POSTHOG_PERSONAL_API_KEY, POSTHOG_DOCS_EVAL_PROJECT_ID, POSTHOG_GATEWAY_TOKEN.\nOptional: DOCS_EVAL_REWRITE_MODEL (default claude-opus-4-6), POSTHOG_REGION (default us).\nExit codes: 0 success, 2 configuration/API/model error.");
+    console.log("Usage: pnpm docs-eval:pools [--max-rows <n>] [--fresh] [--help]\nRequires POSTHOG_DOCS_EVAL_API_KEY, POSTHOG_DOCS_EVAL_PROJECT_ID, POSTHOG_GATEWAY_TOKEN.\nOptional: DOCS_EVAL_REWRITE_MODEL (default claude-opus-4-6), POSTHOG_REGION (default us).\nExit codes: 0 success, 2 configuration/API/model error.");
     return;
   }
   try {
@@ -271,7 +271,7 @@ async function main(): Promise<void> {
     if (!sample.success) throw new PoolsError("Invalid raw-sample.json format");
     const gatewayToken = resolveGatewayToken();
     if (!gatewayToken) throw new PoolsError("POSTHOG_GATEWAY_TOKEN must be set");
-    if (!process.env.POSTHOG_PERSONAL_API_KEY?.trim()) throw new PoolsError("POSTHOG_PERSONAL_API_KEY must be set");
+    if (!process.env.POSTHOG_DOCS_EVAL_API_KEY?.trim()) throw new PoolsError("POSTHOG_DOCS_EVAL_API_KEY must be set");
     let projectId: number;
     try {
       projectId = docsProjectId();

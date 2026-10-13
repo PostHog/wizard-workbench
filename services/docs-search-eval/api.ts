@@ -58,8 +58,8 @@ interface PaginatedResponse<T> {
 type QueryParams = Record<string, string | number | boolean>;
 
 async function posthogRequest<T>(path: string, method: string, params?: QueryParams, body?: unknown): Promise<T> {
-  const apiKey = process.env.POSTHOG_PERSONAL_API_KEY;
-  if (!apiKey?.trim()) throw new Error("POSTHOG_PERSONAL_API_KEY must be set");
+  const apiKey = process.env.POSTHOG_DOCS_EVAL_API_KEY;
+  if (!apiKey?.trim()) throw new Error("POSTHOG_DOCS_EVAL_API_KEY must be set");
   const url = new URL(path, posthogAppHost(process.env.POSTHOG_REGION ?? "us"));
   for (const [name, value] of Object.entries(params ?? {})) url.searchParams.set(name, String(value));
   for (let attempt = 0; attempt < 2; attempt++) {

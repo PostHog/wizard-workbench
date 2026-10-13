@@ -78,7 +78,7 @@ async function replaySearch(projectId: number, scrubbedQuery: string, rerank: bo
 async function main(): Promise<void> {
   const argumentsList = process.argv.slice(2);
   if (argumentsList.includes("--help")) {
-    console.log("Usage: pnpm docs-eval:run [--gating-arm rerankOff|rerankOn] [--help]\nReplays the committed gold set against the Business Knowledge docs project with both rerank arms.\nDefaults: --gating-arm rerankOff (the shipped docs-search path).\nRequires POSTHOG_PERSONAL_API_KEY and POSTHOG_DOCS_EVAL_PROJECT_ID; POSTHOG_REGION defaults to us.\nExit codes: 0 pass, 1 readiness/coverage/bar failure, 2 configuration/API/file error.");
+    console.log("Usage: pnpm docs-eval:run [--gating-arm rerankOff|rerankOn] [--help]\nReplays the committed gold set against the Business Knowledge docs project with both rerank arms.\nDefaults: --gating-arm rerankOff (the shipped docs-search path).\nRequires POSTHOG_DOCS_EVAL_API_KEY and POSTHOG_DOCS_EVAL_PROJECT_ID; POSTHOG_REGION defaults to us.\nExit codes: 0 pass, 1 readiness/coverage/bar failure, 2 configuration/API/file error.");
     return;
   }
   try {
