@@ -7,6 +7,8 @@
     "docs-eval:sample": "tsx services/docs-search-eval/sample.ts",
     "docs-eval:pools": "tsx services/docs-search-eval/pools.ts",
     "docs-eval:label": "tsx services/docs-search-eval/labeler/server.ts",
+    "docs-eval:score": "tsx services/docs-search-eval/score.ts",
+    "test:docs-eval": "tsx --test services/docs-search-eval/score.test.ts",
     "evaluate": "tsx services/pr-evaluator/index.ts",
     "wizard-ci": "tsx services/wizard-ci/index.ts",
     "wizard-ci-snapshots": "tsx services/wizard-ci/snapshots.ts",
