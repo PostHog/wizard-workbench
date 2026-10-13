@@ -64,33 +64,29 @@ async function fetchCandidates(options: SampleOptions): Promise<CandidateSpan[]>
   const candidates: CandidateSpan[] = [];
   const candidatesPerHarness = options.perHarness * 3;
   for (const harness of HARNESSES) {
-    for (let offset = 0; offset < candidatesPerHarness; offset += 500) {
-      const pageSize = Math.min(500, candidatesPerHarness - offset);
-      const spans = await runHogQL(eventsProjectId(), `
-        SELECT uuid, ${HARNESS_EXPRESSION} AS harness,
-          properties.$mcp_client_name AS clientName,
-          properties.$ai_trace_id AS traceId, timestamp
-        FROM events
-        WHERE event = '$ai_span' AND properties.$ai_span_name = 'docs-search'
-          AND timestamp >= now() - INTERVAL ${options.days} DAY
-          AND timestamp <= now() AND ${HARNESS_EXPRESSION} = ${quoteHogQL(harness)}
-        ORDER BY cityHash64(concat(toString(uuid), '${options.seed}')), uuid
-        LIMIT ${pageSize} OFFSET ${offset}
-      `);
-      for (const span of spans) {
-        if (typeof span.uuid !== "string" || typeof span.timestamp !== "string") {
-          throw new Error("PostHog candidate response is missing a span UUID or timestamp");
-        }
-        if (typeof span.traceId !== "string" || !span.traceId.trim()) continue;
-        candidates.push({
-          spanUuid: span.uuid,
-          traceId: span.traceId,
-          harness,
-          clientName: typeof span.clientName === "string" ? span.clientName : "",
-          timestamp: span.timestamp,
-        });
+    const spans = await runHogQL(eventsProjectId(), `
+      SELECT uuid, ${HARNESS_EXPRESSION} AS harness,
+        properties.$mcp_client_name AS clientName,
+        properties.$ai_trace_id AS traceId, timestamp
+      FROM events
+      WHERE event = '$ai_span' AND properties.$ai_span_name = 'docs-search'
+        AND timestamp >= now() - INTERVAL ${options.days} DAY
+        AND timestamp <= now() AND ${HARNESS_EXPRESSION} = ${quoteHogQL(harness)}
+      ORDER BY cityHash64(concat(toString(uuid), '${options.seed}')), uuid
+      LIMIT ${candidatesPerHarness}
+    `);
+    for (const span of spans) {
+      if (typeof span.uuid !== "string" || typeof span.timestamp !== "string") {
+        throw new Error("PostHog candidate response is missing a span UUID or timestamp");
       }
-      if (spans.length < pageSize) break;
+      if (typeof span.traceId !== "string" || !span.traceId.trim()) continue;
+      candidates.push({
+        spanUuid: span.uuid,
+        traceId: span.traceId,
+        harness,
+        clientName: typeof span.clientName === "string" ? span.clientName : "",
+        timestamp: span.timestamp,
+      });
     }
   }
   return candidates;

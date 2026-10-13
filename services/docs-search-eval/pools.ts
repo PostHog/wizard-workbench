@@ -52,6 +52,8 @@ type Rewrite = z.infer<typeof rewriteSchema>;
 const dataDirectory = fileURLToPath(new URL("./data/", import.meta.url));
 const samplePath = resolve(dataDirectory, "raw-sample.json");
 const outputPath = resolve(dataDirectory, "pools.json");
+const hostAgentEnvironmentPattern = /^(CLAUDE|ANTHROPIC|AI_AGENT)/;
+const gatewayEnvironmentNames = new Set(["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_CUSTOM_HEADERS", "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS"]);
 const stopwords = new Set([
   "the", "and", "for", "with", "how", "can", "you", "your", "this", "that", "are", "does",
   "from", "have", "has", "what", "which", "when", "where", "why", "into", "using", "use",
@@ -146,8 +148,19 @@ export function assertResumable(
   throw new PoolsError(`Existing pools.json differs in ${differingFields.join(", ")}; rerun with --fresh`);
 }
 
+function rewriteEnvironment(): Record<string, string> {
+  const environment: Record<string, string> = {};
+  for (const [name, value] of Object.entries(process.env)) {
+    if (value === undefined) continue;
+    if (hostAgentEnvironmentPattern.test(name) && !gatewayEnvironmentNames.has(name)) continue;
+    environment[name] = value;
+  }
+  return { ...environment, TMPDIR: dataDirectory, CLAUDE_CONFIG_DIR: resolve(dataDirectory, ".claude") };
+}
+
 async function rewriteBatch(rows: SampleRow[], rewriteModel: string): Promise<Rewrite[]> {
   for (let attempt = 0; attempt < 2; attempt++) {
+    let lastStderrLine = "";
     try {
       let outputText = "";
       for await (const message of query({
@@ -163,9 +176,11 @@ async function rewriteBatch(rows: SampleRow[], rewriteModel: string): Promise<Re
           strictMcpConfig: true,
           mcpServers: {},
           cwd: dataDirectory,
-          env: { ...process.env, TMPDIR: dataDirectory, CLAUDE_CONFIG_DIR: resolve(dataDirectory, ".claude") },
+          env: rewriteEnvironment(),
           debug: false,
-          stderr: () => {},
+          stderr: (line) => {
+            if (line.trim()) lastStderrLine = line.trim().slice(0, 300);
+          },
         },
       })) {
         if (message.type === "result" && message.subtype === "success") outputText = message.result;
@@ -178,9 +193,10 @@ async function rewriteBatch(rows: SampleRow[], rewriteModel: string): Promise<Re
         returnedIds.add(rewrite.id);
       }
       return rewrites;
-    } catch {
+    } catch (error) {
       if (attempt === 0) continue;
-      throw new PoolsError("Rewrite batch failed after 2 attempts");
+      const cause = [error instanceof Error ? error.message : String(error), lastStderrLine].filter(Boolean).join(": ");
+      throw new PoolsError(`Rewrite batch failed after 2 attempts: ${cause}`);
     }
   }
   throw new PoolsError("Rewrite batch failed");
