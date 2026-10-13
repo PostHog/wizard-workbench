@@ -9,6 +9,7 @@
     "docs-eval:label": "tsx services/docs-search-eval/labeler/server.ts",
     "docs-eval:score": "tsx services/docs-search-eval/score.ts",
     "test:docs-eval": "tsx --test services/docs-search-eval/score.test.ts",
+    "docs-eval:run": "tsx services/docs-search-eval/run.ts",
     "evaluate": "tsx services/pr-evaluator/index.ts",
     "wizard-ci": "tsx services/wizard-ci/index.ts",
     "wizard-ci-snapshots": "tsx services/wizard-ci/snapshots.ts",
