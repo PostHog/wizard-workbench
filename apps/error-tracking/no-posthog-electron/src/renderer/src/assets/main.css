@@ -1,0 +1,68 @@
+@import './base.css';
+
+.layout {
+  display: flex;
+  height: 100vh;
+}
+
+.note-list {
+  width: 240px;
+  padding: 12px;
+  border-right: 1px solid var(--ev-c-gray-1);
+  overflow-y: auto;
+}
+
+.note-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+}
+
+.note-list li {
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.note-list li.selected {
+  background: var(--color-background-mute);
+}
+
+main {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editor input,
+.editor textarea {
+  font: inherit;
+  padding: 8px;
+  color: inherit;
+  background: var(--color-background-soft);
+  border: 1px solid var(--ev-c-gray-1);
+  border-radius: 4px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.empty {
+  color: var(--ev-c-text-2);
+}
+
+footer {
+  margin-top: auto;
+  font-size: 12px;
+  color: var(--ev-c-text-2);
+}

@@ -1,0 +1,18 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.wrangler/
+
+# local secrets for wrangler dev
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+
+# logs
+*.log
+
+# misc
+.DS_Store
