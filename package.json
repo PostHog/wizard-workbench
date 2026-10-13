@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "docs-eval:coverage": "tsx services/docs-search-eval/coverage.ts",
     "evaluate": "tsx services/pr-evaluator/index.ts",
     "wizard-ci": "tsx services/wizard-ci/index.ts",
     "wizard-ci-snapshots": "tsx services/wizard-ci/snapshots.ts",
