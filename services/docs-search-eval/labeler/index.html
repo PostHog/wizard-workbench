@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docs-search labeler</title>
+<style>
+:root { color-scheme: light; --background: #f5f6f8; --surface: #fff; --text: #202733; --muted: #535f70; --border: #c4ccd8; --accent: #2158b0; --selected: #e6efff; --warning: #9a3400; }
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark; --background: #171b22; --surface: #222834; --text: #eef1f7; --muted: #b7c2d2; --border: #536077; --accent: #92bbff; --selected: #2c4165; --warning: #ffb07c; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--background); color: var(--text); font: 15px/1.5 system-ui, sans-serif; }
+header { padding: 16px 24px; border-bottom: 1px solid var(--border); }
+h1 { margin: 0; font-size: 22px; }
+h2 { font-size: 19px; }
+a { color: var(--accent); overflow-wrap: anywhere; }
+.workspace { display: grid; grid-template-columns: 320px minmax(0, 1fr); }
+aside { padding: 16px; border-right: 1px solid var(--border); }
+main { padding: 16px 24px; max-width: 1000px; min-width: 0; }
+label.field { display: block; margin: 16px 0; font-weight: 600; }
+textarea, input[type="text"], select { width: 100%; padding: 9px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; font: inherit; }
+textarea { min-height: 95px; resize: vertical; }
+button { padding: 8px 14px; border: 1px solid var(--border); border-radius: 5px; color: var(--text); background: var(--surface); font: inherit; cursor: pointer; }
+button:disabled { opacity: .55; cursor: default; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.query-list { display: grid; gap: 8px; margin-top: 16px; max-height: calc(100vh - 220px); overflow: auto; }
+.query { text-align: left; width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; }
+.query[aria-current="true"] { background: var(--selected); border-color: var(--accent); }
+.query-preview { display: block; font-size: 14px; overflow-wrap: anywhere; }
+.chip { display: inline-block; font-size: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 1px 7px; margin-left: 5px; }
+.local { border: 1px dashed var(--warning); padding: 12px; }
+.local strong, .warning { color: var(--warning); }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/1.5 ui-monospace, monospace; }
+.candidate { margin: 10px 0; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; }
+.candidate label { font-weight: 600; }
+.candidate p { margin: 5px 0; }
+.context { color: var(--muted); font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 16px 0; }
+#status, #progress, #warning { white-space: pre-wrap; }
+@media (max-width: 799px) { .workspace { grid-template-columns: 1fr; } aside { border-right: 0; border-bottom: 1px solid var(--border); } .query-list { max-height: 240px; } main { padding: 16px; } }
+</style>
+</head>
+<body>
+<header><h1>Docs-search labeler</h1><div id="progress" role="status">Loading local queries…</div></header>
+<div class="workspace">
+<aside>
+<label for="filter">Filter queries</label>
+<select id="filter"><option value="all">All</option><option value="unlabeled">Unlabeled</option><option value="labeled">Labeled</option><option value="skipped">Skipped</option><option value="component">Component</option></select>
+<nav id="queries" class="query-list" aria-label="Queries"></nav>
+<p class="context">Keyboard: j/k select, s saves, outside text fields. Navigation keeps edits until the page reloads.</p>
+</aside>
+<main>
+<p id="empty">Select a query to label.</p>
+<section id="detail" hidden>
+<h2 id="query-heading"></h2>
+<div class="local"><strong>Raw query — local only, never saved</strong><pre id="raw-query"></pre></div>
+<label class="field" for="rewrite">Scrubbed rewrite<textarea id="rewrite"></textarea></label>
+<div id="warning" class="warning" role="status"></div>
+<h2>Candidate pages</h2><div id="candidates"></div>
+<label class="field" for="missing">Missing URLs (one per line)<textarea id="missing" placeholder="https://posthog.com/docs/…"></textarea></label>
+<label><input id="component" type="checkbox"> Targets a component page</label>
+<label class="field" for="snippet">Expected code snippet<input id="snippet" type="text" disabled placeholder="posthog.init("></label>
+<p class="context">A literal substring the top relevant chunk must contain. Required for labeled component queries.</p>
+<label class="field" for="notes">Notes<textarea id="notes"></textarea></label>
+<h2>Inkeep URLs</h2><p class="context">Inkeep is not a reference. These URLs are read-only context.</p><div id="inkeep"></div>
+<div class="actions"><button id="save" type="button">Save</button><button id="skip" type="button">Skip</button><button id="next" type="button">Next</button><span id="status" role="status" aria-live="polite"></span></div>
+</section>
+</main>
+</div>
+<script>
+const elements = Object.fromEntries(["progress", "filter", "queries", "empty", "detail", "query-heading", "raw-query", "rewrite", "warning", "candidates", "missing", "component", "snippet", "notes", "inkeep", "save", "skip", "next", "status"].map((name) => [name, document.getElementById(name)]));
+let rows = [];
+let selectedId = null;
+let isSaving = false;
+const draftsById = new Map();
+
+const bareDomainTopLevels = new Set(["com", "io", "net", "org", "co", "dev", "app", "ai", "xyz", "de", "uk", "fr", "nl", "eu", "us", "ca", "au", "in", "br", "es", "it", "se", "ch", "jp", "cn", "ru", "me", "tech", "cloud", "site"]);
+
+const keyOrTokenPatterns = [
+  /(?:phc|phx|phs|pha)_[\w-]{8,}/i,
+  /(?<![a-z])sk-\w{8,}/i,
+  /(?<![a-z])sk[-_][\w-]{16,}/i,
+  /(?:gh[pousr]_|github_pat_)\w{8,}/i,
+  /AKIA[0-9A-Z]{16}/,
+  /xox[abp]-[\w-]+/i,
+  /eyJ[\w-]+\.[\w-]+\./,
+];
+
+function decodePercentEscapes(text) {
+  return text.replace(/(?:%[0-9a-f]{2})+/gi, (escapedSequence) => {
+    try {
+      return decodeURIComponent(escapedSequence);
+    } catch {
+      return escapedSequence;
+    }
+  });
+}
+
+function isPostHogHost(host) {
+  return host === "posthog.com" || host.endsWith(".posthog.com");
+}
+
+function hasBareDomainOutsidePostHog(text) {
+  for (const match of text.matchAll(/(?<![\p{L}\p{N}_.@/-])(?:[\p{L}\p{N}-]+\.)+(\p{L}{2,})(?![\p{L}\p{N}_(-]|\.[\p{L}\p{N}])/giu)) {
+    const host = match[0].toLowerCase();
+    if (isPostHogHost(host)) continue;
+    if (host.startsWith("www.") || bareDomainTopLevels.has(match[1].toLowerCase())) return true;
+  }
+  return false;
+}
+
+function findUnscrubbedPattern(text) {
+  if (/[\p{L}\p{N}_.!#$%&'*+/=?^`{|}~-]+@[\p{L}\p{N}_.-]+\.\p{L}{2,}/u.test(text)) return "email address";
+  for (const match of text.matchAll(/https?:\/\/[^\s<>"']+/gi)) {
+    try {
+      if (!isPostHogHost(new URL(match[0]).hostname.toLowerCase())) return "URL outside posthog.com";
+    } catch {
+      return "invalid URL";
+    }
+  }
+  if (hasBareDomainOutsidePostHog(text)) return "domain outside posthog.com";
+  if (keyOrTokenPatterns.some((pattern) => pattern.test(text))) return "key or token";
+  if (/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(text)) return "UUID";
+  if (/[0-9a-f]{24,}/i.test(text)) return "long hex string";
+  if (/\d{6,}/.test(text)) return "number with six or more digits";
+  if (/\d(?:[ .-]?\d){8,}/.test(text)) return "number with nine or more digits";
+  if (/(?<![\w+])\+\d(?:[\s().-]*\d){6,}/.test(text)) return "phone number";
+  return null;
+}
+
+function findUnscrubbedText(text) {
+  for (const candidateText of new Set([text, decodePercentEscapes(text)])) {
+    const reason = findUnscrubbedPattern(candidateText);
+    if (reason) return reason;
+  }
+  return null;
+}
+
+function updateWarning() {
+  elements.warning.textContent = [["scrubbedQuery", elements.rewrite.value], ["notes", elements.notes.value], ["expectedCodeSnippet", elements.component.checked ? elements.snippet.value : ""]]
+    .map(([field, text]) => { const reason = findUnscrubbedText(text); return reason ? `${field} contains ${reason}` : ""; }).filter(Boolean).join("\n");
+}
+
+function showProgress(progress) {
+  elements.progress.textContent = `Labeled: ${progress.labeled} / skipped: ${progress.skipped} / component-labeled: ${progress.componentLabeled} / remaining: ${progress.remaining}\n${progress.isReadyForRun ? "Ready for a run" : "Not ready for a run"}${progress.problems.length ? "\n" + progress.problems.join("\n") : ""}`;
+}
+
+function visibleRows() {
+  const filter = elements.filter.value;
+  return rows.filter((row) => {
+    if (filter === "all") return true;
+    if (filter === "component") return row.targetsComponentPage;
+    if (filter === "unlabeled") return !row.status;
+    return row.status === filter;
+  });
+}
+
+function renderList() {
+  elements.queries.replaceChildren();
+  for (const row of visibleRows()) {
+    const queryCard = document.createElement("button");
+    queryCard.type = "button";
+    queryCard.className = "query";
+    queryCard.setAttribute("aria-current", String(row.id === selectedId));
+    const harness = document.createElement("span");
+    harness.textContent = row.harness;
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.textContent = row.status || "unlabeled";
+    const preview = document.createElement("span");
+    preview.className = "query-preview";
+    preview.textContent = row.scrubbedQuery.slice(0, 60) + (row.scrubbedQuery.length > 60 ? "…" : "");
+    queryCard.append(harness, chip, preview);
+    queryCard.addEventListener("click", () => selectRow(row.id));
+    elements.queries.append(queryCard);
+  }
+}
+
+function createUrlLink(url) {
+  const link = document.createElement("a");
+  link.textContent = url;
+  try {
+    const parsedUrl = new URL(url);
+    if (!["https:", "http:"].includes(parsedUrl.protocol)) return link;
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+  } catch {
+    return link;
+  }
+  return link;
+}
+
+function captureDraft() {
+  if (!selectedId) return;
+  draftsById.set(selectedId, {
+    scrubbedQuery: elements.rewrite.value,
+    relevantUrls: [...elements.candidates.querySelectorAll("input:checked")].map((checkbox) => checkbox.value),
+    missing: elements.missing.value,
+    targetsComponentPage: elements.component.checked,
+    expectedCodeSnippet: elements.snippet.value,
+    notes: elements.notes.value,
+  });
+}
+
+function selectRow(id) {
+  if (isSaving) return;
+  captureDraft();
+  selectedId = id;
+  const row = rows.find((candidate) => candidate.id === id);
+  elements.detail.hidden = !row;
+  elements.empty.hidden = Boolean(row);
+  renderList();
+  if (!row) return;
+  const draft = draftsById.get(id);
+  const entry = draft || row;
+  elements["query-heading"].textContent = `${row.harness} · ${row.id}`;
+  elements["raw-query"].textContent = row.rawQuery;
+  elements.rewrite.value = entry.scrubbedQuery;
+  elements.component.checked = entry.targetsComponentPage;
+  elements.snippet.value = entry.expectedCodeSnippet || "";
+  elements.snippet.disabled = !entry.targetsComponentPage;
+  elements.notes.value = entry.notes || "";
+  const candidateUrls = new Set(row.candidates.map((candidate) => candidate.url));
+  elements.missing.value = draft ? draft.missing : (row.relevantUrls || []).filter((url) => !candidateUrls.has(url)).join("\n");
+  elements.candidates.replaceChildren();
+  for (const [index, candidate] of row.candidates.entries()) {
+    const card = document.createElement("div");
+    card.className = "candidate";
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = candidate.url;
+    checkbox.checked = (entry.relevantUrls || []).includes(candidate.url);
+    checkbox.id = `candidate-${index}`;
+    label.append(checkbox, document.createTextNode(` ${candidate.title || candidate.url}`));
+    const urlLine = document.createElement("p");
+    urlLine.append(createUrlLink(candidate.url));
+    const ranks = document.createElement("p");
+    ranks.className = "context";
+    ranks.textContent = `Rerank-off rank: ${candidate.rerankOffRank ?? "—"} · Rerank-on rank: ${candidate.rerankOnRank ?? "—"}`;
+    if (candidate.isTitleMatch) {
+      const badge = document.createElement("span");
+      badge.className = "chip";
+      badge.textContent = "Title match";
+      ranks.append(badge);
+    }
+    const headings = document.createElement("p");
+    headings.textContent = candidate.headingPath.join(" › ");
+    const snippet = document.createElement("pre");
+    snippet.textContent = candidate.snippet;
+    card.append(label, urlLine, ranks, headings, snippet);
+    elements.candidates.append(card);
+  }
+  elements.inkeep.replaceChildren();
+  for (const url of row.inkeepUrls) {
+    const paragraph = document.createElement("p");
+    paragraph.append(createUrlLink(url));
+    elements.inkeep.append(paragraph);
+  }
+  elements.status.textContent = "";
+  updateWarning();
+}
+
+function moveSelection(offset) {
+  if (isSaving) return;
+  const visible = visibleRows();
+  if (!visible.length) { selectRow(null); return; }
+  const selectedIndex = visible.findIndex((row) => row.id === selectedId);
+  const nextIndex = Math.max(0, Math.min(visible.length - 1, selectedIndex + offset));
+  selectRow(visible[nextIndex].id);
+}
+
+async function saveEntry(status) {
+  if (isSaving || !selectedId) return;
+  captureDraft();
+  const row = rows.find((candidate) => candidate.id === selectedId);
+  const draft = draftsById.get(selectedId);
+  const entry = {
+    id: row.id, harness: row.harness, status,
+    scrubbedQuery: draft.scrubbedQuery,
+    relevantUrls: [...draft.relevantUrls, ...draft.missing.split(/\r?\n/).map((url) => url.trim()).filter(Boolean)],
+    targetsComponentPage: draft.targetsComponentPage,
+    expectedCodeSnippet: draft.targetsComponentPage ? draft.expectedCodeSnippet : null,
+    inkeepUrls: row.inkeepUrls,
+    notes: draft.notes,
+    labeledAt: new Date().toISOString(),
+  };
+  isSaving = true;
+  for (const name of ["save", "skip", "next", "filter"]) elements[name].disabled = true;
+  elements.status.textContent = "Saving…";
+  try {
+    const response = await fetch("/api/gold", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
+    const saved = await response.json();
+    if (!response.ok) { elements.status.textContent = saved.errors.join("\n"); return; }
+    const stateResponse = await fetch("/api/state");
+    if (!stateResponse.ok) throw new Error("Saved, but unable to refresh local state");
+    const state = await stateResponse.json();
+    rows = state.rows;
+    showProgress(saved.progress);
+    renderList();
+    elements.status.textContent = "Saved.";
+  } catch (error) {
+    elements.status.textContent = error.message || "Unable to save";
+  } finally {
+    isSaving = false;
+    for (const name of ["save", "skip", "next", "filter"]) elements[name].disabled = false;
+  }
+}
+
+elements.rewrite.addEventListener("input", updateWarning);
+elements.notes.addEventListener("input", updateWarning);
+elements.snippet.addEventListener("input", updateWarning);
+elements.component.addEventListener("change", () => { elements.snippet.disabled = !elements.component.checked; updateWarning(); });
+elements.filter.addEventListener("change", () => { const visible = visibleRows(); selectRow(visible[0]?.id || null); });
+elements.save.addEventListener("click", () => saveEntry("labeled"));
+elements.skip.addEventListener("click", () => saveEntry("skipped"));
+elements.next.addEventListener("click", () => moveSelection(1));
+document.addEventListener("keydown", (event) => {
+  if (event.ctrlKey || event.metaKey || event.altKey || event.target.closest("input, textarea, select, [contenteditable]")) return;
+  if (!["j", "k", "s"].includes(event.key)) return;
+  event.preventDefault();
+  if (event.key === "j") moveSelection(1);
+  if (event.key === "k") moveSelection(-1);
+  if (event.key === "s") saveEntry("labeled");
+});
+async function loadState() {
+  try {
+    const response = await fetch("/api/state");
+    if (!response.ok) throw new Error("Unable to load local queries");
+    const state = await response.json();
+    rows = state.rows;
+    showProgress(state.progress);
+    selectRow(rows[0]?.id || null);
+  } catch (error) {
+    elements.progress.textContent = error.message;
+  }
+}
+loadState();
+</script>
+</body>
+</html>
