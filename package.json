@@ -5,6 +5,7 @@
   "scripts": {
     "docs-eval:coverage": "tsx services/docs-search-eval/coverage.ts",
     "docs-eval:sample": "tsx services/docs-search-eval/sample.ts",
+    "docs-eval:pools": "tsx services/docs-search-eval/pools.ts",
     "evaluate": "tsx services/pr-evaluator/index.ts",
     "wizard-ci": "tsx services/wizard-ci/index.ts",
     "wizard-ci-snapshots": "tsx services/wizard-ci/snapshots.ts",
