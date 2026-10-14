@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -8,16 +10,37 @@ from django.contrib.auth.views import (
 )
 from django.contrib import messages
 from django.urls import reverse_lazy
+from config.apps import get_posthog_client
 from .forms import RegisterForm, LoginForm, ProfileForm
+
+
+posthog_logger = logging.getLogger('posthog.exporter')
 
 
 class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        client = get_posthog_client()
+        if client:
+            client.capture('user_logged_in')
+        posthog_logger.info(
+            'user_login_completed',
+            extra={'event': 'user_login_completed'},
+        )
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def post(self, request, *args, **kwargs):
+        client = get_posthog_client()
+        if request.user.is_authenticated and client:
+            client.capture('user_logged_out')
+        return super().post(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -49,6 +72,13 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            client = get_posthog_client()
+            if client:
+                client.capture('user_registered')
+            posthog_logger.info(
+                'user_registration_completed',
+                extra={'event': 'user_registration_completed'},
+            )
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +93,9 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            client = get_posthog_client()
+            if client:
+                client.capture('profile_updated')
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
