@@ -8,6 +8,7 @@ export const useAuth = () => {
   
   const user = useState<string | null>('auth-user', () => cookie.value)
   const isAuthenticated = computed(() => !!user.value)
+  const { $posthogLogger } = useNuxtApp()
 
   const login = async (username: string, password: string) => {
     if (!username?.trim() || !password?.trim()) {
@@ -23,6 +24,10 @@ export const useAuth = () => {
       if (response.success) {
         user.value = response.user
         cookie.value = response.user
+        $posthogLogger?.info('authentication login completed', {
+          auth_action: 'login',
+          outcome: 'success',
+        })
         await navigateTo('/')
       }
       
@@ -41,6 +46,10 @@ export const useAuth = () => {
     } finally {
       user.value = null
       cookie.value = null
+      $posthogLogger?.info('authentication logout completed', {
+        auth_action: 'logout',
+        outcome: 'completed',
+      })
       await navigateTo('/login')
     }
   }
