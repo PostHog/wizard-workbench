@@ -1,13 +1,19 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
-from flask import Flask, request, current_app
+from flask import Flask, g, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog
+from opentelemetry.exporter.otlp.proto.http._log_exporter import \
+    OTLPLogExporter
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -35,6 +41,21 @@ moment = Moment()
 babel = Babel()
 
 
+def identify_posthog_user(user):
+    """Bind the authenticated user to the active PostHog context."""
+    posthog_client = current_app.extensions.get('posthog')
+    if posthog_client:
+        distinct_id = str(user.id)
+        posthog_client.identify_context(distinct_id)
+        posthog_client.set(
+            distinct_id=distinct_id,
+            properties={
+                'email': user.email,
+                'username': user.username,
+            },
+        )
+
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -53,6 +74,74 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    app.extensions['posthog'] = None
+    app.extensions['posthog_log_logger'] = None
+    posthog_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    if posthog_token and posthog_host:
+        posthog_client = Posthog(
+            project_api_key=posthog_token,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        app.extensions['posthog'] = posthog_client
+        atexit.register(posthog_client.shutdown)
+
+        logger_provider = LoggerProvider()
+        otlp_exporter = OTLPLogExporter(
+            endpoint=f"{posthog_host.rstrip('/')}/i/v1/logs",
+            headers={'Authorization': f'Bearer {posthog_token}'},
+        )
+        logger_provider.add_log_record_processor(
+            BatchLogRecordProcessor(otlp_exporter)
+        )
+        posthog_log_logger = logging.Logger('microblog.posthog_logs')
+        posthog_log_logger.setLevel(logging.INFO)
+        posthog_log_logger.propagate = False
+        posthog_log_logger.addHandler(
+            LoggingHandler(logger_provider=logger_provider)
+        )
+        app.extensions['posthog_log_logger'] = posthog_log_logger
+        atexit.register(logger_provider.shutdown)
+        posthog_log_logger.info(
+            'application started',
+            extra={'event': 'application_started', 'component': 'flask'},
+        )
+    elif app.debug:
+        missing_var = 'POSTHOG_PROJECT_TOKEN' if not posthog_token else 'POSTHOG_HOST'
+        raise RuntimeError(
+            f'{missing_var} variable required by PostHog is missing or '
+            f'un-configured, this causes events to be silently missed. This '
+            f'error stops appearing once {missing_var} is configured'
+        )
+
+    @app.before_request
+    def bind_posthog_request_context():
+        posthog_client = app.extensions.get('posthog')
+        if not posthog_client:
+            return
+
+        context = posthog_client.new_context(fresh=True)
+        context.__enter__()
+        g.posthog_context = context
+
+        if current_user.is_authenticated:
+            identify_posthog_user(current_user)
+        else:
+            distinct_id = request.headers.get('X-POSTHOG-DISTINCT-ID')
+            if distinct_id:
+                posthog_client.identify_context(distinct_id)
+
+        session_id = request.headers.get('X-POSTHOG-SESSION-ID')
+        if session_id:
+            posthog_client.set_context_session(session_id)
+
+    @app.teardown_request
+    def close_posthog_request_context(exception):
+        context = g.pop('posthog_context', None)
+        if context:
+            context.__exit__(None, None, None)
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)

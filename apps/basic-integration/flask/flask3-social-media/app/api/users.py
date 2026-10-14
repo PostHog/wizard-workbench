@@ -1,6 +1,6 @@
 import sqlalchemy as sa
-from flask import request, url_for, abort
-from app import db
+from flask import current_app, request, url_for, abort
+from app import db, identify_posthog_user
 from app.models import User
 from app.api import bp
 from app.api.auth import token_auth
@@ -57,6 +57,13 @@ def create_user():
     user.from_dict(data, new_user=True)
     db.session.add(user)
     db.session.commit()
+    identify_posthog_user(user)
+    posthog_client = current_app.extensions.get('posthog')
+    if posthog_client:
+        posthog_client.capture(
+            'user_registered',
+            properties={'registration_channel': 'api'},
+        )
     return user.to_dict(), 201, {'Location': url_for('api.get_user',
                                                      id=user.id)}
 
@@ -76,6 +83,20 @@ def update_user(id):
         db.session.scalar(sa.select(User).where(
             User.email == data['email'])):
         return bad_request('please use a different email address')
+    username_updated = 'username' in data and data['username'] != user.username
+    about_me_updated = 'about_me' in data and data['about_me'] != user.about_me
+    email_updated = 'email' in data and data['email'] != user.email
     user.from_dict(data, new_user=False)
     db.session.commit()
+    posthog_client = current_app.extensions.get('posthog')
+    if posthog_client:
+        posthog_client.capture(
+            'profile_updated',
+            properties={
+                'update_channel': 'api',
+                'username_updated': username_updated,
+                'about_me_updated': about_me_updated,
+                'email_updated': email_updated,
+            },
+        )
     return user.to_dict()
