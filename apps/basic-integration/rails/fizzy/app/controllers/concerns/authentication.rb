@@ -88,7 +88,15 @@ module Authentication
     def start_new_session_for(identity)
       identity.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
         set_current_session session
+        if posthog_configured?
+          PostHog.identify(distinct_id: identity.posthog_distinct_id, properties: identity.posthog_properties)
+          PostHog.capture(distinct_id: identity.posthog_distinct_id, event: "user_logged_in")
+        end
       end
+    end
+
+    def posthog_configured?
+      ENV["POSTHOG_API_KEY"].present? && ENV["POSTHOG_HOST"].present?
     end
 
     def set_current_session(session)
