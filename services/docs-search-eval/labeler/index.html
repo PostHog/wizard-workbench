@@ -30,7 +30,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .local { border: 1px dashed var(--warning); padding: 12px; }
 .local strong, .warning { color: var(--warning); }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/1.5 ui-monospace, monospace; }
-.candidate { margin: 10px 0; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; }
+.candidate { margin: 10px 0; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
+.candidate:has(input:checked) { background: var(--selected); border-color: var(--accent); }
 .candidate label { font-weight: 600; }
 .candidate p { margin: 5px 0; }
 .context { color: var(--muted); font-size: 14px; }
@@ -249,6 +250,10 @@ function selectRow(id) {
     const snippet = document.createElement("pre");
     snippet.textContent = candidate.snippet;
     card.append(label, urlLine, ranks, headings, snippet);
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("a, label") || window.getSelection().toString()) return;
+      checkbox.checked = !checkbox.checked;
+    });
     elements.candidates.append(card);
   }
   elements.inkeep.replaceChildren();
