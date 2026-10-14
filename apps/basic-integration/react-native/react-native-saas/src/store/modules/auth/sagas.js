@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
+import { posthog } from '../../../config/posthog';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
 
 import {
@@ -41,6 +42,17 @@ export function* signIn({ payload }) {
     if (email === 'demo@test.com' && password === 'demo') {
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
       yield put(signInSuccess(DEMO_TOKEN));
+
+      if (posthog) {
+        posthog.identify(email, {
+          $set: { email },
+        });
+        posthog.capture('sign_in_succeeded', { authentication_method: 'demo' });
+        posthog.logger.info('demo_sign_in_completed', {
+          authentication_method: 'demo',
+        });
+      }
+
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
       toast.showSuccess('Welcome to demo mode!');
@@ -53,13 +65,34 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+
+    if (posthog) {
+      posthog.identify(email, {
+        $set: { email },
+      });
+      posthog.capture('sign_in_succeeded', { authentication_method: 'api' });
+      posthog.logger.info('api_sign_in_completed', {
+        authentication_method: 'api',
+      });
+    }
+
     NavigationService.navigate('Main');
   } catch (err) {
+    if (posthog) {
+      posthog.capture('sign_in_failed');
+      posthog.logger.warn('sign_in_rejected');
+    }
     toast.showError('Invalid credentials');
   }
 }
 
 export function* signOut() {
+  if (posthog) {
+    posthog.capture('signed_out');
+    posthog.logger.info('sign_out_completed');
+    posthog.reset();
+  }
+
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
