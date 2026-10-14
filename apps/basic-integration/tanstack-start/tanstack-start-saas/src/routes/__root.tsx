@@ -7,6 +7,7 @@ import {
   createRootRoute,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react'
 import * as React from 'react'
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary'
 import { NotFound } from '~/components/NotFound'
@@ -58,6 +59,56 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const projectToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+  const apiHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
+  if (!projectToken) {
+    if (import.meta.env.DEV) {
+      throw new Error(
+        'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_PROJECT_TOKEN is configured',
+      )
+    }
+
+    return <RootDocumentContent>{children}</RootDocumentContent>
+  }
+
+  if (!apiHost) {
+    if (import.meta.env.DEV) {
+      throw new Error(
+        'VITE_PUBLIC_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_HOST is configured',
+      )
+    }
+
+    return <RootDocumentContent>{children}</RootDocumentContent>
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={projectToken}
+      options={{
+        api_host: apiHost,
+        defaults: '2025-05-24',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+        tracing_headers:
+          typeof window !== 'undefined' ? [window.location.hostname] : [],
+      }}
+    >
+      <PostHogErrorBoundary
+        fallback={({ error }) => (
+          <DefaultCatchBoundary
+            error={error as Error}
+            reset={() => window.location.reload()}
+          />
+        )}
+      >
+        <RootDocumentContent>{children}</RootDocumentContent>
+      </PostHogErrorBoundary>
+    </PostHogProvider>
+  )
+}
+
+function RootDocumentContent({ children }: { children: React.ReactNode }) {
   return (
     <html>
       <head>

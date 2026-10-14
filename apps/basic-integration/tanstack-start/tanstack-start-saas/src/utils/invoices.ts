@@ -130,7 +130,10 @@ export const createInvoiceFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     console.info('Creating invoice...', data)
-    return createInvoice(data)
+    const invoice = createInvoice(data)
+    const { logInvoiceCreated } = await import('./posthog-logs')
+    logInvoiceCreated()
+    return invoice
   })
 
 export const markInvoicePaid = createServerFn({ method: 'POST' })
@@ -141,9 +144,14 @@ export const markInvoicePaid = createServerFn({ method: 'POST' })
     if (isNaN(id)) {
       throw new Error('Invalid invoice ID')
     }
+    const { logInvoicePaymentRequested, logInvoiceMarkedPaid } = await import(
+      './posthog-logs'
+    )
+    logInvoicePaymentRequested()
     const invoice = updateInvoice(id, { status: 'paid' })
     if (!invoice) {
       throw new Error('Invoice not found')
     }
+    logInvoiceMarkedPaid()
     return invoice
   })

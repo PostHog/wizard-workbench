@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 
-export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
+export function DefaultCatchBoundary({ error, reset }: ErrorComponentProps) {
   const router = useRouter()
   const isRoot = useMatch({
     strict: false,
@@ -28,6 +28,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
       <div className="flex gap-3 items-center">
         <button
           onClick={() => {
+            reset()
             router.invalidate()
           }}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
