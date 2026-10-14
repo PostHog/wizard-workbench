@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import posthog from 'posthog-js'
 import { useAuth } from '../composables/useAuth'
+import { logPostHogInfo } from '../posthogLogger'
 
 const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
 const { login } = useAuth()
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+)
 
 const handleLogin = async () => {
   error.value = ''
@@ -14,6 +19,13 @@ const handleLogin = async () => {
 
   try {
     await login(username.value, password.value)
+    if (isPostHogConfigured) {
+      posthog.capture('login_succeeded')
+    }
+    logPostHogInfo('Login completed', {
+      operation: 'login',
+      outcome: 'succeeded',
+    })
   } catch (e: any) {
     error.value = e.message || 'Login failed'
   } finally {

@@ -1,18 +1,40 @@
 <script setup lang="ts">
+import posthog from 'posthog-js'
 import type { Media, MediaType, QueryItem } from '../../types'
 import { formatVote } from '../../composables/utils'
+import { logPostHogInfo } from '../../posthogLogger'
 
-defineProps<{
+const props = defineProps<{
   type: MediaType
   item: Media
   query?: QueryItem
 }>()
+
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+)
+
+function selectMedia() {
+  const mediaType = props.item.media_type || props.type
+  if (isPostHogConfigured) {
+    posthog.capture('media_selected', {
+      media_id: props.item.id,
+      media_type: mediaType,
+    })
+  }
+  logPostHogInfo('Media selected', {
+    operation: 'media_selection',
+    media_id: props.item.id,
+    media_type: mediaType,
+  })
+}
 </script>
 
 <template>
   <router-link
     :to="`/${item.media_type || type}/${item.id}`"
     class="pb-2 block"
+    @click="selectMedia"
   >
     <div
       class="block bg-gray-400/10 p-1 aspect-[10/16] transition duration-400 hover:scale-105 z-10"
