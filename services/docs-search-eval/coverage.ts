@@ -46,7 +46,7 @@ function scopePrefix(url: string): Prefix | null {
   }
 }
 
-function decodeXml(text: string): string {
+export function decodeXml(text: string): string {
   return text.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (entity: string, name: string) => {
     if (name.startsWith("#x")) return String.fromCodePoint(parseInt(name.slice(2), 16));
     if (name.startsWith("#")) return String.fromCodePoint(Number(name.slice(1)));
@@ -54,7 +54,7 @@ function decodeXml(text: string): string {
   });
 }
 
-async function sitemapUrls(): Promise<string[]> {
+export async function sitemapUrls(): Promise<string[]> {
   const response = await fetch("https://posthog.com/sitemap.xml", { redirect: "follow", signal: AbortSignal.timeout(60_000) });
   if (!response.ok) throw new Error(`Sitemap HTTP ${response.status} for https://posthog.com/sitemap.xml`);
   const xml = await response.text();

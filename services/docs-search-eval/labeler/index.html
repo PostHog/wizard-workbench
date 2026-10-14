@@ -245,6 +245,12 @@ function selectRow(id) {
       badge.textContent = "Title match";
       ranks.append(badge);
     }
+    if (candidate.isIngested === false) {
+      const badge = document.createElement("span");
+      badge.className = "chip";
+      badge.textContent = "Not in BK";
+      ranks.append(badge);
+    }
     const headings = document.createElement("p");
     headings.textContent = candidate.headingPath.join(" › ");
     const snippet = document.createElement("pre");

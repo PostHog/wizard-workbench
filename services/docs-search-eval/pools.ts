@@ -1,11 +1,13 @@
 import "dotenv/config";
 import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { configureGateway, repairAndParseJSON, resolveGatewayToken } from "../pr-evaluator/evaluator.js";
-import { docsProjectId, listSourceDocuments, listSources, searchKnowledge, type KnowledgeChunk } from "./api.js";
+import { docsProjectId, listSourceDocuments, listSources, searchKnowledge, type KnowledgeChunk, type KnowledgeSource } from "./api.js";
+import { decodeXml, sitemapUrls } from "./coverage.js";
 import { isCommunityQuestionUrl, normalizeDocUrl } from "./urls.js";
 
 const sampleRowSchema = z.object({
@@ -28,6 +30,7 @@ const candidateSchema = z.object({
   rerankOffRank: z.number().int().positive().nullable(),
   rerankOnRank: z.number().int().positive().nullable(),
   isTitleMatch: z.boolean(),
+  isIngested: z.boolean().default(true),
   headingPath: z.array(z.string()),
   snippet: z.string(),
 });
@@ -82,6 +85,7 @@ export function buildCandidatePool(
   rerankOffChunks: KnowledgeChunk[],
   rerankOnChunks: KnowledgeChunk[],
   titlesByNormalizedUrl: Map<string, string>,
+  notIngestedPagesByUrl: Map<string, { title: string; snippet: string }>,
 ): PoolCandidate[] {
   const candidatesByUrl = new Map<string, PoolCandidate>();
   for (const [armIndex, chunks] of [rerankOffChunks, rerankOnChunks].entries()) {
@@ -97,6 +101,7 @@ export function buildCandidatePool(
         rerankOffRank: null,
         rerankOnRank: null,
         isTitleMatch: false,
+        isIngested: true,
         headingPath: [],
         snippet: "",
       };
@@ -119,7 +124,18 @@ export function buildCandidatePool(
   for (const document of titleMatches) {
     candidatesByUrl.set(document.url, {
       url: document.url, title: document.title, rerankOffRank: null, rerankOnRank: null,
-      isTitleMatch: true, headingPath: [], snippet: "",
+      isTitleMatch: true, isIngested: true, headingPath: [], snippet: "",
+    });
+  }
+  const notIngestedMatches = [...notIngestedPagesByUrl].map(([url, page]) => {
+    const searchableText = `${page.title} ${new URL(url).pathname.replace(/[/-]/g, " ")}`.toLowerCase();
+    return { url, ...page, score: tokens.filter((token) => searchableText.includes(token)).length };
+  }).filter((page) => page.score >= 2 && !candidatesByUrl.has(page.url))
+    .sort((first, second) => second.score - first.score || first.url.localeCompare(second.url)).slice(0, 5);
+  for (const page of notIngestedMatches) {
+    candidatesByUrl.set(page.url, {
+      url: page.url, title: page.title, rerankOffRank: null, rerankOnRank: null,
+      isTitleMatch: true, isIngested: false, headingPath: [], snippet: page.snippet,
     });
   }
   return [...candidatesByUrl.values()].sort((first, second) => {
@@ -202,10 +218,18 @@ async function rewriteBatch(rows: SampleRow[], rewriteModel: string): Promise<Re
   throw new PoolsError("Rewrite batch failed");
 }
 
+async function assertSourcesReady(projectId: number): Promise<KnowledgeSource[]> {
+  const sources = await listSources(projectId);
+  const unreadySources = sources.filter((source) => source.status !== "ready");
+  if (unreadySources.length === 0) return sources;
+  const unreadyList = unreadySources.map((source) => `${source.name} is ${source.status}`).join(", ");
+  throw new PoolsError(`BK search skips sources that are not ready (${unreadyList}); rerun once every source is ready`);
+}
+
 async function listDocumentTitles(projectId: number): Promise<Map<string, string>> {
   const titlesByNormalizedUrl = new Map<string, string>();
-  const sources = await listSources(projectId);
-  for (const source of sources.filter((source) => source.status === "ready")) {
+  const sources = await assertSourcesReady(projectId);
+  for (const source of sources) {
     const documents = await listSourceDocuments(projectId, source.id);
     for (const document of documents) {
       if (document.safety_verdict !== "safe" || !document.url.trim()) continue;
@@ -216,9 +240,118 @@ async function listDocumentTitles(projectId: number): Promise<Map<string, string
   return titlesByNormalizedUrl;
 }
 
+type PageSummary = { title: string; snippet: string };
+type PageData = {
+  result?: {
+    data?: {
+      post?: { frontmatter?: { title?: unknown }; excerpt?: unknown };
+      pageData?: { frontmatter?: { title?: unknown }; excerpt?: unknown };
+      postHogPipeline?: { name?: unknown; description?: unknown };
+      postHogSource?: { name?: unknown; caption?: unknown };
+      data?: { name?: unknown; items?: unknown };
+    } | null;
+    pageContext?: {
+      description?: unknown;
+      fullReference?: { info?: { title?: unknown } };
+      typeData?: { name?: unknown; example?: unknown };
+    };
+  };
+} | null;
+
+async function fetchPublicText(url: string): Promise<string | null> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(attempt * 1_000);
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+      if (response.ok) return await response.text();
+      await response.body?.cancel();
+      if (response.status !== 429 && response.status < 500) return null;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+async function fetchPageData(path: string): Promise<PageData | undefined> {
+  const pageDataText = await fetchPublicText(`https://posthog.com/page-data/${path}/page-data.json`);
+  if (pageDataText === null) return undefined;
+  try {
+    return JSON.parse(pageDataText) as PageData;
+  } catch {
+    return undefined;
+  }
+}
+
+function trimmedText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function apiEndpointTitle(endpointName: unknown): string {
+  const words = trimmedText(endpointName).replace(/-\d+$/, "").replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function apiEndpointSnippet(operationsJson: unknown): string {
+  try {
+    const operations = JSON.parse(trimmedText(operationsJson)) as { description?: unknown }[];
+    return operations.map((operation) => trimmedText(operation.description)).filter(Boolean).join(" ");
+  } catch {
+    return "";
+  }
+}
+
+function summarizePageData(pageData: PageData): PageSummary | undefined {
+  const data = pageData?.result?.data;
+  const pageContext = pageData?.result?.pageContext;
+  const summariesByShape: PageSummary[] = [
+    { title: trimmedText(data?.post?.frontmatter?.title), snippet: trimmedText(data?.post?.excerpt) },
+    { title: trimmedText(data?.pageData?.frontmatter?.title), snippet: trimmedText(data?.pageData?.excerpt) },
+    { title: trimmedText(data?.postHogPipeline?.name), snippet: trimmedText(data?.postHogPipeline?.description) },
+    { title: trimmedText(data?.postHogSource?.name), snippet: trimmedText(data?.postHogSource?.caption) },
+    { title: trimmedText(pageContext?.fullReference?.info?.title), snippet: trimmedText(pageContext?.description) },
+    { title: trimmedText(pageContext?.typeData?.name), snippet: trimmedText(pageContext?.typeData?.example) },
+    { title: apiEndpointTitle(data?.data?.name), snippet: apiEndpointSnippet(data?.data?.items) },
+  ];
+  return summariesByShape.find((summary) => summary.title);
+}
+
+async function fetchHtmlTitle(url: string): Promise<string> {
+  const html = await fetchPublicText(url);
+  const title = html?.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1];
+  if (!title) return "";
+  return decodeXml(title).replace(/\s+[-–]\s+(?:Docs\s+[-–]\s+)?PostHog$/, "").trim();
+}
+
+async function listNotIngestedPages(ingestedUrls: Set<string>): Promise<Map<string, PageSummary>> {
+  const urls = (await sitemapUrls()).filter((url) => !ingestedUrls.has(url) && !isCommunityQuestionUrl(url));
+  const notIngestedPagesByUrl = new Map<string, PageSummary>();
+  let pageDataFailureCount = 0;
+  let slugTitleFallbackCount = 0;
+  let nextIndex = 0;
+  async function summaryWorker(): Promise<void> {
+    while (nextIndex < urls.length) {
+      const url = urls[nextIndex++];
+      const path = new URL(url).pathname.slice(1);
+      const pageData = await fetchPageData(path);
+      if (pageData === undefined) pageDataFailureCount++;
+      const summary = summarizePageData(pageData ?? null) ?? { title: await fetchHtmlTitle(url), snippet: "" };
+      if (!summary.title) slugTitleFallbackCount++;
+      notIngestedPagesByUrl.set(url, {
+        title: summary.title || path.split("/").at(-1)!.replace(/-/g, " "),
+        snippet: summary.snippet.slice(0, 300),
+      });
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(8, urls.length) }, () => summaryWorker()));
+  console.log(`Not-ingested page summaries: ${urls.length - slugTitleFallbackCount}/${urls.length} (slug-title fallbacks: ${slugTitleFallbackCount}, page-data fetch failures: ${pageDataFailureCount})`);
+  return notIngestedPagesByUrl;
+}
+
 async function buildPoolRows(
-  rows: SampleRow[], rewritesById: Map<string, Rewrite>, projectId: number,
+  rows: Omit<PoolRow, "candidates">[], projectId: number,
   titlesByNormalizedUrl: Map<string, string>,
+  notIngestedPagesByUrl: Map<string, { title: string; snippet: string }>,
 ): Promise<PoolRow[]> {
   const poolRows: PoolRow[] = new Array(rows.length);
   let nextIndex = 0;
@@ -226,14 +359,11 @@ async function buildPoolRows(
     while (nextIndex < rows.length) {
       const rowIndex = nextIndex++;
       const row = rows[rowIndex];
-      const rewrite = rewritesById.get(row.spanUuid)!;
-      const rerankOff = await searchKnowledge(projectId, rewrite.scrubbedQuery, { limit: 10, rerank: false });
-      const rerankOn = await searchKnowledge(projectId, rewrite.scrubbedQuery, { limit: 10, rerank: true });
+      const rerankOff = await searchKnowledge(projectId, row.scrubbedQuery, { limit: 10, rerank: false });
+      const rerankOn = await searchKnowledge(projectId, row.scrubbedQuery, { limit: 10, rerank: true });
       poolRows[rowIndex] = {
         ...row,
-        scrubbedQuery: rewrite.scrubbedQuery,
-        targetsComponentPage: rewrite.targetsComponentPage,
-        candidates: buildCandidatePool(rewrite.scrubbedQuery, rerankOff.results, rerankOn.results, titlesByNormalizedUrl),
+        candidates: buildCandidatePool(row.scrubbedQuery, rerankOff.results, rerankOn.results, titlesByNormalizedUrl, notIngestedPagesByUrl),
       };
     }
   }
@@ -262,16 +392,21 @@ async function savePools(pools: PoolsFile): Promise<void> {
 async function main(): Promise<void> {
   const argumentsList = process.argv.slice(2);
   if (argumentsList.includes("--help")) {
-    console.log("Usage: pnpm docs-eval:pools [--max-rows <n>] [--fresh] [--help]\nRequires POSTHOG_DOCS_EVAL_API_KEY, POSTHOG_DOCS_EVAL_PROJECT_ID, POSTHOG_GATEWAY_TOKEN.\nOptional: DOCS_EVAL_REWRITE_MODEL (default claude-opus-4-6), POSTHOG_REGION (default us).\nExit codes: 0 success, 2 configuration/API/model error.");
+    console.log("Usage: pnpm docs-eval:pools [--max-rows <n>] [--fresh] [--refresh-candidates] [--help]\nRequires POSTHOG_DOCS_EVAL_API_KEY and POSTHOG_DOCS_EVAL_PROJECT_ID.\nNormal mode also requires POSTHOG_GATEWAY_TOKEN.\n--refresh-candidates rebuilds candidates in existing pools.json without rewriting queries or using the gateway; cannot combine with --fresh or --max-rows.\nOptional: DOCS_EVAL_REWRITE_MODEL (default claude-opus-4-6), POSTHOG_REGION (default us).\nExit codes: 0 success, 2 configuration/API/model error.");
     return;
   }
   try {
     let maxRows = Infinity;
     let isFresh = false;
+    let shouldRefreshCandidates = false;
     for (let index = 0; index < argumentsList.length; index++) {
       const argument = argumentsList[index];
       if (argument === "--fresh") {
         isFresh = true;
+        continue;
+      }
+      if (argument === "--refresh-candidates") {
+        shouldRefreshCandidates = true;
         continue;
       }
       if (argument !== "--max-rows") throw new PoolsError("Unknown argument; run --help for usage");
@@ -281,12 +416,9 @@ async function main(): Promise<void> {
         throw new PoolsError("--max-rows requires a non-negative safe integer");
       }
     }
-    const sampleJson = await readJsonFile(samplePath);
-    if (sampleJson === undefined) throw new PoolsError("Missing raw-sample.json; run pnpm docs-eval:sample first");
-    const sample = z.object({ generatedAt: z.string(), rows: z.array(sampleRowSchema) }).safeParse(sampleJson);
-    if (!sample.success) throw new PoolsError("Invalid raw-sample.json format");
-    const gatewayToken = resolveGatewayToken();
-    if (!gatewayToken) throw new PoolsError("POSTHOG_GATEWAY_TOKEN must be set");
+    if (shouldRefreshCandidates && (isFresh || argumentsList.includes("--max-rows"))) {
+      throw new PoolsError("--refresh-candidates cannot be combined with --fresh or --max-rows");
+    }
     if (!process.env.POSTHOG_DOCS_EVAL_API_KEY?.trim()) throw new PoolsError("POSTHOG_DOCS_EVAL_API_KEY must be set");
     let projectId: number;
     try {
@@ -294,6 +426,29 @@ async function main(): Promise<void> {
     } catch {
       throw new PoolsError("POSTHOG_DOCS_EVAL_PROJECT_ID must be a positive integer");
     }
+    if (shouldRefreshCandidates) {
+      const existingJson = await readJsonFile(outputPath);
+      if (existingJson === undefined) throw new PoolsError("Missing pools.json; generate pools before refreshing candidates");
+      const existing = poolsFileSchema.safeParse(existingJson);
+      if (!existing.success) throw new PoolsError("Invalid pools.json format");
+      const pools = existing.data;
+      if (pools.rows.length > 0) {
+        const titlesByNormalizedUrl = await listDocumentTitles(projectId);
+        const notIngestedPagesByUrl = await listNotIngestedPages(new Set(titlesByNormalizedUrl.keys()));
+        pools.rows = await buildPoolRows(pools.rows, projectId, titlesByNormalizedUrl, notIngestedPagesByUrl);
+        await assertSourcesReady(projectId);
+      }
+      await savePools(pools);
+      console.log(`Refreshed rows: ${pools.rows.length}`);
+      console.log(`Output: ${outputPath}`);
+      return;
+    }
+    const sampleJson = await readJsonFile(samplePath);
+    if (sampleJson === undefined) throw new PoolsError("Missing raw-sample.json; run pnpm docs-eval:sample first");
+    const sample = z.object({ generatedAt: z.string(), rows: z.array(sampleRowSchema) }).safeParse(sampleJson);
+    if (!sample.success) throw new PoolsError("Invalid raw-sample.json format");
+    const gatewayToken = resolveGatewayToken();
+    if (!gatewayToken) throw new PoolsError("POSTHOG_GATEWAY_TOKEN must be set");
     const originalConsoleLog = console.log;
     try {
       console.log = () => {};
@@ -317,6 +472,9 @@ async function main(): Promise<void> {
     let droppedCount = 0;
     await mkdir(dataDirectory, { recursive: true });
     const titlesByNormalizedUrl = pendingRows.length > 0 ? await listDocumentTitles(projectId) : new Map<string, string>();
+    const notIngestedPagesByUrl = pendingRows.length > 0
+      ? await listNotIngestedPages(new Set(titlesByNormalizedUrl.keys()))
+      : new Map<string, { title: string; snippet: string }>();
     while (pendingRows.length > 0) {
       const batch = pendingRows.slice(0, 20);
       pendingRows = pendingRows.slice(20);
@@ -332,8 +490,13 @@ async function main(): Promise<void> {
         missingRows.push(row);
       }
       pendingRows = [...missingRows, ...pendingRows];
-      const rewrittenRows = batch.filter((row) => rewritesById.has(row.spanUuid));
-      pools.rows.push(...await buildPoolRows(rewrittenRows, rewritesById, projectId, titlesByNormalizedUrl));
+      const rewrittenRows = batch.filter((row) => rewritesById.has(row.spanUuid)).map((row) => {
+        const rewrite = rewritesById.get(row.spanUuid)!;
+        return { ...row, scrubbedQuery: rewrite.scrubbedQuery, targetsComponentPage: rewrite.targetsComponentPage };
+      });
+      const batchPoolRows = await buildPoolRows(rewrittenRows, projectId, titlesByNormalizedUrl, notIngestedPagesByUrl);
+      await assertSourcesReady(projectId);
+      pools.rows.push(...batchPoolRows);
       pools.generatedAt = new Date().toISOString();
       await savePools(pools);
       console.log(`Completed rows: ${pools.rows.length - initialRowCount}`);
