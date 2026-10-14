@@ -1,0 +1,83 @@
+name: MCP Stub Drift
+
+permissions:
+  contents: read
+
+on:
+  # Weekly (Wed at 11 AM EST / 4 PM UTC). It talks to prod, and the fixtures
+  # change rarely.
+  schedule:
+    - cron: '0 16 * * 3'
+  workflow_dispatch:
+
+jobs:
+  # ============================================================================
+  # MCP-STUB-DRIFT: Re-record the stub's fixtures against prod and fail if they
+  # moved. The stub answers the warehouse e2e runs from fixtures recorded off
+  # production, so PostHog can change a credential field or reword a validation
+  # error and every one of those runs keeps passing against yesterday's API.
+  # This job is what stops the stub rotting.
+  # ============================================================================
+  mcp-stub-drift:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Re-record the fixtures and diff them
+        id: drift
+        env:
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
+        run: |
+          # `--dry-run` prints what it would write but does not compare, so it
+          # cannot detect drift. Record for real into the working tree and let
+          # git do the comparison — the checkout is thrown away either way.
+          pnpm mcp-stub:record
+
+          # Every fixture carries a provenance header stamped with the time it
+          # was recorded, so a plain `git diff` is never quiet and this job
+          # would cry drift every week. Ignore that one line and compare the
+          # bodies, which are what the stub actually answers from.
+          IGNORE_VOLATILE='"recordedAt"'
+
+          if git diff --quiet -I "$IGNORE_VOLATILE" -- services/mcp-stub/fixtures; then
+            echo "✓ fixtures match production"
+            exit 0
+          fi
+
+          {
+            echo "## MCP stub fixtures have drifted from production"
+            echo ""
+            echo "The warehouse e2e runs answer from these fixtures, so they are"
+            echo "now testing against an API PostHog no longer serves."
+            echo ""
+            echo "Refresh them:"
+            echo ""
+            echo '```'
+            echo "POSTHOG_PERSONAL_API_KEY=phx_... pnpm mcp-stub:record"
+            echo '```'
+            echo ""
+            echo '```diff'
+            git diff -I "$IGNORE_VOLATILE" -- services/mcp-stub/fixtures | head -300
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::error title=MCP stub fixtures drifted::Run pnpm mcp-stub:record and commit the diff."
+          exit 1
+
+      - name: Check the stub still answers its own tests
+        if: always()
+        run: pnpm test:mcp-stub
