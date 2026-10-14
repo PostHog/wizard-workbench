@@ -11,8 +11,8 @@ import Layout from '../layouts/Layout.astro';
         Comprehensive guides, API references, and best practices.
       </p>
       <div class="hero-buttons">
-        <a href="/docs" class="btn btn-primary">Get Started</a>
-        <a href="/docs/api" class="btn btn-secondary">API Reference</a>
+        <a href="/docs" class="btn btn-primary" data-docs-cta="get_started">Get Started</a>
+        <a href="/docs/api" class="btn btn-secondary" data-docs-cta="api_reference">API Reference</a>
       </div>
     </div>
   </section>
@@ -54,3 +54,18 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </footer>
 </Layout>
+
+<script is:inline>
+  document.querySelectorAll('[data-docs-cta]').forEach((cta) => {
+    cta.addEventListener('click', () => {
+      window.posthog?.capture('documentation_cta_clicked', {
+        cta: cta.dataset.docsCta,
+        location: 'homepage_hero',
+      });
+      window.posthog?.logger?.info('documentation CTA selected', {
+        cta: cta.dataset.docsCta,
+        location: 'homepage_hero',
+      });
+    });
+  });
+</script>
