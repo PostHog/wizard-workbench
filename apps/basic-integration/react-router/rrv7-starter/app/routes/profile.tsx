@@ -5,6 +5,7 @@ import type { Route } from './+types/profile'
 import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
+import posthog from '@/lib/posthog.client'
 import cn from '@/lib/utils/cn'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
@@ -14,6 +15,9 @@ function FollowButton({ username, onFollow }: { username: string; onFollow: () =
     setIsFollowing(!isFollowing)
     if (!isFollowing) {
       onFollow()
+      posthog?.capture('follower_followed')
+    } else {
+      posthog?.capture('follower_unfollowed')
     }
   }
 
