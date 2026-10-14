@@ -47,6 +47,12 @@ Each of these apps has a setup that a generic integration gets wrong. As with th
 - the client created once `ConfigModule` has loaded `.env`, not from `process.env` at module top level
 - the upload runs on the build that ships, inside the Docker build and before the prune, with the key passed as a build secret, never a build arg
 
+**`no-posthog-express-no-build`**: Express without PostHog and with no build at all: `start` runs `index.js` as written. Expected:
+
+- no source-map upload, credentials, CI wiring or verify task, and no ask for a personal API key, because the stack traces are already readable
+- no bundler, compiler or new `build` script added to create something to upload
+- capture through `setupExpressErrorHandler` after the routes, with the missing `.env` loader named as a follow-up
+
 **`no-posthog-express-tsc`**: Express 5 in TypeScript with native ES modules (`NodeNext`, `verbatimModuleSyntax`), compiled by `tsc` with source maps off. Nothing loads `.env`. Render builds and serves it from `render.yaml`; the build in `ci.yml` never ships. Expected:
 
 - `sourceMap: true` in `tsconfig.json`, which keeps `"types": ["node"]`
