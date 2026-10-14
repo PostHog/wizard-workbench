@@ -10,4 +10,20 @@ class ApplicationController < ActionController::Base
   etag { "v1" }
   stale_when_importmap_changes
   allow_browser versions: :modern
+
+  private
+    def current_identity
+      Current.identity
+    end
+
+    def capture_posthog_event(event, properties: {})
+      return unless ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+      return unless Current.identity.present?
+
+      PostHog.capture(
+        distinct_id: Current.identity.posthog_distinct_id,
+        event: event,
+        properties: properties
+      )
+    end
 end

@@ -20,6 +20,17 @@ class Identity < ApplicationRecord
     end
   end
 
+  # The identity primary key is stable across the accounts a person belongs to.
+  # posthog-rails uses it to associate automatically captured errors.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  # PII belongs on the PostHog person, not on individual captured events.
+  def posthog_properties
+    { email: email_address }
+  end
+
   def send_magic_link(**attributes)
     attributes[:purpose] = attributes.delete(:for) if attributes.key?(:for)
 
