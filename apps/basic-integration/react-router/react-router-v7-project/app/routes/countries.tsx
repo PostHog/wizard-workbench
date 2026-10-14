@@ -137,6 +137,20 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
+                        if (!isClaimed) {
+                          window.dispatchEvent(
+                            new CustomEvent("posthog:capture", {
+                              detail: {
+                                eventName: "country_claimed",
+                                properties: {
+                                  country_code: country.cca3,
+                                  region: country.region,
+                                  total_claimed: user.claimedCountries.length + 1,
+                                },
+                              },
+                            }),
+                          );
+                        }
                         claimCountry(countryName);
                         window.location.reload();
                       }}
@@ -150,6 +164,20 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        if (!isLiked) {
+                          window.dispatchEvent(
+                            new CustomEvent("posthog:capture", {
+                              detail: {
+                                eventName: "country_liked",
+                                properties: {
+                                  country_code: country.cca3,
+                                  region: country.region,
+                                  total_liked: user.likedCountries.length + 1,
+                                },
+                              },
+                            }),
+                          );
+                        }
                         likeCountry(countryName);
                         window.location.reload();
                       }}
@@ -163,6 +191,20 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
+                        if (!user.visitedCountries.includes(countryName)) {
+                          window.dispatchEvent(
+                            new CustomEvent("posthog:capture", {
+                              detail: {
+                                eventName: "country_visited",
+                                properties: {
+                                  country_code: country.cca3,
+                                  region: country.region,
+                                  total_visited: user.visitedCountries.length + 1,
+                                },
+                              },
+                            }),
+                          );
+                        }
                         visitCountry(countryName);
                         window.location.reload();
                       }}
