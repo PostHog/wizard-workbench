@@ -9,7 +9,6 @@ import {
   featureFlagChecks,
   fetchFlagsByKey,
   loadFeatureFlagsExpect,
-  FEATURE_FLAGS_REPORT_FILE,
   type FeatureFlagEvidence,
   type RemoteFlag,
 } from "./feature-flag-checks.js";
@@ -32,14 +31,12 @@ function passingEvidence(): FeatureFlagEvidence {
       ["lib/feature-flags.ts", `export const FRONTEND = "${FRONTEND_KEY}";\nexport const BACKEND = "${BACKEND_KEY}";`],
       ["app/page.tsx", `import { FRONTEND } from "@/lib/feature-flags";`],
       ["app/api/route.ts", `import { BACKEND } from "@/lib/feature-flags";`],
-      [FEATURE_FLAGS_REPORT_FILE, `Turn on ${FRONTEND_KEY} and ${BACKEND_KEY}.`],
     ]),
     remoteFlagsByKey: new Map([
       [FRONTEND_KEY, inactiveFlag(FRONTEND_KEY)],
       [BACKEND_KEY, inactiveFlag(BACKEND_KEY)],
     ]),
     flagsApiError: null,
-    isReportWritten: true,
   };
 }
 
@@ -366,12 +363,6 @@ describe("featureFlagChecks", () => {
     const evidence = passingEvidence();
     evidence.expectedFlagKeys = [BACKEND_KEY];
     assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), ["no unexpected flag key"]);
-  });
-
-  it("fails a run without a report", () => {
-    const evidence = passingEvidence();
-    evidence.isReportWritten = false;
-    assert.deepEqual(failedCheckNames(featureFlagChecks(evidence)), ["report file written"]);
   });
 });
 
