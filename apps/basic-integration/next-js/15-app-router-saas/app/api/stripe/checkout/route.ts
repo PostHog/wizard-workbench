@@ -4,6 +4,7 @@ import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
+import { logCheckoutCompleted, logCheckoutFailed } from '@/lib/posthog-logs';
 import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
@@ -89,8 +90,10 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    await logCheckoutCompleted();
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
+    await logCheckoutFailed();
     console.error('Error handling successful checkout:', error);
     return NextResponse.redirect(new URL('/error', request.url));
   }
