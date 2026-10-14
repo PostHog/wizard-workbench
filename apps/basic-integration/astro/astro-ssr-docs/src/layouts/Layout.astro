@@ -1,5 +1,7 @@
 ---
 import Navigation from '../components/Navigation.astro';
+import PostHog from '../components/posthog.astro';
+import { logPageRendered } from '../lib/posthog-logs';
 import '../styles/global.css';
 
 interface Props {
@@ -8,6 +10,7 @@ interface Props {
 }
 
 const { title, description = 'NeuralFlow Documentation - Learn how to build with AI-powered automation' } = Astro.props;
+logPageRendered(Astro.url.pathname);
 ---
 
 <!doctype html>
@@ -18,6 +21,7 @@ const { title, description = 'NeuralFlow Documentation - Learn how to build with
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title} | NeuralFlow Docs</title>
+    <PostHog />
   </head>
   <body>
     <Navigation />

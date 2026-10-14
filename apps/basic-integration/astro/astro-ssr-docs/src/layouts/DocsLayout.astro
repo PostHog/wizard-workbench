@@ -1,6 +1,7 @@
 ---
 import Layout from './Layout.astro';
 import DocsSidebar from '../components/DocsSidebar.astro';
+import { logDocumentationArticleRendered } from '../lib/posthog-logs';
 
 interface Props {
   title: string;
@@ -9,6 +10,7 @@ interface Props {
 
 const { title, description } = Astro.props;
 const currentPath = Astro.url.pathname;
+logDocumentationArticleRendered(currentPath);
 ---
 
 <Layout title={title} description={description}>
