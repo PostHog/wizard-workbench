@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -57,10 +58,20 @@ export function Login({
           return;
         }
 
+        if (result.user) {
+          posthog.identify(String(result.user.id), {
+            email: result.user.email,
+            ...(result.user.name ? { name: result.user.name } : {}),
+            role: result.user.role
+          });
+          posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up');
+        }
+
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
           // Stripe checkout redirect
+          posthog.capture('checkout_started');
           window.location.href = result.url;
         }
       } catch (err) {
