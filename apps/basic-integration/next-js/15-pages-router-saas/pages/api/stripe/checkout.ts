@@ -5,6 +5,8 @@ import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { PostHog } from 'posthog-node';
+import { emitPostHogIntegrationLog } from '@/lib/posthog-logs';
 
 export default async function handler(
   req: NextApiRequest,
@@ -93,6 +95,44 @@ export default async function handler(
         updatedAt: new Date()
       })
       .where(eq(teams.id, userTeam[0].teamId));
+
+    await emitPostHogIntegrationLog('subscription activation completed', {
+      event: 'subscription_activated',
+      plan_name: (plan.product as Stripe.Product).name,
+      subscription_status: subscription.status
+    });
+
+    const posthogProjectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+    const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+
+    if (posthogProjectToken && posthogHost) {
+      try {
+        const posthog = new PostHog(posthogProjectToken, {
+          host: posthogHost,
+          enableExceptionAutocapture: true,
+          flushAt: 1,
+          flushInterval: 0
+        });
+        posthog.capture({
+          distinctId: String(user[0].id),
+          event: 'subscription_activated',
+          properties: {
+            plan_name: (plan.product as Stripe.Product).name,
+            subscription_status: subscription.status
+          }
+        });
+        await posthog.shutdown();
+      } catch (error) {
+        console.error('PostHog subscription capture error:', error);
+      }
+    } else if (process.env.NODE_ENV === 'development') {
+      const missingVariable = posthogProjectToken
+        ? 'NEXT_PUBLIC_POSTHOG_HOST'
+        : 'NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN';
+      console.error(
+        `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`
+      );
+    }
 
     await setSession(user[0]);
     return res.redirect('/dashboard');
