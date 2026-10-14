@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import posthog from 'posthog-js'
 import type { QueryItem } from '../../types'
 import { listMedia } from '../../composables/useTMDB'
 import MediaCard from '../media/MediaCard.vue'
@@ -11,6 +12,18 @@ const props = defineProps<{
 
 const items = ref<any[]>([])
 const loading = ref(true)
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+)
+
+function exploreCollection() {
+  if (isPostHogConfigured) {
+    posthog.capture('collection_explored', {
+      media_type: props.query.type,
+      collection: props.query.query,
+    })
+  }
+}
 
 onMounted(async () => {
   try {
@@ -30,7 +43,7 @@ onMounted(async () => {
       {{ query.title }}
     </template>
     <template #more>
-      <router-link :to="`/${query.type}/category/${query.query}`" class="n-link">
+      <router-link :to="`/${query.type}/category/${query.query}`" class="n-link" @click="exploreCollection">
         Explore more
       </router-link>
     </template>

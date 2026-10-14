@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute } from 'vue-router'
 import type { Media } from '../types'
 import { getMedia, getRecommendations } from '../composables/useTMDB'
+import { posthogLog } from '../composables/posthogLog'
 import { formatTime, formatVote, getTrailer } from '../composables/utils'
 import MediaCard from '../components/media/MediaCard.vue'
 import CarouselBase from '../components/carousel/CarouselBase.vue'
@@ -61,6 +63,9 @@ const recommendations = ref<Media[]>([])
 const loading = ref(false)
 const showModal = ref(false)
 const trailerUrl = computed(() => item.value ? getTrailer(item.value) : null)
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+)
 
 async function loadMedia() {
   loading.value = true
@@ -75,6 +80,9 @@ async function loadMedia() {
   try {
     const media = await getMedia(type.value as any, id.value)
     item.value = media
+    posthogLog.info('media_details_loaded', {
+      media_type: type.value,
+    })
     
     try {
       const recs = await getRecommendations(type.value as any, id.value, 1)
@@ -83,6 +91,9 @@ async function loadMedia() {
       recommendations.value = []
     }
   } catch (error) {
+    posthogLog.warn('media_details_load_failed', {
+      media_type: type.value,
+    })
     // Keep fake data if real data fails
     console.error('Error loading media:', error)
   } finally {
@@ -100,8 +111,14 @@ watch(() => route.fullPath, () => {
 }, { immediate: false })
 
 function playTrailer() {
-  if (trailerUrl.value) {
+  if (trailerUrl.value && item.value) {
     showModal.value = true
+    if (isPostHogConfigured) {
+      posthog.capture('trailer_played', {
+        media_id: item.value.id,
+        media_type: type.value,
+      })
+    }
   }
 }
 

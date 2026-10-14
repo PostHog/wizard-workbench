@@ -1,14 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import posthog from 'posthog-js'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 
 const route = useRoute()
 const router = useRouter()
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+)
 const { user, logout } = useAuth()
 
 const handleLogout = async () => {
   await logout()
+  if (isPostHogConfigured) {
+    posthog.capture('logout_completed')
+  }
 }
 
 const isActive = (path: string) => {
