@@ -57,9 +57,17 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="/contact" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="/contact" class="btn btn-secondary" id="pricing-contact-sales-cta" style="width: 100%; justify-content: center;">Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.getElementById('pricing-contact-sales-cta')?.addEventListener('click', () => {
+    window.posthog?.capture('contact_sales_clicked', {
+      source: 'pricing_enterprise',
+    });
+  });
+</script>

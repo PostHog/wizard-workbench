@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { flushPostHogContactLogs, getPostHogContactLogger } from '../../lib/posthog-logs';
 
 export const prerender = false;
 
@@ -45,6 +46,16 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    getPostHogContactLogger().emit({
+      severityText: 'INFO',
+      body: 'Contact form submission accepted',
+      attributes: {
+        route: '/api/contact',
+        interest: data.interest,
+      },
+    });
+    await flushPostHogContactLogs();
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -54,6 +65,12 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contact form error:', error);
+    getPostHogContactLogger().emit({
+      severityText: 'ERROR',
+      body: 'Contact form request processing failed',
+      attributes: { route: '/api/contact' },
+    });
+    await flushPostHogContactLogs();
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

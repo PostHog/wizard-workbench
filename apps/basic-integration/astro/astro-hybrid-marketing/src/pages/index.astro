@@ -15,7 +15,7 @@ import Layout from '../layouts/Layout.astro';
       </p>
       <div class="hero-buttons">
         <a href="#" class="btn btn-primary">Start Free Trial</a>
-        <a href="/contact" class="btn btn-secondary">Contact Sales</a>
+        <a href="/contact" class="btn btn-secondary" id="home-contact-sales-cta">Contact Sales</a>
       </div>
     </div>
   </section>
@@ -61,3 +61,11 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.getElementById('home-contact-sales-cta')?.addEventListener('click', () => {
+    window.posthog?.capture('contact_sales_clicked', {
+      source: 'home_hero',
+    });
+  });
+</script>
