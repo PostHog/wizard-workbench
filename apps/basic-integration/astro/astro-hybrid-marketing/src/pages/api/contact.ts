@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { flushPostHogContactLogs, logContactApi } from '../../lib/posthog-logs';
 
 export const prerender = false;
 
@@ -16,6 +17,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
+      logContactApi('WARN', 'Contact form rejected because required fields were missing');
+      await flushPostHogContactLogs();
       return new Response(
         JSON.stringify({ error: 'Please fill in all required fields.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -25,6 +28,8 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
+      logContactApi('WARN', 'Contact form rejected because email validation failed');
+      await flushPostHogContactLogs();
       return new Response(
         JSON.stringify({ error: 'Please enter a valid email address.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -45,6 +50,9 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    logContactApi('INFO', 'Contact form submission accepted');
+    await flushPostHogContactLogs();
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -54,6 +62,8 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contact form error:', error);
+    logContactApi('ERROR', 'Contact form processing failed');
+    await flushPostHogContactLogs();
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

@@ -77,14 +77,20 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        window.posthog?.capture('contact_form_submitted', {
+          selected_interest: formData.get('interest'),
+        });
+        window.posthog?.logger?.info('Contact form submission accepted');
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
       } else {
+        window.posthog?.logger?.warn('Contact form submission was rejected by the API');
         messageDiv.className = 'form-message error';
         messageDiv.textContent = result.error || 'Something went wrong. Please try again.';
       }
     } catch (error) {
+      window.posthog?.logger?.error('Contact form submission request failed');
       messageDiv.className = 'form-message error';
       messageDiv.textContent = 'Network error. Please try again.';
     }
