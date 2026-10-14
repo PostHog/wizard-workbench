@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
+from app.posthog import get_posthog_client
+from app.posthog_logs import get_posthog_log_logger
 
 router = APIRouter(prefix="/api")
 
@@ -74,6 +76,27 @@ async def generate_content(
         prompt=request.prompt,
         result=mock_content,
         credits_used=credits_needed,
+    )
+
+    posthog_client = get_posthog_client()
+    if posthog_client is not None:
+        posthog_client.capture(
+            "content_generated",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+                "prompt_length": len(request.prompt),
+            },
+        )
+
+    get_posthog_log_logger().info(
+        "Content generation completed",
+        extra={
+            "generation_type": request.generation_type,
+            "credits_used": credits_needed,
+            "credits_remaining": current_user.credits,
+        },
     )
 
     return GenerateResponse(
