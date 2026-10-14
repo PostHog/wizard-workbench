@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { SeverityNumber, todoApiLogger, loggerProvider } from '@/instrumentation';
 import { getTodos, createTodo } from '@/lib/data';
 import { z } from 'zod';
 
@@ -32,6 +33,15 @@ export async function POST(request: NextRequest) {
       title: validatedData.title,
       description: validatedData.description,
       completed: validatedData.completed,
+    });
+
+    todoApiLogger?.emit({
+      body: 'Todo created',
+      severityNumber: SeverityNumber.INFO,
+      attributes: { endpoint: '/api/todos', method: 'POST' },
+    });
+    after(async () => {
+      await loggerProvider?.forceFlush();
     });
 
     return NextResponse.json(newTodo, { status: 201 });
