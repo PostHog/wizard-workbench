@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { PUBLIC_POSTHOG_HOST, PUBLIC_POSTHOG_PROJECT_TOKEN } from "$env/static/public"
   import { page } from "$app/stores"
+  import posthog from "posthog-js"
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
   import SettingsModule from "../settings_module.svelte"
@@ -38,6 +40,9 @@
           sentEmail = d.error ? false : true
           sendBtnDisabled = false
           sendBtnText = "Send Forgot Password Email"
+          if (!d.error && PUBLIC_POSTHOG_PROJECT_TOKEN && PUBLIC_POSTHOG_HOST) {
+            posthog.capture("password_reset_email_requested")
+          }
         })
     }
   }

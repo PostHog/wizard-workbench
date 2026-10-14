@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { capturePostHogServerLog } from "$lib/server/posthog-logs"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -73,6 +74,11 @@ export const actions = {
     await sendAdminEmail({
       subject: "New contact request",
       body: `New contact request from ${firstName} ${lastName}.\n\nEmail: ${email}\n\nPhone: ${phone}\n\nCompany: ${company}\n\nMessage: ${message}`,
+    })
+
+    await capturePostHogServerLog("contact request processed", {
+      action: "contact_request_submission",
+      persistence: "completed",
     })
   },
 }

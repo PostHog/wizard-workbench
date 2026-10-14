@@ -1,5 +1,6 @@
 // src/hooks.server.ts
 import { PRIVATE_SUPABASE_SERVICE_ROLE } from "$env/static/private"
+import { configurePostHogServerLogs } from "$lib/server/posthog-logs"
 import {
   PUBLIC_SUPABASE_ANON_KEY,
   PUBLIC_SUPABASE_URL,
@@ -8,6 +9,8 @@ import { createServerClient } from "@supabase/ssr"
 import { createClient, type AMREntry } from "@supabase/supabase-js"
 import type { Handle } from "@sveltejs/kit"
 import { sequence } from "@sveltejs/kit/hooks"
+
+configurePostHogServerLogs()
 
 export const supabase: Handle = async ({ event, resolve }) => {
   event.locals.supabase = createServerClient(

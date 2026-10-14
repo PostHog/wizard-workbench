@@ -1,7 +1,9 @@
 <script lang="ts">
   import { enhance, applyAction } from "$app/forms"
+  import { PUBLIC_POSTHOG_HOST, PUBLIC_POSTHOG_PROJECT_TOKEN } from "$env/static/public"
   import { page } from "$app/stores"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import posthog from "posthog-js"
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -50,6 +52,13 @@
     saveButtonTitle = "Save",
   }: Props = $props()
 
+  const successfulEvents: Record<string, string> = {
+    "/account/api?/updateProfile": "profile_updated",
+    "/account/api?/updatePassword": "password_updated",
+    "/account/api?/updateEmail": "email_change_initiated",
+    "/account/api?/toggleEmailSubscription": "email_subscription_updated",
+  }
+
   const handleSubmit: SubmitFunction = () => {
     loading = true
     return async ({ update, result }) => {
@@ -58,6 +67,10 @@
       loading = false
       if (result.type === "success") {
         showSuccess = true
+        const event = successfulEvents[formTarget]
+        if (event && PUBLIC_POSTHOG_PROJECT_TOKEN && PUBLIC_POSTHOG_HOST) {
+          posthog.capture(event)
+        }
       }
     }
   }

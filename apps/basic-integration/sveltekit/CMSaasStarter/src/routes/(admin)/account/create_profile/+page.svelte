@@ -1,6 +1,8 @@
 <script lang="ts">
   import { applyAction, enhance } from "$app/forms"
+  import { PUBLIC_POSTHOG_HOST, PUBLIC_POSTHOG_PROJECT_TOKEN } from "$env/static/public"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import posthog from "posthog-js"
   import "../../../../app.css"
 
   interface User {
@@ -38,6 +40,12 @@
       await update({ reset: false })
       await applyAction(result)
       loading = false
+      if (result.type === "success" && PUBLIC_POSTHOG_PROJECT_TOKEN && PUBLIC_POSTHOG_HOST) {
+        posthog.capture("profile_created")
+        posthog.logger.info("profile setup completed", {
+          action: "profile_creation",
+        })
+      }
     }
   }
 </script>

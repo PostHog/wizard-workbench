@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { PUBLIC_POSTHOG_HOST, PUBLIC_POSTHOG_PROJECT_TOKEN } from "$env/static/public"
+  import posthog from "posthog-js"
   import { pricingPlans } from "./pricing_plans"
 
   interface Props {
@@ -15,6 +17,16 @@
     currentPlanId = "",
     center = true,
   }: Props = $props()
+
+  const selectPlan = (planId: string) => {
+    if (PUBLIC_POSTHOG_PROJECT_TOKEN && PUBLIC_POSTHOG_HOST) {
+      posthog.capture("plan_selected", { plan_id: planId })
+      posthog.logger.info("plan selection started", {
+        action: "plan_selection",
+        plan_id: planId,
+      })
+    }
+  }
 </script>
 
 <div
@@ -57,6 +69,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() => selectPlan(plan.id)}
               >
                 {callToAction}
               </a>
