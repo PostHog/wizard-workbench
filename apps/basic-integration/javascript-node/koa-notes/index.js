@@ -1,9 +1,18 @@
+import 'dotenv/config';
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { posthog } from './posthog.js';
+import { posthogLogger } from './posthog-logs.js';
 
 const app = new Koa();
 const router = new Router();
+
+app.on('error', (error) => {
+  if (posthog) {
+    posthog.captureException(error);
+  }
+});
 
 app.use(bodyParser());
 
@@ -32,6 +41,19 @@ router.post('/api/folders', (ctx) => {
 
   const folder = { id: nextFolderId++, name };
   folders.push(folder);
+  if (posthog) {
+    posthog.capture({
+      event: 'folder_created',
+      properties: { is_default_folder: false },
+    });
+  }
+  if (posthogLogger) {
+    posthogLogger.emit({
+      severityText: 'info',
+      body: 'folder creation completed',
+      attributes: { is_default_folder: false },
+    });
+  }
   ctx.status = 201;
   ctx.body = folder;
 });
@@ -54,11 +76,18 @@ router.delete('/api/folders/:id', (ctx) => {
   }
 
   // Move notes from deleted folder to General
+  const reassignedNoteCount = notes.filter((note) => note.folder_id === folderId).length;
   for (const note of notes) {
     if (note.folder_id === folderId) note.folder_id = 1;
   }
 
   folders.splice(index, 1);
+  if (posthog) {
+    posthog.capture({
+      event: 'folder_deleted',
+      properties: { reassigned_note_count: reassignedNoteCount },
+    });
+  }
   ctx.status = 204;
 });
 
@@ -105,6 +134,22 @@ router.post('/api/notes', (ctx) => {
     updated_at: new Date().toISOString(),
   };
   notes.push(note);
+  if (posthog) {
+    posthog.capture({
+      event: 'note_created',
+      properties: {
+        folder_id,
+        has_content: Boolean(content),
+      },
+    });
+  }
+  if (posthogLogger) {
+    posthogLogger.emit({
+      severityText: 'info',
+      body: 'note creation completed',
+      attributes: { has_content: Boolean(content) },
+    });
+  }
   ctx.status = 201;
   ctx.body = note;
 });
@@ -143,6 +188,27 @@ router.patch('/api/notes/:id', (ctx) => {
   }
   note.updated_at = new Date().toISOString();
 
+  if (posthog) {
+    posthog.capture({
+      event: 'note_updated',
+      properties: {
+        title_updated: title !== undefined,
+        content_updated: content !== undefined,
+        folder_changed: folder_id !== undefined,
+      },
+    });
+  }
+  if (posthogLogger) {
+    posthogLogger.emit({
+      severityText: 'info',
+      body: 'note update completed',
+      attributes: {
+        title_updated: title !== undefined,
+        content_updated: content !== undefined,
+        folder_changed: folder_id !== undefined,
+      },
+    });
+  }
   ctx.body = note;
 });
 
@@ -156,6 +222,9 @@ router.delete('/api/notes/:id', (ctx) => {
   }
 
   notes.splice(index, 1);
+  if (posthog) {
+    posthog.capture({ event: 'note_deleted' });
+  }
   ctx.status = 204;
 });
 
