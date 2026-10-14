@@ -1,7 +1,19 @@
 """Travel desk on the OpenAI Agents SDK: a triage agent hands off to a booking
 agent that has one tool."""
 
-from agents import Agent, Runner, function_tool
+from os import environ
+from uuid import uuid4
+
+from agents import Agent, RunConfig, Runner, function_tool
+from posthog import Posthog
+from posthog.ai.openai_agents import instrument
+
+
+posthog_client = Posthog(
+    environ["POSTHOG_PROJECT_TOKEN"],
+    host=environ["POSTHOG_HOST"],
+    enable_exception_autocapture=True,
+)
 
 
 @function_tool
@@ -24,9 +36,22 @@ triage_agent = Agent(
 
 
 def main() -> None:
-    result = Runner.run_sync(triage_agent, "How much is a flight from Boston to Lisbon?")
+    session_id = f"travel-triage-{uuid4()}"
+    instrument(
+        client=posthog_client,
+        privacy_mode=False,
+        properties={"$ai_session_id": session_id},
+    )
+    result = Runner.run_sync(
+        triage_agent,
+        "How much is a flight from Boston to Lisbon?",
+        run_config=RunConfig(group_id=session_id),
+    )
     print(result.final_output)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        posthog_client.shutdown()
