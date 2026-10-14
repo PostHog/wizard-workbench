@@ -1,4 +1,5 @@
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { IconMail } from "@tabler/icons-react";
 import { Trans, useTranslation } from "react-i18next";
 import { data, Form, href, Link, useNavigation } from "react-router";
@@ -30,6 +31,7 @@ import { loginWithEmailSchema } from "~/features/user-authentication/login/login
 import { LoginVerificationAwaiting } from "~/features/user-authentication/login/login-verification-awaiting";
 import { loginIntents } from "~/features/user-authentication/user-authentication-constants";
 import { getIsAwaitingEmailConfirmation } from "~/features/user-authentication/user-authentication-helpers";
+import { createPostHogLogger } from "~/lib/posthog-logger.client";
 import { cn } from "~/lib/utils";
 import { getPageTitle } from "~/utils/get-page-title.server";
 
@@ -67,6 +69,8 @@ export default function LoginRoute({
   actionData,
 }: Route.ComponentProps) {
   const { t } = useTranslation("userAuthentication", { keyPrefix: "login" });
+  const posthog = usePostHog();
+  const posthogLogger = createPostHogLogger(posthog);
   const { inviteLinkInfo } = loaderData;
 
   const isAwaitingEmailConfirmation =
@@ -142,6 +146,13 @@ export default function LoginRoute({
             <Field>
               <Button
                 name="intent"
+                onClick={() => {
+                  posthog?.capture("login_started", { auth_method: "email" });
+                  posthogLogger.info("Authentication request submitted", {
+                    auth_method: "email",
+                    event: "auth.login_requested",
+                  });
+                }}
                 type="submit"
                 value={LOGIN_WITH_EMAIL_INTENT}
               >
@@ -164,6 +175,9 @@ export default function LoginRoute({
           <Field>
             <Button
               name="intent"
+              onClick={() =>
+                posthog?.capture("login_started", { auth_method: "google" })
+              }
               type="submit"
               value={LOGIN_WITH_GOOGLE_INTENT}
               variant="outline"

@@ -1,5 +1,6 @@
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { usePostHog } from "@posthog/react";
 import { IconUser } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { data, Form, useNavigation } from "react-router";
@@ -65,6 +66,7 @@ export default function UserAccountOnboardingRoute({
   loaderData,
 }: Route.ComponentProps) {
   const { t } = useTranslation("onboarding", { keyPrefix: "userAccount" });
+  const posthog = usePostHog();
   const { form, fields } = useForm(
     coerceFormValue(onboardingUserAccountSchema),
     {
@@ -148,6 +150,9 @@ export default function UserAccountOnboardingRoute({
           <Field>
             <Button
               name="intent"
+              onClick={() =>
+                posthog?.capture("onboarding_user_account_submitted")
+              }
               type="submit"
               value={ONBOARDING_USER_ACCOUNT_INTENT}
             >

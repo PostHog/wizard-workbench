@@ -1,6 +1,7 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { usePostHog } from "@posthog/react";
 import { IconUser } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { Form, useNavigation } from "react-router";
@@ -40,6 +41,7 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
   const { t } = useTranslation("settings", {
     keyPrefix: "userAccount",
   });
+  const posthog = usePostHog();
 
   const { form, fields } = useForm(
     coerceFormValue(updateUserAccountFormSchema),
@@ -180,6 +182,9 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
           <div className="max-w-min">
             <Button
               name="intent"
+              onClick={() =>
+                posthog?.capture("user_account_settings_submitted")
+              }
               type="submit"
               value={UPDATE_USER_ACCOUNT_INTENT}
             >

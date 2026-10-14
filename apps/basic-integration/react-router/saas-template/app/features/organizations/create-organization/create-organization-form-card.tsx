@@ -1,6 +1,7 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { coerceFormValue } from "@conform-to/zod/v4/future";
+import { usePostHog } from "@posthog/react";
 import { IconBuilding } from "@tabler/icons-react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form, href, Link } from "react-router";
@@ -32,6 +33,7 @@ import {
 } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
+import { createPostHogLogger } from "~/lib/posthog-logger.client";
 
 const ONE_MB = 1_000_000;
 
@@ -45,6 +47,8 @@ export function CreateOrganizationFormCard({
   lastResult,
 }: CreateOrganizationFormCardProps) {
   const { t } = useTranslation("organizations", { keyPrefix: "new.form" });
+  const posthog = usePostHog();
+  const posthogLogger = createPostHogLogger(posthog);
   const { form, fields } = useForm(
     coerceFormValue(createOrganizationFormSchema),
     {
@@ -144,6 +148,12 @@ export function CreateOrganizationFormCard({
             className="w-full"
             disabled={isCreatingOrganization}
             form={form.id}
+            onClick={() => {
+              posthog?.capture("organization_creation_started");
+              posthogLogger.info("Organization creation requested", {
+                event: "organization.creation_requested",
+              });
+            }}
             name="intent"
             type="submit"
             value={CREATE_ORGANIZATION_INTENT}
