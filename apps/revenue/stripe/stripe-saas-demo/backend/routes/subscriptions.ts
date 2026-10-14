@@ -8,7 +8,7 @@ export const subscriptionsRouter = Router();
 // POST /api/subscriptions — create a subscription for an existing customer
 subscriptionsRouter.post("/", async (req, res) => {
   try {
-    const { customerId, priceId, userId } = req.body;
+    const { customerId, priceId, userId, posthogDistinctId } = req.body;
 
     if (!customerId || !priceId) {
       res.status(400).json({ error: "customerId and priceId are required" });
@@ -28,6 +28,9 @@ subscriptionsRouter.post("/", async (req, res) => {
       payment_behavior: "default_incomplete",
       payment_settings: { save_default_payment_method: "on_subscription" },
       expand: ["latest_invoice.payment_intent"],
+      ...(posthogDistinctId
+        ? { metadata: { posthog_person_distinct_id: posthogDistinctId } }
+        : {}),
     });
 
     const invoice = subscription.latest_invoice as any;
@@ -40,13 +43,14 @@ subscriptionsRouter.post("/", async (req, res) => {
     });
   } catch (err: any) {
     console.error("Error creating subscription:", err.message);
-    const { customerId, priceId, userId } = req.body;
-    const distinctId = userId || customerId || "anonymous";
-    posthog.capture({
-      distinctId,
-      event: "subscription_setup_failed",
-      properties: { stripe_customer_id: customerId, price_id: priceId, error_message: err.message },
-    });
+    const { customerId, priceId, posthogDistinctId } = req.body;
+    if (posthogDistinctId) {
+      posthog.capture({
+        distinctId: posthogDistinctId,
+        event: "subscription_setup_failed",
+        properties: { stripe_customer_id: customerId, price_id: priceId, error_message: err.message },
+      });
+    }
     res.status(500).json({ error: err.message });
   }
 });

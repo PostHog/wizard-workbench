@@ -21,13 +21,26 @@ export function createCustomer(email: string, name: string, posthogDistinctId?: 
   });
 }
 
-export function createSubscription(customerId: string, priceId: string, userId?: string) {
+export function createSubscription(
+  customerId: string,
+  priceId: string,
+  userId?: string,
+  posthogDistinctId?: string
+) {
   return request<{ subscriptionId: string; clientSecret: string; status: string }>(
     "/api/subscriptions",
-    { customerId, priceId, userId }
+    { customerId, priceId, userId, posthogDistinctId }
   );
 }
 
-export function createCheckoutSession(priceId: string, userId?: string, customerEmail?: string) {
-  return request<{ url: string }>("/api/checkout", { priceId, userId, customerEmail });
+export function createCheckoutSession(
+  priceId: string,
+  posthogDistinctId?: string,
+  customerEmail?: string
+) {
+  return request<{ url: string }>("/api/checkout", {
+    priceId,
+    posthogDistinctId,
+    customerEmail,
+  });
 }
