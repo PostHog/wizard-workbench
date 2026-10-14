@@ -1,7 +1,9 @@
 <script lang="ts">
   import { enhance, applyAction } from "$app/forms"
+  import { env } from "$env/dynamic/public"
   import { page } from "$app/stores"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import posthog from "posthog-js"
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -58,6 +60,9 @@
       loading = false
       if (result.type === "success") {
         showSuccess = true
+        if (env.PUBLIC_POSTHOG_PROJECT_TOKEN && env.PUBLIC_POSTHOG_HOST) {
+          posthog.capture("account_setting_updated", { setting_name: title })
+        }
       }
     }
   }

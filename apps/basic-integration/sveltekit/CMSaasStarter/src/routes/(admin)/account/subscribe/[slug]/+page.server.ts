@@ -2,6 +2,12 @@ import { PRIVATE_STRIPE_API_KEY } from "$env/static/private"
 import { error, redirect } from "@sveltejs/kit"
 import Stripe from "stripe"
 import {
+  flushPostHogLogs,
+  logCheckoutSessionCreated,
+  logCheckoutSessionRequested,
+  logCheckoutSessionCreationFailed,
+} from "$lib/server/posthog-logs"
+import {
   fetchSubscription,
   getOrCreateCustomerId,
 } from "../../subscription_helpers.server"
@@ -43,6 +49,7 @@ export const load: PageServerLoad = async ({
   }
 
   let checkoutUrl
+  logCheckoutSessionRequested(params.slug)
   try {
     const stripeSession = await stripe.checkout.sessions.create({
       line_items: [
@@ -57,8 +64,12 @@ export const load: PageServerLoad = async ({
       cancel_url: `${url.origin}/account/billing`,
     })
     checkoutUrl = stripeSession.url
+    logCheckoutSessionCreated(params.slug)
+    await flushPostHogLogs()
   } catch (e) {
     console.error("Error creating checkout session", e)
+    logCheckoutSessionCreationFailed()
+    await flushPostHogLogs()
     error(500, "Unknown Error (SSE): If issue persists please contact us.")
   }
 

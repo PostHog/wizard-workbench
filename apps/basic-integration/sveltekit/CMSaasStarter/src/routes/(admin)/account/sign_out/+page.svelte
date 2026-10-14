@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { env } from "$env/dynamic/public"
   import { goto } from "$app/navigation"
   import { onMount } from "svelte"
+  import posthog from "posthog-js"
 
   let { data } = $props()
 
@@ -9,6 +11,9 @@
 
   // on mount, sign out
   onMount(() => {
+    if (env.PUBLIC_POSTHOG_PROJECT_TOKEN && env.PUBLIC_POSTHOG_HOST) {
+      posthog.capture("account_sign_out_started")
+    }
     supabase.auth.signOut().then(({ error }) => {
       if (error) {
         message = "There was an issue signing out."
