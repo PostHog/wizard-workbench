@@ -85,6 +85,11 @@ export function GeneralOrganizationSettings({
     <Form
       encType="multipart/form-data"
       method="POST"
+      onSubmit={() => {
+        void import("~/lib/posthog.client").then(({ default: posthog }) =>
+          posthog?.capture("organization_settings_update_submitted"),
+        );
+      }}
       {...form.props}
       aria-describedby={
         form.errors && form.errors.length > 0

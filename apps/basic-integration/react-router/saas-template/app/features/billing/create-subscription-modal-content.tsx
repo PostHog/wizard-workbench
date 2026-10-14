@@ -106,8 +106,16 @@ export function CreateSubscriptionModalContent({
     (tier) => planLimits[tier] < currentSeats,
   );
 
+  const handleCheckoutStart = () => {
+    void import("~/lib/posthog.client").then(({ default: posthog }) =>
+      posthog?.capture("subscription_checkout_started", {
+        billing_period: billingPeriod,
+      }),
+    );
+  };
+
   return (
-    <Form method="post" replace>
+    <Form method="post" onSubmit={handleCheckoutStart} replace>
       {unavailable.length > 0 && (
         <Alert className="mb-4">
           <AlertTitle>{tModal("disabledPlansAlert.title")}</AlertTitle>
