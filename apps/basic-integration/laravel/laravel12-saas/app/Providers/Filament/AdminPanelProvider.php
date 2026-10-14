@@ -47,6 +47,7 @@ class AdminPanelProvider extends PanelProvider
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,
                 SubstituteBindings::class,
+                \PostHogRequestContext::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
