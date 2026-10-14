@@ -1,4 +1,7 @@
 const express = require('express');
+const { setupExpressErrorHandler } = require('posthog-node');
+const posthog = require('./posthog');
+const { posthogLogger, shutdownPosthogLogs } = require('./posthog-logs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +24,22 @@ app.post('/api/todos', (req, res) => {
 
   const todo = { id: nextId++, title, completed: false };
   todos.push(todo);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'todo_created',
+      properties: { todo_count: todos.length },
+    });
+  }
+
+  if (posthogLogger) {
+    posthogLogger.emit({
+      severityText: 'info',
+      body: 'todo created',
+      attributes: { todo_count: todos.length },
+    });
+  }
+
   res.status(201).json(todo);
 });
 
@@ -31,8 +50,31 @@ app.patch('/api/todos/:id', (req, res) => {
     return res.status(404).json({ error: 'Not found' });
   }
 
-  if (req.body.title !== undefined) todo.title = req.body.title;
-  if (req.body.completed !== undefined) todo.completed = req.body.completed;
+  const updatedFields = [];
+
+  if (req.body.title !== undefined) {
+    todo.title = req.body.title;
+    updatedFields.push('title');
+  }
+  if (req.body.completed !== undefined) {
+    todo.completed = req.body.completed;
+    updatedFields.push('completed');
+  }
+
+  if (posthog) {
+    posthog.capture({
+      event: 'todo_updated',
+      properties: { updated_fields: updatedFields },
+    });
+  }
+
+  if (posthogLogger) {
+    posthogLogger.emit({
+      severityText: 'info',
+      body: 'todo updated',
+      attributes: { updated_fields: updatedFields },
+    });
+  }
 
   res.json(todo);
 });
@@ -45,9 +87,48 @@ app.delete('/api/todos/:id', (req, res) => {
   }
 
   todos.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'todo_deleted',
+      properties: { remaining_todo_count: todos.length },
+    });
+  }
+
+  if (posthogLogger) {
+    posthogLogger.emit({
+      severityText: 'info',
+      body: 'todo deleted',
+      attributes: { remaining_todo_count: todos.length },
+    });
+  }
+
   res.status(204).send();
 });
 
-app.listen(PORT, () => {
+if (posthog) {
+  setupExpressErrorHandler(posthog, app);
+}
+
+const server = app.listen(PORT, () => {
   console.log(`Express todo API running on http://localhost:${PORT}`);
+
+  if (posthogLogger) {
+    posthogLogger.emit({
+      severityText: 'info',
+      body: 'express todo API started',
+      attributes: { port: PORT },
+    });
+  }
 });
+
+async function shutdown() {
+  await new Promise((resolve) => server.close(resolve));
+  await Promise.all([
+    posthog ? posthog.shutdown() : Promise.resolve(),
+    shutdownPosthogLogs(),
+  ]);
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
