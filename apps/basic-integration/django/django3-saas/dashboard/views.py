@@ -1,3 +1,5 @@
+import logging
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -5,6 +7,10 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Project, ActivityLog
 from .forms import ProjectForm
+from config import posthog
+
+
+posthog_logger = logging.getLogger('posthog.export')
 
 
 @login_required
@@ -60,6 +66,14 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            client = posthog.get_posthog_client()
+            if client:
+                client.capture('project_created')
+
+            posthog_logger.info(
+                'Project creation completed',
+                extra={'event': 'project_created', 'outcome': 'success'},
+            )
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +97,14 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            client = posthog.get_posthog_client()
+            if client:
+                client.capture('project_updated')
+
+            posthog_logger.info(
+                'Project update completed',
+                extra={'event': 'project_updated', 'outcome': 'success'},
+            )
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -105,6 +127,14 @@ def delete_project(request, pk):
             description=f'Deleted project: {name}'
         )
 
+        client = posthog.get_posthog_client()
+        if client:
+            client.capture('project_deleted')
+
+        posthog_logger.info(
+            'Project deletion completed',
+            extra={'event': 'project_deleted', 'outcome': 'success'},
+        )
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
 
