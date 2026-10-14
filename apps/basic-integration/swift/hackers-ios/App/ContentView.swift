@@ -10,11 +10,12 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import Foundation
+import PostHog
 import Settings
 import Shared
 import SwiftUI
 import UIKit
-import Foundation
 
 @MainActor
 struct MainContentView: View {
@@ -81,9 +82,11 @@ struct MainContentView: View {
                                 currentUsername: sessionService.username,
                                 onLogin: { username, password in
                                     _ = try await sessionService.authenticate(username: username, password: password)
+                                    trackLoginSucceeded()
                                 },
                                 onLogout: {
                                     sessionService.unauthenticate()
+                                    trackUserLoggedOut()
                                 },
                                 onShowOnboarding: {
                                     showOnboarding = true
@@ -103,9 +106,11 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    trackLoginSucceeded()
                 },
                 onLogout: {
                     sessionService.unauthenticate()
+                    trackUserLoggedOut()
                 },
                 textSize: settingsViewModel.textSize
             )
@@ -119,9 +124,11 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    trackLoginSucceeded()
                 },
                 onLogout: {
                     sessionService.unauthenticate()
+                    trackUserLoggedOut()
                 },
                 onShowOnboarding: {
                     showOnboarding = true
@@ -143,6 +150,16 @@ struct MainContentView: View {
                 showOnboarding = true
             }
         }
+    }
+
+    private func trackLoginSucceeded() {
+        PostHogSDK.shared.capture("login_succeeded")
+        PostHogLog.info("Authentication completed")
+    }
+
+    private func trackUserLoggedOut() {
+        PostHogSDK.shared.capture("user_logged_out")
+        PostHogLog.info("User logout completed")
     }
 
     private var isPresentingModal: Bool {
