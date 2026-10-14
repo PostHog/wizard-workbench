@@ -1,5 +1,6 @@
 import { Component, ElementRef, input, inject, ChangeDetectionStrategy, signal, computed } from '@angular/core';
 import { I18nService } from './i18n.service';
+import { PostHogService } from '@core/services';
 
 @Component({
   selector: 'app-language-selector',
@@ -13,6 +14,7 @@ import { I18nService } from './i18n.service';
 })
 export class LanguageSelectorComponent {
   private readonly i18nService = inject(I18nService);
+  private readonly posthogService = inject(PostHogService);
   private readonly eRef = inject(ElementRef);
 
   inNavbar = input(true);
@@ -38,6 +40,9 @@ export class LanguageSelectorComponent {
   }
 
   setLanguage(language: string) {
+    if (language !== this.i18nService.currentLanguage()) {
+      this.posthogService.client?.capture('language_changed', { language });
+    }
     this.i18nService.setLanguage(language);
     this.isDropdownOpen.set(false);
   }
