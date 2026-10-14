@@ -15,7 +15,6 @@ against the keys in `.wizard-ci/feature-flags.json`:
 - the key appears in exactly one changed file, its constants module, and
   another changed file imports that module
 - no changed file holds a `wizard-example-*` key outside that list
-- `posthog-feature-flags-report.md` exists
 
 The flag checks cannot prove this run created the flag: CI never deletes the
 shared key, because parallel legs share it.

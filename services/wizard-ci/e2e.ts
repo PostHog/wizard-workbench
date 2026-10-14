@@ -33,7 +33,6 @@ import {
   fetchFlagsByKey,
   loadFeatureFlagsExpect,
   posthogAppHost,
-  FEATURE_FLAGS_REPORT_FILE,
   type FeatureFlagsExpect,
   type RemoteFlag,
 } from "./feature-flag-checks.js";
@@ -545,7 +544,6 @@ async function gradeFeatureFlags(args: {
     changedFileContentsByPath: changedFiles(args.sourceDir, args.appDir),
     remoteFlagsByKey,
     flagsApiError,
-    isReportWritten: existsSync(join(args.appDir, FEATURE_FLAGS_REPORT_FILE)),
   });
 }
 

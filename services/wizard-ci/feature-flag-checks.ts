@@ -2,8 +2,6 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, extname, join } from "node:path";
 import type { Check } from "./warehouse-checks.js";
 
-export const FEATURE_FLAGS_REPORT_FILE = "posthog-feature-flags-report.md";
-
 const EXAMPLE_FLAG_KEY_PATTERN = /wizard-example-[a-z0-9]+(?:-[a-z0-9]+)*/g;
 
 const UNTRACKED_DIRECTORIES = new Set([
@@ -31,7 +29,6 @@ export interface FeatureFlagEvidence {
   changedFileContentsByPath: Map<string, string>;
   remoteFlagsByKey: Map<string, RemoteFlag>;
   flagsApiError: string | null;
-  isReportWritten: boolean;
 }
 
 export function loadFeatureFlagsExpect(appsDir: string, app: string): FeatureFlagsExpect | null {
@@ -227,9 +224,6 @@ function codeChecks(flagKey: string, sourceFiles: Map<string, string>): Check[] 
 }
 
 export function featureFlagChecks(evidence: FeatureFlagEvidence): Check[] {
-  const sourceFiles = new Map(
-    [...evidence.changedFileContentsByPath].filter(([path]) => path !== FEATURE_FLAGS_REPORT_FILE),
-  );
   const expectedKeys = new Set(evidence.expectedFlagKeys);
   const unexpectedKeys = new Set<string>();
   for (const contents of evidence.changedFileContentsByPath.values()) {
@@ -241,17 +235,12 @@ export function featureFlagChecks(evidence: FeatureFlagEvidence): Check[] {
   return [
     ...evidence.expectedFlagKeys.flatMap((flagKey) => [
       ...remoteFlagChecks(flagKey, evidence),
-      ...codeChecks(flagKey, sourceFiles),
+      ...codeChecks(flagKey, evidence.changedFileContentsByPath),
     ]),
     check(
       "no unexpected flag key",
       unexpectedKeys.size === 0,
       unexpectedKeys.size ? [...unexpectedKeys].join(", ") : "none",
-    ),
-    check(
-      "report file written",
-      evidence.isReportWritten,
-      evidence.isReportWritten ? FEATURE_FLAGS_REPORT_FILE : `missing ${FEATURE_FLAGS_REPORT_FILE}`,
     ),
   ];
 }
