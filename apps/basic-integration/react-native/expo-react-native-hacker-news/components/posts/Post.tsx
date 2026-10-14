@@ -14,6 +14,7 @@ import { Link2, MessageSquareText } from "lucide-react-native";
 
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { posthog } from "@/lib/posthog";
 
 export const Post = ({ id, title, url, score, text, kids }: Item) => {
   const QC = useQueryClient();
@@ -34,8 +35,21 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
-          if (isExternal) Linking.openURL(url);
-          else await navigateToDetails();
+          if (isExternal) {
+            posthog?.capture("story_external_link_opened", {
+              story_id: id,
+              source: "story_title",
+              external_domain: new URL(url).host,
+            });
+            Linking.openURL(url);
+          } else {
+            posthog?.capture("story_opened", {
+              story_id: id,
+              source: "story_title",
+              content_type: "story",
+            });
+            await navigateToDetails();
+          }
         }}
       >
         <Text style={{ color: "black", fontSize: 20, fontWeight: 500 }}>
@@ -66,6 +80,12 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog?.capture("story_opened", {
+              story_id: id,
+              source: "story_comments",
+              content_type: "story",
+              comment_count: kids?.length || 0,
+            });
             await navigateToDetails();
           }}
         >
@@ -86,6 +106,11 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           <Pressable
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              posthog?.capture("story_external_link_opened", {
+                story_id: id,
+                source: "story_link",
+                external_domain: new URL(url).host,
+              });
               Linking.openURL(url);
             }}
           >
