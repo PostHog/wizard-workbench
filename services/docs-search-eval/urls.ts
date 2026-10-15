@@ -53,3 +53,10 @@ export function isCommunityQuestionUrl(url: string): boolean {
 export function uniqueNormalized(urls: Iterable<string>): string[] {
   return [...new Set(Array.from(urls, normalizeDocUrl).filter(Boolean))];
 }
+
+export async function fetchHeadWithGetFallback(url: string): Promise<Response> {
+  const response = await fetch(url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(30_000) });
+  if (response.status !== 405) return response;
+  await response.body?.cancel();
+  return fetch(url, { method: "GET", redirect: "follow", signal: AbortSignal.timeout(30_000) });
+}

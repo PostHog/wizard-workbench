@@ -26,7 +26,7 @@ function sendJson(response: ServerResponse, status: number, body: unknown): void
   response.end(JSON.stringify(body));
 }
 
-export function createLabelerHandler(pools: PoolsFile, initialGoldSet: GoldSet, goldPath: string, port: number, html: string) {
+function createLabelerHandler(pools: PoolsFile, initialGoldSet: GoldSet, goldPath: string, port: number, html: string) {
   let goldSet = initialGoldSet;
   let pendingSave: Promise<void> = Promise.resolve();
   const rowsById = new Map(pools.rows.map((row) => [goldQueryIdFor(row.spanUuid), row]));

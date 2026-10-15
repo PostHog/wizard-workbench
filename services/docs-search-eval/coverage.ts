@@ -1,14 +1,14 @@
 import "dotenv/config";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { docsScope, listSourceDocuments, listSources, type KnowledgeSource } from "./api.js";
-import { normalizeDocUrl, uniqueNormalized } from "./urls.js";
+import { docsScope, listSourceDocuments, listSources, mapConcurrent, type KnowledgeSource } from "./api.js";
+import { fetchHeadWithGetFallback, normalizeDocUrl, uniqueNormalized } from "./urls.js";
 
 const PREFIXES = ["/docs", "/handbook", "/pricing"] as const;
 type Prefix = typeof PREFIXES[number];
 type ExclusionReason = "redirectedToIngested" | "redirectedOutOfScope" | "nonHtml" | "goneFromSite";
 
-export interface CoverageCounts {
+interface CoverageCounts {
   sitemap: number;
   ingested: number;
   excluded: number;
@@ -17,7 +17,7 @@ export interface CoverageCounts {
   coverage: number;
 }
 
-export interface CoverageResult {
+interface CoverageResult {
   passed: boolean;
   projectId: number;
   overall: CoverageCounts;
@@ -75,11 +75,7 @@ function requiredSource(sources: KnowledgeSource[], prefix: Prefix): KnowledgeSo
 }
 
 async function probeMissingUrl(url: string, ingestedUrls: Set<string>): Promise<ExclusionReason | null> {
-  let response = await fetch(url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(30_000) });
-  if (response.status === 405) {
-    await response.body?.cancel();
-    response = await fetch(url, { method: "GET", redirect: "follow", signal: AbortSignal.timeout(30_000) });
-  }
+  const response = await fetchHeadWithGetFallback(url);
   await response.body?.cancel();
   if (response.status === 404 || response.status === 410) return "goneFromSite";
   if (!response.ok) throw new Error(`Probe HTTP ${response.status} for ${url}`);
@@ -140,19 +136,14 @@ export async function checkCoverage(): Promise<CoverageResult> {
   const candidates = urls.filter((url) => !ingestedUrls.has(url));
   const exclusions = new Map<string, ExclusionReason>();
   const probeErrors: CoverageResult["probeErrors"] = [];
-  let nextIndex = 0;
-  async function probeWorker(): Promise<void> {
-    while (nextIndex < candidates.length) {
-      const url = candidates[nextIndex++];
-      try {
-        const reason = await probeMissingUrl(url, ingestedUrls);
-        if (reason) exclusions.set(url, reason);
-      } catch (error) {
-        probeErrors.push({ url, message: error instanceof Error ? error.message : String(error) });
-      }
+  await mapConcurrent(candidates, async (url) => {
+    try {
+      const reason = await probeMissingUrl(url, ingestedUrls);
+      if (reason) exclusions.set(url, reason);
+    } catch (error) {
+      probeErrors.push({ url, message: error instanceof Error ? error.message : String(error) });
     }
-  }
-  await Promise.all(Array.from({ length: Math.min(4, candidates.length) }, () => probeWorker()));
+  });
   const overall = countCoverage(urls, ingestedUrls, exclusions);
   const prefixes = Object.fromEntries(PREFIXES.map((prefix) => [
     prefix, countCoverage(urls.filter((url) => scopePrefix(url) === prefix), ingestedUrls, exclusions),

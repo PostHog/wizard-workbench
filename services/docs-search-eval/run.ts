@@ -3,41 +3,15 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { docsScope, searchKnowledge, type DocsScope } from "./api.js";
+import { docsScope, mapConcurrent, searchKnowledge, type DocsScope } from "./api.js";
 import { checkCoverage } from "./coverage.js";
 import { assertGoldSetReadyForRun, readGoldSet } from "./gold-set.js";
 import { Results, exceedsErrorBudget, renderReport, score, type ArmResult, type ScoringResults } from "./score.js";
-import { normalizeDocUrl } from "./urls.js";
-
-function createLimiter(): <Value>(operation: () => Promise<Value>) => Promise<Value> {
-  let activeRequests = 0;
-  const waitingRequests: Array<() => void> = [];
-  async function acquireSlot(): Promise<void> {
-    if (activeRequests < 4) {
-      activeRequests++;
-      return;
-    }
-    await new Promise<void>((resume) => waitingRequests.push(resume));
-  }
-  return async function limitRequest<Value>(operation: () => Promise<Value>): Promise<Value> {
-    await acquireSlot();
-    try {
-      return await operation();
-    } finally {
-      const resume = waitingRequests.shift();
-      if (resume) resume();
-      if (!resume) activeRequests--;
-    }
-  };
-}
+import { fetchHeadWithGetFallback, normalizeDocUrl } from "./urls.js";
 
 async function resolveLabelUrl(url: string): Promise<ScoringResults["resolvedUrls"][string]> {
   try {
-    let response = await fetch(url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(30_000) });
-    if (response.status === 405) {
-      await response.body?.cancel();
-      response = await fetch(url, { method: "GET", redirect: "follow", signal: AbortSignal.timeout(30_000) });
-    }
+    const response = await fetchHeadWithGetFallback(url);
     const resolution = { finalUrl: normalizeDocUrl(response.url), status: response.status };
     await response.body?.cancel();
     return resolution;
@@ -91,23 +65,20 @@ async function main(): Promise<void> {
     const labeledQueries = goldSet.queries.filter((query) => query.status === "labeled");
     const resolvedUrls = new Map<string, ScoringResults["resolvedUrls"][string]>();
     const relevantUrls = [...new Set(labeledQueries.flatMap((query) => query.relevantUrls.map(normalizeDocUrl)))];
-    const limitRequest = createLimiter();
     let resolvedCount = 0;
     let searchedCount = 0;
     const totalSearches = labeledQueries.length;
-    const resolutions = relevantUrls.map((url) => limitRequest(async () => {
+    await mapConcurrent(relevantUrls, async (url) => {
       resolvedUrls.set(url, await resolveLabelUrl(url));
       resolvedCount++;
       console.log(`Resolved labels: ${resolvedCount}/${relevantUrls.length}`);
-    }));
-    await Promise.all(resolutions);
-    const replays = labeledQueries.map((query) => limitRequest(async () => {
+    });
+    const queries = await mapConcurrent(labeledQueries, async (query) => {
       const search = await replaySearch(scope, query.scrubbedQuery);
       searchedCount++;
       console.log(`Searches: ${searchedCount}/${totalSearches}`);
       return { id: query.id, search };
-    }));
-    const queries = await Promise.all(replays);
+    });
     const replay: ScoringResults = {
       version: 1,
       startedAt,

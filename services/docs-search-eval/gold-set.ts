@@ -65,7 +65,7 @@ function findUnscrubbedPattern(text: string): string | null {
   return null;
 }
 
-export function findUnscrubbedText(text: string): string | null {
+function findUnscrubbedText(text: string): string | null {
   for (const candidateText of new Set([text, decodePercentEscapes(text)])) {
     const reason = findUnscrubbedPattern(candidateText);
     if (reason) return reason;

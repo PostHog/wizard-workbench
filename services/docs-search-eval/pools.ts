@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { configureGateway, repairAndParseJSON, resolveGatewayToken } from "../pr-evaluator/evaluator.js";
-import { docsScope, listSourceDocuments, listSources, searchKnowledge, type DocsScope, type KnowledgeChunk, type KnowledgeSource } from "./api.js";
+import { docsScope, listSourceDocuments, listSources, mapConcurrent, searchKnowledge, type DocsScope, type KnowledgeChunk, type KnowledgeSource } from "./api.js";
 import { decodeXml, sitemapUrls } from "./coverage.js";
 import { isCommunityQuestionUrl, normalizeDocUrl } from "./urls.js";
 
@@ -44,8 +44,8 @@ const poolsFileSchema = z.object({
   rows: z.array(poolRowSchema),
 });
 
-export type PoolCandidate = z.infer<typeof candidateSchema>;
-export type PoolRow = z.infer<typeof poolRowSchema>;
+type PoolCandidate = z.infer<typeof candidateSchema>;
+type PoolRow = z.infer<typeof poolRowSchema>;
 export type PoolsFile = z.infer<typeof poolsFileSchema>;
 type SampleRow = z.infer<typeof sampleRowSchema>;
 type Rewrite = z.infer<typeof rewriteSchema>;
@@ -64,7 +64,7 @@ const rewriteSystemPrompt = `Rewrite each docs-search query, preserving its inte
 
 class PoolsError extends Error {}
 
-export function parseRewrites(outputText: string): Rewrite[] {
+function parseRewrites(outputText: string): Rewrite[] {
   const unfencedText = outputText.trim().replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/i, "$1");
   try {
     return z.object({ rewrites: z.array(rewriteSchema) }).parse(repairAndParseJSON(unfencedText)).rewrites;
@@ -73,12 +73,7 @@ export function parseRewrites(outputText: string): Rewrite[] {
   }
 }
 
-export function queryTokens(scrubbedQuery: string): string[] {
-  return [...new Set(scrubbedQuery.toLowerCase().split(/[^a-z0-9]+/)
-    .filter((token) => token.length >= 3 && !stopwords.has(token)))];
-}
-
-export function buildCandidatePool(
+function buildCandidatePool(
   scrubbedQuery: string,
   chunks: KnowledgeChunk[],
   titlesByNormalizedUrl: Map<string, string>,
@@ -98,7 +93,8 @@ export function buildCandidatePool(
       snippet: chunk.content.slice(0, 300),
     });
   }
-  const tokens = queryTokens(scrubbedQuery);
+  const tokens = [...new Set(scrubbedQuery.toLowerCase().split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 3 && !stopwords.has(token)))];
   const titleMatches = [...titlesByNormalizedUrl].map(([url, title]) => ({
     url, title, score: tokens.filter((token) => title.toLowerCase().includes(token)).length,
   })).filter((document) => document.score >= 2 && !candidatesByUrl.has(document.url)
@@ -140,7 +136,7 @@ function rewriteEnvironment(): Record<string, string> {
 }
 
 async function rewriteBatch(rows: SampleRow[], rewriteModel: string): Promise<Rewrite[]> {
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; ; attempt++) {
     let lastStderrLine = "";
     try {
       let outputText = "";
@@ -180,7 +176,6 @@ async function rewriteBatch(rows: SampleRow[], rewriteModel: string): Promise<Re
       throw new PoolsError(`Rewrite batch failed after 2 attempts: ${cause}`);
     }
   }
-  throw new PoolsError("Rewrite batch failed");
 }
 
 async function assertSourcesReady(scope: DocsScope): Promise<KnowledgeSource[]> {
@@ -318,21 +313,13 @@ async function buildPoolRows(
   titlesByNormalizedUrl: Map<string, string>,
   notIngestedPagesByUrl: Map<string, { title: string; snippet: string }>,
 ): Promise<PoolRow[]> {
-  const poolRows: PoolRow[] = new Array(rows.length);
-  let nextIndex = 0;
-  async function searchWorker(): Promise<void> {
-    while (nextIndex < rows.length) {
-      const rowIndex = nextIndex++;
-      const row = rows[rowIndex];
-      const search = await searchKnowledge(scope, row.scrubbedQuery, { limit: 10 });
-      poolRows[rowIndex] = {
-        ...row,
-        candidates: buildCandidatePool(row.scrubbedQuery, search.results, titlesByNormalizedUrl, notIngestedPagesByUrl),
-      };
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(4, rows.length) }, () => searchWorker()));
-  return poolRows;
+  return mapConcurrent(rows, async (row) => {
+    const search = await searchKnowledge(scope, row.scrubbedQuery, { limit: 10 });
+    return {
+      ...row,
+      candidates: buildCandidatePool(row.scrubbedQuery, search.results, titlesByNormalizedUrl, notIngestedPagesByUrl),
+    };
+  });
 }
 
 async function readJsonFile(path: string): Promise<unknown | undefined> {

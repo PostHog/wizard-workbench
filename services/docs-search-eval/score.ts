@@ -27,7 +27,7 @@ const RetrievalMetrics = z.object({
 }).strict();
 const ArmMetrics = RetrievalMetrics.extend({ errorRate: rate, latencyP50Ms: latency, latencyP95Ms: latency }).strict();
 
-export const ScoreSummary = z.object({
+const ScoreSummary = z.object({
   search: ArmMetrics,
   passBars: z.array(z.object({
     name: z.enum(["emptyRate", "hitAt3", "recallAt10", "latencyP95Ms"]),
@@ -41,7 +41,7 @@ export const ScoreSummary = z.object({
   componentFlags: z.array(z.object({ queryId: z.string(), reason: z.enum(["no relevant chunk", "snippet missing"]) }).strict()),
   componentQueriesChecked: count,
 }).strict();
-export type ScoreSummary = z.infer<typeof ScoreSummary>;
+type ScoreSummary = z.infer<typeof ScoreSummary>;
 
 export const Results = z.object({
   version: z.literal(1),
@@ -116,10 +116,6 @@ function retrievalMetrics(searches: Array<{ urls: string[]; relevantUrls: Set<st
   };
 }
 
-function roundedRetrieval(metrics: z.infer<typeof RetrievalMetrics>): z.infer<typeof RetrievalMetrics> {
-  return { ...metrics, emptyRate: roundMetric(metrics.emptyRate), hitAt3: roundMetric(metrics.hitAt3), recallAt10: roundMetric(metrics.recallAt10) };
-}
-
 export function score(results: ScoringResults): ScoreSummary {
   const replayById = new Map(results.queries.map((query) => [query.id, query.search]));
   const staleLabels: ScoreSummary["staleLabels"] = [];
@@ -177,16 +173,16 @@ export function score(results: ScoringResults): ScoreSummary {
       componentFlags.push({ queryId: query.id, reason: "snippet missing" });
     }
   }
-  function roundedArm(arm: z.infer<typeof ArmMetrics>): z.infer<typeof ArmMetrics> {
-    return {
-      ...roundedRetrieval(arm),
-      errorRate: roundMetric(arm.errorRate),
-      latencyP50Ms: roundMetric(arm.latencyP50Ms, 1),
-      latencyP95Ms: roundMetric(arm.latencyP95Ms, 1),
-    };
-  }
   return {
-    search: roundedArm(searchMetrics),
+    search: {
+      ...searchMetrics,
+      emptyRate: roundMetric(searchMetrics.emptyRate),
+      hitAt3: roundMetric(searchMetrics.hitAt3),
+      recallAt10: roundMetric(searchMetrics.recallAt10),
+      errorRate: roundMetric(searchMetrics.errorRate),
+      latencyP50Ms: roundMetric(searchMetrics.latencyP50Ms, 1),
+      latencyP95Ms: roundMetric(searchMetrics.latencyP95Ms, 1),
+    },
     passBars: passBars.sort((first, second) => compareText(first.name, second.name))
       .map((bar) => ({ ...bar, value: roundMetric(bar.value, bar.name === "latencyP95Ms" ? 1 : 4) })),
     passed: passBars.every((bar) => bar.passed),

@@ -1,5 +1,18 @@
 import { posthogAppHost } from "../wizard-ci/feature-flag-checks.js";
 
+export async function mapConcurrent<Value, Output>(values: Value[], operation: (value: Value) => Promise<Output>): Promise<Output[]> {
+  const outputs: Output[] = new Array(values.length);
+  let nextIndex = 0;
+  async function worker(): Promise<void> {
+    while (nextIndex < values.length) {
+      const index = nextIndex++;
+      outputs[index] = await operation(values[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(4, values.length) }, worker));
+  return outputs;
+}
+
 function requiredProjectIdFromEnv(variableName: string): number {
   const rawValue = process.env[variableName]?.trim() ?? "";
   const projectId = Number(rawValue);
@@ -35,7 +48,7 @@ export interface KnowledgeSource {
   last_refresh_status: string | null;
 }
 
-export interface KnowledgeDocument {
+interface KnowledgeDocument {
   id: string | number;
   url: string;
   title: string;
@@ -70,7 +83,7 @@ async function posthogRequest<T>(path: string, method: string, params?: QueryPar
   if (!apiKey?.trim()) throw new Error("POSTHOG_DOCS_EVAL_API_KEY must be set");
   const url = new URL(path, posthogAppHost(process.env.POSTHOG_REGION ?? "us"));
   for (const [name, value] of Object.entries(params ?? {})) url.searchParams.set(name, String(value));
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; ; attempt++) {
     let response: Response;
     try {
       response = await fetch(url, {
@@ -90,22 +103,13 @@ async function posthogRequest<T>(path: string, method: string, params?: QueryPar
     if (!response.ok) throw new Error(`PostHog API HTTP ${response.status} for ${method} ${path}`);
     return await response.json() as T;
   }
-  throw new Error(`PostHog API request failed for ${method} ${path}`);
-}
-
-export function posthogGet<T>(path: string, params?: QueryParams): Promise<T> {
-  return posthogRequest<T>(path, "GET", params);
-}
-
-export function posthogPost<T>(path: string, body: unknown): Promise<T> {
-  return posthogRequest<T>(path, "POST", undefined, body);
 }
 
 async function listAll<T>(path: string, params?: QueryParams): Promise<T[]> {
   const records: T[] = [];
   let offset = 0;
   while (true) {
-    const page = await posthogGet<PaginatedResponse<T>>(path, { ...params, limit: 100, offset });
+    const page = await posthogRequest<PaginatedResponse<T>>(path, "GET", { ...params, limit: 100, offset });
     records.push(...page.results);
     if (page.next === null) return records;
     if (page.results.length === 0) throw new Error(`PostHog API pagination made no progress for ${path}`);
@@ -123,14 +127,14 @@ export function listSourceDocuments(projectId: number, sourceId: string | number
 
 export async function searchKnowledge(scope: DocsScope, query: string, options: { limit: number }): Promise<{ results: KnowledgeChunk[]; latencyMs: number }> {
   const startedAt = performance.now();
-  const results = await posthogGet<KnowledgeChunk[]>(`/api/projects/${scope.projectId}/business_knowledge/documents/search/`, {
+  const results = await posthogRequest<KnowledgeChunk[]>(`/api/projects/${scope.projectId}/business_knowledge/documents/search/`, "GET", {
     query, limit: Math.min(options.limit, 20), rerank: false, library_id: scope.libraryId,
   });
   return { results, latencyMs: performance.now() - startedAt };
 }
 
 export async function runHogQL(projectId: number, query: string): Promise<Record<string, unknown>[]> {
-  const response = await posthogPost<{ columns: string[]; results: unknown[][] }>(`/api/projects/${projectId}/query/`, {
+  const response = await posthogRequest<{ columns: string[]; results: unknown[][] }>(`/api/projects/${projectId}/query/`, "POST", undefined, {
     query: { kind: "HogQLQuery", query },
   });
   return response.results.map((row) => Object.fromEntries(response.columns.map((column, index) => [column, row[index]])));
