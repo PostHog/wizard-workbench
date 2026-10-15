@@ -9,31 +9,31 @@ test("rescoring a saved fixture run reproduces the hand-computed metrics", () =>
       relevantUrls: ["https://posthog.com/docs/old-lantern", "https://posthog.com/docs/lantern-colors"],
       targetsComponentPage: false, expectedCodeSnippet: null,
       inkeepUrls: ["https://posthog.com/docs/lantern", "https://posthog.com/docs/lantern-colors"],
-      notes: "", labeledAt: "2026-01-01T00:00:00Z",
+      notes: "", isAwaitingReview: false, labeledAt: "2026-01-01T00:00:00Z",
     },
     {
       id: "000000000002", harness: "fictional", status: "labeled", scrubbedQuery: "Render the lantern component",
       relevantUrls: ["https://posthog.com/docs/lantern-component"],
       targetsComponentPage: true, expectedCodeSnippet: "<Lantern />",
       inkeepUrls: ["https://posthog.com/docs/lantern-component"],
-      notes: "", labeledAt: "2026-01-01T00:00:00Z",
+      notes: "", isAwaitingReview: false, labeledAt: "2026-01-01T00:00:00Z",
     },
     {
       id: "000000000003", harness: "fictional", status: "labeled", scrubbedQuery: "Find the retired lantern",
       relevantUrls: ["https://posthog.com/docs/retired-lantern"],
       targetsComponentPage: false, expectedCodeSnippet: null, inkeepUrls: [],
-      notes: "", labeledAt: "2026-01-01T00:00:00Z",
+      notes: "", isAwaitingReview: false, labeledAt: "2026-01-01T00:00:00Z",
     },
     {
       id: "000000000004", harness: "fictional", status: "labeled", scrubbedQuery: "Configure the lantern switch",
       relevantUrls: ["https://posthog.com/docs/lantern-switch"],
       targetsComponentPage: false, expectedCodeSnippet: null, inkeepUrls: [],
-      notes: "", labeledAt: "2026-01-01T00:00:00Z",
+      notes: "", isAwaitingReview: false, labeledAt: "2026-01-01T00:00:00Z",
     },
     {
       id: "000000000005", harness: "fictional", status: "skipped", scrubbedQuery: "Skipped lantern query",
       relevantUrls: [], targetsComponentPage: false, expectedCodeSnippet: null, inkeepUrls: [],
-      notes: "", labeledAt: "2026-01-01T00:00:00Z",
+      notes: "", isAwaitingReview: false, labeledAt: "2026-01-01T00:00:00Z",
     },
   ];
   const successfulSearch = (urls: string[], latencyMs: number): Extract<ArmResult, { status: "ok" }> => ({

@@ -9,6 +9,7 @@ function progressFor(goldSet: GoldSet, pools: PoolsFile) {
   const labeled = goldSet.queries.filter((query) => query.status === "labeled").length;
   const skipped = goldSet.queries.filter((query) => query.status === "skipped").length;
   const componentLabeled = goldSet.queries.filter((query) => query.status === "labeled" && query.targetsComponentPage).length;
+  const awaitingReview = goldSet.queries.filter((query) => query.isAwaitingReview).length;
   const savedIds = new Set(goldSet.queries.map((query) => query.id));
   const remaining = pools.rows.filter((row) => !savedIds.has(goldQueryIdFor(row.spanUuid))).length;
   let problems: string[] = [];
@@ -17,7 +18,7 @@ function progressFor(goldSet: GoldSet, pools: PoolsFile) {
   } catch (error) {
     problems = (error as Error).message.split("\n");
   }
-  return { labeled, skipped, componentLabeled, remaining, isReadyForRun: problems.length === 0, problems };
+  return { labeled, skipped, componentLabeled, awaitingReview, remaining, isReadyForRun: problems.length === 0, problems };
 }
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {

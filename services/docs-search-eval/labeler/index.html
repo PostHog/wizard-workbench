@@ -45,7 +45,7 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/1.5 ui-monospac
 <div class="workspace">
 <aside>
 <label for="filter">Filter queries</label>
-<select id="filter"><option value="all">All</option><option value="unlabeled">Unlabeled</option><option value="labeled">Labeled</option><option value="skipped">Skipped</option><option value="component">Component</option></select>
+<select id="filter"><option value="all">All</option><option value="needs-review">Needs review</option><option value="unlabeled">Unlabeled</option><option value="labeled">Labeled</option><option value="skipped">Skipped</option><option value="component">Component</option></select>
 <nav id="queries" class="query-list" aria-label="Queries"></nav>
 <p class="context">Keyboard: j/k select, s saves, outside text fields. Navigation keeps edits until the page reloads.</p>
 </aside>
@@ -142,7 +142,7 @@ function updateWarning() {
 }
 
 function showProgress(progress) {
-  elements.progress.textContent = `Labeled: ${progress.labeled} / skipped: ${progress.skipped} / component-labeled: ${progress.componentLabeled} / remaining: ${progress.remaining}\n${progress.isReadyForRun ? "Ready for a run" : "Not ready for a run"}${progress.problems.length ? "\n" + progress.problems.join("\n") : ""}`;
+  elements.progress.textContent = `Labeled: ${progress.labeled} / skipped: ${progress.skipped} / component-labeled: ${progress.componentLabeled} / needs review: ${progress.awaitingReview} / remaining: ${progress.remaining}\n${progress.isReadyForRun ? "Ready for a run" : "Not ready for a run"}${progress.problems.length ? "\n" + progress.problems.join("\n") : ""}`;
 }
 
 function visibleRows() {
@@ -151,6 +151,7 @@ function visibleRows() {
     if (filter === "all") return true;
     if (filter === "component") return row.targetsComponentPage;
     if (filter === "unlabeled") return !row.status;
+    if (filter === "needs-review") return row.isAwaitingReview;
     return row.status === filter;
   });
 }
@@ -166,7 +167,7 @@ function renderList() {
     harness.textContent = row.harness;
     const chip = document.createElement("span");
     chip.className = "chip";
-    chip.textContent = row.status || "unlabeled";
+    chip.textContent = row.isAwaitingReview ? "needs review" : row.status || "unlabeled";
     const preview = document.createElement("span");
     preview.className = "query-preview";
     preview.textContent = row.scrubbedQuery.slice(0, 60) + (row.scrubbedQuery.length > 60 ? "…" : "");
@@ -306,7 +307,8 @@ async function saveEntry(status) {
     const stateResponse = await fetch("/api/state");
     if (!stateResponse.ok) throw new Error("Saved, but unable to refresh local state");
     const state = await stateResponse.json();
-    rows = state.rows;
+    const listPositionById = new Map(rows.map((existingRow, position) => [existingRow.id, position]));
+    rows = state.rows.sort((first, second) => listPositionById.get(first.id) - listPositionById.get(second.id));
     showProgress(saved.progress);
     renderList();
     elements.status.textContent = "Saved.";
@@ -339,7 +341,7 @@ async function loadState() {
     const response = await fetch("/api/state");
     if (!response.ok) throw new Error("Unable to load local queries");
     const state = await response.json();
-    rows = state.rows;
+    rows = state.rows.sort((first, second) => Number(Boolean(second.isAwaitingReview)) - Number(Boolean(first.isAwaitingReview)));
     showProgress(state.progress);
     selectRow(rows[0]?.id || null);
   } catch (error) {

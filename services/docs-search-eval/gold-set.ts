@@ -96,6 +96,7 @@ export const GoldQuery = z.object({
   expectedCodeSnippet: z.string().nullable(),
   inkeepUrls: inkeepDocUrls,
   notes: z.string(),
+  isAwaitingReview: z.boolean().default(false),
   labeledAt: z.string().datetime({ offset: true }),
 }).strict().superRefine((query, context) => {
   for (const field of ["scrubbedQuery", "notes", "expectedCodeSnippet"] as const) {
@@ -156,5 +157,7 @@ export function assertGoldSetReadyForRun(goldSet: GoldSet): void {
   const componentCount = labeledQueries.filter((query) => query.targetsComponentPage).length;
   if (labeledQueries.length < 100) problems.push(`Requires at least 100 labeled queries (currently ${labeledQueries.length})`);
   if (componentCount < 10) problems.push(`Requires at least 10 labeled component queries (currently ${componentCount})`);
+  const awaitingReviewCount = goldSet.queries.filter((query) => query.isAwaitingReview).length;
+  if (awaitingReviewCount > 0) problems.push(`Requires review of ${awaitingReviewCount} queries marked needs review`);
   if (problems.length > 0) throw new Error(problems.join("\n"));
 }
