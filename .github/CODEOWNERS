@@ -1,21 +1,15 @@
-# CODEOWNERS for wizard-workbench
+# CODEOWNERS for context-mill
 #
 # Path matching is last-match-wins. The wizard-docs catchall is first;
-# team-owned app trees override it below.
+# team-owned skill trees override it below.
 
 # Default owner
 *                                       @PostHog/team-wizard-docs
 
 # App-specific ownership
-/apps/ai-observability/                 @PostHog/team-ai-observability
-/apps/audit/                            @PostHog/team-fde
-/apps/basic-integration/                @PostHog/team-growth
-/apps/error-tracking/                   @PostHog/team-error-tracking
 /apps/error-tracking-upload-source-maps/ @PostHog/team-error-tracking
-/apps/mcp-analytics/                    @PostHog/mcp-analytics
-/apps/migrate/                          @PostHog/team-fde
-/apps/replay-vision/                    @PostHog/team-replay
-/apps/revenue/                          @PostHog/team-web-analytics
 /apps/self-driving/                     @PostHog/team-self-driving
-/apps/warehouse/                        @PostHog/team-warehouse-sources
-/apps/warehouse-seeded/                 @PostHog/team-warehouse-sources
+/apps/basic-integration/                @PostHog/team-wizard-docs
+/apps/replay-vision/                    @PostHog/team-replay
+/apps/ai-observability/                 @PostHog/team-ai-observability
+/apps/mcp-analytics/                    @PostHog/mcp-analytics
