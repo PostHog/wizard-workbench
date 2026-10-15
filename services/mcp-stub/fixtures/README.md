@@ -25,15 +25,23 @@ runs — they are the same ones a human would type.
 
 ## Redaction
 
-The recorder runs a redaction pass before it writes. Two things get replaced:
+The recorder runs a regex redaction pass before it writes. Four things get
+replaced:
 
 1. **Internal hostnames.** Prod error messages quote the request URL, which
    names an internal cluster service. The recorder rewrites that origin to
    `https://app.posthog.example/…`. The status code and the message body — the
    parts the wizard's agent reads — are kept byte-for-byte.
 2. **Anything key-shaped.** Values matching a known credential prefix
-   (`phx_`, `phc_`, `sk_`, `rk_`, `hf_`, `pat-`) or a field the source wizard
-   marks `secret: true` are replaced with `<redacted>`.
+   (`phx_`, `phc_`, `phs_`, `sk_live_`/`sk_test_`, `rk_live_`/`rk_test_`,
+   `hf_`, `acct_`, `pat-`) are replaced with `<redacted>`.
+3. **Project ids in paths.** `/api/projects/<id>/` becomes
+   `/api/projects/{project_id}/`. The stub fills the id in at run time.
+4. **Email addresses.** They become `redacted@example.com`.
+
+The recorder does not look at `secret: true`. Fields the source wizard marks
+`secret: true` are redacted at run time instead, in `journal.ts`, as
+`<redacted:N>` where N is the value's length.
 
 No fixture in this directory contains a real credential. If you add a capture
 that could, redact it in `record.ts` rather than in the output file, so the
