@@ -60,14 +60,21 @@ install run — different code, and where the recent regressions were. See
 Reviews are auto-requested via [`.github/CODEOWNERS`](.github/CODEOWNERS) — the
 file is the source of truth; this table just mirrors it for readability.
 `team-wizard-docs` is the default reviewer; the team-owned apps below route
-review to their owning team instead.
+review to their owning team instead. The apps follow who owns each program in
+the [wizard handbook](https://posthog.com/handbook/wizard-and-docs/wizard#who-owns-what).
 
 | Path | Owning team |
 |---|---|
 | `*` (everything else, including all other apps) | `@PostHog/team-wizard-docs` |
-| `/apps/basic-integration/` | `@PostHog/team-wizard-docs` |
-| `/apps/error-tracking-upload-source-maps/` | `@PostHog/team-error-tracking` |
+| `/apps/basic-integration/` | `@PostHog/team-growth` |
+| `/apps/audit/`, `/apps/migrate/` | `@PostHog/team-fde` |
+| `/apps/error-tracking/`, `/apps/error-tracking-upload-source-maps/` | `@PostHog/team-error-tracking` |
+| `/apps/revenue/` | `@PostHog/team-web-analytics` |
+| `/apps/warehouse/`, `/apps/warehouse-seeded/` | `@PostHog/team-warehouse-sources` |
 | `/apps/self-driving/` | `@PostHog/team-self-driving` |
+| `/apps/replay-vision/` | `@PostHog/team-replay` |
+| `/apps/ai-observability/` | `@PostHog/team-ai-observability` |
+| `/apps/mcp-analytics/` | `@PostHog/mcp-analytics` |
 
 Ownership is by directory. Apps not listed above fall through the default and
 are owned by `team-wizard-docs`. Today CODEOWNERS only auto-requests review —
@@ -95,11 +102,12 @@ Adding a new wizard command to the pickers: append an entry to
 
 ## Wizard local dev stack
 
-The workbench can run the entire Wizard stack in local development mode, with hot reload where supported. It uses `phrocs` to run all the repos defined in your `.env` file:
+The workbench can run the Wizard stack in local development mode, with hot reload where supported. It uses `phrocs` to run the repos defined in your `.env` file:
 
 - [Context Mill repo](https://github.com/PostHog/context-mill)
 - [Wizard repo](https://github.com/PostHog/wizard)
-- [MCP repo](https://github.com/PostHog/posthog/tree/master/services/mcp) (within PostHog monorepo)
+
+The [MCP server](https://github.com/PostHog/posthog/tree/master/services/mcp) now runs from the posthog hogli stack, not from a workbench pane. You only need a posthog clone to run the MCP server, the MCP Inspector, or PostHog itself locally.
 
 ![local dev stack](https://res.cloudinary.com/dmukukwp6/image/upload/q_auto,f_auto/pasted_image_2026_01_26_T20_15_17_777_Z_473d28d6e1.png)
 
@@ -112,6 +120,8 @@ bash fresh-setup
 ```
 
 This installs `phrocs`, clones `context-mill`, `wizard`, and `posthog` **as siblings next to this repo** (e.g. `../context-mill`), writes your `.env` with the right paths, prompts for an optional PostHog API key, and runs `pnpm install` everywhere.
+
+The posthog clone is optional. Most wizard work doesn't need it, so run `bash fresh-setup --skip-posthog` unless you'll run the MCP server or PostHog locally.
 
 macOS only for now.
 
@@ -144,7 +154,7 @@ cp .env.example .env
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `CONTEXT_MILL_PATH` | Yes | Path to your local context-mill repo (e.g., `~/development/context-mill`) |
-| `MCP_PATH` | Yes | Path to MCP service (e.g., `~/development/posthog/services/mcp`) |
+| `MCP_PATH` | No | Path to MCP service (e.g., `~/development/posthog/services/mcp`). Only the `mcp` and `mcp-inspector` panes use it |
 | `WIZARD_PATH` | Yes | Path to your local wizard repo (e.g., `~/development/wizard`) |
 | `POSTHOG_PERSONAL_API_KEY` | For CI | PostHog personal API key (`phx_`) for wizard CI mode |
 | `POSTHOG_REGION` | No | PostHog region (`us` or `eu`). Defaults to `us`. Can also be set via `--region` flag or workflow input. |
@@ -173,9 +183,8 @@ Use keyboard shortcuts in phrocs: `r` to run/restart, `s` to stop, `q` to quit.
 | Process | Port | Description |
 |---------|------|-------------|
 | `context-mill` | 8765 | Context Mill server with MCP resources ZIP — the wizard reads these via `--local-context-mill` |
-| `mcp` | 8787 | MCP server using local resources (`autostart: false` — hogli owns this port; reach it with `--local-mcp`) |
-| `mcp-inspector` | 6274 | MCP Inspector UI for debugging |
-| `wizard-build` | - | Builds and watches Wizard for changes |
+| `mcp-inspector` | 6274 | MCP Inspector UI for debugging. Needs `MCP_PATH` |
+| `wizard-build` | - | Builds and watches Wizard for changes, with `build:ci` so the runners can pass `--ci` and `--local-*` |
 
 A local PostHog (Django on **8010**) isn't started by any pane — run `./bin/start`
 in the `posthog/` repo yourself, then pass the wizard `--local-posthog`.
@@ -184,12 +193,19 @@ in the `posthog/` repo yourself, then pass the wizard `--local-posthog`.
 
 | Process | Description |
 |---------|-------------|
+| `mcp` | MCP server on 8787 using local resources. Off by default: the posthog hogli stack owns this port, so reach it there with `--local-mcp` |
+| `wizard-build-dev` | Dev build that points OAuth and the host at a local PostHog on 8010. Stop `wizard-build` first, they share `dist/` |
 | `wizard-run` | Interactive picker: choose a wizard command (`posthog-wizard`, `posthog-wizard revenue`, …) then an app |
 | `wizard-tail-run` | Tail the wizard's verbose output (`/tmp/posthog-wizard.log`) |
 | `wizard-ci-run` | Full CI flow: run wizard, create PR, evaluate |
 | `wizard-ci-local-run` | CI flow with local evaluation (no PR) |
 | `wizard-ci-create-pr` | Push branch and create PR only (skip wizard run) |
 | `wizard-ci-evaluate-pr` | Evaluate an existing PR or local branch |
+| `wizard-ci-snapshots` | Run the CI e2e test definitions and capture every screen of each real TUI run |
+| `wizard-benchmark` | Interactive app picker that runs the wizard with `--benchmark` |
+| `playground` | The wizard TUI playground (`pnpm try --playground`) |
+| `framework-detect` | Framework and language detection only, for debugging |
+| `yara-scan` | Standalone YARA scanner for testing rules against app files |
 | `mitmproxy` | HTTPS-intercepting proxy on port 8888 |
 | `wizard-run-proxy` | Run wizard with all fetch traffic routed through the proxy |
 
@@ -206,7 +222,7 @@ service, so each is independently switchable:
 | Wizard → MCP worker | **Prod** `mcp.posthog.com` | add `--local-mcp` |
 | Wizard → PostHog API/app | **Prod** US/EU | add `--local-posthog` (or `--base-url`) |
 | MCP worker → PostHog backend | Prod US/EU | `$MCP_PATH/.dev.vars` |
-| Wizard → LLM gateway | `gateway.us.posthog.com/wizard` | baked in at wizard build time — see below |
+| Wizard → AI gateway | The URL the PostHog gateway-token mint returns | `--local-posthog` with a local gateway, or `WIZARD_CI_GATEWAY_URL` for `--ci` runs — see below |
 
 `--local-dev` turns on the first three at once. Full catalog:
 [`docs/local-dev.md`](https://github.com/PostHog/wizard/blob/main/docs/local-dev.md)
@@ -240,15 +256,15 @@ Restart the `mcp` proc.
 2. Uncomment the three lines above.
 3. Restart the `mcp` proc.
 
-### Point wizard at local LLM gateway
+### Point wizard at local AI gateway
 
-Requires a wizard code change. The gateway URL is locked at build time — `wizard/tsdown.config.ts` hard-codes `NODE_ENV=production`, and `agent-interface.ts:697` unconditionally overwrites `ANTHROPIC_BASE_URL` at runtime.
+No wizard code change is needed. The wizard calls whatever gateway URL the PostHog mint hands it.
 
-To enable it:
+- **Interactive runs.** Run local PostHog with the `ai-gateway` hogli unit. It serves the [ai-gateway](https://github.com/PostHog/ai-gateway) on `:8080`. Set `WIZARD_GATEWAY_URL=http://localhost:8080` in posthog's `.env.local`, then run the wizard with `--local-posthog`. The `[gateway] minted ... url=` line in `/tmp/posthog-wizard.log` shows which gateway the run used.
+- **`--ci` runs.** These skip the mint and use the token in `WIZARD_CI_GATEWAY_TOKEN_FILE`. Set `WIZARD_CI_GATEWAY_URL=http://localhost:8080` to point them at the local gateway. Otherwise they use `https://ai-gateway.<region>.posthog.com`.
+- **Builds.** `WIZARD_BUILD_NODE_ENV` sets the build mode. `wizard-build` uses `ci`, and `wizard-build-dev` uses `development`.
 
-1. In `wizard/tsdown.config.ts`, change `NODE_ENV: 'production'` to `NODE_ENV: process.env.NODE_ENV ?? 'production'`.
-2. Rebuild with `NODE_ENV=development pnpm build`.
-3. Start `llm-gateway` locally on `:3308` (no workbench proc does this today — run it from the `posthog/services/llm-gateway` repo yourself).
+The full recipe is in the wizard's [`docs/local-dev.md`](https://github.com/PostHog/wizard/blob/main/docs/local-dev.md).
 
 ---
 
