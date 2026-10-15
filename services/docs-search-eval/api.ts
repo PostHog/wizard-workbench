@@ -121,10 +121,10 @@ export function listSourceDocuments(projectId: number, sourceId: string | number
   return listAll(`/api/projects/${projectId}/business_knowledge/sources/${encodeURIComponent(sourceId)}/documents/`);
 }
 
-export async function searchKnowledge(scope: DocsScope, query: string, options: { limit: number; rerank: boolean }): Promise<{ results: KnowledgeChunk[]; latencyMs: number }> {
+export async function searchKnowledge(scope: DocsScope, query: string, options: { limit: number }): Promise<{ results: KnowledgeChunk[]; latencyMs: number }> {
   const startedAt = performance.now();
   const results = await posthogGet<KnowledgeChunk[]>(`/api/projects/${scope.projectId}/business_knowledge/documents/search/`, {
-    query, limit: Math.min(options.limit, 20), rerank: options.rerank, library_id: scope.libraryId,
+    query, limit: Math.min(options.limit, 20), rerank: false, library_id: scope.libraryId,
   });
   return { results, latencyMs: performance.now() - startedAt };
 }

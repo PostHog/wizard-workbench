@@ -62,13 +62,12 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 14px/1.5 ui-monospac
 <label class="field" for="snippet">Expected code snippet<input id="snippet" type="text" disabled placeholder="posthog.init("></label>
 <p class="context">A literal substring the top relevant chunk must contain. Required for labeled component queries.</p>
 <label class="field" for="notes">Notes<textarea id="notes"></textarea></label>
-<h2>Inkeep URLs</h2><p class="context">Inkeep is not a reference. These URLs are read-only context.</p><div id="inkeep"></div>
 <div class="actions"><button id="save" type="button">Save</button><button id="skip" type="button">Skip</button><button id="next" type="button">Next</button><span id="status" role="status" aria-live="polite"></span></div>
 </section>
 </main>
 </div>
 <script>
-const elements = Object.fromEntries(["progress", "filter", "queries", "empty", "detail", "query-heading", "raw-query", "rewrite", "warning", "candidates", "missing", "component", "snippet", "notes", "inkeep", "save", "skip", "next", "status"].map((name) => [name, document.getElementById(name)]));
+const elements = Object.fromEntries(["progress", "filter", "queries", "empty", "detail", "query-heading", "raw-query", "rewrite", "warning", "candidates", "missing", "component", "snippet", "notes", "save", "skip", "next", "status"].map((name) => [name, document.getElementById(name)]));
 let rows = [];
 let selectedId = null;
 let isSaving = false;
@@ -239,7 +238,7 @@ function selectRow(id) {
     urlLine.append(createUrlLink(candidate.url));
     const ranks = document.createElement("p");
     ranks.className = "context";
-    ranks.textContent = `Rerank-off rank: ${candidate.rerankOffRank ?? "—"} · Rerank-on rank: ${candidate.rerankOnRank ?? "—"}`;
+    ranks.textContent = `Search rank: ${(candidate.rank === undefined ? candidate.rerankOffRank : candidate.rank) ?? "—"}`;
     if (candidate.isTitleMatch) {
       const badge = document.createElement("span");
       badge.className = "chip";
@@ -262,12 +261,6 @@ function selectRow(id) {
       checkbox.checked = !checkbox.checked;
     });
     elements.candidates.append(card);
-  }
-  elements.inkeep.replaceChildren();
-  for (const url of row.inkeepUrls) {
-    const paragraph = document.createElement("p");
-    paragraph.append(createUrlLink(url));
-    elements.inkeep.append(paragraph);
   }
   elements.status.textContent = "";
   updateWarning();
@@ -293,7 +286,6 @@ async function saveEntry(status) {
     relevantUrls: [...draft.relevantUrls, ...draft.missing.split(/\r?\n/).map((url) => url.trim()).filter(Boolean)],
     targetsComponentPage: draft.targetsComponentPage,
     expectedCodeSnippet: draft.targetsComponentPage ? draft.expectedCodeSnippet : null,
-    inkeepUrls: row.inkeepUrls,
     notes: draft.notes,
     labeledAt: new Date().toISOString(),
   };

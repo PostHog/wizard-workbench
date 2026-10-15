@@ -5,8 +5,6 @@ import { z } from "zod";
 import { GoldSet, type GoldQuery } from "./gold-set.js";
 import { isCommunityQuestionUrl, normalizeDocUrl } from "./urls.js";
 
-const armNames = ["rerankOff", "rerankOn"] as const;
-const ArmName = z.enum(armNames);
 const rate = z.number().finite().min(0).max(1).nullable();
 const latency = z.number().finite().nonnegative().nullable();
 const count = z.number().int().nonnegative();
@@ -30,8 +28,7 @@ const RetrievalMetrics = z.object({
 const ArmMetrics = RetrievalMetrics.extend({ errorRate: rate, latencyP50Ms: latency, latencyP95Ms: latency }).strict();
 
 export const ScoreSummary = z.object({
-  gatingArm: ArmName,
-  arms: z.object({ rerankOff: ArmMetrics, rerankOn: ArmMetrics, inkeep: RetrievalMetrics }).strict(),
+  search: ArmMetrics,
   passBars: z.array(z.object({
     name: z.enum(["emptyRate", "hitAt3", "recallAt10", "latencyP95Ms"]),
     threshold: z.number().finite(),
@@ -51,13 +48,12 @@ export const Results = z.object({
   startedAt: z.string(),
   finishedAt: z.string(),
   projectId: z.number().int(),
-  gatingArm: ArmName,
   goldSetSha256: z.string(),
   goldSet: GoldSet,
   resolvedUrls: z.record(z.object({ finalUrl: z.string(), status: z.number().int() }).strict()),
   queries: z.array(z.object({
     id: z.string(),
-    arms: z.object({ rerankOff: ArmResult, rerankOn: ArmResult }).strict(),
+    search: ArmResult,
   }).strict()),
   metrics: ScoreSummary,
 }).strict().superRefine((run, context) => {
@@ -125,7 +121,7 @@ function roundedRetrieval(metrics: z.infer<typeof RetrievalMetrics>): z.infer<ty
 }
 
 export function score(results: ScoringResults): ScoreSummary {
-  const replayById = new Map(results.queries.map((query) => [query.id, query.arms]));
+  const replayById = new Map(results.queries.map((query) => [query.id, query.search]));
   const staleLabels: ScoreSummary["staleLabels"] = [];
   const labeledQueries: QueryLabels[] = results.goldSet.queries
     .filter((query) => query.status === "labeled")
@@ -142,38 +138,35 @@ export function score(results: ScoringResults): ScoreSummary {
       }
       return { query, relevantUrls };
     });
-  const rawArms = Object.fromEntries(armNames.map((armName) => {
-    const searches: Array<{ urls: string[]; relevantUrls: Set<string> }> = [];
-    const latencies: number[] = [];
-    let errored = 0;
-    for (const { query, relevantUrls } of labeledQueries) {
-      const arm = replayById.get(query.id)?.[armName];
-      if (!arm) throw new Error(`Missing ${armName} search for labeled query ${query.id}`);
-      if (arm.status === "error") {
-        errored++;
-        continue;
-      }
-      latencies.push(arm.latencyMs);
-      searches.push({ urls: rankedUrls(arm.chunks.map((chunk) => chunk.url)), relevantUrls });
+  const searches: Array<{ urls: string[]; relevantUrls: Set<string> }> = [];
+  const latencies: number[] = [];
+  let errored = 0;
+  for (const { query, relevantUrls } of labeledQueries) {
+    const search = replayById.get(query.id);
+    if (!search) throw new Error(`Missing search for labeled query ${query.id}`);
+    if (search.status === "error") {
+      errored++;
+      continue;
     }
-    return [armName, {
-      ...retrievalMetrics(searches, labeledQueries.length, errored),
-      errorRate: ratio(errored, labeledQueries.length),
-      latencyP50Ms: percentile(latencies, 0.5),
-      latencyP95Ms: percentile(latencies, 0.95),
-    }];
-  })) as Record<typeof armNames[number], z.infer<typeof ArmMetrics>>;
-  const gatingMetrics = rawArms[results.gatingArm];
+    latencies.push(search.latencyMs);
+    searches.push({ urls: rankedUrls(search.chunks.map((chunk) => chunk.url)), relevantUrls });
+  }
+  const searchMetrics = {
+    ...retrievalMetrics(searches, labeledQueries.length, errored),
+    errorRate: ratio(errored, labeledQueries.length),
+    latencyP50Ms: percentile(latencies, 0.5),
+    latencyP95Ms: percentile(latencies, 0.95),
+  };
   const passBars: ScoreSummary["passBars"] = [
-    { name: "emptyRate", threshold: 0.02, value: gatingMetrics.emptyRate, passed: gatingMetrics.emptyRate !== null && gatingMetrics.emptyRate < 0.02 },
-    { name: "hitAt3", threshold: 0.8, value: gatingMetrics.hitAt3, passed: gatingMetrics.hitAt3 !== null && gatingMetrics.hitAt3 >= 0.8 },
-    { name: "recallAt10", threshold: 0.7, value: gatingMetrics.recallAt10, passed: gatingMetrics.recallAt10 !== null && gatingMetrics.recallAt10 >= 0.7 },
-    { name: "latencyP95Ms", threshold: 3000, value: gatingMetrics.latencyP95Ms, passed: gatingMetrics.latencyP95Ms !== null && gatingMetrics.latencyP95Ms < 3000 },
+    { name: "emptyRate", threshold: 0.02, value: searchMetrics.emptyRate, passed: searchMetrics.emptyRate !== null && searchMetrics.emptyRate < 0.02 },
+    { name: "hitAt3", threshold: 0.8, value: searchMetrics.hitAt3, passed: searchMetrics.hitAt3 !== null && searchMetrics.hitAt3 >= 0.8 },
+    { name: "recallAt10", threshold: 0.7, value: searchMetrics.recallAt10, passed: searchMetrics.recallAt10 !== null && searchMetrics.recallAt10 >= 0.7 },
+    { name: "latencyP95Ms", threshold: 3000, value: searchMetrics.latencyP95Ms, passed: searchMetrics.latencyP95Ms !== null && searchMetrics.latencyP95Ms < 3000 },
   ];
   const componentQueries = labeledQueries.filter(({ query }) => query.targetsComponentPage);
   const componentFlags: ScoreSummary["componentFlags"] = [];
   for (const { query, relevantUrls } of componentQueries) {
-    const arm = replayById.get(query.id)?.[results.gatingArm];
+    const arm = replayById.get(query.id);
     if (arm?.status === "error") continue;
     const chunk = arm?.chunks.find((candidate) => relevantUrls.has(normalizeDocUrl(candidate.url)));
     if (!chunk) {
@@ -193,24 +186,19 @@ export function score(results: ScoringResults): ScoreSummary {
     };
   }
   return {
-    gatingArm: results.gatingArm,
-    arms: {
-      rerankOff: roundedArm(rawArms.rerankOff),
-      rerankOn: roundedArm(rawArms.rerankOn),
-      inkeep: roundedRetrieval(retrievalMetrics(labeledQueries.map(({ query, relevantUrls }) => ({ urls: rankedUrls(query.inkeepUrls), relevantUrls })), labeledQueries.length, 0)),
-    },
+    search: roundedArm(searchMetrics),
     passBars: passBars.sort((first, second) => compareText(first.name, second.name))
       .map((bar) => ({ ...bar, value: roundMetric(bar.value, bar.name === "latencyP95Ms" ? 1 : 4) })),
     passed: passBars.every((bar) => bar.passed),
     staleLabels: staleLabels.sort((first, second) => compareText(first.queryId, second.queryId) || compareText(first.url, second.url)),
     queriesWithoutLiveLabels: labeledQueries.filter(({ relevantUrls }) => relevantUrls.size === 0).length,
     componentFlags,
-    componentQueriesChecked: componentQueries.filter(({ query }) => replayById.get(query.id)?.[results.gatingArm].status === "ok").length,
+    componentQueriesChecked: componentQueries.filter(({ query }) => replayById.get(query.id)?.status === "ok").length,
   };
 }
 
 export function exceedsErrorBudget(results: ScoringResults): boolean {
-  const searches = results.queries.flatMap((query) => armNames.map((armName) => query.arms[armName]));
+  const searches = results.queries.map((query) => query.search);
   return searches.filter((arm) => arm.status === "error").length > searches.length * 0.05;
 }
 
@@ -223,21 +211,18 @@ export function renderReport(results: ScoringResults, summary: ScoreSummary): st
   const lines = [
     `# Docs-search eval: ${markdownCell(results.startedAt)} (project ${results.projectId})`,
     "",
-    `Gating arm: ${summary.gatingArm}. Overall: **${summary.passed ? "PASS" : "FAIL"}**.`,
+    `Overall: **${summary.passed ? "PASS" : "FAIL"}**.`,
     "",
     "| Bar | Threshold | Value | Result |",
     "| --- | --- | --- | --- |",
     ...summary.passBars.map((bar) => `| ${bar.name} | ${bar.name === "emptyRate" || bar.name === "latencyP95Ms" ? "<" : "≥"} ${bar.threshold} | ${markdownCell(bar.value)} | ${bar.passed ? "PASS" : "FAIL"} |`),
     "",
-    "| Arm | emptyRate | errorRate | hitAt3 | recallAt10 | p50 (ms) | p95 (ms) | Labeled | OK | Errored | Scorable |",
+    "| Search | emptyRate | errorRate | hitAt3 | recallAt10 | p50 (ms) | p95 (ms) | Labeled | OK | Errored | Scorable |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
   ];
-  for (const armName of [...armNames, "inkeep"] as const) {
-    const metrics = summary.arms[armName];
-    const searchMetrics = armName === "inkeep" ? null : summary.arms[armName];
-    lines.push(`| ${armName === "inkeep" ? "Inkeep (report only)" : armName} | ${markdownCell(metrics.emptyRate)} | ${markdownCell(searchMetrics?.errorRate ?? null)} | ${markdownCell(metrics.hitAt3)} | ${markdownCell(metrics.recallAt10)} | ${markdownCell(searchMetrics?.latencyP50Ms ?? null)} | ${markdownCell(searchMetrics?.latencyP95Ms ?? null)} | ${metrics.counts.labeled} | ${metrics.counts.ok} | ${metrics.counts.errored} | ${metrics.counts.scorable} |`);
-  }
-  lines.push("", "Inkeep is not a correctness reference.", "", `Queries without live labels: ${summary.queriesWithoutLiveLabels}.`, "", "## Component checks", "", `Component queries checked: ${summary.componentQueriesChecked}.`, "");
+  const metrics = summary.search;
+  lines.push(`| Search | ${markdownCell(metrics.emptyRate)} | ${markdownCell(metrics.errorRate)} | ${markdownCell(metrics.hitAt3)} | ${markdownCell(metrics.recallAt10)} | ${markdownCell(metrics.latencyP50Ms)} | ${markdownCell(metrics.latencyP95Ms)} | ${metrics.counts.labeled} | ${metrics.counts.ok} | ${metrics.counts.errored} | ${metrics.counts.scorable} |`);
+  lines.push("", `Queries without live labels: ${summary.queriesWithoutLiveLabels}.`, "", "## Component checks", "", `Component queries checked: ${summary.componentQueriesChecked}.`, "");
   const scrubbedById = new Map(results.goldSet.queries.map((query) => [query.id, query.scrubbedQuery]));
   if (summary.componentFlags.length === 0) lines.push("No component flags.");
   if (summary.componentFlags.length > 0) {
@@ -264,13 +249,13 @@ async function main(): Promise<void> {
     const resultsPath = resolve(argumentsList[0]);
     const results = Results.parse(JSON.parse(await readFile(resultsPath, "utf8")));
     if (exceedsErrorBudget(results)) {
-      const erroredSearches = results.queries.flatMap((query) => armNames.map((armName) => query.arms[armName])).filter((arm) => arm.status === "error").length;
+      const erroredSearches = results.queries.filter((query) => query.search.status === "error").length;
       console.error(`Search errors: ${erroredSearches}; exceeds the 5% error budget`);
       process.exitCode = 2;
       return;
     }
     const summary = score(results);
-    console.log(`Docs-search eval: ${summary.passed ? "PASS" : "FAIL"} (${summary.gatingArm})`);
+    console.log(`Docs-search eval: ${summary.passed ? "PASS" : "FAIL"}`);
     for (const bar of summary.passBars) console.log(`${bar.name}: ${bar.value ?? "N/A"} ${bar.passed ? "PASS" : "FAIL"}`);
     if (JSON.stringify(summary) !== JSON.stringify(results.metrics)) {
       const differingKeys = (Object.keys(summary) as Array<keyof ScoreSummary>)

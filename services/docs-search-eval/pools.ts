@@ -17,7 +17,6 @@ const sampleRowSchema = z.object({
   clientName: z.string(),
   timestamp: z.string(),
   rawQuery: z.string().min(1),
-  inkeepUrls: z.array(z.string()),
 });
 const rewriteSchema = z.object({
   id: z.string().min(1),
@@ -27,8 +26,7 @@ const rewriteSchema = z.object({
 const candidateSchema = z.object({
   url: z.string().min(1),
   title: z.string(),
-  rerankOffRank: z.number().int().positive().nullable(),
-  rerankOnRank: z.number().int().positive().nullable(),
+  rank: z.number().int().positive().nullable().optional(),
   isTitleMatch: z.boolean(),
   isIngested: z.boolean().default(true),
   headingPath: z.string(),
@@ -82,38 +80,23 @@ export function queryTokens(scrubbedQuery: string): string[] {
 
 export function buildCandidatePool(
   scrubbedQuery: string,
-  rerankOffChunks: KnowledgeChunk[],
-  rerankOnChunks: KnowledgeChunk[],
+  chunks: KnowledgeChunk[],
   titlesByNormalizedUrl: Map<string, string>,
   notIngestedPagesByUrl: Map<string, { title: string; snippet: string }>,
 ): PoolCandidate[] {
   const candidatesByUrl = new Map<string, PoolCandidate>();
-  for (const [armIndex, chunks] of [rerankOffChunks, rerankOnChunks].entries()) {
-    const seenUrls = new Set<string>();
-    for (const [chunkIndex, chunk] of chunks.entries()) {
-      const url = normalizeDocUrl(chunk.url);
-      if (!url || isCommunityQuestionUrl(url) || seenUrls.has(url)) continue;
-      seenUrls.add(url);
-      const rank = chunkIndex + 1;
-      const candidate = candidatesByUrl.get(url) ?? {
-        url,
-        title: titlesByNormalizedUrl.get(url) || chunk.document_title,
-        rerankOffRank: null,
-        rerankOnRank: null,
-        isTitleMatch: false,
-        isIngested: true,
-        headingPath: "",
-        snippet: "",
-      };
-      const previousBestRank = Math.min(candidate.rerankOffRank ?? Infinity, candidate.rerankOnRank ?? Infinity);
-      if (rank < previousBestRank) {
-        candidate.headingPath = chunk.heading_path;
-        candidate.snippet = chunk.content.slice(0, 300);
-      }
-      if (armIndex === 0) candidate.rerankOffRank = rank;
-      if (armIndex === 1) candidate.rerankOnRank = rank;
-      candidatesByUrl.set(url, candidate);
-    }
+  for (const [chunkIndex, chunk] of chunks.entries()) {
+    const url = normalizeDocUrl(chunk.url);
+    if (!url || isCommunityQuestionUrl(url) || candidatesByUrl.has(url)) continue;
+    candidatesByUrl.set(url, {
+      url,
+      title: titlesByNormalizedUrl.get(url) || chunk.document_title,
+      rank: chunkIndex + 1,
+      isTitleMatch: false,
+      isIngested: true,
+      headingPath: chunk.heading_path,
+      snippet: chunk.content.slice(0, 300),
+    });
   }
   const tokens = queryTokens(scrubbedQuery);
   const titleMatches = [...titlesByNormalizedUrl].map(([url, title]) => ({
@@ -123,7 +106,7 @@ export function buildCandidatePool(
     .sort((first, second) => second.score - first.score || first.url.localeCompare(second.url)).slice(0, 5);
   for (const document of titleMatches) {
     candidatesByUrl.set(document.url, {
-      url: document.url, title: document.title, rerankOffRank: null, rerankOnRank: null,
+      url: document.url, title: document.title, rank: null,
       isTitleMatch: true, isIngested: true, headingPath: "", snippet: "",
     });
   }
@@ -134,34 +117,16 @@ export function buildCandidatePool(
     .sort((first, second) => second.score - first.score || first.url.localeCompare(second.url)).slice(0, 5);
   for (const page of notIngestedMatches) {
     candidatesByUrl.set(page.url, {
-      url: page.url, title: page.title, rerankOffRank: null, rerankOnRank: null,
+      url: page.url, title: page.title, rank: null,
       isTitleMatch: true, isIngested: false, headingPath: "", snippet: page.snippet,
     });
   }
   return [...candidatesByUrl.values()].sort((first, second) => {
-    const firstRank = Math.min(first.rerankOffRank ?? Infinity, first.rerankOnRank ?? Infinity);
-    const secondRank = Math.min(second.rerankOffRank ?? Infinity, second.rerankOnRank ?? Infinity);
+    const firstRank = first.rank ?? Infinity;
+    const secondRank = second.rank ?? Infinity;
     if (firstRank === secondRank) return 0;
     return firstRank - secondRank;
   });
-}
-
-export function selectNewRows(sampleRows: SampleRow[], existingRows: PoolRow[], maxRows: number): SampleRow[] {
-  const seenSpanUuids = new Set(existingRows.map((row) => row.spanUuid));
-  return sampleRows.filter((row) => {
-    if (seenSpanUuids.has(row.spanUuid)) return false;
-    seenSpanUuids.add(row.spanUuid);
-    return true;
-  }).slice(0, maxRows);
-}
-
-export function assertResumable(
-  existing: { rewriteModel: string; sampleGeneratedAt: string },
-  current: { rewriteModel: string; sampleGeneratedAt: string },
-): void {
-  const differingFields = (["rewriteModel", "sampleGeneratedAt"] as const).filter((field) => existing[field] !== current[field]);
-  if (differingFields.length === 0) return;
-  throw new PoolsError(`Existing pools.json differs in ${differingFields.join(", ")}; rerun with --fresh`);
 }
 
 function rewriteEnvironment(): Record<string, string> {
@@ -359,11 +324,10 @@ async function buildPoolRows(
     while (nextIndex < rows.length) {
       const rowIndex = nextIndex++;
       const row = rows[rowIndex];
-      const rerankOff = await searchKnowledge(scope, row.scrubbedQuery, { limit: 10, rerank: false });
-      const rerankOn = await searchKnowledge(scope, row.scrubbedQuery, { limit: 10, rerank: true });
+      const search = await searchKnowledge(scope, row.scrubbedQuery, { limit: 10 });
       poolRows[rowIndex] = {
         ...row,
-        candidates: buildCandidatePool(row.scrubbedQuery, rerankOff.results, rerankOn.results, titlesByNormalizedUrl, notIngestedPagesByUrl),
+        candidates: buildCandidatePool(row.scrubbedQuery, search.results, titlesByNormalizedUrl, notIngestedPagesByUrl),
       };
     }
   }
@@ -392,33 +356,14 @@ async function savePools(pools: PoolsFile): Promise<void> {
 async function main(): Promise<void> {
   const argumentsList = process.argv.slice(2);
   if (argumentsList.includes("--help")) {
-    console.log("Usage: pnpm docs-eval:pools [--max-rows <n>] [--fresh] [--refresh-candidates] [--help]\nRequires POSTHOG_DOCS_EVAL_API_KEY, POSTHOG_DOCS_EVAL_PROJECT_ID, and POSTHOG_DOCS_EVAL_LIBRARY_ID.\nNormal mode also requires POSTHOG_GATEWAY_TOKEN.\n--refresh-candidates rebuilds candidates in existing pools.json without rewriting queries or using the gateway; cannot combine with --fresh or --max-rows.\nOptional: DOCS_EVAL_REWRITE_MODEL (default claude-opus-4-6), POSTHOG_REGION (default us).\nExit codes: 0 success, 2 configuration/API/model error.");
+    console.log("Usage: pnpm docs-eval:pools [--refresh-candidates] [--help]\nRequires POSTHOG_DOCS_EVAL_API_KEY, POSTHOG_DOCS_EVAL_PROJECT_ID, and POSTHOG_DOCS_EVAL_LIBRARY_ID.\nNormal mode also requires POSTHOG_GATEWAY_TOKEN.\n--refresh-candidates rebuilds candidates in existing pools.json without rewriting queries or using the gateway.\nOptional: DOCS_EVAL_REWRITE_MODEL (default claude-opus-4-6), POSTHOG_REGION (default us).\nExit codes: 0 success, 2 configuration/API/model error.");
     return;
   }
   try {
-    let maxRows = Infinity;
-    let isFresh = false;
-    let shouldRefreshCandidates = false;
-    for (let index = 0; index < argumentsList.length; index++) {
-      const argument = argumentsList[index];
-      if (argument === "--fresh") {
-        isFresh = true;
-        continue;
-      }
-      if (argument === "--refresh-candidates") {
-        shouldRefreshCandidates = true;
-        continue;
-      }
-      if (argument !== "--max-rows") throw new PoolsError("Unknown argument; run --help for usage");
-      const countText = argumentsList[++index];
-      maxRows = Number(countText);
-      if (!countText || !/^\d+$/.test(countText) || !Number.isSafeInteger(maxRows)) {
-        throw new PoolsError("--max-rows requires a non-negative safe integer");
-      }
+    for (const argument of argumentsList) {
+      if (argument !== "--refresh-candidates") throw new PoolsError("Unknown argument; run --help for usage");
     }
-    if (shouldRefreshCandidates && (isFresh || argumentsList.includes("--max-rows"))) {
-      throw new PoolsError("--refresh-candidates cannot be combined with --fresh or --max-rows");
-    }
+    const shouldRefreshCandidates = argumentsList.includes("--refresh-candidates");
     if (!process.env.POSTHOG_DOCS_EVAL_API_KEY?.trim()) throw new PoolsError("POSTHOG_DOCS_EVAL_API_KEY must be set");
     let scope: DocsScope;
     try {
@@ -459,16 +404,11 @@ async function main(): Promise<void> {
     }
     process.env.ANTHROPIC_CUSTOM_HEADERS = `X-PostHog-Properties: ${JSON.stringify({ ai_product: "docs-search-eval" })}`;
     const rewriteModel = process.env.DOCS_EVAL_REWRITE_MODEL || "claude-opus-4-6";
-    const existingJson = isFresh ? undefined : await readJsonFile(outputPath);
-    const existing = existingJson === undefined ? undefined : poolsFileSchema.safeParse(existingJson);
-    if (existing && !existing.success) throw new PoolsError("Invalid pools.json format; use --fresh to replace it");
-    if (existing?.success) assertResumable(existing.data, { rewriteModel, sampleGeneratedAt: sample.data.generatedAt });
     const pools: PoolsFile = {
       generatedAt: new Date().toISOString(), rewriteModel, sampleGeneratedAt: sample.data.generatedAt,
-      rows: existing?.success ? existing.data.rows : [],
+      rows: [],
     };
-    let pendingRows = selectNewRows(sample.data.rows, pools.rows, maxRows);
-    const initialRowCount = pools.rows.length;
+    let pendingRows = sample.data.rows;
     const retriedMissingIds = new Set<string>();
     let droppedCount = 0;
     await mkdir(dataDirectory, { recursive: true });
@@ -498,12 +438,11 @@ async function main(): Promise<void> {
       const batchPoolRows = await buildPoolRows(rewrittenRows, scope, titlesByNormalizedUrl, notIngestedPagesByUrl);
       await assertSourcesReady(scope);
       pools.rows.push(...batchPoolRows);
-      pools.generatedAt = new Date().toISOString();
-      await savePools(pools);
-      console.log(`Completed rows: ${pools.rows.length - initialRowCount}`);
+      console.log(`Completed rows: ${pools.rows.length}`);
     }
+    pools.generatedAt = new Date().toISOString();
     await savePools(pools);
-    console.log(`Kept rows: ${initialRowCount}; new rows: ${pools.rows.length - initialRowCount}; dropped rewrites: ${droppedCount}`);
+    console.log(`Rows: ${pools.rows.length}; dropped rewrites: ${droppedCount}`);
     console.log(`Output: ${outputPath}`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : "Docs-search pools failed");

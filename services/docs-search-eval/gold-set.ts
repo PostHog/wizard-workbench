@@ -82,10 +82,6 @@ const docUrls = z.array(z.string().transform(normalizeDocUrl)).transform((urls) 
     }
   });
 
-const inkeepDocUrls = z.array(z.string()).transform((urls) => [...new Set(urls
-  .map((url) => normalizeDocUrl(url).replace(/^http:\/\/posthog\.com(?=\/|$)/, "https://posthog.com"))
-  .filter((url) => /^https:\/\/posthog\.com(?:\/|$)/.test(url) && !isCommunityQuestionUrl(url)))]);
-
 export const GoldQuery = z.object({
   id: z.string().regex(/^[0-9a-f]{12}$/),
   harness: z.string(),
@@ -94,7 +90,6 @@ export const GoldQuery = z.object({
   relevantUrls: docUrls,
   targetsComponentPage: z.boolean(),
   expectedCodeSnippet: z.string().nullable(),
-  inkeepUrls: inkeepDocUrls,
   notes: z.string(),
   isAwaitingReview: z.boolean().default(false),
   labeledAt: z.string().datetime({ offset: true }),

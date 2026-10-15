@@ -9,21 +9,6 @@ import { assertGoldSetReadyForRun, readGoldSet } from "./gold-set.js";
 import { Results, exceedsErrorBudget, renderReport, score, type ArmResult, type ScoringResults } from "./score.js";
 import { normalizeDocUrl } from "./urls.js";
 
-function parseOptions(argumentsList: string[]): { gatingArm: ScoringResults["gatingArm"] } {
-  let gatingArm: ScoringResults["gatingArm"] = "rerankOff";
-  for (let index = 0; index < argumentsList.length; index++) {
-    const argument = argumentsList[index];
-    if (argument === "--gating-arm") {
-      const value = argumentsList[++index];
-      if (value !== "rerankOff" && value !== "rerankOn") throw new Error("--gating-arm must be rerankOff or rerankOn");
-      gatingArm = value;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${argument}`);
-  }
-  return { gatingArm };
-}
-
 function createLimiter(): <Value>(operation: () => Promise<Value>) => Promise<Value> {
   let activeRequests = 0;
   const waitingRequests: Array<() => void> = [];
@@ -61,10 +46,10 @@ async function resolveLabelUrl(url: string): Promise<ScoringResults["resolvedUrl
   }
 }
 
-async function replaySearch(scope: DocsScope, scrubbedQuery: string, rerank: boolean): Promise<ArmResult> {
+async function replaySearch(scope: DocsScope, scrubbedQuery: string): Promise<ArmResult> {
   const startedAt = performance.now();
   try {
-    const search = await searchKnowledge(scope, scrubbedQuery, { limit: 10, rerank });
+    const search = await searchKnowledge(scope, scrubbedQuery, { limit: 10 });
     return {
       status: "ok",
       latencyMs: search.latencyMs,
@@ -78,11 +63,11 @@ async function replaySearch(scope: DocsScope, scrubbedQuery: string, rerank: boo
 async function main(): Promise<void> {
   const argumentsList = process.argv.slice(2);
   if (argumentsList.includes("--help")) {
-    console.log("Usage: pnpm docs-eval:run [--gating-arm rerankOff|rerankOn] [--help]\nReplays the committed gold set against the Business Knowledge docs project with both rerank arms.\nDefaults: --gating-arm rerankOff (the shipped docs-search path).\nRequires POSTHOG_DOCS_EVAL_API_KEY, POSTHOG_DOCS_EVAL_PROJECT_ID, and POSTHOG_DOCS_EVAL_LIBRARY_ID; POSTHOG_REGION defaults to us.\nExit codes: 0 pass, 1 readiness/coverage/bar failure, 2 configuration/API/file error.");
+    console.log("Usage: pnpm docs-eval:run [--help]\nReplays the committed gold set against the Business Knowledge docs project with plain search.\nRequires POSTHOG_DOCS_EVAL_API_KEY, POSTHOG_DOCS_EVAL_PROJECT_ID, and POSTHOG_DOCS_EVAL_LIBRARY_ID; POSTHOG_REGION defaults to us.\nExit codes: 0 pass, 1 readiness/coverage/bar failure, 2 configuration/API/file error.");
     return;
   }
   try {
-    const options = parseOptions(argumentsList);
+    if (argumentsList.length > 0) throw new Error(`Unknown argument: ${argumentsList[0]}`);
     const goldSet = await readGoldSet();
     try {
       assertGoldSetReadyForRun(goldSet);
@@ -109,32 +94,25 @@ async function main(): Promise<void> {
     const limitRequest = createLimiter();
     let resolvedCount = 0;
     let searchedCount = 0;
-    const totalSearches = labeledQueries.length * 2;
+    const totalSearches = labeledQueries.length;
     const resolutions = relevantUrls.map((url) => limitRequest(async () => {
       resolvedUrls.set(url, await resolveLabelUrl(url));
       resolvedCount++;
       console.log(`Resolved labels: ${resolvedCount}/${relevantUrls.length}`);
     }));
     await Promise.all(resolutions);
-    const replays = labeledQueries.map(async (query) => {
-      async function searchArm(rerank: boolean): Promise<ArmResult> {
-        return limitRequest(async () => {
-          const arm = await replaySearch(scope, query.scrubbedQuery, rerank);
-          searchedCount++;
-          console.log(`Searches: ${searchedCount}/${totalSearches}`);
-          return arm;
-        });
-      }
-      const [rerankOff, rerankOn] = await Promise.all([searchArm(false), searchArm(true)]);
-      return { id: query.id, arms: { rerankOff, rerankOn } };
-    });
+    const replays = labeledQueries.map((query) => limitRequest(async () => {
+      const search = await replaySearch(scope, query.scrubbedQuery);
+      searchedCount++;
+      console.log(`Searches: ${searchedCount}/${totalSearches}`);
+      return { id: query.id, search };
+    }));
     const queries = await Promise.all(replays);
     const replay: ScoringResults = {
       version: 1,
       startedAt,
       finishedAt: new Date().toISOString(),
       projectId: scope.projectId,
-      gatingArm: options.gatingArm,
       goldSetSha256: createHash("sha256").update(goldSetBytes).digest("hex"),
       goldSet,
       resolvedUrls: Object.fromEntries(resolvedUrls),
@@ -148,7 +126,7 @@ async function main(): Promise<void> {
     await mkdir(runDirectory, { recursive: true });
     await writeFile(resultsPath, `${JSON.stringify(results, null, 2)}\n`, "utf8");
     if (exceedsErrorBudget(results)) {
-      const errorCount = results.queries.flatMap((query) => [query.arms.rerankOff, query.arms.rerankOn]).filter((arm) => arm.status === "error").length;
+      const errorCount = results.queries.filter((query) => query.search.status === "error").length;
       console.error(`Search errors: ${errorCount}/${totalSearches}; exceeds the 5% error budget`);
       console.log(resultsPath);
       process.exitCode = 2;
@@ -159,7 +137,7 @@ async function main(): Promise<void> {
       const comparison = bar.name === "emptyRate" || bar.name === "latencyP95Ms" ? "<" : ">=";
       console.log(`${bar.name}: ${bar.value ?? "N/A"} (required ${comparison} ${bar.threshold}) ${bar.passed ? "PASS" : "FAIL"}`);
     }
-    console.log(`Docs-search eval: ${metrics.passed ? "PASS" : "FAIL"} (${options.gatingArm})`);
+    console.log(`Docs-search eval: ${metrics.passed ? "PASS" : "FAIL"}`);
     console.log(resultsPath);
     console.log(reportPath);
     process.exitCode = metrics.passed ? 0 : 1;

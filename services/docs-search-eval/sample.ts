@@ -3,7 +3,6 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { eventsProjectId, runHogQL } from "./api.js";
-import { isCommunityQuestionUrl, uniqueNormalized } from "./urls.js";
 
 const HARNESSES = ["slack", "codex", "claude-code", "claude-ai", "cursor", "other"] as const;
 type Harness = typeof HARNESSES[number];
@@ -24,7 +23,6 @@ interface CandidateSpan {
 
 interface SampleRow extends CandidateSpan {
   rawQuery: string;
-  inkeepUrls: string[];
 }
 
 const HARNESS_EXPRESSION = `multiIf(
@@ -92,14 +90,14 @@ async function fetchCandidates(options: SampleOptions): Promise<CandidateSpan[]>
   return candidates;
 }
 
-async function fetchSpanStates(spans: CandidateSpan[], column: "input_state" | "output_state"): Promise<Map<string, unknown>> {
+async function fetchSpanStates(spans: CandidateSpan[]): Promise<Map<string, unknown>> {
   const statesBySpanUuid = new Map<string, unknown>();
   for (let offset = 0; offset < spans.length; offset += 100) {
     const batch = spans.slice(offset, offset + 100);
     const traceIds = [...new Set(batch.map((span) => span.traceId))];
     const spanUuids = [...new Set(batch.map((span) => span.spanUuid))];
     const states = await runHogQL(eventsProjectId(), `
-      SELECT uuid, ${column} FROM posthog.ai_events
+      SELECT uuid, input_state FROM posthog.ai_events
       WHERE trace_id IN (${traceIds.map(quoteHogQL).join(", ")})
         AND span_name = 'docs-search'
         AND uuid IN (${spanUuids.map(quoteHogQL).join(", ")})
@@ -107,7 +105,7 @@ async function fetchSpanStates(spans: CandidateSpan[], column: "input_state" | "
     `);
     for (const state of states) {
       if (typeof state.uuid !== "string") throw new Error("PostHog content response is missing a span UUID");
-      statesBySpanUuid.set(state.uuid, state[column]);
+      statesBySpanUuid.set(state.uuid, state.input_state);
     }
   }
   return statesBySpanUuid;
@@ -125,15 +123,9 @@ function extractQuery(inputState: unknown): string {
   return typeof inputState.query === "string" ? inputState.query.trim() : "";
 }
 
-function extractUrls(outputState: unknown): string[] {
-  const outputText = typeof outputState === "string" ? outputState : JSON.stringify(outputState) ?? "";
-  const urls = Array.from(outputText.matchAll(/URL:\s*(https?:\/\/[^\s\\"'<>]+)/g), (match) => match[1]);
-  return uniqueNormalized(urls).filter((url) => !isCommunityQuestionUrl(url));
-}
-
 async function sample(options: SampleOptions): Promise<number> {
   const candidates = await fetchCandidates(options);
-  const inputsBySpanUuid = await fetchSpanStates(candidates, "input_state");
+  const inputsBySpanUuid = await fetchSpanStates(candidates);
   const countsByHarness = Object.fromEntries(HARNESSES.map((harness) => [harness, 0])) as Record<Harness, number>;
   const seenQueries = new Set<string>();
   const rows: SampleRow[] = [];
@@ -144,10 +136,8 @@ async function sample(options: SampleOptions): Promise<number> {
     if (!queryKey || seenQueries.has(queryKey)) continue;
     seenQueries.add(queryKey);
     countsByHarness[candidate.harness]++;
-    rows.push({ ...candidate, rawQuery, inkeepUrls: [] });
+    rows.push({ ...candidate, rawQuery });
   }
-  const outputsBySpanUuid = await fetchSpanStates(rows, "output_state");
-  for (const row of rows) row.inkeepUrls = extractUrls(outputsBySpanUuid.get(row.spanUuid));
   const outputPath = fileURLToPath(new URL("./data/raw-sample.json", import.meta.url));
   await mkdir(fileURLToPath(new URL("./data/", import.meta.url)), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify({
