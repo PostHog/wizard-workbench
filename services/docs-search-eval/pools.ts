@@ -31,7 +31,7 @@ const candidateSchema = z.object({
   rerankOnRank: z.number().int().positive().nullable(),
   isTitleMatch: z.boolean(),
   isIngested: z.boolean().default(true),
-  headingPath: z.array(z.string()),
+  headingPath: z.string(),
   snippet: z.string(),
 });
 const poolRowSchema = sampleRowSchema.extend({
@@ -102,12 +102,12 @@ export function buildCandidatePool(
         rerankOnRank: null,
         isTitleMatch: false,
         isIngested: true,
-        headingPath: [],
+        headingPath: "",
         snippet: "",
       };
       const previousBestRank = Math.min(candidate.rerankOffRank ?? Infinity, candidate.rerankOnRank ?? Infinity);
       if (rank < previousBestRank) {
-        candidate.headingPath = [...chunk.heading_path];
+        candidate.headingPath = chunk.heading_path;
         candidate.snippet = chunk.content.slice(0, 300);
       }
       if (armIndex === 0) candidate.rerankOffRank = rank;
@@ -124,7 +124,7 @@ export function buildCandidatePool(
   for (const document of titleMatches) {
     candidatesByUrl.set(document.url, {
       url: document.url, title: document.title, rerankOffRank: null, rerankOnRank: null,
-      isTitleMatch: true, isIngested: true, headingPath: [], snippet: "",
+      isTitleMatch: true, isIngested: true, headingPath: "", snippet: "",
     });
   }
   const notIngestedMatches = [...notIngestedPagesByUrl].map(([url, page]) => {
@@ -135,7 +135,7 @@ export function buildCandidatePool(
   for (const page of notIngestedMatches) {
     candidatesByUrl.set(page.url, {
       url: page.url, title: page.title, rerankOffRank: null, rerankOnRank: null,
-      isTitleMatch: true, isIngested: false, headingPath: [], snippet: page.snippet,
+      isTitleMatch: true, isIngested: false, headingPath: "", snippet: page.snippet,
     });
   }
   return [...candidatesByUrl.values()].sort((first, second) => {

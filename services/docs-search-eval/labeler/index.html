@@ -253,7 +253,7 @@ function selectRow(id) {
       ranks.append(badge);
     }
     const headings = document.createElement("p");
-    headings.textContent = candidate.headingPath.join(" › ");
+    headings.textContent = candidate.headingPath;
     const snippet = document.createElement("pre");
     snippet.textContent = candidate.snippet;
     card.append(label, urlLine, ranks, headings, snippet);

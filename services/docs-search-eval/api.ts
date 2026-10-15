@@ -42,7 +42,7 @@ export interface KnowledgeChunk {
   source_name: string;
   source_type: string;
   document_title: string;
-  heading_path: string[];
+  heading_path: string;
   content: string;
   is_generated: boolean;
   url: string;

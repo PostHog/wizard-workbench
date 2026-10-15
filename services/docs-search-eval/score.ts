@@ -15,7 +15,7 @@ export const ArmResult = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("ok"),
     latencyMs: z.number().finite().nonnegative(),
-    chunks: z.array(z.object({ url: z.string(), content: z.string(), headingPath: z.array(z.string()) }).strict()),
+    chunks: z.array(z.object({ url: z.string(), content: z.string(), headingPath: z.string() }).strict()),
   }).strict(),
   z.object({ status: z.literal("error"), latencyMs: z.number().finite().nonnegative(), error: z.string() }).strict(),
 ]);

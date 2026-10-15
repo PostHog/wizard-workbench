@@ -38,7 +38,7 @@ test("rescoring a saved fixture run reproduces the hand-computed metrics", () =>
   ];
   const successfulSearch = (urls: string[], latencyMs: number): Extract<ArmResult, { status: "ok" }> => ({
     status: "ok", latencyMs,
-    chunks: urls.map((url) => ({ url, content: "Fictional guide without a code snippet", headingPath: ["Lantern"] })),
+    chunks: urls.map((url) => ({ url, content: "Fictional guide without a code snippet", headingPath: "Lantern" })),
   });
   const replay: ScoringResults = {
     version: 1, startedAt: "2026-01-01T00:00:00Z", finishedAt: "2026-01-01T00:01:00Z",
@@ -70,8 +70,8 @@ test("rescoring a saved fixture run reproduces the hand-computed metrics", () =>
             status: "ok", latencyMs: 200.06,
             chunks: [
               ...successfulSearch(["https://posthog.com/docs/unrelated-a", "https://posthog.com/docs/unrelated-b", "https://posthog.com/docs/unrelated-c"], 0).chunks,
-              { url: "https://posthog.com/docs/lantern-component#intro", content: "No snippet here", headingPath: [] },
-              { url: "https://posthog.com/docs/lantern-component#example", content: "<Lantern />", headingPath: [] },
+              { url: "https://posthog.com/docs/lantern-component#intro", content: "No snippet here", headingPath: "" },
+              { url: "https://posthog.com/docs/lantern-component#example", content: "<Lantern />", headingPath: "" },
             ],
           },
         },
