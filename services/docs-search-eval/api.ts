@@ -7,8 +7,16 @@ function requiredProjectIdFromEnv(variableName: string): number {
   return projectId;
 }
 
-export function docsProjectId(): number {
-  return requiredProjectIdFromEnv("POSTHOG_DOCS_EVAL_PROJECT_ID");
+export interface DocsScope {
+  projectId: number;
+  libraryId: string;
+}
+
+export function docsScope(): DocsScope {
+  const projectId = requiredProjectIdFromEnv("POSTHOG_DOCS_EVAL_PROJECT_ID");
+  const libraryId = process.env.POSTHOG_DOCS_EVAL_LIBRARY_ID?.trim() ?? "";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(libraryId)) throw new Error("POSTHOG_DOCS_EVAL_LIBRARY_ID must be set to the docs library UUID");
+  return { projectId, libraryId };
 }
 
 export function eventsProjectId(): number {
@@ -93,11 +101,11 @@ export function posthogPost<T>(path: string, body: unknown): Promise<T> {
   return posthogRequest<T>(path, "POST", undefined, body);
 }
 
-async function listAll<T>(path: string): Promise<T[]> {
+async function listAll<T>(path: string, params?: QueryParams): Promise<T[]> {
   const records: T[] = [];
   let offset = 0;
   while (true) {
-    const page = await posthogGet<PaginatedResponse<T>>(path, { limit: 100, offset });
+    const page = await posthogGet<PaginatedResponse<T>>(path, { ...params, limit: 100, offset });
     records.push(...page.results);
     if (page.next === null) return records;
     if (page.results.length === 0) throw new Error(`PostHog API pagination made no progress for ${path}`);
@@ -105,18 +113,18 @@ async function listAll<T>(path: string): Promise<T[]> {
   }
 }
 
-export function listSources(projectId: number): Promise<KnowledgeSource[]> {
-  return listAll(`/api/projects/${projectId}/business_knowledge/sources/`);
+export function listSources(scope: DocsScope): Promise<KnowledgeSource[]> {
+  return listAll(`/api/projects/${scope.projectId}/business_knowledge/sources/`, { library_id: scope.libraryId });
 }
 
 export function listSourceDocuments(projectId: number, sourceId: string | number): Promise<KnowledgeDocument[]> {
   return listAll(`/api/projects/${projectId}/business_knowledge/sources/${encodeURIComponent(sourceId)}/documents/`);
 }
 
-export async function searchKnowledge(projectId: number, query: string, options: { limit: number; rerank: boolean }): Promise<{ results: KnowledgeChunk[]; latencyMs: number }> {
+export async function searchKnowledge(scope: DocsScope, query: string, options: { limit: number; rerank: boolean }): Promise<{ results: KnowledgeChunk[]; latencyMs: number }> {
   const startedAt = performance.now();
-  const results = await posthogGet<KnowledgeChunk[]>(`/api/projects/${projectId}/business_knowledge/documents/search/`, {
-    query, limit: Math.min(options.limit, 20), rerank: options.rerank,
+  const results = await posthogGet<KnowledgeChunk[]>(`/api/projects/${scope.projectId}/business_knowledge/documents/search/`, {
+    query, limit: Math.min(options.limit, 20), rerank: options.rerank, library_id: scope.libraryId,
   });
   return { results, latencyMs: performance.now() - startedAt };
 }

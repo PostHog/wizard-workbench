@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { configureGateway, repairAndParseJSON, resolveGatewayToken } from "../pr-evaluator/evaluator.js";
-import { docsProjectId, listSourceDocuments, listSources, searchKnowledge, type KnowledgeChunk, type KnowledgeSource } from "./api.js";
+import { docsScope, listSourceDocuments, listSources, searchKnowledge, type DocsScope, type KnowledgeChunk, type KnowledgeSource } from "./api.js";
 import { decodeXml, sitemapUrls } from "./coverage.js";
 import { isCommunityQuestionUrl, normalizeDocUrl } from "./urls.js";
 
@@ -218,19 +218,19 @@ async function rewriteBatch(rows: SampleRow[], rewriteModel: string): Promise<Re
   throw new PoolsError("Rewrite batch failed");
 }
 
-async function assertSourcesReady(projectId: number): Promise<KnowledgeSource[]> {
-  const sources = await listSources(projectId);
+async function assertSourcesReady(scope: DocsScope): Promise<KnowledgeSource[]> {
+  const sources = await listSources(scope);
   const unreadySources = sources.filter((source) => source.status !== "ready");
   if (unreadySources.length === 0) return sources;
   const unreadyList = unreadySources.map((source) => `${source.name} is ${source.status}`).join(", ");
   throw new PoolsError(`BK search skips sources that are not ready (${unreadyList}); rerun once every source is ready`);
 }
 
-async function listDocumentTitles(projectId: number): Promise<Map<string, string>> {
+async function listDocumentTitles(scope: DocsScope): Promise<Map<string, string>> {
   const titlesByNormalizedUrl = new Map<string, string>();
-  const sources = await assertSourcesReady(projectId);
+  const sources = await assertSourcesReady(scope);
   for (const source of sources) {
-    const documents = await listSourceDocuments(projectId, source.id);
+    const documents = await listSourceDocuments(scope.projectId, source.id);
     for (const document of documents) {
       if (document.safety_verdict !== "safe" || !document.url.trim()) continue;
       const url = normalizeDocUrl(document.url);
@@ -349,7 +349,7 @@ async function listNotIngestedPages(ingestedUrls: Set<string>): Promise<Map<stri
 }
 
 async function buildPoolRows(
-  rows: Omit<PoolRow, "candidates">[], projectId: number,
+  rows: Omit<PoolRow, "candidates">[], scope: DocsScope,
   titlesByNormalizedUrl: Map<string, string>,
   notIngestedPagesByUrl: Map<string, { title: string; snippet: string }>,
 ): Promise<PoolRow[]> {
@@ -359,8 +359,8 @@ async function buildPoolRows(
     while (nextIndex < rows.length) {
       const rowIndex = nextIndex++;
       const row = rows[rowIndex];
-      const rerankOff = await searchKnowledge(projectId, row.scrubbedQuery, { limit: 10, rerank: false });
-      const rerankOn = await searchKnowledge(projectId, row.scrubbedQuery, { limit: 10, rerank: true });
+      const rerankOff = await searchKnowledge(scope, row.scrubbedQuery, { limit: 10, rerank: false });
+      const rerankOn = await searchKnowledge(scope, row.scrubbedQuery, { limit: 10, rerank: true });
       poolRows[rowIndex] = {
         ...row,
         candidates: buildCandidatePool(row.scrubbedQuery, rerankOff.results, rerankOn.results, titlesByNormalizedUrl, notIngestedPagesByUrl),
@@ -392,7 +392,7 @@ async function savePools(pools: PoolsFile): Promise<void> {
 async function main(): Promise<void> {
   const argumentsList = process.argv.slice(2);
   if (argumentsList.includes("--help")) {
-    console.log("Usage: pnpm docs-eval:pools [--max-rows <n>] [--fresh] [--refresh-candidates] [--help]\nRequires POSTHOG_DOCS_EVAL_API_KEY and POSTHOG_DOCS_EVAL_PROJECT_ID.\nNormal mode also requires POSTHOG_GATEWAY_TOKEN.\n--refresh-candidates rebuilds candidates in existing pools.json without rewriting queries or using the gateway; cannot combine with --fresh or --max-rows.\nOptional: DOCS_EVAL_REWRITE_MODEL (default claude-opus-4-6), POSTHOG_REGION (default us).\nExit codes: 0 success, 2 configuration/API/model error.");
+    console.log("Usage: pnpm docs-eval:pools [--max-rows <n>] [--fresh] [--refresh-candidates] [--help]\nRequires POSTHOG_DOCS_EVAL_API_KEY, POSTHOG_DOCS_EVAL_PROJECT_ID, and POSTHOG_DOCS_EVAL_LIBRARY_ID.\nNormal mode also requires POSTHOG_GATEWAY_TOKEN.\n--refresh-candidates rebuilds candidates in existing pools.json without rewriting queries or using the gateway; cannot combine with --fresh or --max-rows.\nOptional: DOCS_EVAL_REWRITE_MODEL (default claude-opus-4-6), POSTHOG_REGION (default us).\nExit codes: 0 success, 2 configuration/API/model error.");
     return;
   }
   try {
@@ -420,11 +420,12 @@ async function main(): Promise<void> {
       throw new PoolsError("--refresh-candidates cannot be combined with --fresh or --max-rows");
     }
     if (!process.env.POSTHOG_DOCS_EVAL_API_KEY?.trim()) throw new PoolsError("POSTHOG_DOCS_EVAL_API_KEY must be set");
-    let projectId: number;
+    let scope: DocsScope;
     try {
-      projectId = docsProjectId();
-    } catch {
-      throw new PoolsError("POSTHOG_DOCS_EVAL_PROJECT_ID must be a positive integer");
+      scope = docsScope();
+    } catch (error) {
+      if (error instanceof Error) throw new PoolsError(error.message);
+      throw error;
     }
     if (shouldRefreshCandidates) {
       const existingJson = await readJsonFile(outputPath);
@@ -433,10 +434,10 @@ async function main(): Promise<void> {
       if (!existing.success) throw new PoolsError("Invalid pools.json format");
       const pools = existing.data;
       if (pools.rows.length > 0) {
-        const titlesByNormalizedUrl = await listDocumentTitles(projectId);
+        const titlesByNormalizedUrl = await listDocumentTitles(scope);
         const notIngestedPagesByUrl = await listNotIngestedPages(new Set(titlesByNormalizedUrl.keys()));
-        pools.rows = await buildPoolRows(pools.rows, projectId, titlesByNormalizedUrl, notIngestedPagesByUrl);
-        await assertSourcesReady(projectId);
+        pools.rows = await buildPoolRows(pools.rows, scope, titlesByNormalizedUrl, notIngestedPagesByUrl);
+        await assertSourcesReady(scope);
       }
       await savePools(pools);
       console.log(`Refreshed rows: ${pools.rows.length}`);
@@ -471,7 +472,7 @@ async function main(): Promise<void> {
     const retriedMissingIds = new Set<string>();
     let droppedCount = 0;
     await mkdir(dataDirectory, { recursive: true });
-    const titlesByNormalizedUrl = pendingRows.length > 0 ? await listDocumentTitles(projectId) : new Map<string, string>();
+    const titlesByNormalizedUrl = pendingRows.length > 0 ? await listDocumentTitles(scope) : new Map<string, string>();
     const notIngestedPagesByUrl = pendingRows.length > 0
       ? await listNotIngestedPages(new Set(titlesByNormalizedUrl.keys()))
       : new Map<string, { title: string; snippet: string }>();
@@ -494,8 +495,8 @@ async function main(): Promise<void> {
         const rewrite = rewritesById.get(row.spanUuid)!;
         return { ...row, scrubbedQuery: rewrite.scrubbedQuery, targetsComponentPage: rewrite.targetsComponentPage };
       });
-      const batchPoolRows = await buildPoolRows(rewrittenRows, projectId, titlesByNormalizedUrl, notIngestedPagesByUrl);
-      await assertSourcesReady(projectId);
+      const batchPoolRows = await buildPoolRows(rewrittenRows, scope, titlesByNormalizedUrl, notIngestedPagesByUrl);
+      await assertSourcesReady(scope);
       pools.rows.push(...batchPoolRows);
       pools.generatedAt = new Date().toISOString();
       await savePools(pools);

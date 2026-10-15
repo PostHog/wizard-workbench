@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { docsProjectId, listSourceDocuments, listSources, type KnowledgeSource } from "./api.js";
+import { docsScope, listSourceDocuments, listSources, type KnowledgeSource } from "./api.js";
 import { normalizeDocUrl, uniqueNormalized } from "./urls.js";
 
 const PREFIXES = ["/docs", "/handbook", "/pricing"] as const;
@@ -117,8 +117,8 @@ function countCoverage(urls: string[], ingestedUrls: Set<string>, exclusions: Ma
 }
 
 export async function checkCoverage(): Promise<CoverageResult> {
-  const projectId = docsProjectId();
-  const sources = await listSources(projectId);
+  const scope = docsScope();
+  const sources = await listSources(scope);
   const urls = await sitemapUrls();
   const requiredSources = PREFIXES.map((prefix) => {
     const source = requiredSource(sources, prefix);
@@ -133,7 +133,7 @@ export async function checkCoverage(): Promise<CoverageResult> {
   });
   const ingestedUrls = new Set<string>();
   for (const source of sources.filter((candidateSource) => candidateSource.status === "ready")) {
-    const documents = await listSourceDocuments(projectId, source.id);
+    const documents = await listSourceDocuments(scope.projectId, source.id);
     const searchableDocuments = documents.filter((document) => document.safety_verdict === "safe");
     for (const url of uniqueNormalized(searchableDocuments.map((document) => document.url))) ingestedUrls.add(url);
   }
@@ -163,7 +163,7 @@ export async function checkCoverage(): Promise<CoverageResult> {
   });
   return {
     passed: overall.coverage >= 0.99 && requiredSources.every((source) => source.status === "ready"),
-    projectId,
+    projectId: scope.projectId,
     overall,
     prefixes,
     requiredSources,
@@ -195,7 +195,7 @@ function printReport(report: CoverageResult): void {
 async function main(): Promise<void> {
   const argumentsList = process.argv.slice(2);
   if (argumentsList.includes("--help")) {
-    console.log("Usage: pnpm docs-eval:coverage [--json] [--help]\nChecks BK docs, handbook, and pricing coverage in the project named by POSTHOG_DOCS_EVAL_PROJECT_ID.\nRequires POSTHOG_DOCS_EVAL_API_KEY and POSTHOG_DOCS_EVAL_PROJECT_ID; POSTHOG_REGION defaults to us.\nPOSTHOG_DOCS_EVAL_EVENTS_PROJECT_ID selects the events project for sample.ts.\nExit codes: 0 pass, 1 coverage failure, 2 configuration/API error.");
+    console.log("Usage: pnpm docs-eval:coverage [--json] [--help]\nChecks BK docs, handbook, and pricing coverage in the project named by POSTHOG_DOCS_EVAL_PROJECT_ID.\nRequires POSTHOG_DOCS_EVAL_API_KEY, POSTHOG_DOCS_EVAL_PROJECT_ID, and POSTHOG_DOCS_EVAL_LIBRARY_ID; POSTHOG_REGION defaults to us.\nPOSTHOG_DOCS_EVAL_EVENTS_PROJECT_ID selects the events project for sample.ts.\nExit codes: 0 pass, 1 coverage failure, 2 configuration/API error.");
     return;
   }
   const isJson = argumentsList.includes("--json");

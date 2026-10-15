@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { docsProjectId, searchKnowledge } from "./api.js";
+import { docsScope, searchKnowledge, type DocsScope } from "./api.js";
 import { checkCoverage } from "./coverage.js";
 import { assertGoldSetReadyForRun, readGoldSet } from "./gold-set.js";
 import { Results, exceedsErrorBudget, renderReport, score, type ArmResult, type ScoringResults } from "./score.js";
@@ -61,10 +61,10 @@ async function resolveLabelUrl(url: string): Promise<ScoringResults["resolvedUrl
   }
 }
 
-async function replaySearch(projectId: number, scrubbedQuery: string, rerank: boolean): Promise<ArmResult> {
+async function replaySearch(scope: DocsScope, scrubbedQuery: string, rerank: boolean): Promise<ArmResult> {
   const startedAt = performance.now();
   try {
-    const search = await searchKnowledge(projectId, scrubbedQuery, { limit: 10, rerank });
+    const search = await searchKnowledge(scope, scrubbedQuery, { limit: 10, rerank });
     return {
       status: "ok",
       latencyMs: search.latencyMs,
@@ -78,7 +78,7 @@ async function replaySearch(projectId: number, scrubbedQuery: string, rerank: bo
 async function main(): Promise<void> {
   const argumentsList = process.argv.slice(2);
   if (argumentsList.includes("--help")) {
-    console.log("Usage: pnpm docs-eval:run [--gating-arm rerankOff|rerankOn] [--help]\nReplays the committed gold set against the Business Knowledge docs project with both rerank arms.\nDefaults: --gating-arm rerankOff (the shipped docs-search path).\nRequires POSTHOG_DOCS_EVAL_API_KEY and POSTHOG_DOCS_EVAL_PROJECT_ID; POSTHOG_REGION defaults to us.\nExit codes: 0 pass, 1 readiness/coverage/bar failure, 2 configuration/API/file error.");
+    console.log("Usage: pnpm docs-eval:run [--gating-arm rerankOff|rerankOn] [--help]\nReplays the committed gold set against the Business Knowledge docs project with both rerank arms.\nDefaults: --gating-arm rerankOff (the shipped docs-search path).\nRequires POSTHOG_DOCS_EVAL_API_KEY, POSTHOG_DOCS_EVAL_PROJECT_ID, and POSTHOG_DOCS_EVAL_LIBRARY_ID; POSTHOG_REGION defaults to us.\nExit codes: 0 pass, 1 readiness/coverage/bar failure, 2 configuration/API/file error.");
     return;
   }
   try {
@@ -101,7 +101,7 @@ async function main(): Promise<void> {
       return;
     }
     const startedAt = new Date().toISOString();
-    const projectId = docsProjectId();
+    const scope = docsScope();
     const goldSetBytes = await readFile(fileURLToPath(new URL("./gold-set.json", import.meta.url)));
     const labeledQueries = goldSet.queries.filter((query) => query.status === "labeled");
     const resolvedUrls = new Map<string, ScoringResults["resolvedUrls"][string]>();
@@ -119,7 +119,7 @@ async function main(): Promise<void> {
     const replays = labeledQueries.map(async (query) => {
       async function searchArm(rerank: boolean): Promise<ArmResult> {
         return limitRequest(async () => {
-          const arm = await replaySearch(projectId, query.scrubbedQuery, rerank);
+          const arm = await replaySearch(scope, query.scrubbedQuery, rerank);
           searchedCount++;
           console.log(`Searches: ${searchedCount}/${totalSearches}`);
           return arm;
@@ -133,7 +133,7 @@ async function main(): Promise<void> {
       version: 1,
       startedAt,
       finishedAt: new Date().toISOString(),
-      projectId,
+      projectId: scope.projectId,
       gatingArm: options.gatingArm,
       goldSetSha256: createHash("sha256").update(goldSetBytes).digest("hex"),
       goldSet,
