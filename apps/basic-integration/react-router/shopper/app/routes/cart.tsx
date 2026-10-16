@@ -1,8 +1,15 @@
 import { Link } from "react-router";
+import { usePostHog } from "@posthog/react";
 import { useCart, type CartItem } from "../context/CartContext";
+import { storefrontLogger } from "../lib/posthog-logs";
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  );
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
@@ -10,6 +17,27 @@ export default function Cart() {
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+  };
+
+  const handleCheckoutStarted = () => {
+    if (isPostHogConfigured) {
+      const cartItemCount = cart.reduce(
+        (count, item) => count + item.quantity,
+        0
+      );
+      const cartTotal = getCartTotal() * 1.1;
+
+      posthog.capture("checkout_started", {
+        cart_item_count: cartItemCount,
+        cart_distinct_product_count: cart.length,
+        cart_total: cartTotal,
+      });
+      storefrontLogger.info(posthog, "Checkout started", {
+        cart_item_count: cartItemCount,
+        cart_distinct_product_count: cart.length,
+        cart_total: cartTotal,
+      });
+    }
   };
 
   if (cart.length === 0) {
@@ -154,6 +182,7 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={handleCheckoutStarted}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout

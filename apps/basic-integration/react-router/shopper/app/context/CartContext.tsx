@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { usePostHog } from "@posthog/react";
 import type { Product } from "../data/products";
 
 export interface CartItem extends Product {
@@ -19,6 +20,11 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  );
 
   const addToCart = (product: Product) => {
     setCart((prevCart) => {
@@ -32,10 +38,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prevCart, { ...product, quantity: 1 }];
     });
+    if (isPostHogConfigured) {
+      posthog.capture("product_added_to_cart", {
+        product_id: product.id,
+        product_category: product.category,
+        quantity: 1,
+        unit_price: product.price,
+      });
+    }
   };
 
   const removeFromCart = (productId: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
+    const item = cart.find((cartItem) => cartItem.id === productId);
+    setCart((prevCart) => prevCart.filter((cartItem) => cartItem.id !== productId));
+    if (item && isPostHogConfigured) {
+      posthog.capture("cart_item_removed", {
+        product_id: item.id,
+        product_category: item.category,
+        quantity: item.quantity,
+        unit_price: item.price,
+      });
+    }
   };
 
   const updateQuantity = (productId: number, quantity: number) => {
@@ -43,11 +66,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart(productId);
       return;
     }
+    const item = cart.find((cartItem) => cartItem.id === productId);
     setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
+      prevCart.map((cartItem) =>
+        cartItem.id === productId ? { ...cartItem, quantity } : cartItem
       )
     );
+    if (item && item.quantity !== quantity && isPostHogConfigured) {
+      posthog.capture("cart_item_quantity_updated", {
+        product_id: item.id,
+        product_category: item.category,
+        previous_quantity: item.quantity,
+        quantity,
+      });
+    }
   };
 
   const clearCart = () => {

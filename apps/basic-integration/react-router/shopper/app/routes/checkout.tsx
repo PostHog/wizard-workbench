@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { usePostHog } from "@posthog/react";
 import { useCart } from "../context/CartContext";
+import { storefrontLogger } from "../lib/posthog-logs";
 
 export default function Checkout() {
   const { cart, getCartTotal, clearCart } = useCart();
   const navigate = useNavigate();
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -41,8 +48,28 @@ export default function Checkout() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
+    const orderTotal = getCartTotal() * 1.1;
+    const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
+
+    storefrontLogger.info(posthog, "Checkout submitted", {
+      item_count: itemCount,
+      distinct_product_count: cart.length,
+      order_total: orderTotal,
+    });
 
     setTimeout(() => {
+      if (isPostHogConfigured) {
+        posthog.capture("order_placed", {
+          item_count: itemCount,
+          distinct_product_count: cart.length,
+          order_total: orderTotal,
+        });
+        storefrontLogger.info(posthog, "Order placed", {
+          item_count: itemCount,
+          distinct_product_count: cart.length,
+          order_total: orderTotal,
+        });
+      }
       clearCart();
       setIsProcessing(false);
       alert("Order placed successfully! Thank you for your purchase.");
