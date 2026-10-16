@@ -1,15 +1,17 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
 import { Observable, Subject, takeUntil, throwError } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { catchError, finalize } from 'rxjs/operators';
 import { CredentialsService } from '@auth';
+import { PostHogService } from '@core/services';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ApiPrefixInterceptor implements HttpInterceptor {
   private readonly _ongoingRequests = new Map<string, Subject<any>>();
+  private readonly posthogService = inject(PostHogService);
 
   constructor(
     private readonly _credentialsService: CredentialsService,
@@ -54,6 +56,7 @@ export class ApiPrefixInterceptor implements HttpInterceptor {
         takeUntil(cancelSubject),
         catchError((error: HttpErrorResponse) => {
           if (error.status === 401 || error.status === 403) {
+            this.posthogService.posthog.reset();
             this._credentialsService.setCredentials();
             window.location.href = '/login';
           }
