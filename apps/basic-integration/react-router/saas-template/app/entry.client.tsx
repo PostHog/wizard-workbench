@@ -6,6 +6,8 @@ import { hydrateRoot } from "react-dom/client";
 import { I18nextProvider, initReactI18next } from "react-i18next";
 import { HydratedRouter } from "react-router/dom";
 
+import "./lib/posthog.client";
+
 async function hydrate() {
   await i18next
     .use(initReactI18next)

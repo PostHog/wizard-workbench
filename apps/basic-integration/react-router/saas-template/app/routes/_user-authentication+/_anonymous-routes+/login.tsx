@@ -30,6 +30,8 @@ import { loginWithEmailSchema } from "~/features/user-authentication/login/login
 import { LoginVerificationAwaiting } from "~/features/user-authentication/login/login-verification-awaiting";
 import { loginIntents } from "~/features/user-authentication/user-authentication-constants";
 import { getIsAwaitingEmailConfirmation } from "~/features/user-authentication/user-authentication-helpers";
+import { capturePosthogEvent } from "~/lib/capture-posthog";
+import { logPosthogInfo } from "~/lib/log-posthog";
 import { cn } from "~/lib/utils";
 import { getPageTitle } from "~/utils/get-page-title.server";
 
@@ -116,7 +118,16 @@ export default function LoginRoute({
         </div>
 
         {/* Email Login Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmitCapture={() => {
+            const attributes = { event: "login_requested", method: "email" };
+
+            capturePosthogEvent("login_requested", attributes);
+            logPosthogInfo("login requested", attributes);
+          }}
+          {...form.props}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -160,7 +171,15 @@ export default function LoginRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Login Form */}
-        <Form method="POST">
+        <Form
+          method="POST"
+          onSubmitCapture={() => {
+            const attributes = { event: "login_requested", method: "google" };
+
+            capturePosthogEvent("login_requested", attributes);
+            logPosthogInfo("login requested", attributes);
+          }}
+        >
           <Field>
             <Button
               name="intent"

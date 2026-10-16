@@ -30,6 +30,7 @@ import { registerWithEmailSchema } from "~/features/user-authentication/registra
 import { RegistrationVerificationAwaiting } from "~/features/user-authentication/registration/registration-verification-awaiting";
 import { registerIntents } from "~/features/user-authentication/user-authentication-constants";
 import { getIsAwaitingEmailConfirmation } from "~/features/user-authentication/user-authentication-helpers";
+import { capturePosthogEvent } from "~/lib/capture-posthog";
 import { cn } from "~/lib/utils";
 import { getPageTitle } from "~/utils/get-page-title.server";
 
@@ -117,7 +118,13 @@ export default function RegisterRoute({
         </div>
 
         {/* Email Registration Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmitCapture={() =>
+            capturePosthogEvent("registration_requested", { method: "email" })
+          }
+          {...form.props}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -161,7 +168,12 @@ export default function RegisterRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Registration Form */}
-        <Form method="POST">
+        <Form
+          method="POST"
+          onSubmitCapture={() =>
+            capturePosthogEvent("registration_requested", { method: "google" })
+          }
+        >
           <Field>
             <Button
               name="intent"

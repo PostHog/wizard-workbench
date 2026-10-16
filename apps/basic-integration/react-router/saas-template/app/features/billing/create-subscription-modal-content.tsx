@@ -30,6 +30,8 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { capturePosthogEvent } from "~/lib/capture-posthog";
+import { logPosthogInfo } from "~/lib/log-posthog";
 
 export type CreateSubscriptionModalContentProps = {
   /** how many seats your org is currently using */
@@ -97,6 +99,16 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () => {
+        const attributes = {
+          billing_interval: interval,
+          event: "subscription_checkout_started",
+          plan_tier: tier,
+        };
+
+        capturePosthogEvent("subscription_checkout_started", attributes);
+        logPosthogInfo("subscription checkout requested", attributes);
+      },
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };

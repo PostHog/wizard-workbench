@@ -27,6 +27,7 @@ import {
 } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { OrganizationMembershipRole } from "~/generated/browser";
+import { capturePosthogEvent } from "~/lib/capture-posthog";
 
 export type EmailInviteCardProps = {
   currentUserIsOwner: boolean;
@@ -70,7 +71,13 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmitCapture={() =>
+            capturePosthogEvent("team_invitation_requested")
+          }
+          {...form.props}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">
