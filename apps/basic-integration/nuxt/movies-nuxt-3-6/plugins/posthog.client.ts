@@ -1,0 +1,39 @@
+import posthog from 'posthog-js'
+import type { PostHog } from 'posthog-js'
+import { defineNuxtPlugin, useRuntimeConfig } from '#imports'
+
+export default defineNuxtPlugin((nuxtApp) => {
+  const runtimeConfig = useRuntimeConfig()
+  const projectToken = runtimeConfig.public.posthog.publicKey
+  const host = runtimeConfig.public.posthog.host
+  const isDev = process.env.NODE_ENV === 'development'
+  let posthogClient: PostHog | undefined
+
+  if (!projectToken) {
+    if (isDev)
+      throw new Error('NUXT_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once NUXT_PUBLIC_POSTHOG_PROJECT_TOKEN is configured')
+  }
+  else if (!host) {
+    if (isDev)
+      throw new Error('NUXT_PUBLIC_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once NUXT_PUBLIC_POSTHOG_HOST is configured')
+  }
+  else {
+    posthogClient = posthog.init(projectToken, {
+      api_host: host,
+      logs: {
+        serviceName: 'nuxt-movies-web',
+        environment: isDev ? 'development' : 'production',
+      },
+    })
+
+    nuxtApp.hook('vue:error', (error) => {
+      posthogClient?.captureException(error)
+    })
+  }
+
+  return {
+    provide: {
+      posthog: posthogClient,
+    },
+  }
+})

@@ -1,3 +1,5 @@
+import { logPostHogServerEvent } from '../../utils/posthog-logs'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -19,6 +21,10 @@ export default defineEventHandler(async (event) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
+    })
+
+    await logPostHogServerEvent(useRuntimeConfig(), 'authentication login completed', {
+      outcome: 'success',
     })
 
     return {
