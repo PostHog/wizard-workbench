@@ -1,9 +1,15 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 import * as React from 'react'
 import { z } from 'zod'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
 import { fetchInvoiceById, patchInvoice } from '../utils/mockTodos'
+
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+    import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+)
 
 export const Route = createFileRoute('/dashboard/invoices/$invoiceId')({
   params: {
@@ -24,6 +30,7 @@ export const Route = createFileRoute('/dashboard/invoices/$invoiceId')({
 })
 
 function InvoiceComponent() {
+  const posthog = usePostHog()
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
@@ -86,15 +93,24 @@ function InvoiceComponent() {
 
         <form
           key={invoice.id}
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
-            updateInvoiceMutation.mutate({
+            const updatedInvoice = await updateInvoiceMutation.mutate({
               id: invoice.id,
               title: formData.get('title') as string,
               body: formData.get('body') as string,
             })
+
+            if (updatedInvoice && isPostHogConfigured) {
+              posthog.capture('invoice_updated', {
+                invoice_id: updatedInvoice.id,
+              })
+              posthog.logger.info('invoice_updated', {
+                invoice_id: updatedInvoice.id,
+              })
+            }
           }}
           className="space-y-4"
         >

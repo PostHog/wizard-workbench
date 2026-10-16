@@ -6,9 +6,26 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogErrorBoundary, PostHogProvider } from '@posthog/react'
 import { Spinner } from '../components/Spinner'
 import { Breadcrumbs } from '../components/Breadcrumbs'
 import type { Auth } from '../utils/auth'
+
+const posthogProjectToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+const isPostHogConfigured = Boolean(posthogProjectToken && posthogHost)
+
+if (!isPostHogConfigured && import.meta.env.DEV) {
+  const missingVariable = posthogProjectToken
+    ? 'VITE_PUBLIC_POSTHOG_HOST'
+    : 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN'
+
+  console.error(
+    new Error(
+      `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+    ),
+  )
+}
 
 function RouterSpinner() {
   const isLoading = useRouterState({ select: (s) => s.status === 'pending' })
@@ -22,7 +39,7 @@ export const Route = createRootRouteWithContext<{
 })
 
 function RootComponent() {
-  return (
+  const app = (
     <>
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
@@ -71,5 +88,27 @@ function RootComponent() {
       </div>
       <TanStackRouterDevtools position="bottom-right" />
     </>
+  )
+
+  if (!isPostHogConfigured) {
+    return app
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={posthogProjectToken!}
+      options={{
+        api_host: posthogHost!,
+        defaults: '2026-01-30',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+        logs: {
+          serviceName: 'cloudflow-web',
+          environment: import.meta.env.MODE,
+        },
+      }}
+    >
+      <PostHogErrorBoundary>{app}</PostHogErrorBoundary>
+    </PostHogProvider>
   )
 }
