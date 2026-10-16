@@ -15,10 +15,16 @@ from app.main import bp
 
 @bp.before_app_request
 def before_request():
+    posthog_client = current_app.extensions.get('posthog')
     if current_user.is_authenticated:
+        if posthog_client:
+            posthog_client.identify_context(str(current_user.id))
         current_user.last_seen = datetime.now(timezone.utc)
         db.session.commit()
         g.search_form = SearchForm()
+    elif posthog_client and request.headers.get('X-POSTHOG-DISTINCT-ID'):
+        posthog_client.identify_context(
+            request.headers['X-POSTHOG-DISTINCT-ID'])
     g.locale = str(get_locale())
 
 
@@ -36,6 +42,25 @@ def index():
                     language=language)
         db.session.add(post)
         db.session.commit()
+        posthog_client = current_app.extensions.get('posthog')
+        if posthog_client:
+            posthog_client.capture(
+                'post_created',
+                properties={
+                    'post_length': len(post.body),
+                    'detected_language': language or None,
+                },
+            )
+        posthog_logs_logger = current_app.extensions.get(
+            'posthog_logs_logger')
+        if posthog_logs_logger:
+            posthog_logs_logger.info(
+                'post_created',
+                extra={
+                    'post_length': len(post.body),
+                    'detected_language': language or None,
+                },
+            )
         flash(_('Your post is now live!'))
         return redirect(url_for('main.index'))
     page = request.args.get('page', 1, type=int)
@@ -102,6 +127,9 @@ def edit_profile():
         current_user.username = form.username.data
         current_user.about_me = form.about_me.data
         db.session.commit()
+        posthog_client = current_app.extensions.get('posthog')
+        if posthog_client:
+            posthog_client.capture('profile_updated')
         flash(_('Your changes have been saved.'))
         return redirect(url_for('main.edit_profile'))
     elif request.method == 'GET':
@@ -126,6 +154,9 @@ def follow(username):
             return redirect(url_for('main.user', username=username))
         current_user.follow(user)
         db.session.commit()
+        posthog_client = current_app.extensions.get('posthog')
+        if posthog_client:
+            posthog_client.capture('user_followed')
         flash(_('You are following %(username)s!', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -147,6 +178,9 @@ def unfollow(username):
             return redirect(url_for('main.user', username=username))
         current_user.unfollow(user)
         db.session.commit()
+        posthog_client = current_app.extensions.get('posthog')
+        if posthog_client:
+            posthog_client.capture('user_unfollowed')
         flash(_('You are not following %(username)s.', username=username))
         return redirect(url_for('main.user', username=username))
     else:
@@ -157,9 +191,15 @@ def unfollow(username):
 @login_required
 def translate_text():
     data = request.get_json()
-    return {'text': translate(data['text'],
-                              data['source_language'],
-                              data['dest_language'])}
+    translated_text = translate(data['text'], data['source_language'],
+                                data['dest_language'])
+    posthog_client = current_app.extensions.get('posthog')
+    if posthog_client:
+        posthog_client.capture('translation_requested')
+    posthog_logs_logger = current_app.extensions.get('posthog_logs_logger')
+    if posthog_logs_logger:
+        posthog_logs_logger.info('translation_requested')
+    return {'text': translated_text}
 
 
 @bp.route('/search')
@@ -190,6 +230,10 @@ def send_message(recipient):
         user.add_notification('unread_message_count',
                               user.unread_message_count())
         db.session.commit()
+        posthog_client = current_app.extensions.get('posthog')
+        if posthog_client:
+            posthog_client.capture(
+                'message_sent', properties={'message_length': len(msg.body)})
         flash(_('Your message has been sent.'))
         return redirect(url_for('main.user', username=recipient))
     return render_template('send_message.html', title=_('Send Message'),
@@ -224,6 +268,9 @@ def export_posts():
     else:
         current_user.launch_task('export_posts', _('Exporting posts...'))
         db.session.commit()
+        posthog_client = current_app.extensions.get('posthog')
+        if posthog_client:
+            posthog_client.capture('post_export_started')
     return redirect(url_for('main.user', username=current_user.username))
 
 
