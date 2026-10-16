@@ -1,6 +1,18 @@
 import Fastify from 'fastify';
+import posthog from './posthog.js';
+import { logPosthogInfo, shutdownPosthogLogs } from './posthog-logs.js';
 
 const fastify = Fastify({ logger: true });
+
+fastify.setErrorHandler((error, request, reply) => {
+  posthog?.captureException(error);
+  reply.send(error);
+});
+
+fastify.addHook('onClose', async () => {
+  await posthog?.shutdown();
+  await shutdownPosthogLogs();
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +51,11 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+  posthog?.capture({
+    event: 'post_created',
+    properties: { is_published: post.published },
+  });
+  logPosthogInfo('post created', { is_published: post.published });
   return reply.status(201).send(post);
 });
 
@@ -67,6 +84,22 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  const updatedFields = [
+    ...(title !== undefined ? ['title'] : []),
+    ...(body !== undefined ? ['body'] : []),
+    ...(published !== undefined ? ['published'] : []),
+  ];
+  posthog?.capture({
+    event: 'post_updated',
+    properties: {
+      updated_fields: updatedFields,
+      is_published: post.published,
+    },
+  });
+  logPosthogInfo('post updated', {
+    updated_field_count: updatedFields.length,
+    is_published: post.published,
+  });
   return post;
 });
 
@@ -79,6 +112,7 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   }
 
   const postId = posts[index].id;
+  const removed_comment_count = comments.filter((comment) => comment.post_id === postId).length;
   posts.splice(index, 1);
 
   // Remove associated comments
@@ -86,6 +120,11 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
     if (comments[i].post_id === postId) comments.splice(i, 1);
   }
 
+  posthog?.capture({
+    event: 'post_deleted',
+    properties: { removed_comment_count },
+  });
+  logPosthogInfo('post deleted', { removed_comment_count });
   return reply.status(204).send();
 });
 
@@ -111,6 +150,11 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+  posthog?.capture({
+    event: 'comment_created',
+    properties: { post_is_published: post.published },
+  });
+  logPosthogInfo('comment created', { post_is_published: post.published });
   return reply.status(201).send(comment);
 });
 
