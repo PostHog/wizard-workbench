@@ -5,6 +5,7 @@ import PropTypes from 'prop-types';
 import { Text, TextInput, TouchableOpacity } from 'react-native';
 
 import { createTeamRequest } from '~/store/modules/teams/actions';
+import { posthog } from '~/config/posthog';
 
 import Modal from '~/components/Modal';
 
@@ -15,6 +16,7 @@ export default function NewTeam({ visible, onRequestClose }) {
   const [newTeam, setNewTeam] = useState('');
 
   function handleSubmit() {
+    posthog?.capture('team_created');
     dispatch(createTeamRequest(newTeam));
     setNewTeam('');
     onRequestClose();

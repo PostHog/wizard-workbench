@@ -5,6 +5,7 @@ import PropTypes from 'prop-types';
 import { Text, TextInput, TouchableOpacity } from 'react-native';
 
 import { inviteMemberRequest } from '~/store/modules/members/actions';
+import { posthog } from '~/config/posthog';
 
 import Modal from '~/components/Modal';
 
@@ -15,6 +16,7 @@ export default function InviteMember({ visible, onRequestClose }) {
   const [email, setEmail] = useState('');
 
   function handleSubmit() {
+    posthog?.capture('member_invited');
     dispatch(inviteMemberRequest(email));
     setEmail('');
     onRequestClose();
