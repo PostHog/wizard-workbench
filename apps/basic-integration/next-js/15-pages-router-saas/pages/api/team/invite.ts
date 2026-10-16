@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
@@ -11,6 +12,13 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { loggerProvider } from '@/instrumentation';
+
+const posthogLogger = loggerProvider.getLogger('posthog-integration');
+
+async function flushPostHogLogs() {
+  await loggerProvider.forceFlush().catch(() => undefined);
+}
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -91,6 +99,15 @@ export default async function handler(
       .limit(1);
 
     if (existingInvitation.length > 0) {
+      posthogLogger.emit({
+        body: 'Team invitation rejected because a pending invitation already exists',
+        severityNumber: SeverityNumber.WARN,
+        attributes: {
+          endpoint: '/api/team/invite',
+          outcome: 'duplicate_pending_invitation'
+        }
+      });
+      await flushPostHogLogs();
       return res.status(400).json({ error: 'An invitation has already been sent to this email' });
     }
 
@@ -107,6 +124,17 @@ export default async function handler(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+
+    posthogLogger.emit({
+      body: 'Team invitation created',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        endpoint: '/api/team/invite',
+        invitation_role: role,
+        outcome: 'created'
+      }
+    });
+    await flushPostHogLogs();
 
     return res.status(200).json({ success: 'Invitation sent successfully' });
   } catch (error) {

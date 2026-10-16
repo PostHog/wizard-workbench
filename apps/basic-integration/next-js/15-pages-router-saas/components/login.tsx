@@ -7,6 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
+
+const posthogEnabled = Boolean(
+  process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST
+);
 
 export function Login({
   mode = 'signin',
@@ -55,6 +60,24 @@ export function Login({
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
           return;
+        }
+
+        if (result.user && posthogEnabled) {
+          const userId = result.user.id.toString();
+          const identifiedUserId = posthog.get_property('$user_id');
+
+          if (identifiedUserId && identifiedUserId !== userId) {
+            posthog.reset();
+          }
+
+          posthog.identify(userId, {
+            email: result.user.email,
+            role: result.user.role,
+            ...(result.user.name ? { name: result.user.name } : {})
+          });
+          posthog.capture('authentication_completed', {
+            authentication_method: mode
+          });
         }
 
         if (result.success && result.redirectTo) {
