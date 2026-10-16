@@ -1,5 +1,8 @@
 <script lang="ts">
+  import { env } from "$env/dynamic/public"
+  import { posthogLogs } from "$lib/posthog-logs"
   import { pricingPlans } from "./pricing_plans"
+  import posthog from "posthog-js"
 
   interface Props {
     // Module context
@@ -15,6 +18,17 @@
     currentPlanId = "",
     center = true,
   }: Props = $props()
+
+  const posthogConfigured = Boolean(
+    env.PUBLIC_POSTHOG_PROJECT_TOKEN && env.PUBLIC_POSTHOG_HOST,
+  )
+
+  const startCheckout = (planId: string) => {
+    if (posthogConfigured) {
+      posthog.capture("plan_checkout_started", { plan_id: planId })
+    }
+    posthogLogs.info("plan checkout started", { plan_id: planId })
+  }
 </script>
 
 <div
@@ -57,6 +71,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() => startCheckout(plan.id)}
               >
                 {callToAction}
               </a>

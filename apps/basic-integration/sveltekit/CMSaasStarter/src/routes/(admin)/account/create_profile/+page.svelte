@@ -1,6 +1,9 @@
 <script lang="ts">
   import { applyAction, enhance } from "$app/forms"
+  import { env } from "$env/dynamic/public"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import { posthogLogs } from "$lib/posthog-logs"
+  import posthog from "posthog-js"
   import "../../../../app.css"
 
   interface User {
@@ -26,6 +29,9 @@
   let fullName: string = profile?.full_name ?? ""
   let companyName: string = profile?.company_name ?? ""
   let website: string = profile?.website ?? ""
+  const posthogConfigured = Boolean(
+    env.PUBLIC_POSTHOG_PROJECT_TOKEN && env.PUBLIC_POSTHOG_HOST,
+  )
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -38,6 +44,12 @@
       await update({ reset: false })
       await applyAction(result)
       loading = false
+      if (result.type === "success") {
+        if (posthogConfigured) {
+          posthog.capture("profile_created")
+        }
+        posthogLogs.info("account profile created")
+      }
     }
   }
 </script>

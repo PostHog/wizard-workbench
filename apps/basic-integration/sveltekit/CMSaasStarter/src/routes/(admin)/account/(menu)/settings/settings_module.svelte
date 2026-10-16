@@ -1,7 +1,9 @@
 <script lang="ts">
   import { enhance, applyAction } from "$app/forms"
   import { page } from "$app/stores"
+  import { env } from "$env/dynamic/public"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import posthog from "posthog-js"
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -11,6 +13,9 @@
   // Page state
   let loading = $state(false)
   let showSuccess = $state(false)
+  const posthogConfigured = Boolean(
+    env.PUBLIC_POSTHOG_PROJECT_TOKEN && env.PUBLIC_POSTHOG_HOST,
+  )
 
   type Field = {
     inputType?: string // default is "text"
@@ -20,6 +25,13 @@
     placeholder?: string
     maxlength?: number
   }
+
+  type SuccessEvent =
+    | ""
+    | "profile_updated"
+    | "email_change_initiated"
+    | "password_updated"
+    | "email_subscription_updated"
 
   interface Props {
     // Module context
@@ -34,6 +46,7 @@
     editButtonTitle?: string | null
     editLink?: string | null
     saveButtonTitle?: string
+    successEvent?: SuccessEvent
   }
 
   let {
@@ -48,7 +61,29 @@
     editButtonTitle = null,
     editLink = null,
     saveButtonTitle = "Save",
+    successEvent = "",
   }: Props = $props()
+
+  const captureSuccessEvent = (event: SuccessEvent) => {
+    if (!posthogConfigured) {
+      return
+    }
+
+    switch (event) {
+      case "profile_updated":
+        posthog.capture("profile_updated")
+        break
+      case "email_change_initiated":
+        posthog.capture("email_change_initiated")
+        break
+      case "password_updated":
+        posthog.capture("password_updated")
+        break
+      case "email_subscription_updated":
+        posthog.capture("email_subscription_updated")
+        break
+    }
+  }
 
   const handleSubmit: SubmitFunction = () => {
     loading = true
@@ -57,6 +92,7 @@
       await applyAction(result)
       loading = false
       if (result.type === "success") {
+        captureSuccessEvent(successEvent)
         showSuccess = true
       }
     }

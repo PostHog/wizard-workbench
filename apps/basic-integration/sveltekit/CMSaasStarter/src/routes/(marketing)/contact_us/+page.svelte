@@ -1,11 +1,17 @@
 <script lang="ts">
   import { enhance, applyAction } from "$app/forms"
+  import { env } from "$env/dynamic/public"
   import type { SubmitFunction } from "@sveltejs/kit"
   import type { FullAutoFill } from "svelte/elements"
+  import { posthogLogs } from "$lib/posthog-logs"
+  import posthog from "posthog-js"
 
   let errors: { [fieldName: string]: string } = $state({})
   let loading = $state(false)
   let showSuccess = $state(false)
+  const posthogConfigured = Boolean(
+    env.PUBLIC_POSTHOG_PROJECT_TOKEN && env.PUBLIC_POSTHOG_HOST,
+  )
 
   interface FormField {
     id: string
@@ -61,6 +67,10 @@
       await applyAction(result)
       loading = false
       if (result.type === "success") {
+        if (posthogConfigured) {
+          posthog.capture("contact_request_submitted")
+        }
+        posthogLogs.info("contact request submitted")
         showSuccess = true
       } else if (result.type === "failure") {
         errors = result.data?.errors ?? {}
