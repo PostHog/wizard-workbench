@@ -1,8 +1,10 @@
+from django.apps import apps
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
+from config.posthog_logs import posthog_logger
 from .models import Project, ActivityLog
 from .forms import ProjectForm
 
@@ -60,6 +62,14 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            posthog_client = apps.get_app_config('config').posthog_client
+            if posthog_client is not None:
+                posthog_client.capture('project_created')
+
+            posthog_logger.info(
+                'project_created',
+                extra={'operation': 'project_create'},
+            )
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +93,14 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            posthog_client = apps.get_app_config('config').posthog_client
+            if posthog_client is not None:
+                posthog_client.capture('project_updated')
+
+            posthog_logger.info(
+                'project_updated',
+                extra={'operation': 'project_update'},
+            )
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -105,6 +123,14 @@ def delete_project(request, pk):
             description=f'Deleted project: {name}'
         )
 
+        posthog_client = apps.get_app_config('config').posthog_client
+        if posthog_client is not None:
+            posthog_client.capture('project_deleted')
+
+        posthog_logger.info(
+            'project_deleted',
+            extra={'operation': 'project_delete'},
+        )
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
 
