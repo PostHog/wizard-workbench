@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Services\PostHogService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
 
@@ -11,11 +12,13 @@ new class extends Component
     /**
      * Delete the currently authenticated user.
      */
-    public function deleteUser(Logout $logout): void
+    public function deleteUser(Logout $logout, PostHogService $posthog): void
     {
         $this->validate([
             'password' => ['required', 'string', 'current_password'],
         ]);
+
+        $posthog->capture('account_deleted');
 
         tap(Auth::user(), $logout(...))->delete();
 

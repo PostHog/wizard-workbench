@@ -53,6 +53,20 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         ];
     }
 
+    /**
+     * Get the non-sensitive person properties associated with this user.
+     *
+     * @return array<string, string|null>
+     */
+    public function postHogPersonProperties(): array
+    {
+        return [
+            'email' => $this->email,
+            'name' => $this->name,
+            'provider' => $this->provider,
+        ];
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
