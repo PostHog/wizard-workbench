@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react'
+import { usePostHog } from '@posthog/react'
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
 
@@ -14,15 +15,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
+  const posthog = usePostHog()
+  const hasRestoredSession = useRef(false)
+
+  const identifyUser = (authenticatedUser: FakeUser) => {
+    posthog?.identify(authenticatedUser.id, {
+      email: authenticatedUser.email,
+      username: authenticatedUser.username,
+    })
+  }
 
   useEffect(() => {
+    if (hasRestoredSession.current) return
+
+    hasRestoredSession.current = true
     const currentUser = getCurrentUser()
+    if (currentUser) {
+      identifyUser(currentUser)
+    }
     setUser(currentUser)
   }, [])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      if (user && user.id !== loggedInUser.id) {
+        posthog?.reset()
+      }
+      identifyUser(loggedInUser)
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +52,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      if (user && user.id !== newUser.id) {
+        posthog?.reset()
+      }
+      identifyUser(newUser)
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    posthog?.reset()
     fakeLogout()
     setUser(null)
   }
