@@ -40,6 +40,7 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.compose.jetchat.auth.LoginScreen
 import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.launch
 
 /**
@@ -83,6 +84,17 @@ class NavActivity : AppCompatActivity() {
                         LoginScreen(
                             onLogin = { username, password ->
                                 viewModel.login(username, password)
+                                if (BuildConfig.POSTHOG_ENABLED) {
+                                    PostHogAndroid.getInstance().logger.info(
+                                        "demo login completed",
+                                        mapOf("authentication_mode" to "demo"),
+                                    )
+                                    PostHogAndroid.getInstance().capture(event = "user_logged_in")
+                                    PostHogAndroid.getInstance().screen(
+                                        screenTitle = "Conversation",
+                                        properties = mapOf("channel_name" to "composers"),
+                                    )
+                                }
                             },
                         )
                     } else {
@@ -96,6 +108,16 @@ class NavActivity : AppCompatActivity() {
                                     drawerState.close()
                                 }
                                 selectedMenu = it
+                                if (BuildConfig.POSTHOG_ENABLED) {
+                                    PostHogAndroid.getInstance().capture(
+                                        event = "channel_selected",
+                                        properties = mapOf("channel_name" to it),
+                                    )
+                                    PostHogAndroid.getInstance().screen(
+                                        screenTitle = "Conversation",
+                                        properties = mapOf("channel_name" to it),
+                                    )
+                                }
                             },
                             onProfileClicked = {
                                 val bundle = bundleOf("userId" to it)
@@ -104,6 +126,17 @@ class NavActivity : AppCompatActivity() {
                                     drawerState.close()
                                 }
                                 selectedMenu = it
+                                val profileType = if (it == "me") "self" else "colleague"
+                                if (BuildConfig.POSTHOG_ENABLED) {
+                                    PostHogAndroid.getInstance().capture(
+                                        event = "profile_opened",
+                                        properties = mapOf("profile_type" to profileType),
+                                    )
+                                    PostHogAndroid.getInstance().screen(
+                                        screenTitle = "Profile",
+                                        properties = mapOf("profile_type" to profileType),
+                                    )
+                                }
                             },
                             onLogoutClicked = {
                                 viewModel.logout()
@@ -112,6 +145,10 @@ class NavActivity : AppCompatActivity() {
                                     drawerState.close()
                                 }
                                 selectedMenu = "composers"
+                                if (BuildConfig.POSTHOG_ENABLED) {
+                                    PostHogAndroid.getInstance().capture(event = "user_logged_out")
+                                    PostHogAndroid.getInstance().screen(screenTitle = "Login")
+                                }
                             },
                         ) {
                             AndroidViewBinding(ContentMainBinding::inflate)
