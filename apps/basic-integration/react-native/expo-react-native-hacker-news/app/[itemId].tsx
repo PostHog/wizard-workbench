@@ -7,12 +7,14 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
+import { useEffect } from "react";
 import * as Haptics from "expo-haptics";
 import { useQuery } from "@tanstack/react-query";
 import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
@@ -20,8 +22,13 @@ import { Comments } from "@/components/comments/comments";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export default function ItemDetails() {
+  const posthog = usePostHog();
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+
+  useEffect(() => {
+    posthog.screen("item_details");
+  }, [posthog]);
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -72,7 +79,14 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              onPress={() => {
+                posthog.capture("author_profile_opened", {
+                  open_source: "item_details",
+                });
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -163,6 +177,9 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog.capture("external_link_opened", {
+                    open_source: "item_details",
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +211,10 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog.capture("parent_item_opened");
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
