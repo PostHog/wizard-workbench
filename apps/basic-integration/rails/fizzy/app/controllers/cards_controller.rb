@@ -14,11 +14,22 @@ class CardsController < ApplicationController
     respond_to do |format|
       format.html do
         card = Current.user.draft_new_card_in(@board)
+        PostHog.capture(
+          distinct_id: Current.user.posthog_distinct_id,
+          event: "card_draft_started"
+        )
+        PostHogLogs.info("card draft started", attributes: { "operation" => "card_draft_create" })
         redirect_to card_draft_path(card)
       end
 
       format.json do
         card = @board.cards.create! card_params.merge(creator: Current.user, status: "published")
+        PostHog.capture(
+          distinct_id: Current.user.posthog_distinct_id,
+          event: "card_created",
+          properties: { creation_method: "api" }
+        )
+        PostHogLogs.info("card API creation completed", attributes: { "operation" => "card_api_create" })
         head :created, location: card_path(card, format: :json)
       end
     end
@@ -32,6 +43,12 @@ class CardsController < ApplicationController
 
   def update
     @card.update! card_params
+
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "card_updated",
+      properties: { updated_fields: card_params.keys.map(&:to_s) }
+    )
 
     respond_to do |format|
       format.turbo_stream
