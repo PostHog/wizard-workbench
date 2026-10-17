@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: express-tsc-esm
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    # Deploys are triggered from GitHub Actions via the service deploy hook.
+    autoDeployTrigger: "off"
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production

@@ -36,3 +36,73 @@ Python, Ruby and PHP ship readable stack traces, so these apps grade release lin
 - the ID reaches the container (`build-args` + `ARG`/`ENV` in the final stage, or `environment:` in the compose file fed from the SSH script)
 - `env[POSTHOG_RELEASE_ID] = $POSTHOG_RELEASE_ID` in `docker/php-fpm/zz-app.conf`; without it the workers never see the ID
 - `tests.yml`, `composer dev`, `.env` and `.env.example` carry no release ID
+
+## Stack-specific apps
+
+Each of these apps has a setup that a generic integration gets wrong. As with the release-linking apps, their own READMEs describe the project only.
+
+**`no-posthog-nestjs`**: NestJS 11 without PostHog. The global `AllExceptionsFilter` (`@Catch()`) turns every exception into a JSON response, config comes from `@nestjs/config`, and the Dockerfile runs `nest build` and then `npm prune --omit=dev`. Expected:
+
+- capture inside `AllExceptionsFilter.catch` for server errors, not `HttpException` 4xx responses, with the JSON error shape kept
+- the client created once `ConfigModule` has loaded `.env`, not from `process.env` at module top level
+- the upload runs on the build that ships, inside the Docker build and before the prune, with the key passed as a build secret, never a build arg
+
+**`no-posthog-express-no-build`**: Express without PostHog and with no build at all: `start` runs `index.js` as written. Expected:
+
+- no source-map upload, credentials, CI wiring or verify task, and no ask for a personal API key, because the stack traces are already readable
+- no bundler, compiler or new `build` script added to create something to upload
+- capture through `setupExpressErrorHandler` after the routes, with the missing `.env` loader named as a follow-up
+
+**`no-posthog-express-tsc`**: Express 5 in TypeScript with native ES modules (`NodeNext`, `verbatimModuleSyntax`), compiled by `tsc` with source maps off. Nothing loads `.env`. Render builds and serves it from `render.yaml`; the build in `ci.yml` never ships. Expected:
+
+- `sourceMap: true` in `tsconfig.json`, which keeps `"types": ["node"]`
+- capture in the final error middleware in `src/server.ts`, with `.js` extensions on new imports
+- the upload in Render's `buildCommand`, its variables declared as Render env vars, not only as GitHub secrets
+- the missing `.env` loader named as a follow-up
+
+**`no-posthog-cloudflare-worker`**: Hono on Cloudflare Workers without PostHog. `cloudflare/wrangler-action` deploys with `wrangler deploy --minify`, while `npm run build` bundles without `--minify`. Expected:
+
+- the client built from `c.env` bindings typed in `src/types.ts`, never `process.env`
+- capture in `app.onError` for errors other than `HTTPException`, sent through `c.executionCtx.waitUntil`, with the handler still returning a response
+- maps uploaded from the same minified bundle that deploys; `upload_source_maps` in `wrangler.toml` is Cloudflare's own feature, not the PostHog upload
+
+**`no-posthog-electron`**: Electron 44 with electron-vite and electron-builder, without PostHog. The main, preload and renderer sections build separately, the renderer's CSP allows only `'self'`, and the release job builds on three OS runners. Expected:
+
+- `posthog-node` in `dependencies` for the main process and `posthog-js` in the renderer, each process with its own client and none shared over `contextBridge`
+- the main-process token read as `import.meta.env.MAIN_VITE_*`, which electron-vite inlines at build, because a packaged app has no `.env`
+- the renderer's CSP `connect-src` allows the PostHog host
+- source maps set per section in `electron.vite.config.ts` and kept out of the packaged app
+
+**`no-posthog-fastapi-uv`**: FastAPI managed only by uv (`uv.lock`, `uv sync --locked`), src layout with the package `app`, deployed to Fly from GitHub Actions. Expected:
+
+- `posthog` added with `uv add`, so `pyproject.toml` and `uv.lock` change together, with no `requirements.txt` or `pip install`
+- capture in the existing `Exception` handler only, not also in a middleware, and not for `HTTPException`
+- release linking in `deploy.yml` only, with the ID reaching the app as `POSTHOG_RELEASE_ID`
+- the runtime key named as a Fly secret, never a Docker build arg
+
+**`no-posthog-spring-boot`**: Spring Boot 3.5 on Java 17, Gradle Kotlin DSL and `application.yml`. A `@RestControllerAdvice` turns every exception into a 500, so nothing reaches `/error` or a filter. Expected:
+
+- capture in the advice's `Exception` handler, not in the `ResponseStatusException` handler or a filter
+- the key read from the environment with an empty default (`${POSTHOG_API_KEY:}`), so `./gradlew build` and its `@SpringBootTest` pass with no environment
+- one client bean, closed on shutdown, and no upload or release linking
+- the Boot and Gradle versions unchanged
+
+**`create-react-app`**: Create React App 5 (`react-scripts`, no webpack config) with `posthog-js` initialized in `src/index.js`, deployed to Netlify from GitHub Actions. Expected:
+
+- no `eject`, craco or react-app-rewired: the upload runs on `build/` after `react-scripts build`, in a step that covers both the workflow and Netlify's own builds
+- `GENERATE_SOURCEMAP` left on, and the maps deleted after upload so Netlify does not publish them
+- the `CI=true` build passes with only environment variables and no `.env`
+- the personal API key never gets a `REACT_APP_` prefix
+
+**`next-sentry`**: Next.js 15 with `@sentry/nextjs` 11 set up the documented way, `productionBrowserSourceMaps: true`, and `posthog-js` pinned exactly to 1.274.1 and initialized after `Sentry.init`. Expected:
+
+- Sentry left working: no second `Sentry.init`, and PostHog composed into the existing `onRequestError` export and `global-error.tsx`
+- `productionBrowserSourceMaps` kept
+- `posthog-js` kept as an exact pin, upgraded only when the install fails on it
+- no `posthog-node` in the edge runtime (`middleware.ts`, `app/api/edge/route.ts`)
+
+**`vite-yarn-pnp`**: Vite and React on Yarn 4 Plug'n'Play, with no `node_modules` and a one-day `npmMinimalAgeGate`. `posthog-js` runs through `PostHogProvider` with `VITE_PH_PROJECT_TOKEN`. The build emits hidden source maps and `.gz` and `.br` copies, and the GitHub Pages workflow publishes all of `dist/`. Expected:
+
+- packages added with `yarn add`, so `.pnp.cjs` and `yarn.lock` change together, never with npm or a switch to `nodeLinker: node-modules`
+- the existing `VITE_PH_*` names reused, and the personal API key never given a `VITE_` prefix
+- the maps uploaded and then deleted before `upload-pages-artifact`
