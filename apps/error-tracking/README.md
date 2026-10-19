@@ -101,7 +101,7 @@ Each of these apps has a setup that a generic integration gets wrong. As with th
 - `posthog-js` kept as an exact pin, upgraded only when the install fails on it
 - no `posthog-node` in the edge runtime (`middleware.ts`, `app/api/edge/route.ts`)
 
-**`vite-yarn-pnp`**: Vite and React on Yarn 4 Plug'n'Play, with no `node_modules` and a one-day `npmMinimalAgeGate`. `posthog-js` runs through `PostHogProvider` with `VITE_PH_PROJECT_TOKEN`. The build emits hidden source maps and `.gz` and `.br` copies, and the GitHub Pages workflow publishes all of `dist/`. Expected:
+**`vite-yarn-pnp`**: Vite and React on Yarn 4 Plug'n'Play, with no `node_modules` and a seven-day `npmMinimalAgeGate`. `posthog-js` runs through `PostHogProvider` with `VITE_PH_PROJECT_TOKEN`. The build emits hidden source maps and `.gz` and `.br` copies, and the GitHub Pages workflow publishes all of `dist/`. Expected:
 
 - packages added with `yarn add`, so `.pnp.cjs` and `yarn.lock` change together, never with npm or a switch to `nodeLinker: node-modules`
 - the existing `VITE_PH_*` names reused, and the personal API key never given a `VITE_` prefix
