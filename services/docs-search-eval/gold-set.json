@@ -129,6 +129,7 @@
       "expectedCodeSnippet": null,
       "notes": "agent-labeled (low): Command palette page lists Cmd+K search and keyboard shortcuts; no page documents an accounts search box shortcut",
       "isAwaitingReview": false,
+      "isDocsGap": true,
       "labeledAt": "2026-10-15T15:20:11.928Z"
     },
     {
@@ -937,6 +938,7 @@
       "expectedCodeSnippet": null,
       "notes": "agent-labeled (low): capture 'Suppressing exceptions' rules applied client-side; legacy errors-to-ignore setting itself not documented",
       "isAwaitingReview": false,
+      "isDocsGap": true,
       "labeledAt": "2026-10-14T17:53:01.680Z"
     },
     {
@@ -2101,6 +2103,7 @@
       "expectedCodeSnippet": null,
       "notes": "agent-labeled (low): Cross-region project move section; credit transfer itself not documented",
       "isAwaitingReview": false,
+      "isDocsGap": true,
       "labeledAt": "2026-10-14T17:53:01.663Z"
     },
     {
@@ -2155,6 +2158,7 @@
       "expectedCodeSnippet": null,
       "notes": "agent-labeled (low): Alert notifications support webhook destinations; pricing of alert webhooks not documented",
       "isAwaitingReview": false,
+      "isDocsGap": true,
       "labeledAt": "2026-10-14T17:53:01.664Z"
     },
     {

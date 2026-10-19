@@ -86,6 +86,7 @@ export const GoldQuery = z.object({
   expectedCodeSnippet: z.string().nullable(),
   notes: z.string(),
   isAwaitingReview: z.boolean().default(false),
+  isDocsGap: z.boolean().default(false),
   labeledAt: z.string().datetime({ offset: true }),
 }).strict().superRefine((query, context) => {
   for (const field of ["scrubbedQuery", "notes", "expectedCodeSnippet"] as const) {

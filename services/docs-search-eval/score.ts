@@ -40,6 +40,7 @@ const ScoreSummary = z.object({
   queriesWithoutLiveLabels: count,
   componentFlags: z.array(z.object({ queryId: z.string(), reason: z.enum(["no relevant chunk", "snippet missing"]) }).strict()),
   componentQueriesChecked: count,
+  docsGaps: z.array(z.string()),
 }).strict();
 type ScoreSummary = z.infer<typeof ScoreSummary>;
 
@@ -103,8 +104,14 @@ interface QueryLabels {
   relevantUrls: Set<string>;
 }
 
-function retrievalMetrics(searches: Array<{ urls: string[]; relevantUrls: Set<string> }>, labeled: number, errored: number): z.infer<typeof RetrievalMetrics> {
-  const scorableSearches = searches.filter((search) => search.relevantUrls.size > 0);
+interface ReplayedSearch {
+  urls: string[];
+  relevantUrls: Set<string>;
+  isDocsGap: boolean;
+}
+
+function retrievalMetrics(searches: ReplayedSearch[], labeled: number, errored: number): z.infer<typeof RetrievalMetrics> {
+  const scorableSearches = searches.filter((search) => search.relevantUrls.size > 0 && !search.isDocsGap);
   const hits = scorableSearches.filter((search) => search.urls.slice(0, 3).some((url) => search.relevantUrls.has(url))).length;
   const totalRecall = scorableSearches.reduce((total, search) =>
     total + search.urls.slice(0, 10).filter((url) => search.relevantUrls.has(url)).length / search.relevantUrls.size, 0);
@@ -134,7 +141,7 @@ export function score(results: ScoringResults): ScoreSummary {
       }
       return { query, relevantUrls };
     });
-  const searches: Array<{ urls: string[]; relevantUrls: Set<string> }> = [];
+  const searches: ReplayedSearch[] = [];
   const latencies: number[] = [];
   let errored = 0;
   for (const { query, relevantUrls } of labeledQueries) {
@@ -145,7 +152,7 @@ export function score(results: ScoringResults): ScoreSummary {
       continue;
     }
     latencies.push(search.latencyMs);
-    searches.push({ urls: rankedUrls(search.chunks.map((chunk) => chunk.url)), relevantUrls });
+    searches.push({ urls: rankedUrls(search.chunks.map((chunk) => chunk.url)), relevantUrls, isDocsGap: query.isDocsGap });
   }
   const searchMetrics = {
     ...retrievalMetrics(searches, labeledQueries.length, errored),
@@ -190,6 +197,7 @@ export function score(results: ScoringResults): ScoreSummary {
     queriesWithoutLiveLabels: labeledQueries.filter(({ relevantUrls }) => relevantUrls.size === 0).length,
     componentFlags,
     componentQueriesChecked: componentQueries.filter(({ query }) => replayById.get(query.id)?.status === "ok").length,
+    docsGaps: labeledQueries.filter(({ query }) => query.isDocsGap).map(({ query }) => query.id),
   };
 }
 
@@ -224,6 +232,12 @@ export function renderReport(results: ScoringResults, summary: ScoreSummary): st
   if (summary.componentFlags.length > 0) {
     lines.push("| Query ID | Scrubbed query | Reason |", "| --- | --- | --- |", ...summary.componentFlags.map((flag) =>
       `| ${markdownCell(flag.queryId)} | ${markdownCell(scrubbedById.get(flag.queryId) ?? "")} | ${flag.reason} |`));
+  }
+  lines.push("", "## Docs gaps", "", "Labeled queries the docs do not answer; left out of hitAt3 and recallAt10.", "");
+  if (summary.docsGaps.length === 0) lines.push("No docs gaps.");
+  if (summary.docsGaps.length > 0) {
+    lines.push("| Query ID | Scrubbed query |", "| --- | --- |", ...summary.docsGaps.map((queryId) =>
+      `| ${markdownCell(queryId)} | ${markdownCell(scrubbedById.get(queryId) ?? "")} |`));
   }
   lines.push("", "## Stale labels", "");
   if (summary.staleLabels.length === 0) lines.push("No stale labels.");

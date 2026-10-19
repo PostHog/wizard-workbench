@@ -8,30 +8,36 @@ test("rescoring a saved fixture run reproduces the hand-computed metrics", () =>
       id: "000000000001", harness: "fictional", status: "labeled", scrubbedQuery: "Find the lantern guide",
       relevantUrls: ["https://posthog.com/docs/old-lantern", "https://posthog.com/docs/lantern-colors"],
       targetsComponentPage: false, expectedCodeSnippet: null,
-      notes: "", isAwaitingReview: false, labeledAt: "2026-01-01T00:00:00Z",
+      notes: "", isAwaitingReview: false, isDocsGap: false, labeledAt: "2026-01-01T00:00:00Z",
     },
     {
       id: "000000000002", harness: "fictional", status: "labeled", scrubbedQuery: "Render the lantern component",
       relevantUrls: ["https://posthog.com/docs/lantern-component"],
       targetsComponentPage: true, expectedCodeSnippet: "<Lantern />",
-      notes: "", isAwaitingReview: false, labeledAt: "2026-01-01T00:00:00Z",
+      notes: "", isAwaitingReview: false, isDocsGap: false, labeledAt: "2026-01-01T00:00:00Z",
     },
     {
       id: "000000000003", harness: "fictional", status: "labeled", scrubbedQuery: "Find the retired lantern",
       relevantUrls: ["https://posthog.com/docs/retired-lantern"],
       targetsComponentPage: false, expectedCodeSnippet: null,
-      notes: "", isAwaitingReview: false, labeledAt: "2026-01-01T00:00:00Z",
+      notes: "", isAwaitingReview: false, isDocsGap: false, labeledAt: "2026-01-01T00:00:00Z",
     },
     {
       id: "000000000004", harness: "fictional", status: "labeled", scrubbedQuery: "Configure the lantern switch",
       relevantUrls: ["https://posthog.com/docs/lantern-switch"],
       targetsComponentPage: false, expectedCodeSnippet: null,
-      notes: "", isAwaitingReview: false, labeledAt: "2026-01-01T00:00:00Z",
+      notes: "", isAwaitingReview: false, isDocsGap: false, labeledAt: "2026-01-01T00:00:00Z",
     },
     {
       id: "000000000005", harness: "fictional", status: "skipped", scrubbedQuery: "Skipped lantern query",
       relevantUrls: [], targetsComponentPage: false, expectedCodeSnippet: null,
-      notes: "", isAwaitingReview: false, labeledAt: "2026-01-01T00:00:00Z",
+      notes: "", isAwaitingReview: false, isDocsGap: false, labeledAt: "2026-01-01T00:00:00Z",
+    },
+    {
+      id: "000000000006", harness: "fictional", status: "labeled", scrubbedQuery: "Price the lantern refill",
+      relevantUrls: ["https://posthog.com/docs/lantern-switch"],
+      targetsComponentPage: false, expectedCodeSnippet: null,
+      notes: "", isAwaitingReview: false, isDocsGap: true, labeledAt: "2026-01-01T00:00:00Z",
     },
   ];
   const successfulSearch = (urls: string[], latencyMs: number): Extract<ArmResult, { status: "ok" }> => ({
@@ -80,19 +86,24 @@ test("rescoring a saved fixture run reproduces the hand-computed metrics", () =>
         id: "000000000005",
         search: successfulSearch([], 9000),
       },
+      {
+        id: "000000000006",
+        search: successfulSearch(["https://posthog.com/docs/unrelated-a"], 150),
+      },
     ],
   };
   const firstSummary = score(replay);
   assert.equal(firstSummary.search.hitAt3, 0.5);
   assert.equal(firstSummary.search.recallAt10, 0.75);
-  assert.equal(firstSummary.search.emptyRate, 0.3333);
-  assert.equal(firstSummary.search.errorRate, 0.25);
+  assert.equal(firstSummary.search.emptyRate, 0.25);
+  assert.equal(firstSummary.search.errorRate, 0.2);
   assert.deepEqual(firstSummary.staleLabels, [{ queryId: "000000000003", url: "https://posthog.com/docs/retired-lantern" }]);
   assert.deepEqual(firstSummary.componentFlags, [{ queryId: "000000000002", reason: "snippet missing" }]);
-  assert.deepEqual(firstSummary.search.counts, { labeled: 4, ok: 3, errored: 1, scorable: 2 });
+  assert.deepEqual(firstSummary.search.counts, { labeled: 5, ok: 4, errored: 1, scorable: 2 });
   assert.equal(firstSummary.queriesWithoutLiveLabels, 1);
   assert.equal(firstSummary.componentQueriesChecked, 1);
-  assert.equal(firstSummary.search.latencyP50Ms, 200.1);
+  assert.deepEqual(firstSummary.docsGaps, ["000000000006"]);
+  assert.equal(firstSummary.search.latencyP50Ms, 150);
   assert.equal(firstSummary.search.latencyP95Ms, 300.1);
   const savedRun = { ...replay, metrics: firstSummary };
   const reloadedRun = Results.parse(JSON.parse(JSON.stringify(savedRun)));
