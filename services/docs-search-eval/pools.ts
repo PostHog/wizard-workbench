@@ -46,7 +46,7 @@ const poolsFileSchema = z.object({
 
 type PoolCandidate = z.infer<typeof candidateSchema>;
 type PoolRow = z.infer<typeof poolRowSchema>;
-export type PoolsFile = z.infer<typeof poolsFileSchema>;
+type PoolsFile = z.infer<typeof poolsFileSchema>;
 type SampleRow = z.infer<typeof sampleRowSchema>;
 type Rewrite = z.infer<typeof rewriteSchema>;
 

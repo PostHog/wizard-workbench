@@ -1,15 +1,9 @@
-import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { isCommunityQuestionUrl, normalizeDocUrl } from "./urls.js";
 
 const defaultGoldPath = fileURLToPath(new URL("./gold-set.json", import.meta.url));
-
-export function goldQueryIdFor(spanUuid: string): string {
-  return createHash("sha256").update(spanUuid).digest("hex").slice(0, 12);
-}
 
 const bareDomainTopLevels = new Set(["com", "io", "net", "org", "co", "dev", "app", "ai", "xyz", "de", "uk", "fr", "nl", "eu", "us", "ca", "au", "in", "br", "es", "it", "se", "ch", "jp", "cn", "ru", "me", "tech", "cloud", "site"]);
 
@@ -129,19 +123,6 @@ export async function readGoldSet(path = defaultGoldPath): Promise<GoldSet> {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return { version: 1, queries: [] };
     throw error;
-  }
-}
-
-export async function writeGoldSet(goldSet: GoldSet, path = defaultGoldPath): Promise<void> {
-  const validatedGoldSet = GoldSet.parse(goldSet);
-  validatedGoldSet.queries.sort((first, second) => first.id.localeCompare(second.id));
-  await mkdir(dirname(path), { recursive: true });
-  const temporaryPath = `${path}.${randomUUID()}.tmp`;
-  try {
-    await writeFile(temporaryPath, `${JSON.stringify(validatedGoldSet, null, 2)}\n`, { flag: "wx", mode: 0o600 });
-    await rename(temporaryPath, path);
-  } finally {
-    await rm(temporaryPath, { force: true });
   }
 }
 
