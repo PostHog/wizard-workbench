@@ -116,3 +116,5 @@ Makefile
 
 # Personal scratch space
 scratch/
+
+services/docs-search-eval/runs/

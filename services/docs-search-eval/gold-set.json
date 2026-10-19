@@ -1,0 +1,2685 @@
+{
+  "version": 1,
+  "queries": [
+    {
+      "id": "024e53b7c941",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "How should I integrate PostHog into a Next.js App Router app with version 16 using existing posthog-js, including instrumentation-client.ts, manual error-boundary capture and event registration?",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/installation/nextjs",
+        "https://posthog.com/docs/libraries/next-js"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "posthog.captureException(error)",
+      "notes": "agent-labeled (high): Next.js error tracking install covers instrumentation-client init and error boundary captureException; library page covers App Router setup",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.651Z"
+    },
+    {
+      "id": "02ef30a7ccbd",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog dead clicks rageclick exception events properties pathname host element text",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/autocapture"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Autocapture: rageclick, dead clicks, exception, element text and $host/$pathname properties",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.661Z"
+    },
+    {
+      "id": "0393967b5c23",
+      "harness": "cursor",
+      "status": "skipped",
+      "scrubbedQuery": "noop",
+      "relevantUrls": [],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Query \"noop\" is not a docs question",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "03e09a483c3f",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "How to investigate bot or automated traffic and exclude it from PostHog analytics insights?",
+      "relevantUrls": [
+        "https://posthog.com/docs/web-analytics/managing-bot-traffic",
+        "https://posthog.com/docs/web-analytics/bot-detection"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): managing-bot-traffic: exclude bots from insight/dashboard; bot-detection: classification and custom rules",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.673Z"
+    },
+    {
+      "id": "04fd40675217",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How is bounce rate defined in web analytics overview?",
+      "relevantUrls": [
+        "https://posthog.com/docs/web-analytics/dashboard"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Bounce rate section defines a bounce",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "075b267330d7",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "heatmaps enable_heatmaps true project heatmaps_opt_in session replay masking configuration maskAllInputs true client",
+      "relevantUrls": [
+        "https://posthog.com/docs/toolbar/heatmaps",
+        "https://posthog.com/docs/session-replay/privacy",
+        "https://posthog.com/docs/libraries/js/config"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "maskAllInputs: true,",
+      "notes": "agent-labeled (medium): Heatmaps page covers enabling heatmaps in project settings or init config; session replay privacy covers maskAllInputs config",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.682Z"
+    },
+    {
+      "id": "07f7823b39ed",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "managed reverse proxy HIPAA warning",
+      "relevantUrls": [
+        "https://posthog.com/docs/advanced/proxy/managed-reverse-proxy",
+        "https://posthog.com/docs/privacy/hipaa-compliance"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Managed proxy page has HIPAA caution and FAQ; HIPAA page warns managed proxy not covered by BAA",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.657Z"
+    },
+    {
+      "id": "0d49d39ef246",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "upload source maps Next.js posthog-cli sourcemap inject upload CI environment variables",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/upload-source-maps/cli",
+        "https://posthog.com/docs/error-tracking/upload-source-maps/nextjs"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "posthog-cli sourcemap inject --directory ./path/to/assets",
+      "notes": "agent-labeled (high): CLI page: inject/upload steps and POSTHOG_CLI_* CI env vars; Next.js page: config package with POSTHOG_API_KEY/PROJECT_ID env vars.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.668Z"
+    },
+    {
+      "id": "0e142d4cddf9",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "Analytics search accounts keyboard shortcut focus search box",
+      "relevantUrls": [
+        "https://posthog.com/docs/cmd-k"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Command palette page lists Cmd+K search and keyboard shortcuts; no page documents an accounts search box shortcut",
+      "isAwaitingReview": false,
+      "isDocsGap": true,
+      "labeledAt": "2026-10-15T15:20:11.928Z"
+    },
+    {
+      "id": "0e891b2ba689",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog heatmaps current product status ownership maintenance",
+      "relevantUrls": [
+        "https://posthog.com/docs/glossary",
+        "https://posthog.com/docs/api/heatmaps",
+        "https://posthog.com/handbook/engineering/feature-ownership",
+        "https://posthog.com/docs/toolbar/heatmaps"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): feature-ownership table lists heatmaps owner/maintenance; toolbar/heatmaps is current product doc",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-15T15:21:32.099Z"
+    },
+    {
+      "id": "0feb78f1ec33",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "What does a dead click session replay event prove and what limitations apply when identifying frustration from recordings?",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/autocapture"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Dead clicks autocapture section defines dead click; limitations of frustration inference only partly covered",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.665Z"
+    },
+    {
+      "id": "10d560e37200",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "reverse proxy setup for PostHog ingestion, managed reverse proxy, Cloudflare worker proxy, ad blockers",
+      "relevantUrls": [
+        "https://posthog.com/docs/advanced/proxy",
+        "https://posthog.com/docs/advanced/proxy/managed-reverse-proxy",
+        "https://posthog.com/docs/advanced/proxy/cloudflare"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Proxy overview plus managed proxy and Cloudflare worker guides",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "113a9d3d1f6a",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "On the feature flag detail screen, where do I add an organization group-property release condition app_env equals dev? app_env is supplied through group_properties only during evaluation and is not stored on groups. Can I enter a custom property name if it is absent from the dropdown?",
+      "relevantUrls": [
+        "https://posthog.com/docs/feature-flags/user-and-group-targeting",
+        "https://posthog.com/docs/feature-flags/property-overrides"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Setting up a group-targeted condition via Target by dropdown; property overrides cover group properties passed at evaluation",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "115b6fe0c75d",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "posthog-js capture returns undefined local headless Chrome browser testing navigator.webdriver localhost bot capture",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/troubleshooting"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Automated browsers are filtered: navigator.webdriver/HeadlessChrome drops captures",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.662Z"
+    },
+    {
+      "id": "13651530b04d",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "how to contact support from inside the PostHog app help menu support panel",
+      "relevantUrls": [
+        "https://posthog.com/docs/support-options"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): In-app Support section: help menu top right of UI",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.663Z"
+    },
+    {
+      "id": "140f46782cce",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "keyboard shortcut to show hide collapse sidebar navigation",
+      "relevantUrls": [
+        "https://posthog.com/docs/cmd-k"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Keyboard shortcuts table: Cmd/Ctrl+B or [ toggles left sidebar",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.662Z"
+    },
+    {
+      "id": "143eeb2fd2fa",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "feature flags rollout",
+      "relevantUrls": [
+        "https://posthog.com/docs/feature-flags/creating-feature-flags",
+        "https://posthog.com/docs/feature-flags/phased-rollout"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): creating-feature-flags release conditions and rollout percentage; phased-rollout guide",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.680Z"
+    },
+    {
+      "id": "15733917e4b6",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "Replay Vision billing spend limit change credit limit pricing",
+      "relevantUrls": [
+        "https://posthog.com/docs/replay-vision/quota-and-limits",
+        "https://posthog.com/docs/billing/limits-alerts"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Quota and limits: credit pricing, spending limit on billing page, per-scanner credit limits; billing limits page covers changing limits.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.669Z"
+    },
+    {
+      "id": "16b1e636b2fb",
+      "harness": "claude-code",
+      "status": "skipped",
+      "scrubbedQuery": "posthog-js-lite web browser package features compared to posthog-js autocapture web vitals exceptions pageview",
+      "relevantUrls": [],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): No docs page compares posthog-js-lite features to posthog-js; only a one-line mention in the types page.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.668Z"
+    },
+    {
+      "id": "16f7f3d39a3e",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "JavaScript feature flags isFeatureEnabled getFeatureFlag send_event false onFeatureFlags errorsLoading cached flags failure",
+      "relevantUrls": [
+        "https://posthog.com/docs/feature-flags/adding-feature-flag-code",
+        "https://posthog.com/docs/libraries/js/usage"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "posthog.onFeatureFlags(function (flags, flagVariants, { errorsLoading }) {",
+      "notes": "agent-labeled (high): Ensuring flags are loaded section: onFeatureFlags with errorsLoading and isFeatureEnabled",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.657Z"
+    },
+    {
+      "id": "1821c78a4141",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "incoming webhook source capture events from external service HTTP webhook to PostHog event (source_webhook)",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/sources/incoming-webhooks",
+        "https://posthog.com/docs/cdp/source_webhooks/source-webhook"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Incoming webhooks guide and HTTP Incoming Webhook source template",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.659Z"
+    },
+    {
+      "id": "191deabf9819",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "scheduled Tasks recurring agent Slack channel create duplicate task",
+      "relevantUrls": [
+        "https://posthog.com/docs/workflows/ai-tasks",
+        "https://posthog.com/docs/slack",
+        "https://posthog.com/docs/api/tasks"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): AI task workflow step covers schedule-triggered agent tasks posting to Slack; Tasks API create has scheduled_at and channel fields. No doc on recurring task duplication.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-15T15:18:46.990Z"
+    },
+    {
+      "id": "1a82f3c21864",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "Cross-domain tracking across different root domains bootstrap sessionID distinctID sessionStartTimestamp Shopify checkout customer events pixel",
+      "relevantUrls": [
+        "https://posthog.com/docs/libraries/bootstrapping",
+        "https://posthog.com/docs/libraries/shopify"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "sessionID: 'session_id_of_user_session',",
+      "notes": "agent-labeled (medium): Bootstrap a session ID section for cross-domain sessions; Shopify page covers custom web pixel for checkout events",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "1d78a772a14c",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "How does retention use first start event and return event, date timezone calendar day versus exact elapsed day? HogQL toTimeZone and dateDiff support.",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/retention",
+        "https://posthog.com/docs/sql/clickhouse-functions",
+        "https://posthog.com/docs/sql/expressions"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Retention page covers start/return events and time criteria; clickhouse-functions lists toTimeZone and dateDiff; calendar vs elapsed day not explicit",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.651Z"
+    },
+    {
+      "id": "1f18591190dc",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog Endpoints product create endpoint from SQL insight materialization data freshness variables",
+      "relevantUrls": [
+        "https://posthog.com/docs/endpoints/start-here/create-endpoint",
+        "https://posthog.com/docs/endpoints/materialization",
+        "https://posthog.com/docs/endpoints/caching",
+        "https://posthog.com/docs/endpoints/variables"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Create endpoint, materialization schedule from data freshness, caching freshness, variables",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.659Z"
+    },
+    {
+      "id": "1f7dd837ed81",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "data warehouse Postgres source connect self-hosted database IP allowlist",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/sources/postgres"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Postgres source: host config, SSH tunnel, inbound IP addresses; IPs rendered as table not code block, so no code snippet",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.663Z"
+    },
+    {
+      "id": "20af96dc16fd",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "session recording compress_events false before_send sanitizing snapshot URLs",
+      "relevantUrls": [
+        "https://posthog.com/docs/session-replay/privacy"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "request.name = request.name.replace(/([?&](token|auth|email)=)[^&]+/g, '$1[REDACTED]')",
+      "notes": "agent-labeled (medium): Privacy page URL redaction section sanitizes replay URLs via maskCapturedNetworkRequestFn; compress_events not documented",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.657Z"
+    },
+    {
+      "id": "21462a9f32b8",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "data warehouse Firebase source setup Resend Groq",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/sources/firebase",
+        "https://posthog.com/docs/cdp/sources/resend",
+        "https://posthog.com/docs/cdp/sources/groq",
+        "https://posthog.com/docs/data-warehouse/sources/firebase",
+        "https://posthog.com/docs/data-warehouse/sources/resend",
+        "https://posthog.com/docs/data-warehouse/sources/groq"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Source setup pages; no code blocks on these pages so not a component query",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.662Z"
+    },
+    {
+      "id": "225ae3ead65b",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "Self-driving scouts, guardrails, which repositories and permissions agents get, cloud runs data handling, AI data processing",
+      "relevantUrls": [
+        "https://posthog.com/docs/self-driving/faq",
+        "https://posthog.com/docs/self-driving/setup",
+        "https://posthog.com/docs/posthog-ai/allow-access"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): FAQ \"What can the agents actually touch?\" and data/training answers; setup covers repo connection and AI data processing requirement",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.685Z"
+    },
+    {
+      "id": "2394d0c33b1c",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "change Slack channel where self-driving Inbox reports are posted",
+      "relevantUrls": [
+        "https://posthog.com/docs/libraries/slack",
+        "https://posthog.com/docs/posthog-desktop/settings"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Slack integration 'Inbox notifications' section: Notify the whole team channel / Default notification channel set in inbox Agents tab or Desktop settings.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.665Z"
+    },
+    {
+      "id": "24dc0f2d1e38",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "How should HogQL queries count unique users and enforce ordered event sequences within a time window?",
+      "relevantUrls": [
+        "https://posthog.com/docs/sql/aggregations",
+        "https://posthog.com/docs/how-posthog-works/queries"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Aggregations list includes windowFunnel for ordered sequences in a window; queries page explains counting unique users by person_id.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.668Z"
+    },
+    {
+      "id": "24dd139efdfd",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog APM tracing mobile iOS SDK spans OpenTelemetry",
+      "relevantUrls": [
+        "https://posthog.com/docs/distributed-tracing/installation",
+        "https://posthog.com/docs/distributed-tracing/start-here"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): No iOS tracing SDK; tracing accepts any OpenTelemetry client via OTLP exporter",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.681Z"
+    },
+    {
+      "id": "254156cbc9ed",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog Conversations create ticket via API from backend server-side, webhook or workflow",
+      "relevantUrls": [
+        "https://posthog.com/docs/support/email",
+        "https://posthog.com/docs/api/conversations-2"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Start a ticket with the API section (tickets/compose endpoint); API reference lists compose",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.663Z"
+    },
+    {
+      "id": "27a2b9af5d51",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "Workflows email open tracking opened email metrics",
+      "relevantUrls": [
+        "https://posthog.com/docs/workflows/engagement-events",
+        "https://posthog.com/docs/workflows/workflow-builder"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): engagement-events lists $workflows_email_opened and how to chart it; workflow-builder covers the Track opens and link clicks toggle",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.638Z"
+    },
+    {
+      "id": "296bded859cf",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "Custom app page screen view tap PostHog event",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/capture-events"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): App-specific screen naming; generic answer is capturing custom events and screen views",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "29e6348182c2",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How does PostHog populate $geoip_country_code and break down product analytics traffic by country code?",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/person-properties",
+        "https://posthog.com/docs/cdp/transformations/template-geoip",
+        "https://posthog.com/docs/product-analytics/trends/breakdowns"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): person-properties 'GeoIP Properties' explains GeoIP enrichment of $geoip_country_code; breakdowns page for breaking down",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.680Z"
+    },
+    {
+      "id": "2a642b5ae688",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "React Native session replay install posthog-react-native-session-replay Expo maskAllTextInputs maskAllImages config",
+      "relevantUrls": [
+        "https://posthog.com/docs/session-replay/installation/react-native"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "maskAllTextInputs: true,",
+      "notes": "agent-labeled (high): React Native session replay install covers Expo install, plugin and masking config",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "2e4a72a8c46e",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "How to connect PostHog website analytics, capture form submissions and attribution events, and integrate with a messaging platform via webhooks or destinations?",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/destinations/webhook",
+        "https://posthog.com/docs/cdp/destinations"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Broad query; webhook destination sends events (incl form submissions) to messaging platforms",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.663Z"
+    },
+    {
+      "id": "3324bee02a44",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "survey popover event trigger posthog-js no code required disable_surveys display conditions",
+      "relevantUrls": [
+        "https://posthog.com/docs/surveys/creating-surveys",
+        "https://posthog.com/docs/surveys/troubleshooting"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "posthog.getActiveMatchingSurveys(surveys => console.log(surveys))",
+      "notes": "agent-labeled (medium): Display conditions and event-triggered surveys; troubleshooting covers disable_surveys and event-based surveys",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.661Z"
+    },
+    {
+      "id": "33743f781713",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "Change release conditions on a running experiment feature flag so 100 percent of users are randomly assigned across existing multivariate variants. Does experience continuity keep users who previously received false stuck outside the experiment?",
+      "relevantUrls": [
+        "https://posthog.com/docs/experiments/changing-distribution-after-rollout",
+        "https://posthog.com/docs/feature-flags/creating-feature-flags"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Changing rollout after launch; persisting flags across authentication (experience continuity)",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.661Z"
+    },
+    {
+      "id": "3422253e38e6",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "Inspect recorded events and SQL data warehouse tables for debugging a specific session",
+      "relevantUrls": [
+        "https://posthog.com/docs/sql",
+        "https://posthog.com/docs/data/sessions"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Vague; SQL querying events by session and session data docs",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.662Z"
+    },
+    {
+      "id": "385a95aa13db",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "Signals scouts authoring scout configuration PostHog",
+      "relevantUrls": [
+        "https://posthog.com/docs/self-driving/scouts",
+        "https://posthog.com/docs/self-driving/whats-in-a-scout",
+        "https://posthog.com/docs/self-driving/scout-examples"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Scouts page: configuring a scout; whats-in-a-scout: shape of a scout; examples: make your own",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.658Z"
+    },
+    {
+      "id": "3ac34c8aa4b0",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "feature flag release conditions is_not operator person property missing, exclude users from flag, rollout 0 condition",
+      "relevantUrls": [
+        "https://posthog.com/docs/data/property-filters",
+        "https://posthog.com/docs/feature-flags/creating-feature-flags"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): property-filters documents is not / is not set operators; creating-feature-flags covers release condition rollout and exclusion behavior",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.655Z"
+    },
+    {
+      "id": "3e62b595cda0",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog MCP server OAuth authentication scopes user:read EU region Codex",
+      "relevantUrls": [
+        "https://posthog.com/docs/model-context-protocol/codex",
+        "https://posthog.com/docs/model-context-protocol/faq",
+        "https://posthog.com/docs/model-context-protocol/enterprise-managed-authorization"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "npx @posthog/wizard mcp add",
+      "notes": "agent-labeled (medium): Codex MCP page: native OAuth login and automatic US/EU routing; FAQ covers region routing; enterprise auth lists required user:read scope.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.665Z"
+    },
+    {
+      "id": "41ff96d946cb",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "Cloudflare Workers native OpenTelemetry export PostHog Logs observability destinations",
+      "relevantUrls": [
+        "https://posthog.com/docs/logs/installation/other"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): No Cloudflare-specific Logs guide; generic OTLP endpoint and token setup applies",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.662Z"
+    },
+    {
+      "id": "444f594e9b6a",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog JavaScript SDK named instances init third argument, feature flag callbacks, getFeatureFlag and onFeatureFlags loading sequence, flag exposure events",
+      "relevantUrls": [
+        "https://posthog.com/docs/libraries/js",
+        "https://posthog.com/docs/feature-flags/adding-feature-flag-code"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "posthog.init('<ph_project_token>', {}, 'project1')",
+      "notes": "agent-labeled (medium): JS library page documents named instances via third init argument; flag code page covers onFeatureFlags loading",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.657Z"
+    },
+    {
+      "id": "4468654e5a23",
+      "harness": "claude-code",
+      "status": "skipped",
+      "scrubbedQuery": "semantic layer what's next roadmap composable metrics dimensions allowed filters",
+      "relevantUrls": [],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Semantic layer docs have no roadmap or composable metrics/dimensions/allowed filters content",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "45b5da4057c5",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "send an email from a PostHog destination or workflow when an error tracking issue is created (native email channel, Resend, SendGrid, Mailgun destination)",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/alerts",
+        "https://posthog.com/docs/cdp/destinations/mailgun"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Error tracking alerts covers issue created/reopened notifications and destinations; Mailgun destination has a send-email template",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.685Z"
+    },
+    {
+      "id": "464d862bc85a",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "upload CSV file to data warehouse and join table to persons by property",
+      "relevantUrls": [
+        "https://posthog.com/docs/data-warehouse/sources/file-upload",
+        "https://posthog.com/docs/data-warehouse/join"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): file-upload for CSV sources; join page for joining warehouse table to persons",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.682Z"
+    },
+    {
+      "id": "480c33cf3aa7",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "How do PostHog Workflows email engagement events link delivery opens and specific link clicks to persons and website signup conversions? Include optional event mirroring, bot or Apple Mail open limitations, and utm attribution.",
+      "relevantUrls": [
+        "https://posthog.com/docs/workflows/engagement-events"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Workflow events page covers engagement events under recipient distinct ID, tracking pixel opens, link clicks, conversion events and funnels",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.685Z"
+    },
+    {
+      "id": "48e6809f554c",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "billing limit increase organization admin self-serve",
+      "relevantUrls": [
+        "https://posthog.com/docs/billing/limits-alerts",
+        "https://posthog.com/docs/billing/common-questions"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Set/raise billing limits in org billing settings; billing restricted to admins and owners",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.661Z"
+    },
+    {
+      "id": "4963299270f3",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "dashboard custom code tile canvas app shared variables",
+      "relevantUrls": [
+        "https://posthog.com/docs/posthog-desktop/canvases",
+        "https://posthog.com/docs/data-warehouse/sql/variables",
+        "https://posthog.com/docs/product-analytics/dashboards"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): No custom-code dashboard tile; canvases are the custom app surface; dashboard variables are SQL variables",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-15T15:22:43.953Z"
+    },
+    {
+      "id": "4acd8e9efb74",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "Does adding a credit card (pay-as-you-go) extend product analytics event data retention from 1 year to 7 years even when usage stays within the free allowance? Can I set a billing limit to avoid charges?",
+      "relevantUrls": [
+        "https://posthog.com/docs/data/events-retention",
+        "https://posthog.com/docs/billing/limits-alerts"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Events retention table: free 1 year vs paid plans 7 years; billing limits page",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.658Z"
+    },
+    {
+      "id": "4c3f41ac425c",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "GeoIP template transformation disable default enrichment manage transformation settings PostHog pipeline project",
+      "relevantUrls": [
+        "https://posthog.com/docs/privacy/data-storage",
+        "https://posthog.com/docs/cdp/transformations/template-geoip",
+        "https://posthog.com/docs/cdp/transformations"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): data-storage 'Processing data before storage' covers disabling default GeoIP transformation",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "4e3d965a04f1",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "reducing local evaluation costs poll interval billed 10 requests 304 not modified cutting costs feature flags",
+      "relevantUrls": [
+        "https://posthog.com/docs/feature-flags/cutting-costs",
+        "https://posthog.com/docs/feature-flags/local-evaluation"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): cutting-costs 'Reducing local evaluation costs': 10 vs 1 request per poll, 304 ETag, poll interval",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.676Z"
+    },
+    {
+      "id": "50310fdb773b",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How should I create a live product analytics dashboard with web traffic, funnels, conversion, errors, and experiment metrics?",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/dashboards"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): dashboards page covers creating dashboards, adding insights and auto-refresh",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.680Z"
+    },
+    {
+      "id": "51f3aa3b84b8",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog web vitals SPA navigation INP long tasks capture_performance",
+      "relevantUrls": [
+        "https://posthog.com/docs/web-analytics/web-vitals"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Web vitals page: INP and capture_performance config; long tasks not covered",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.664Z"
+    },
+    {
+      "id": "523949b04599",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "persons retrieve API person properties distinct IDs",
+      "relevantUrls": [
+        "https://posthog.com/docs/api/persons"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Persons API reference persons_retrieve returns properties and distinct_ids.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.673Z"
+    },
+    {
+      "id": "53a04aa05321",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How to send OpenTelemetry traces to PostHog OTLP traces endpoint from Java",
+      "relevantUrls": [
+        "https://posthog.com/docs/distributed-tracing/installation/java"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=<ph_client_api_host>/i/v1/traces",
+      "notes": "agent-labeled (high): Java distributed tracing install: OTel Java agent and OTLP traces endpoint config",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "569930cc907a",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog Review perspectives workflow",
+      "relevantUrls": [
+        "https://posthog.com/docs/workflows",
+        "https://posthog.com/docs/api/review-hog",
+        "https://posthog.com/docs/api/review-hog-2"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Only review_hog API references document perspectives endpoints; no prose guide exists",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-15T15:22:20.935Z"
+    },
+    {
+      "id": "56f0ca00447d",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog Cloud multiple projects available on paid plans current pricing",
+      "relevantUrls": [
+        "https://posthog.com/pricing"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Pricing page lists 6 projects on paid plans, up from 1 on free.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.665Z"
+    },
+    {
+      "id": "592f42b7dc7f",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "How to investigate AI Observability traces, sessions and model calls in PostHog?",
+      "relevantUrls": [
+        "https://posthog.com/docs/ai-observability/traces",
+        "https://posthog.com/docs/ai-observability/sessions",
+        "https://posthog.com/docs/ai-observability/surfaces/web-app"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Traces page (timeline, generations, search) and sessions page (analyzing sessions) cover investigation",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.657Z"
+    },
+    {
+      "id": "5989570e5f80",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "autocapture_exceptions_errors_to_ignore how does the exception autocapture errors to ignore list work in project settings",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/capture",
+        "https://posthog.com/docs/error-tracking/pricing"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): capture 'Suppressing exceptions' rules applied client-side; legacy errors-to-ignore setting itself not documented",
+      "isAwaitingReview": false,
+      "isDocsGap": true,
+      "labeledAt": "2026-10-14T17:53:01.680Z"
+    },
+    {
+      "id": "5a4204595f32",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "Google Ads conversions destination OAuth integration signup GCLID offline conversion action setup",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/destinations/google-ads"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Google Ads destination setup: OAuth connect, create conversion action, filter on gclid",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.662Z"
+    },
+    {
+      "id": "5d329d3f7c7e",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "download PDF terms of service privacy policy DPA legal documents",
+      "relevantUrls": [
+        "https://posthog.com/docs/privacy",
+        "https://posthog.com/docs/api/legal-documents"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Privacy FAQ \"How do I get a signed DPA?\" covers generating and downloading; legal documents API has a signed-PDF download endpoint",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.682Z"
+    },
+    {
+      "id": "5d622cf5b270",
+      "harness": "claude-code",
+      "status": "skipped",
+      "scrubbedQuery": "how to add a language translation to a survey in the survey editor",
+      "relevantUrls": [],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): No docs page covers survey translations in the editor; only SDK type references exist",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "5e93453ab205",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "Filter individual events by exact email event property in HogQL",
+      "relevantUrls": [
+        "https://posthog.com/docs/data-warehouse/sql",
+        "https://posthog.com/docs/sql/expressions"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): SQL WHERE section filters events by properties.X; expressions page covers property access syntax",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "6086cf99c54d",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "How PostHog Trends counts events over a recent date range and excludes internal or test users",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/trends/filters",
+        "https://posthog.com/docs/product-analytics/trends/overview",
+        "https://posthog.com/docs/data/test-accounts"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Trends filters Filtering internal and test users section; overview Changing the time range",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.657Z"
+    },
+    {
+      "id": "6109267ef43c",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "error tracking Next.js upload source maps @posthog/nextjs-config, and capture server-side errors in Next.js instrumentation onRequestError posthog-node",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/upload-source-maps/nextjs",
+        "https://posthog.com/docs/error-tracking/installation/nextjs"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "import { withPostHogConfig } from \"@posthog/nextjs-config\";",
+      "notes": "agent-labeled (medium): Source map upload with nextjs-config; installation page covers server-side capture",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.664Z"
+    },
+    {
+      "id": "63a9c23fadce",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "Filter analytics events by environment property and hostname to separate QA from production",
+      "relevantUrls": [
+        "https://posthog.com/docs/data/test-accounts",
+        "https://posthog.com/docs/product-analytics/best-practices",
+        "https://posthog.com/docs/settings/projects"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Filter internal/test users by Host; separate projects per environment",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.662Z"
+    },
+    {
+      "id": "66125f7957a1",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How to query custom event properties in HogQL and calculate an average grouped by person",
+      "relevantUrls": [
+        "https://posthog.com/docs/data-warehouse/sql/useful-functions",
+        "https://posthog.com/docs/data-warehouse/sql",
+        "https://posthog.com/docs/sql/expressions"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): avg() over properties examples, GROUP BY syntax, and property access via properties.x",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.657Z"
+    },
+    {
+      "id": "667043177698",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "Where do I see emails sent, delivered, opened, and clicked for a workflow broadcast?",
+      "relevantUrls": [
+        "https://posthog.com/docs/workflows/broadcasts"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Broadcast page shows sent, delivered, opened, clicked counts",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "66864f334597",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "Stripe data warehouse source restricted key PostHog",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/sources/stripe",
+        "https://posthog.com/docs/data-warehouse/sources/stripe"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Stripe source 'Restricted API key' option lists required permissions; no code block on the page, so not a component target.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.673Z"
+    },
+    {
+      "id": "66a229b70f3e",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "Snowflake batch export: which models can be exported (events, persons, sessions, groups), schedule interval, and pricing per row",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/batch-exports/snowflake",
+        "https://posthog.com/docs/cdp/batch-exports",
+        "https://posthog.com/pricing"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): snowflake 'Models' (events, persons, sessions); batch-exports covers schedule/models; pricing for per-row cost",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "67c6a06fd321",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog livestream live events service troubleshooting",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/troubleshooting",
+        "https://posthog.com/docs/health-checks/no-live-events",
+        "https://posthog.com/docs/ai-observability/troubleshooting",
+        "https://posthog.com/docs/web-analytics/live"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): No public doc on the internal livestream service; no-live-events check covers live events not arriving",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-15T15:19:45.059Z"
+    },
+    {
+      "id": "683e4e4828f9",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "handbook sales commission multi-year contract how commission works TAE",
+      "relevantUrls": [
+        "https://posthog.com/handbook/growth/sales/new-business-how-we-work"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): How commission works - Technical Account Executives: multiyear contracts trued up to year 1 equivalent",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.650Z"
+    },
+    {
+      "id": "689aa33dd989",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "How to compare user cohorts using person ids and event properties in HogQL without double counting distinct ids",
+      "relevantUrls": [
+        "https://posthog.com/docs/data-warehouse/sql/data-access",
+        "https://posthog.com/docs/how-posthog-works/queries",
+        "https://posthog.com/docs/product-analytics/identity-resolution"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Data access 'Cohorts' section shows person_id IN COHORT; queries page counts unique person_id; identity resolution explains distinct_id vs person_id mapping.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.668Z"
+    },
+    {
+      "id": "6a3308307a64",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "Shared documentation for PostHog cloud sandboxed agent task runs from Slack, scouts, self-driving, and Desktop",
+      "relevantUrls": [
+        "https://posthog.com/docs/tasks",
+        "https://posthog.com/docs/tasks/agent-environment",
+        "https://posthog.com/docs/tasks/agent-instructions"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Task infrastructure overview: shared docs for cloud sandbox task runs across Slack, Desktop, Self-driving",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.676Z"
+    },
+    {
+      "id": "6a4a9b43968d",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "managed reverse proxy setup CNAME subdomain",
+      "relevantUrls": [
+        "https://posthog.com/docs/advanced/proxy/managed-reverse-proxy"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "ui_host: \"https://us.posthog.com\",",
+      "notes": "agent-labeled (high): Managed reverse proxy steps: create CNAME record for subdomain, then point api_host at it",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.655Z"
+    },
+    {
+      "id": "6ac2ce6f72d5",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "Vercel drains web analytics import into PostHog",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/source_webhooks/source-vercel-log-drain",
+        "https://posthog.com/docs/web-analytics/sending-http-logs"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Vercel logs source for log drains; sending-http-logs managed alternatives section",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.663Z"
+    },
+    {
+      "id": "6aed454d1827",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "How to find a person from event IP address and correlate anonymous session events with identify and login events",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/identity-resolution",
+        "https://posthog.com/docs/data/events",
+        "https://posthog.com/docs/data/anonymous-vs-identified-events",
+        "https://posthog.com/docs/api/events"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Identity resolution: anonymous then identify on login; no dedicated IP-to-person lookup doc",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-15T15:23:43.190Z"
+    },
+    {
+      "id": "6ba30aa54e65",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "Java PostHog server SDK captureException error tracking installation",
+      "relevantUrls": [
+        "https://posthog.com/docs/libraries/java"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "posthog.captureException(error);",
+      "notes": "agent-labeled (low): No Java error tracking install guide; Java SDK page shows captureException in request context",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.664Z"
+    },
+    {
+      "id": "6e2e18fcb75e",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "Android R8 ProGuard mapping upload authentication POSTHOG_CLI_API_KEY personal API key scopes error tracking write organization read posthog-cli proguard upload",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/upload-mappings/android",
+        "https://posthog.com/docs/error-tracking/surfaces/cli"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "postHogApiKey = \"my-personal-api-key\"",
+      "notes": "agent-labeled (high): Android mappings page: CLI auth env vars (personal API key with error tracking write and organization read) and Gradle task config",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "6e486d06c5e5",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "cookieless mode on_reject identify distinct_id merge before consent",
+      "relevantUrls": [
+        "https://posthog.com/docs/privacy/data-collection"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Cookieless tracking section: on_reject captures nothing until consent, identify guidance",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.664Z"
+    },
+    {
+      "id": "72acb1f3e25b",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "revenue_analytics_config events eventName revenueProperty revenueCurrencyProperty currencyAwareDecimal API",
+      "relevantUrls": [
+        "https://posthog.com/docs/revenue-analytics/capture-revenue-events",
+        "https://posthog.com/docs/api/projects"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Revenue events config (event, revenue, currency props) in capture page; project PATCH API carries revenue_analytics_config. No code block sets revenue_analytics_config, so not a component row",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.685Z"
+    },
+    {
+      "id": "73285f73ee2a",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "Person properties mode: use person properties from query time vs time of event, person-on-events",
+      "relevantUrls": [
+        "https://posthog.com/docs/how-posthog-works/queries",
+        "https://posthog.com/docs/product-analytics/troubleshooting"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Queries 'Filtering on person properties' explains persons-on-events mode setting; troubleshooting 'Use faster person properties mode'.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.669Z"
+    },
+    {
+      "id": "7422ea74110d",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog Logs investigate Kubernetes deployment failure service logs",
+      "relevantUrls": [
+        "https://posthog.com/docs/logs/search"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Logs search: Kubernetes namespace/deployment/pod facets and filters for service logs",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.657Z"
+    },
+    {
+      "id": "75bbbf959901",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How does the $merge_dangerously event work? What is distinct_id versus the alias property when merging two persons?",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/identify",
+        "https://posthog.com/docs/how-posthog-works/ingestion-pipeline"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): How to merge users with $merge_dangerously (alias merged into distinct_id); ingestion pipeline explains handling",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.664Z"
+    },
+    {
+      "id": "76fa4040e975",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "Exclude internal users from saved insights using person email filters and filterTestAccounts with project test account filters",
+      "relevantUrls": [
+        "https://posthog.com/docs/data/test-accounts"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): test-accounts: configure internal user filters (e.g. email) and filter test accounts toggle",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.681Z"
+    },
+    {
+      "id": "77595d1cf95f",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "$merge_dangerously capture distinct_id of user to merge into, alias distinct_id of user to be merged",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/identify"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): identify 'How to merge users' $merge_dangerously with alias property",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "779fe5abf029",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "heatmap screenshots blocked by firewall or bot protection, IP addresses and user agent used to capture heatmap page screenshots, Browserless",
+      "relevantUrls": [
+        "https://posthog.com/docs/toolbar/heatmaps"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): toolbar/heatmaps includes PostHog IPs details and 'Screenshot or iframe heatmap fails to load' troubleshooting",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "77a9f28c71d2",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "addExceptionStep Node.js posthog-node exception steps breadcrumbs server",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/capture",
+        "https://posthog.com/docs/references/posthog-node/types/ExceptionStepsConfig"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "posthog.addExceptionStep('checkout_started', {",
+      "notes": "agent-labeled (low): Capture page \"Add exception steps\" section; examples are web/mobile only, Node only has ExceptionStepsConfig type reference",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "784890f0a931",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "Postgres data warehouse source sync views supabase session pooler permissions",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/sources/supabase",
+        "https://posthog.com/docs/cdp/sources/postgres"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Supabase source uses session pooler host and read-only permissions; Postgres source covers user permissions and view support",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "7aacfa98e3dc",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog Logs product and Tracing APM and Metrics OpenTelemetry",
+      "relevantUrls": [
+        "https://posthog.com/docs/logs",
+        "https://posthog.com/docs/distributed-tracing",
+        "https://posthog.com/docs/metrics"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Overview pages of the three OpenTelemetry-native products",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.658Z"
+    },
+    {
+      "id": "7b7e15e8ea7c",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "Session recording snapshot API Version 2 blob_v2 blob_key source snapshots response compressed lines window_id",
+      "relevantUrls": [
+        "https://posthog.com/docs/session-replay/snapshot-api"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Snapshot API page documents blob_v2 sources, blob_key and compressed responses",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.651Z"
+    },
+    {
+      "id": "7e153845f290",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "React Native Expo Metro unstableBeforeAssetSerializationDebugIdPlugin hermes clone upload source maps",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/upload-source-maps/react-native"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "const { getPostHogExpoConfig } = require('posthog-react-native/metro')",
+      "notes": "agent-labeled (medium): Inject step uses PostHog Metro config for Expo debug IDs; hermes upload for EAS",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.664Z"
+    },
+    {
+      "id": "7e2aabaec4b9",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "What are PostHog data pipelines: destinations transformations batch exports? Is it called CDP?",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp",
+        "https://posthog.com/docs/cdp/start-here"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Data pipelines index calls it the CDP; start-here explains destinations, batch exports, transformations, sources",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.662Z"
+    },
+    {
+      "id": "8221f1b03c9b",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How to install and initialize posthog-js in a React Vite app with React Router 6, including capture_pageview, identify, and group analytics for a tenant id",
+      "relevantUrls": [
+        "https://posthog.com/docs/libraries/react-router/react-router-v6",
+        "https://posthog.com/docs/libraries/react",
+        "https://posthog.com/docs/product-analytics/group-analytics"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "posthog.init(import.meta.env.VITE_POSTHOG_PROJECT_TOKEN, {",
+      "notes": "agent-labeled (medium): react-router-v6 guide: Vite init with PostHogProvider, identify step; group-analytics for tenant groups",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.681Z"
+    },
+    {
+      "id": "82eada544b6a",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "How to watch recordings: the player sidebar lists events in the recording, click an event to expand and see its properties",
+      "relevantUrls": [
+        "https://posthog.com/docs/session-replay/how-to-watch-recordings"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): 'When watching replays' item 4: activity panel lists events in the recording",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "83a1491ea151",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "HogQLQuery filters dateRange DataVisualizationNode dateRange dashboard filters SQL query node API",
+      "relevantUrls": [
+        "https://posthog.com/docs/data-warehouse/sql/variables",
+        "https://posthog.com/docs/api/queries"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): variables page covers {filters} and filters.dateRange for dashboard SQL insights; queries API covers HogQLQuery and filters_override",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.651Z"
+    },
+    {
+      "id": "83c1e60bcee1",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "How do I merge two already identified persons with $merge_dangerously, and can a person merge be undone or split?",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/identify"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Identify page covers $merge_dangerously and how to split a merged user back",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.659Z"
+    },
+    {
+      "id": "83d9865e5f52",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "feature flag automatic overrides which properties $lib $browser $os $device_type client-side SDK",
+      "relevantUrls": [
+        "https://posthog.com/docs/feature-flags/property-overrides"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Property overrides 'Automatic overrides' section and $browser/$os/$device_type via setAllPersonProfilePropertiesAsPersonPropertiesForFlags.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.672Z"
+    },
+    {
+      "id": "842dff36a4f7",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "persons bulk_delete endpoint request body distinct_ids delete_events example curl",
+      "relevantUrls": [
+        "https://posthog.com/docs/api/persons",
+        "https://posthog.com/docs/privacy/data-storage"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "<ph_app_host>/api/projects/:project_id/persons/bulk_delete/",
+      "notes": "agent-labeled (medium): Persons API reference bulk_delete endpoint with request body (ids, distinct_ids, delete_events) and curl example; data-storage covers bulk delete response.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.668Z"
+    },
+    {
+      "id": "8489f42871ca",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "How do I count distinct active days for individual identified users and exclude internal test account events using HogQL toTimeZone timestamp?",
+      "relevantUrls": [
+        "https://posthog.com/docs/data/test-accounts",
+        "https://posthog.com/docs/data-warehouse/sql/variables"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Test accounts page covers internal user filtering; SQL variables {filters} applies test account filtering in SQL; no direct active-days recipe",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.685Z"
+    },
+    {
+      "id": "861505ac9e94",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "session replay URL blocklist config format and maskTextSelector option posthog-js; heatmaps enable_heatmaps; capture_dead_clicks",
+      "relevantUrls": [
+        "https://posthog.com/docs/session-replay/privacy",
+        "https://posthog.com/docs/libraries/js/config"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "maskTextSelector: \"*\" // Masks all text elements (not including inputs)",
+      "notes": "agent-labeled (medium): session-replay/privacy masking config; js/config lists capture_dead_clicks and heatmaps options; no URL blocklist doc",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.678Z"
+    },
+    {
+      "id": "86203fe7ff84",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "Does using PostHog MCP server or external MCP tools consume AI credits? How is Max AI usage attributed per user?",
+      "relevantUrls": [
+        "https://posthog.com/docs/model-context-protocol/faq",
+        "https://posthog.com/docs/posthog-ai/pricing"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): MCP FAQ: calling MCP tools is free; AI pricing covers credit consumption and usage tracking",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.664Z"
+    },
+    {
+      "id": "8675b1a6522f",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "When analytics tracking requires consent, how should checkout funnel results and missing purchase events be interpreted?",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/best-practices",
+        "https://posthog.com/docs/privacy/data-collection"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): data-collection opt-out/consent and cookieless on_reject sections explain uncaptured non-consented users; no funnel-specific guide",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-15T15:23:19.305Z"
+    },
+    {
+      "id": "88974f8f09d2",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "HTTP capture API /i/v0/e/ event uuid deduplication $process_person_profile false $geoip_disable true disable session replay without browser SDK",
+      "relevantUrls": [
+        "https://posthog.com/docs/api/capture",
+        "https://posthog.com/docs/data/events"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "\"$process_person_profile\": false",
+      "notes": "agent-labeled (medium): Capture API: /i/v0/e/ examples and anonymous events via $process_person_profile false; events page 'Event deduplication' covers uuid. Geoip/replay parts not covered.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.665Z"
+    },
+    {
+      "id": "89680883e51a",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "Session recording web maskNetworkRequestFn maskAttributeFn maskCapturedNetworkRequestFn signed URLs iframe src before_send rrweb data redaction",
+      "relevantUrls": [
+        "https://posthog.com/docs/session-replay/privacy",
+        "https://posthog.com/docs/session-replay/network-recording"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "maskCapturedNetworkRequestFn: (request) => {",
+      "notes": "agent-labeled (medium): Privacy page URL redaction and network-recording callback cover maskCapturedNetworkRequestFn redaction",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.682Z"
+    },
+    {
+      "id": "8b2ca3c6428a",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How do I query custom event properties with HogQL in the events table?",
+      "relevantUrls": [
+        "https://posthog.com/docs/sql/expressions",
+        "https://posthog.com/docs/data-warehouse/sql"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): SQL expressions covers accessing properties via properties.<name> dot/bracket notation on events; SQL page shows events queries.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.672Z"
+    },
+    {
+      "id": "8b35aa51a6e1",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "running experiments without feature flags step 4 add the variant property to your exposure event $feature/ property name",
+      "relevantUrls": [
+        "https://posthog.com/docs/experiments/running-experiments-without-feature-flags"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Step 4 section: $feature/<experiment-flag-key> property with variant on exposure event.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.668Z"
+    },
+    {
+      "id": "8d45087d0c8c",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "web analytics referring domain referrer internal external sessions direct traffic",
+      "relevantUrls": [
+        "https://posthog.com/docs/web-analytics/troubleshooting",
+        "https://posthog.com/docs/web-analytics/dashboard"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Troubleshooting: why lots of direct traffic, own site as referrer; dashboard: channels and referrers",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.658Z"
+    },
+    {
+      "id": "8e94bd00b4dd",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "How to use existing warehouse payment data and Google Ads Meta Ads spend for marketing mix modeling aggregate revenue",
+      "relevantUrls": [
+        "https://posthog.com/docs/web-analytics/marketing-analytics"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Marketing analytics combines ad spend sources with data warehouse conversion goals; no marketing mix modeling feature",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "9121c058e9c6",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "how long are events retained on PostHog Cloud free plan data retention period",
+      "relevantUrls": [
+        "https://posthog.com/docs/data/events-retention",
+        "https://posthog.com/pricing"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Events retention table: free plan 1 year, paid plans 7 years",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "9162e6bd354d",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "GeoIP transformation runs before IP discarded; remove $geoip_city_name property; $geoip_disable",
+      "relevantUrls": [
+        "https://posthog.com/docs/privacy/data-storage",
+        "https://posthog.com/docs/cdp/transformations/template-geoip"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Discarding IP section: GeoIP transformation uses IP before discard; GeoIP template page",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.665Z"
+    },
+    {
+      "id": "937b2981a4f4",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "How to reduce PostHog costs and billable usage: events, session replay, feature flag requests, web vitals, group analytics",
+      "relevantUrls": [
+        "https://posthog.com/docs/billing/estimating-usage-costs",
+        "https://posthog.com/docs/product-analytics/cutting-costs",
+        "https://posthog.com/docs/feature-flags/cutting-costs",
+        "https://posthog.com/docs/session-replay/how-to-control-which-sessions-you-record",
+        "https://posthog.com/handbook/cs-and-onboarding/cost-optimization"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Per-product cost reduction guides plus billing How to reduce your PostHog costs; handbook covers group analytics add-on waste",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "9384f15e84b6",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "filter or drop events with a transformation before ingestion: are dropped events billed? transformations pricing data pipelines",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/transformations/drop-events",
+        "https://posthog.com/docs/data/event-filtering",
+        "https://posthog.com/docs/billing/estimating-usage-costs"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): drop-events callout: dropped events do not count toward billing; event-filtering alternative; pipeline billing section",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "9433e66128e2",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "How to query unique active users by week using HogQL person_id, event names, toStartOfWeek and timezone; distinguish anonymous and identified users, retention cohorts?",
+      "relevantUrls": [
+        "https://posthog.com/docs/sql/expressions",
+        "https://posthog.com/docs/how-posthog-works/queries",
+        "https://posthog.com/docs/data/anonymous-vs-identified-events"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): SQL expressions covers person_id, toStartOfWeek and project timezone; queries page explains unique persons via person_id; anon vs identified page covers distinction.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.668Z"
+    },
+    {
+      "id": "944c187a45d7",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "delete person by distinct_id via API bulk_delete delete_events GDPR",
+      "relevantUrls": [
+        "https://posthog.com/docs/privacy/data-storage",
+        "https://posthog.com/docs/api/persons",
+        "https://posthog.com/docs/data/persons"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): data-storage 'Right to be forgotten' and bulk_delete; data/persons 'Deleting person data' delete_events",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "960d746b0705",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "Disable IP storage capture API set ip 0 $ip null disable_geoip personless shared distinct id event retention",
+      "relevantUrls": [
+        "https://posthog.com/docs/privacy/data-collection",
+        "https://posthog.com/docs/privacy/data-storage"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): data-collection 'IP data capture' org/project settings; data-storage 'Discarding IP addresses at project level'",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "9b698f2ba3a4",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "Can one experiment test multiple independent changes at once, multivariate or factorial testing, maximum number of variants in an experiment",
+      "relevantUrls": [
+        "https://posthog.com/docs/experiments/traffic-allocation",
+        "https://posthog.com/docs/experiments/creating-an-experiment",
+        "https://posthog.com/docs/experiments/best-practices"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Experiments support 2 to 20 variants (traffic allocation, creating); best practices advises one change at a time.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.672Z"
+    },
+    {
+      "id": "9d4b181f9676",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "How do SQL variables show on a dashboard and override SQL insight tiles",
+      "relevantUrls": [
+        "https://posthog.com/docs/data-warehouse/sql/variables",
+        "https://posthog.com/docs/product-analytics/dashboards"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): sql/variables: setting variables on a dashboard replaces values across SQL tiles",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "a1b17c7be3fe",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog session replay JavaScript maskAllInputs maskTextSelector blockSelector startSessionRecording overrides",
+      "relevantUrls": [
+        "https://posthog.com/docs/libraries/js/usage",
+        "https://posthog.com/docs/session-replay/privacy"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "posthog.startSessionRecording({ linked_flag: true, sampling: true })",
+      "notes": "agent-labeled (medium): JS usage session replay section: startSessionRecording overrides and maskAllInputs/maskTextSelector/blockSelector defaults; privacy page has masking config.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.673Z"
+    },
+    {
+      "id": "a1cf0bf5db12",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "Query current Stripe subscription trial end status in data warehouse",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/sources/stripe",
+        "https://posthog.com/docs/data-warehouse/query"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Stripe source: subscription table and append-only vs webhook sync for current status; query page for SQL",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.662Z"
+    },
+    {
+      "id": "a25042573004",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "how feature flags are billed, charged per request to flags endpoint, not $feature_flag_called events, reduce feature flag requests cost",
+      "relevantUrls": [
+        "https://posthog.com/docs/feature-flags/cutting-costs",
+        "https://posthog.com/docs/feature-flags/troubleshooting"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Cutting costs 'Understanding your bill' covers /flags request billing and reduction tips; troubleshooting 'How are feature flags billed?' says not billed on $feature_flag_called.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.668Z"
+    },
+    {
+      "id": "a355bf116cfc",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "Signals scouts authoring scout configuration recent runs reports",
+      "relevantUrls": [
+        "https://posthog.com/docs/self-driving/whats-in-a-scout",
+        "https://posthog.com/docs/self-driving/scouts",
+        "https://posthog.com/docs/self-driving/reports"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Whats-in-a-scout covers authoring; scouts page covers configuring, running and run reports; reports page covers report contents",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.682Z"
+    },
+    {
+      "id": "a3de9af2a2e6",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "Using session replay console and network errors to investigate authentication failures; limitations of frontend analytics for proving uptime",
+      "relevantUrls": [
+        "https://posthog.com/docs/session-replay/network-recording",
+        "https://posthog.com/docs/session-replay/console-log-recording"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Network and console log recording pages cover inspecting failed requests and errors in replays; uptime limitation not documented.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.673Z"
+    },
+    {
+      "id": "a40bdef7d2a5",
+      "harness": "slack",
+      "status": "skipped",
+      "scrubbedQuery": "Dagster cloud agent unavailable",
+      "relevantUrls": [],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Dagster+ source page covers token setup only; a Dagster Cloud agent being unavailable is a Dagster-side issue not covered in docs.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.665Z"
+    },
+    {
+      "id": "a537a381fbda",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "How can error tracking dashboards separate active issues from historical exception counts, warnings and errors, and distinguish affected users when server-side exceptions have random distinct IDs?",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/issues-and-exceptions",
+        "https://posthog.com/docs/error-tracking/monitoring",
+        "https://posthog.com/docs/error-tracking/capture"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Issues vs exceptions explains issue status vs exception volume; monitoring covers filtering issues; capture shows passing a user distinct_id on server-side exceptions.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.668Z"
+    },
+    {
+      "id": "a5ea76aa6884",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "How can I check a project's captured events and data freshness in PostHog?",
+      "relevantUrls": [
+        "https://posthog.com/docs/activity",
+        "https://posthog.com/docs/data/events",
+        "https://posthog.com/docs/health-checks/no-live-events"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): activity tab live events; data management events list last seen; no-live-events health check",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.681Z"
+    },
+    {
+      "id": "a96fd11261c1",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "web analytics bounce rate definition session pageviews autocapture 10 seconds",
+      "relevantUrls": [
+        "https://posthog.com/docs/web-analytics/dashboard",
+        "https://posthog.com/docs/glossary"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): web-analytics/dashboard 'Bounce rate': one pageview, no autocaptures, under 10 seconds",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "aa3cd6d0c4e5",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "SQL insight {filters} placeholder filter test accounts HogQL query",
+      "relevantUrls": [
+        "https://posthog.com/docs/data-warehouse/sql/variables"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Variables page {filters} placeholder applies date range, property filters and test account filtering.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.669Z"
+    },
+    {
+      "id": "aa9e88508012",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog React Native Expo error tracking captureException unhandled exceptions ErrorBoundary setup source maps",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/installation/react-native",
+        "https://posthog.com/docs/error-tracking/upload-source-maps/react-native"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "import { PostHogProvider, PostHogErrorBoundary } from 'posthog-react-native'",
+      "notes": "agent-labeled (high): RN error tracking install: errorTracking autocapture, captureException, PostHogErrorBoundary; RN source maps page for upload.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.672Z"
+    },
+    {
+      "id": "ac91334af93f",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How unique users aggregation works in trends insights",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/trends/aggregations"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Event aggregation table defines unique users aggregation",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "adc1250085ab",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "personal API key scopes required to run an endpoint (endpoints run API) endpoint:read query:read",
+      "relevantUrls": [
+        "https://posthog.com/docs/endpoints/start-here/retrieve-data",
+        "https://posthog.com/docs/endpoints/surfaces/api"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Both state endpoint:read scope for personal or project secret keys to run endpoints",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.658Z"
+    },
+    {
+      "id": "b4e4004cf63f",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "migrate project between US and EU cloud regions, move project to another organization",
+      "relevantUrls": [
+        "https://posthog.com/docs/settings/projects",
+        "https://posthog.com/docs/migrate/migrate-to-cloud"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Projects: move project to another org, same-region self-serve vs cross-region; migrate between cloud regions",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.659Z"
+    },
+    {
+      "id": "b8f532f92b87",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "upload source maps Next.js static export error tracking",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/upload-source-maps/nextjs",
+        "https://posthog.com/docs/error-tracking/upload-source-maps/cli"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "import { withPostHogConfig } from \"@posthog/nextjs-config\";",
+      "notes": "agent-labeled (medium): Next.js source maps via nextjs-config; static export not covered specifically, CLI inject/upload as fallback",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.658Z"
+    },
+    {
+      "id": "b951a4c8ecc3",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "Can I set billing limits or spending budgets per project, or only per organization?",
+      "relevantUrls": [
+        "https://posthog.com/docs/billing/limits-alerts"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Billing limits are set per product in organization billing settings; no per-project limits documented.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.669Z"
+    },
+    {
+      "id": "b990ebb56e5b",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "SQL insight table conditional formatting color cells",
+      "relevantUrls": [
+        "https://posthog.com/docs/data-warehouse/query"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Visualization section: tables support conditional formatting rules to highlight cells by value",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.682Z"
+    },
+    {
+      "id": "b9bfa44a529a",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog webhook event template event UUID unique delivery event id event.uuid event.id template-webhook",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/destinations/customizing-destinations",
+        "https://posthog.com/docs/cdp/destinations/webhook"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Customizing destinations lists event.uuid global usable in webhook template",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.664Z"
+    },
+    {
+      "id": "b9fd6473bb68",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "move startup credits from US cloud to EU cloud organization change region",
+      "relevantUrls": [
+        "https://posthog.com/docs/settings/projects"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Cross-region project move section; credit transfer itself not documented",
+      "isAwaitingReview": false,
+      "isDocsGap": true,
+      "labeledAt": "2026-10-14T17:53:01.663Z"
+    },
+    {
+      "id": "bb30ef1f6684",
+      "harness": "claude-ai",
+      "status": "skipped",
+      "scrubbedQuery": "change PostHog app interface language to French localization",
+      "relevantUrls": [],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): No documented setting to change the PostHog app interface language",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "bbced9d5afcd",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "Next.js reverse proxy rewrites EU ingest static array paths",
+      "relevantUrls": [
+        "https://posthog.com/docs/advanced/proxy/nextjs"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "source: '/yourpath/array/:path*',",
+      "notes": "agent-labeled (high): Next.js rewrites config with static, array and catch-all rules; replace us with eu for EU",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "bd6d4c69a025",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "reverse proxy GeoIP location wrong all events same country X-Forwarded-For client IP",
+      "relevantUrls": [
+        "https://posthog.com/docs/advanced/proxy/proxy-reference"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Wrong geolocation / same location for all users: forward X-Forwarded-For",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.664Z"
+    },
+    {
+      "id": "bd766118053f",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "insight alert webhook destination pricing free internal destination",
+      "relevantUrls": [
+        "https://posthog.com/docs/alerts"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Alert notifications support webhook destinations; pricing of alert webhooks not documented",
+      "isAwaitingReview": false,
+      "isDocsGap": true,
+      "labeledAt": "2026-10-14T17:53:01.664Z"
+    },
+    {
+      "id": "bf014df48394",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "How to delete events matching a filter or property, data deletion requests, drop events with transformation filter",
+      "relevantUrls": [
+        "https://posthog.com/docs/api/data-deletion-requests",
+        "https://posthog.com/docs/data/event-filtering",
+        "https://posthog.com/docs/cdp/transformations/drop-events",
+        "https://posthog.com/docs/privacy/data-storage"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Deletion requests API deletes events via HogQL query; event filtering and drop-events transformation drop at ingestion; data-storage covers data deletion",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.682Z"
+    },
+    {
+      "id": "bf923179bed1",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "cookieless tracking cookieless_mode on_reject always consent banner server hash mode",
+      "relevantUrls": [
+        "https://posthog.com/docs/privacy/data-collection",
+        "https://posthog.com/docs/libraries/js/config"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Cookieless tracking section explains always/on_reject and server hash mode; no code block sets cookieless_mode",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.658Z"
+    },
+    {
+      "id": "c189f285e10f",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog AI Slack app use MCP tools in Slack",
+      "relevantUrls": [
+        "https://posthog.com/docs/slack",
+        "https://posthog.com/docs/posthog-ai/surfaces/slack"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Slack app answers in-thread using the PostHog MCP; PostHog AI in Slack surface page",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.662Z"
+    },
+    {
+      "id": "c4f92795be6b",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "posthog-js config before_send property_denylist persistence memory bootstrap distinctID disable_session_recording advanced_disable_flags on_request_error",
+      "relevantUrls": [
+        "https://posthog.com/docs/libraries/js/config",
+        "https://posthog.com/docs/references/posthog-js/types/PostHogConfig"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "persistence: 'localStorage+cookie',",
+      "notes": "agent-labeled (high): JS config table covers before_send, property_denylist, bootstrap, persistence, advanced_disable_flags, on_request_error",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.685Z"
+    },
+    {
+      "id": "c4fe7208171f",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How do I make dashboards easier to read: text cards, tile sizes, layout, colors, descriptions",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/dashboards"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Dashboard options: editing layout, insight card options, adding text cards",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "c7c444e25a81",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog cloud task environment secrets environment variables coding agents browser login test account",
+      "relevantUrls": [
+        "https://posthog.com/docs/posthog-desktop/environments",
+        "https://posthog.com/docs/posthog-desktop/cloud-runs"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Cloud environments section covers secrets and env vars injected into cloud runs; browser login test accounts not documented",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.648Z"
+    },
+    {
+      "id": "c9585acab6cb",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "feature flags when ad blockers block PostHog, reverse proxy, bootstrapping flags from the server, flag fallback when request fails",
+      "relevantUrls": [
+        "https://posthog.com/docs/feature-flags/best-practices",
+        "https://posthog.com/docs/feature-flags/bootstrapping",
+        "https://posthog.com/docs/feature-flags/troubleshooting"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Best practices: reverse proxy vs ad blockers, have value before needed, undefined handling; bootstrapping page",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.659Z"
+    },
+    {
+      "id": "ca8f11a1449d",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "Convex data warehouse source: how to link Convex to PostHog, sync frequency, and how data warehouse rows synced are priced (free tier)",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/sources/convex",
+        "https://posthog.com/pricing"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Convex source page covers linking with deploy URL/key and how syncing works; pricing covers rows synced free tier",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "cbe02fc8a573",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "For posthog-cli proguard upload, what credential should POSTHOG_CLI_API_KEY contain, how does it differ from a project API key or token, and what permissions are required to upload a ProGuard/R8 mapping?",
+      "relevantUrls": [
+        "https://posthog.com/docs/error-tracking/upload-mappings/android",
+        "https://posthog.com/docs/cli"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): CLI authenticate table: POSTHOG_CLI_API_KEY is a personal API key with error tracking write and organization read scopes",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.681Z"
+    },
+    {
+      "id": "d216dacde526",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "restrict a member to a single project access control private project plan",
+      "relevantUrls": [
+        "https://posthog.com/docs/settings/access-control"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Project-level access control, private project use case, and feature availability by plan",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "d22f20ae7dd3",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "Signals scouts configuration and authoring scouts skill",
+      "relevantUrls": [
+        "https://posthog.com/docs/self-driving/whats-in-a-scout",
+        "https://posthog.com/docs/self-driving/scouts"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): whats-in-a-scout covers authoring-scouts skill; scouts page covers configuring a scout",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.663Z"
+    },
+    {
+      "id": "d60f4990b5b7",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "How does the Scrub PII in Logs setting work at ingestion, which patterns and attribute keys does it redact, and how long until it applies after switching it on?",
+      "relevantUrls": [
+        "https://posthog.com/docs/logs/pii-scrubbing"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Enabling, pattern matching, sensitive attribute keys; not retroactive",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.665Z"
+    },
+    {
+      "id": "dc70c9be26e7",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "feature flag dependency flag_evaluates_to property key flag id filters format",
+      "relevantUrls": [
+        "https://posthog.com/docs/feature-flags/dependencies",
+        "https://posthog.com/docs/api/feature-flags"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): No code block shows flag_evaluates_to format; API schema FeatureFlagFilterPropertyFlagEvaluatesSchema documents key/type/operator",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "ddeadfa70d9e",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog data warehouse Instagram source supported tables account_insights date full-refresh",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/sources/instagram",
+        "https://posthog.com/docs/data-warehouse/sources/instagram"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Instagram source: sync modes (account_insights incremental by date, rest full refresh) and supported tables",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.658Z"
+    },
+    {
+      "id": "de9d9656dff6",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "What does dead click autocapture mean, and does a recorded console error count alone establish user impact in session replay?",
+      "relevantUrls": [
+        "https://posthog.com/docs/product-analytics/autocapture"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Dead clicks autocapture section defines dead clicks; console-error impact question not answered in docs",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "e2cd4758c35f",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How do I find and inspect an LLM trace by AI session ID?",
+      "relevantUrls": [
+        "https://posthog.com/docs/ai-observability/sessions",
+        "https://posthog.com/docs/ai-observability/traces"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Sessions page: set session ID and analyze sessions in trace viewer",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.659Z"
+    },
+    {
+      "id": "e37c32b7601f",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog Signals scouts inbox reports scout-emit-report",
+      "relevantUrls": [
+        "https://posthog.com/docs/self-driving/scouts",
+        "https://posthog.com/docs/self-driving/reports",
+        "https://posthog.com/docs/self-driving/inbox"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Scouts emit reports to inbox; reports page explains reports",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.663Z"
+    },
+    {
+      "id": "e5a7f94d46fd",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog pricing data warehouse sources data pipelines separate products billing warehouse sources rows synced batch exports",
+      "relevantUrls": [
+        "https://posthog.com/docs/billing/estimating-usage-costs",
+        "https://posthog.com/pricing",
+        "https://posthog.com/docs/data-warehouse/cutting-costs"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): How am I billed for data pipelines section; pricing page lists warehouse rows synced; cutting-costs covers rows synced",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.662Z"
+    },
+    {
+      "id": "e73190be3f72",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "How to initialize posthog-js with opt_out_capturing_by_default and then opt in after cookie consent",
+      "relevantUrls": [
+        "https://posthog.com/docs/privacy/data-collection",
+        "https://posthog.com/docs/libraries/js/config"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "function onConsentChange(hasConsented) {",
+      "notes": "agent-labeled (high): Data collection consent section: init with opt_out_capturing_by_default true then opt_in_capturing on consent; config lists the option.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.672Z"
+    },
+    {
+      "id": "e758b824dc78",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "feature flag release condition person property evaluation identified user stored person properties vs person_properties sent in flags request first app launch",
+      "relevantUrls": [
+        "https://posthog.com/docs/feature-flags/property-overrides",
+        "https://posthog.com/docs/feature-flags/troubleshooting"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): property-overrides explains sent vs stored person properties for flag evaluation; troubleshooting covers properties not yet ingested",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "e7f4d66fe57e",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "How do inactive multivariate feature flags differ from launched experiments with configured outcome metrics?",
+      "relevantUrls": [
+        "https://posthog.com/docs/experiments/creating-an-experiment",
+        "https://posthog.com/docs/experiments/troubleshooting"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Experiments wrap a multivariate flag (draft/launch, metrics); troubleshooting covers using an existing flag",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.658Z"
+    },
+    {
+      "id": "e804ad0901cc",
+      "harness": "slack",
+      "status": "skipped",
+      "scrubbedQuery": "metrics pricing per GB ingested OpenTelemetry metrics free allowance",
+      "relevantUrls": [],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Metrics is in open alpha; no metrics per-GB pricing or free allowance documented (only logs pricing)",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.657Z"
+    },
+    {
+      "id": "e9e09ffc2729",
+      "harness": "codex",
+      "status": "skipped",
+      "scrubbedQuery": "PostHog versus Sentry product analytics error tracking session replay AI observability integration use together",
+      "relevantUrls": [],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Competitor comparison; no docs/handbook page compares PostHog with Sentry or covers using them together",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.650Z"
+    },
+    {
+      "id": "ea886a7026f5",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "revenue analytics event configuration revenueProperty revenueCurrencyProperty currencyAwareDecimal",
+      "relevantUrls": [
+        "https://posthog.com/docs/revenue-analytics/capture-revenue-events"
+      ],
+      "targetsComponentPage": true,
+      "expectedCodeSnippet": "posthog.capture(\"purchase_completed\", {",
+      "notes": "agent-labeled (medium): Revenue/currency property config and capture example; config key names not documented verbatim",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.663Z"
+    },
+    {
+      "id": "eabf9f04dd89",
+      "harness": "claude-ai",
+      "status": "labeled",
+      "scrubbedQuery": "Do heatmaps work for mobile apps (React Native, iOS, Android)? Alternatives such as mobile session replay or autocapture touch events",
+      "relevantUrls": [
+        "https://posthog.com/docs/toolbar/heatmaps",
+        "https://posthog.com/docs/session-replay/mobile"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (low): Heatmaps page ties capture to JS Web SDK (enable_heatmaps); mobile session replay records touches as the mobile alternative. No explicit mobile-heatmap statement.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.669Z"
+    },
+    {
+      "id": "ec3fea7eb469",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog Slack app create Slack canvas",
+      "relevantUrls": [
+        "https://posthog.com/docs/slack",
+        "https://posthog.com/docs/posthog-ai/surfaces/slack"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Slack app page \"Attachments, files, and canvases\" section; PostHog AI Slack surface covers canvas permissions",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.649Z"
+    },
+    {
+      "id": "ef0a5a425903",
+      "harness": "cursor",
+      "status": "labeled",
+      "scrubbedQuery": "property level access control: hide event and person properties from a member or role; is it enforced in SQL editor, HogQL queries, API and MCP?",
+      "relevantUrls": [
+        "https://posthog.com/docs/settings/property-access-control"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Restricted properties hidden in filters and masked in SQL (NULL on explicit reads)",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.664Z"
+    },
+    {
+      "id": "f02e339155a0",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "query PostHog data from external application API managed warehouse Postgres connection batch exports",
+      "relevantUrls": [
+        "https://posthog.com/docs/data-warehouse/warehouse/connect",
+        "https://posthog.com/docs/data-warehouse/warehouse",
+        "https://posthog.com/docs/getting-started/data-import-export",
+        "https://posthog.com/docs/api/queries"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): warehouse/connect: Postgres wire connection from external tools; data-import-export covers batch exports and query API",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    },
+    {
+      "id": "f0b557561a3e",
+      "harness": "slack",
+      "status": "labeled",
+      "scrubbedQuery": "PostHog ClickHouse query timeout capacity troubleshooting",
+      "relevantUrls": [
+        "https://posthog.com/docs/sql/optimizing-queries",
+        "https://posthog.com/docs/api/queries",
+        "https://posthog.com/docs/data/query-log"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Optimizing SQL queries covers heavy-query fixes; Query API rate limits list concurrency and max execution time; query log shows per-query performance",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.682Z"
+    },
+    {
+      "id": "f60aea67f156",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "Query custom event properties with HogQL to inspect captured web app version values",
+      "relevantUrls": [
+        "https://posthog.com/docs/sql/expressions",
+        "https://posthog.com/docs/data-warehouse/sql"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Accessing custom event properties with dot notation in SQL expressions and SELECT queries",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.657Z"
+    },
+    {
+      "id": "f6383347cf00",
+      "harness": "other",
+      "status": "labeled",
+      "scrubbedQuery": "How should I interpret PostHog experiments with zero conversions, small exposure counts and seven day conversion windows where some users have not matured?",
+      "relevantUrls": [
+        "https://posthog.com/docs/experiments/metrics",
+        "https://posthog.com/docs/experiments/statistics-bayesian",
+        "https://posthog.com/docs/experiments/troubleshooting"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Metrics 'Conversion windows'; statistics page minimum 50 exposures and 5 conversions per variant; troubleshooting on minimum exposures.",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.673Z"
+    },
+    {
+      "id": "f7540cfcca67",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "breakdown insights by feature flag value $feature property web JavaScript events include flag automatically",
+      "relevantUrls": [
+        "https://posthog.com/docs/feature-flags/adding-feature-flag-code",
+        "https://posthog.com/docs/feature-flags/canary-release"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): Adding flag code notes flag info must be included only for server-side events (web auto-includes); canary release shows breakdown by flag",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.685Z"
+    },
+    {
+      "id": "fb210ef0c1f6",
+      "harness": "claude-code",
+      "status": "labeled",
+      "scrubbedQuery": "send SMS with Twilio destination from events real-time CDP",
+      "relevantUrls": [
+        "https://posthog.com/docs/cdp/destinations/twilio"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Twilio destination page: send SMS from analytics events",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.656Z"
+    },
+    {
+      "id": "fce220232b51",
+      "harness": "cursor",
+      "status": "skipped",
+      "scrubbedQuery": "ignored",
+      "relevantUrls": [],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (high): Query \"ignored\" is not a docs question",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.686Z"
+    },
+    {
+      "id": "fe38a718852d",
+      "harness": "codex",
+      "status": "labeled",
+      "scrubbedQuery": "Set up waitlist in PostHog dashboard: create dynamic cohort person property waitlist_status equals waiting; email channel domain verification; event triggered workflow waitlist_joined one time enrollment; marketing category unsubscribe link and test email before enable.",
+      "relevantUrls": [
+        "https://posthog.com/docs/workflows/launch-workflow",
+        "https://posthog.com/docs/workflows/configure-channels",
+        "https://posthog.com/docs/data/cohorts",
+        "https://posthog.com/docs/workflows/opt-outs"
+      ],
+      "targetsComponentPage": false,
+      "expectedCodeSnippet": null,
+      "notes": "agent-labeled (medium): launch-workflow: trigger, One time frequency, test, enable; configure-channels: domain verification; opt-outs: message categories",
+      "isAwaitingReview": false,
+      "labeledAt": "2026-10-14T17:53:01.677Z"
+    }
+  ]
+}

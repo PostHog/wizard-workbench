@@ -1,0 +1,121 @@
+import "dotenv/config";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { docsScope, mapConcurrent, searchKnowledge, type DocsScope } from "./api.js";
+import { checkCoverage } from "./coverage.js";
+import { assertGoldSetReadyForRun, readGoldSet } from "./gold-set.js";
+import { Results, exceedsErrorBudget, renderReport, score, type ArmResult, type ScoringResults } from "./score.js";
+import { fetchHeadWithGetFallback, normalizeDocUrl } from "./urls.js";
+
+async function resolveLabelUrl(url: string): Promise<ScoringResults["resolvedUrls"][string]> {
+  try {
+    const response = await fetchHeadWithGetFallback(url);
+    const resolution = { finalUrl: normalizeDocUrl(response.url), status: response.status };
+    await response.body?.cancel();
+    return resolution;
+  } catch {
+    return { finalUrl: url, status: 0 };
+  }
+}
+
+async function replaySearch(scope: DocsScope, scrubbedQuery: string): Promise<ArmResult> {
+  const startedAt = performance.now();
+  try {
+    const search = await searchKnowledge(scope, scrubbedQuery, { limit: 10 });
+    return {
+      status: "ok",
+      latencyMs: search.latencyMs,
+      chunks: search.results.map((chunk) => ({ url: chunk.url, content: chunk.content, headingPath: chunk.heading_path })),
+    };
+  } catch (error) {
+    return { status: "error", latencyMs: performance.now() - startedAt, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+async function main(): Promise<void> {
+  const argumentsList = process.argv.slice(2);
+  if (argumentsList.includes("--help")) {
+    console.log("Usage: pnpm docs-eval:run [--help]\nReplays the committed gold set against the Business Knowledge docs project with plain search.\nRequires POSTHOG_DOCS_EVAL_API_KEY, POSTHOG_DOCS_EVAL_PROJECT_ID, and POSTHOG_DOCS_EVAL_LIBRARY_ID; POSTHOG_REGION defaults to us.\nExit codes: 0 pass, 1 readiness/coverage/bar failure, 2 configuration/API/file error.");
+    return;
+  }
+  try {
+    if (argumentsList.length > 0) throw new Error(`Unknown argument: ${argumentsList[0]}`);
+    const goldSet = await readGoldSet();
+    try {
+      assertGoldSetReadyForRun(goldSet);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+      return;
+    }
+    const coverage = await checkCoverage();
+    if (!coverage.passed) {
+      console.error(`Overall coverage: ${(coverage.overall.coverage * 100).toFixed(2)}% (required: 99%)`);
+      for (const source of coverage.requiredSources) console.error(`${source.name}: status=${source.status}`);
+      console.error(`Missing URLs: ${coverage.overall.missing}`);
+      console.error("Refusing to score: coverage check failed; run pnpm docs-eval:coverage for the full list");
+      process.exitCode = 1;
+      return;
+    }
+    const startedAt = new Date().toISOString();
+    const scope = docsScope();
+    const goldSetBytes = await readFile(fileURLToPath(new URL("./gold-set.json", import.meta.url)));
+    const labeledQueries = goldSet.queries.filter((query) => query.status === "labeled");
+    const resolvedUrls = new Map<string, ScoringResults["resolvedUrls"][string]>();
+    const relevantUrls = [...new Set(labeledQueries.flatMap((query) => query.relevantUrls.map(normalizeDocUrl)))];
+    let resolvedCount = 0;
+    let searchedCount = 0;
+    const totalSearches = labeledQueries.length;
+    await mapConcurrent(relevantUrls, async (url) => {
+      resolvedUrls.set(url, await resolveLabelUrl(url));
+      resolvedCount++;
+      console.log(`Resolved labels: ${resolvedCount}/${relevantUrls.length}`);
+    });
+    const queries = await mapConcurrent(labeledQueries, async (query) => {
+      const search = await replaySearch(scope, query.scrubbedQuery);
+      searchedCount++;
+      console.log(`Searches: ${searchedCount}/${totalSearches}`);
+      return { id: query.id, search };
+    });
+    const replay: ScoringResults = {
+      version: 1,
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      projectId: scope.projectId,
+      goldSetSha256: createHash("sha256").update(goldSetBytes).digest("hex"),
+      goldSet,
+      resolvedUrls: Object.fromEntries(resolvedUrls),
+      queries,
+    };
+    const metrics = score(replay);
+    const results = Results.parse({ ...replay, metrics });
+    const runDirectory = fileURLToPath(new URL(`./runs/${startedAt.replace(/[:.]/g, "-")}/`, import.meta.url));
+    const resultsPath = join(runDirectory, "results.json");
+    const reportPath = join(runDirectory, "report.md");
+    await mkdir(runDirectory, { recursive: true });
+    await writeFile(resultsPath, `${JSON.stringify(results, null, 2)}\n`, "utf8");
+    if (exceedsErrorBudget(results)) {
+      const errorCount = results.queries.filter((query) => query.search.status === "error").length;
+      console.error(`Search errors: ${errorCount}/${totalSearches}; exceeds the 5% error budget`);
+      console.log(resultsPath);
+      process.exitCode = 2;
+      return;
+    }
+    await writeFile(reportPath, renderReport(results, metrics), "utf8");
+    for (const bar of metrics.passBars) {
+      const comparison = bar.name === "emptyRate" || bar.name === "latencyP95Ms" ? "<" : ">=";
+      console.log(`${bar.name}: ${bar.value ?? "N/A"} (required ${comparison} ${bar.threshold}) ${bar.passed ? "PASS" : "FAIL"}`);
+    }
+    console.log(`Docs-search eval: ${metrics.passed ? "PASS" : "FAIL"}`);
+    console.log(resultsPath);
+    console.log(reportPath);
+    process.exitCode = metrics.passed ? 0 : 1;
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 2;
+  }
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
