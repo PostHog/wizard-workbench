@@ -32,10 +32,6 @@ export function docsScope(): DocsScope {
   return { projectId, libraryId };
 }
 
-export function eventsProjectId(): number {
-  return requiredProjectIdFromEnv("POSTHOG_DOCS_EVAL_EVENTS_PROJECT_ID");
-}
-
 export interface KnowledgeSource {
   id: string | number;
   name: string;
@@ -55,7 +51,7 @@ interface KnowledgeDocument {
   safety_verdict: string;
 }
 
-export interface KnowledgeChunk {
+interface KnowledgeChunk {
   chunk_id: string | number;
   document_id: string | number;
   ordinal: number;
@@ -131,11 +127,4 @@ export async function searchKnowledge(scope: DocsScope, query: string, options: 
     query, limit: Math.min(options.limit, 20), rerank: false, library_id: scope.libraryId,
   });
   return { results, latencyMs: performance.now() - startedAt };
-}
-
-export async function runHogQL(projectId: number, query: string): Promise<Record<string, unknown>[]> {
-  const response = await posthogRequest<{ columns: string[]; results: unknown[][] }>(`/api/projects/${projectId}/query/`, "POST", undefined, {
-    query: { kind: "HogQLQuery", query },
-  });
-  return response.results.map((row) => Object.fromEntries(response.columns.map((column, index) => [column, row[index]])));
 }
