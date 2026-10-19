@@ -1,0 +1,43 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  color: #1b2a22;
+  background-color: #f4f1ea;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.trip {
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+input,
+button {
+  font: inherit;
+  padding: 6px 10px;
+}
+
+.forecast {
+  font-size: 0.9em;
+  color: #555;
+}

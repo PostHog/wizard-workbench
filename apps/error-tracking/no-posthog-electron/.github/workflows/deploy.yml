@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: mac
+          - os: windows-latest
+            target: win
+          - os: ubuntu-latest
+            target: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Package and publish
+        run: npx electron-builder --${{ matrix.target }} --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS code signing and notarization
+          CSC_LINK: ${{ secrets.MAC_CERTS }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTS_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows code signing
+          WIN_CSC_LINK: ${{ secrets.WIN_CERTS }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CERTS_PASSWORD }}

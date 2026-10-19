@@ -1,0 +1,26 @@
+{
+  "name": "express-tsc-esm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Catalog and checkout API",
+  "type": "module",
+  "main": "dist/server.js",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.19.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
