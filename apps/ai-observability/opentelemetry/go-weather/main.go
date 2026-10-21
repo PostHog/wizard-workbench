@@ -11,6 +11,13 @@ import (
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
+	"github.com/posthog/posthog-go"
+	posthogotel "github.com/posthog/posthog-go/otel"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 const model = "gpt-5-mini"
@@ -41,18 +48,57 @@ type Conversation struct {
 
 // Ask answers one question, running the tool if the model asks for it.
 func (c *Conversation) Ask(ctx context.Context, client openai.Client, question string) (string, error) {
-	c.messages = append(c.messages, openai.UserMessage(question))
+	ctx = posthog.WithRequestContext(ctx, posthog.RequestContext{
+		DistinctId: c.UserID,
+		Properties: posthog.Properties{
+			"$ai_session_id": c.ThreadID,
+		},
+	})
+	tracer := otel.Tracer("weather-assistant")
+	ctx, turnSpan := tracer.Start(ctx, "gen_ai.chat.turn")
+	turnSpan.SetAttributes(
+		attribute.String("gen_ai.operation.name", "invoke_agent"),
+		attribute.String("$ai_session_id", c.ThreadID),
+		attribute.String("posthog.distinct_id", c.UserID),
+	)
+	defer turnSpan.End()
 
-	response, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
+	c.messages = append(c.messages, openai.UserMessage(question))
+	inputMessages, _ := json.Marshal(c.messages)
+	toolDefinitions, _ := json.Marshal(tools)
+
+	generationCtx, generationSpan := tracer.Start(ctx, "gen_ai.chat.completions")
+	generationSpan.SetAttributes(
+		attribute.String("gen_ai.operation.name", "chat"),
+		attribute.String("gen_ai.provider.name", "openai"),
+		attribute.String("gen_ai.request.model", model),
+		attribute.String("gen_ai.input.messages", string(inputMessages)),
+		attribute.String("gen_ai.tools", string(toolDefinitions)),
+		attribute.String("$ai_session_id", c.ThreadID),
+		attribute.String("posthog.distinct_id", c.UserID),
+	)
+	response, err := client.Chat.Completions.New(generationCtx, openai.ChatCompletionNewParams{
 		Model:             model,
 		Messages:          c.messages,
 		Tools:             tools,
 		ParallelToolCalls: openai.Bool(false),
 	})
 	if err != nil {
+		generationSpan.RecordError(err)
+		generationSpan.SetStatus(codes.Error, err.Error())
+		generationSpan.End()
+		turnSpan.RecordError(err)
+		turnSpan.SetStatus(codes.Error, err.Error())
 		return "", err
 	}
 	message := response.Choices[0].Message
+	outputMessage, _ := json.Marshal(message)
+	generationSpan.SetAttributes(
+		attribute.String("gen_ai.output.messages", string(outputMessage)),
+		attribute.Int("gen_ai.usage.input_tokens", int(response.Usage.PromptTokens)),
+		attribute.Int("gen_ai.usage.output_tokens", int(response.Usage.CompletionTokens)),
+	)
+	generationSpan.End()
 
 	if len(message.ToolCalls) == 0 {
 		c.messages = append(c.messages, openai.AssistantMessage(message.Content))
@@ -64,29 +110,102 @@ func (c *Conversation) Ask(ctx context.Context, client openai.Client, question s
 		Location string `json:"location"`
 	}
 	if err := json.Unmarshal([]byte(call.Function.Arguments), &args); err != nil {
+		turnSpan.RecordError(err)
+		turnSpan.SetStatus(codes.Error, err.Error())
 		return "", err
 	}
+
+	_, toolSpan := tracer.Start(ctx, "gen_ai.tool.get_weather")
+	toolSpan.SetAttributes(
+		attribute.String("gen_ai.operation.name", "execute_tool"),
+		attribute.String("gen_ai.tool.name", call.Function.Name),
+		attribute.String("gen_ai.input.messages", call.Function.Arguments),
+		attribute.String("$ai_session_id", c.ThreadID),
+		attribute.String("posthog.distinct_id", c.UserID),
+	)
 	result := getWeather(args.Location)
+	toolOutput, _ := json.Marshal(map[string]string{"role": "tool", "content": result})
+	toolSpan.SetAttributes(attribute.String("gen_ai.output.messages", string(toolOutput)))
+	toolSpan.End()
 
 	c.messages = append(c.messages, message.ToParam())
 	c.messages = append(c.messages, openai.ToolMessage(result, call.ID))
+	followupInput, _ := json.Marshal(c.messages)
 
-	followup, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
+	followupCtx, followupSpan := tracer.Start(ctx, "gen_ai.chat.completions")
+	followupSpan.SetAttributes(
+		attribute.String("gen_ai.operation.name", "chat"),
+		attribute.String("gen_ai.provider.name", "openai"),
+		attribute.String("gen_ai.request.model", model),
+		attribute.String("gen_ai.input.messages", string(followupInput)),
+		attribute.String("gen_ai.tools", string(toolDefinitions)),
+		attribute.String("$ai_session_id", c.ThreadID),
+		attribute.String("posthog.distinct_id", c.UserID),
+	)
+	followup, err := client.Chat.Completions.New(followupCtx, openai.ChatCompletionNewParams{
 		Model:             model,
 		Messages:          c.messages,
 		Tools:             tools,
 		ParallelToolCalls: openai.Bool(false),
 	})
 	if err != nil {
+		followupSpan.RecordError(err)
+		followupSpan.SetStatus(codes.Error, err.Error())
+		followupSpan.End()
+		turnSpan.RecordError(err)
+		turnSpan.SetStatus(codes.Error, err.Error())
 		return "", err
 	}
 	answer := followup.Choices[0].Message.Content
+	followupOutput, _ := json.Marshal(followup.Choices[0].Message)
+	followupSpan.SetAttributes(
+		attribute.String("gen_ai.output.messages", string(followupOutput)),
+		attribute.Int("gen_ai.usage.input_tokens", int(followup.Usage.PromptTokens)),
+		attribute.Int("gen_ai.usage.output_tokens", int(followup.Usage.CompletionTokens)),
+	)
+	followupSpan.End()
 	c.messages = append(c.messages, openai.AssistantMessage(answer))
 	return answer, nil
 }
 
+func setupTracing(ctx context.Context) (*sdktrace.TracerProvider, error) {
+	projectToken := os.Getenv("POSTHOG_PROJECT_TOKEN")
+	if projectToken == "" {
+		return nil, fmt.Errorf("POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_PROJECT_TOKEN is configured")
+	}
+	host := os.Getenv("POSTHOG_HOST")
+	if host == "" {
+		return nil, fmt.Errorf("POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured")
+	}
+
+	processor, err := posthogotel.NewSpanProcessor(ctx, projectToken, posthogotel.WithHost(host))
+	if err != nil {
+		return nil, err
+	}
+
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithResource(sdkresource.NewWithAttributes("",
+			attribute.String("service.name", "weather-assistant"),
+		)),
+		sdktrace.WithSpanProcessor(processor),
+	)
+	otel.SetTracerProvider(provider)
+	return provider, nil
+}
+
 func main() {
 	ctx := context.Background()
+	provider, err := setupTracing(ctx)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := provider.Shutdown(context.Background()); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+	}()
+
 	client := openai.NewClient(option.WithAPIKey(os.Getenv("OPENAI_API_KEY")))
 
 	thread := &Conversation{UserID: "user_123", ThreadID: "thread_abc"}
