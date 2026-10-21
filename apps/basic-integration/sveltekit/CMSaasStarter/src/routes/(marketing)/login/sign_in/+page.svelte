@@ -2,8 +2,10 @@
   import { Auth } from "@supabase/auth-ui-svelte"
   import { sharedAppearance, oauthProviders } from "../login_config"
   import { goto } from "$app/navigation"
+  import { env } from "$env/dynamic/public"
   import { onMount } from "svelte"
   import { page } from "$app/stores"
+  import posthog from "posthog-js"
 
   let { data } = $props()
   let { supabase } = data
@@ -16,6 +18,9 @@
         // Give the layout callback priority to update state or
         // we'll just bounch back to login when /account tries to load
         setTimeout(() => {
+          if (env.PUBLIC_POSTHOG_PROJECT_TOKEN && env.PUBLIC_POSTHOG_HOST) {
+            posthog.capture("user_signed_in")
+          }
           goto("/account")
         }, 1)
       }

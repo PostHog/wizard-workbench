@@ -2,6 +2,8 @@ import { PRIVATE_STRIPE_API_KEY } from "$env/static/private"
 import { error, redirect } from "@sveltejs/kit"
 import Stripe from "stripe"
 import { getOrCreateCustomerId } from "../../../subscription_helpers.server"
+import { capturePostHogLog } from "$lib/server/posthog-logs"
+import { captureServerEvent } from "$lib/server/posthog"
 import type { PageServerLoad } from "./$types"
 const stripe = new Stripe(PRIVATE_STRIPE_API_KEY, { apiVersion: "2023-08-16" })
 
@@ -37,5 +39,10 @@ export const load: PageServerLoad = async ({
     error(500, "Unknown error (PSE). If issue persists, please contact us.")
   }
 
+  await captureServerEvent(session.user.id, "billing_portal_opened")
+  await capturePostHogLog(
+    "Stripe billing portal session created",
+    "billing_portal_opened",
+  )
   redirect(303, portalLink ?? "/account/billing")
 }
