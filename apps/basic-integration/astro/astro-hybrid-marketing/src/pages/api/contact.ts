@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { logContactFormOutcome } from '../../lib/posthog-logs';
 
 export const prerender = false;
 
@@ -16,6 +17,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
+      logContactFormOutcome('rejected', 400);
       return new Response(
         JSON.stringify({ error: 'Please fill in all required fields.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -25,6 +27,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
+      logContactFormOutcome('rejected', 400);
       return new Response(
         JSON.stringify({ error: 'Please enter a valid email address.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -45,6 +48,7 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    logContactFormOutcome('accepted', 200);
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -54,6 +58,7 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contact form error:', error);
+    logContactFormOutcome('failed', 500);
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
