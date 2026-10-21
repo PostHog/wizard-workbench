@@ -1,4 +1,6 @@
 import { createServer } from 'node:http';
+import { posthogLogger, shutdownPostHogLogs } from './posthog-logs.js';
+import { posthog } from './posthog.js';
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -47,6 +49,11 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      posthog?.capture({ event: 'group_created' });
+      posthogLogger?.emit({
+        severityText: 'info',
+        body: 'contacts_api.group_created',
+      });
       return json(res, 201, group);
     }
 
@@ -90,6 +97,23 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      posthog?.capture({
+        event: 'contact_created',
+        properties: {
+          has_phone: Boolean(contact.phone),
+          has_company: Boolean(contact.company),
+          assigned_to_default_group: contact.group_id === 1,
+        },
+      });
+      posthogLogger?.emit({
+        severityText: 'info',
+        body: 'contacts_api.contact_created',
+        attributes: {
+          has_phone: Boolean(contact.phone),
+          has_company: Boolean(contact.company),
+          assigned_to_default_group: contact.group_id === 1,
+        },
+      });
       return json(res, 201, contact);
     }
 
@@ -114,6 +138,18 @@ const server = createServer(async (req, res) => {
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      const updatedFields = Object.keys(body).filter((field) =>
+        ['name', 'email', 'phone', 'company', 'group_id'].includes(field)
+      );
+      posthog?.capture({
+        event: 'contact_updated',
+        properties: { updated_fields: updatedFields },
+      });
+      posthogLogger?.emit({
+        severityText: 'info',
+        body: 'contacts_api.contact_updated',
+        attributes: { updated_fields: updatedFields },
+      });
       return json(res, 200, contact);
     }
 
@@ -124,12 +160,22 @@ const server = createServer(async (req, res) => {
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
       contacts.splice(index, 1);
+      posthog?.capture({
+        event: 'contact_deleted',
+        properties: { remaining_contacts: contacts.length },
+      });
+      posthogLogger?.emit({
+        severityText: 'info',
+        body: 'contacts_api.contact_deleted',
+        attributes: { remaining_contacts: contacts.length },
+      });
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    posthog?.captureException(err, 'native_http_contacts_api');
     json(res, 500, { error: 'Internal server error' });
   }
 });
@@ -139,3 +185,11 @@ const PORT = process.env.PORT || 3004;
 server.listen(PORT, () => {
   console.log(`Native HTTP contacts API running on http://localhost:${PORT}`);
 });
+
+async function shutdown() {
+  server.close();
+  await Promise.all([posthog?.shutdown(), shutdownPostHogLogs()]);
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
