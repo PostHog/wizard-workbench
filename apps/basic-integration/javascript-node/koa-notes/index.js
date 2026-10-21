@@ -1,9 +1,16 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { posthog } from './posthog.js';
+import { logPostHog } from './posthog-logs.js';
 
 const app = new Koa();
 const router = new Router();
+
+app.on('error', (err) => {
+  posthog?.captureException(err);
+  logPostHog('error', 'koa_request_error');
+});
 
 app.use(bodyParser());
 
@@ -32,6 +39,11 @@ router.post('/api/folders', (ctx) => {
 
   const folder = { id: nextFolderId++, name };
   folders.push(folder);
+  posthog?.capture({
+    event: 'folder_created',
+    properties: { $process_person_profile: false },
+  });
+  logPostHog('info', 'folder_created');
   ctx.status = 201;
   ctx.body = folder;
 });
@@ -53,12 +65,18 @@ router.delete('/api/folders/:id', (ctx) => {
     return;
   }
 
+  const notesMoved = notes.filter((note) => note.folder_id === folderId).length;
+
   // Move notes from deleted folder to General
   for (const note of notes) {
     if (note.folder_id === folderId) note.folder_id = 1;
   }
 
   folders.splice(index, 1);
+  posthog?.capture({
+    event: 'folder_deleted',
+    properties: { notes_moved: notesMoved, $process_person_profile: false },
+  });
   ctx.status = 204;
 });
 
@@ -105,6 +123,18 @@ router.post('/api/notes', (ctx) => {
     updated_at: new Date().toISOString(),
   };
   notes.push(note);
+  posthog?.capture({
+    event: 'note_created',
+    properties: {
+      has_content: content.length > 0,
+      is_default_folder: folder_id === 1,
+      $process_person_profile: false,
+    },
+  });
+  logPostHog('info', 'note_created', {
+    has_content: content.length > 0,
+    is_default_folder: folder_id === 1,
+  });
   ctx.status = 201;
   ctx.body = note;
 });
@@ -131,8 +161,12 @@ router.patch('/api/notes/:id', (ctx) => {
   }
 
   const { title, content, folder_id } = ctx.request.body;
-  if (title !== undefined) note.title = title;
-  if (content !== undefined) note.content = content;
+  const titleUpdated = title !== undefined;
+  const contentUpdated = content !== undefined;
+  const folderChanged = folder_id !== undefined && folder_id !== note.folder_id;
+
+  if (titleUpdated) note.title = title;
+  if (contentUpdated) note.content = content;
   if (folder_id !== undefined) {
     if (!folders.find((f) => f.id === folder_id)) {
       ctx.status = 400;
@@ -142,6 +176,20 @@ router.patch('/api/notes/:id', (ctx) => {
     note.folder_id = folder_id;
   }
   note.updated_at = new Date().toISOString();
+  posthog?.capture({
+    event: 'note_updated',
+    properties: {
+      title_updated: titleUpdated,
+      content_updated: contentUpdated,
+      folder_changed: folderChanged,
+      $process_person_profile: false,
+    },
+  });
+  logPostHog('info', 'note_updated', {
+    title_updated: titleUpdated,
+    content_updated: contentUpdated,
+    folder_changed: folderChanged,
+  });
 
   ctx.body = note;
 });
@@ -155,7 +203,13 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
+  const isDefaultFolder = notes[index].folder_id === 1;
   notes.splice(index, 1);
+  posthog?.capture({
+    event: 'note_deleted',
+    properties: { is_default_folder: isDefaultFolder, $process_person_profile: false },
+  });
+  logPostHog('info', 'note_deleted', { is_default_folder: isDefaultFolder });
   ctx.status = 204;
 });
 
