@@ -1,6 +1,18 @@
 import Fastify from 'fastify';
+import { posthog } from './posthog.js';
+import { posthogLog, shutdownPostHogLogs } from './posthog-logs.js';
 
 const fastify = Fastify({ logger: true });
+
+fastify.addHook('onClose', async () => {
+  await shutdownPostHogLogs();
+  await posthog?.shutdown();
+});
+
+fastify.setErrorHandler((error, request, reply) => {
+  posthog?.captureException(error, request.id);
+  reply.send(error);
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +51,24 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+  if (posthog) {
+    posthog.capture({
+      event: 'post_created',
+      properties: {
+        post_id: post.id,
+        published: post.published,
+      },
+    });
+  }
+  posthogLog?.emit({
+    severityText: 'INFO',
+    body: 'post created',
+    attributes: {
+      operation: 'post_created',
+      post_id: post.id,
+      published: post.published,
+    },
+  });
   return reply.status(201).send(post);
 });
 
@@ -67,6 +97,29 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  if (posthog) {
+    posthog.capture({
+      event: 'post_updated',
+      properties: {
+        post_id: post.id,
+        title_updated: title !== undefined,
+        body_updated: body !== undefined,
+        published: post.published,
+      },
+    });
+  }
+  posthogLog?.emit({
+    severityText: 'INFO',
+    body: 'post updated',
+    attributes: {
+      operation: 'post_updated',
+      post_id: post.id,
+      title_updated: title !== undefined,
+      body_updated: body !== undefined,
+      published: post.published,
+    },
+  });
+
   return post;
 });
 
@@ -82,9 +135,32 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
   posts.splice(index, 1);
 
   // Remove associated comments
+  let deleted_comment_count = 0;
   for (let i = comments.length - 1; i >= 0; i--) {
-    if (comments[i].post_id === postId) comments.splice(i, 1);
+    if (comments[i].post_id === postId) {
+      comments.splice(i, 1);
+      deleted_comment_count++;
+    }
   }
+
+  if (posthog) {
+    posthog.capture({
+      event: 'post_deleted',
+      properties: {
+        post_id: postId,
+        deleted_comment_count,
+      },
+    });
+  }
+  posthogLog?.emit({
+    severityText: 'INFO',
+    body: 'post deleted',
+    attributes: {
+      operation: 'post_deleted',
+      post_id: postId,
+      deleted_comment_count,
+    },
+  });
 
   return reply.status(204).send();
 });
@@ -111,6 +187,24 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+  if (posthog) {
+    posthog.capture({
+      event: 'comment_created',
+      properties: {
+        comment_id: comment.id,
+        post_id: post.id,
+      },
+    });
+  }
+  posthogLog?.emit({
+    severityText: 'INFO',
+    body: 'comment created',
+    attributes: {
+      operation: 'comment_created',
+      comment_id: comment.id,
+      post_id: post.id,
+    },
+  });
   return reply.status(201).send(comment);
 });
 
