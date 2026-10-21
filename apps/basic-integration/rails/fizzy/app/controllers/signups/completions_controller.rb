@@ -11,6 +11,12 @@ class Signups::CompletionsController < ApplicationController
     @signup = Signup.new(signup_params)
 
     if @signup.complete
+      PostHog.capture(
+        distinct_id: @signup.user.posthog_distinct_id,
+        event: "user_signed_up",
+        properties: { signup_method: "magic_link" }
+      ) if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+
       welcome_to_account
     else
       invalid_signup
