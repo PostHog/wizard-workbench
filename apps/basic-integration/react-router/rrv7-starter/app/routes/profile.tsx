@@ -6,6 +6,7 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import posthog from '@/lib/posthog'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
   const [isFollowing, setIsFollowing] = useState(false)
@@ -146,6 +147,7 @@ export default function Profile() {
                   onFollow={() => {
                     const newFollowing = getFollowing() + 1
                     setFollowing(newFollowing)
+                    posthog.capture('follower_followed', { following_total: newFollowing })
                   }}
                 />
               </div>

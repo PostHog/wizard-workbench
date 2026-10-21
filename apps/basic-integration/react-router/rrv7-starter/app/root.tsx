@@ -8,8 +8,10 @@ import {
   useOutlet,
   type MetaFunction,
 } from 'react-router'
+import { useEffect } from 'react'
 import gsap from 'gsap'
 
+import posthog from './lib/posthog'
 import type { Route } from './+types/root'
 import stylesheet from './app.css?url'
 import { RouteTransitionManager } from '@joycostudio/transitions'
@@ -132,6 +134,12 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  useEffect(() => {
+    if (error instanceof Error) {
+      posthog.captureException(error)
+    }
+  }, [error])
+
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined
