@@ -10,9 +10,29 @@ const isDocs = currentPath.startsWith('/docs');
     </a>
     <ul class="nav-links">
       <li><a href="/docs" class:list={["nav-link", { active: isDocs }]}>Documentation</a></li>
-      <li><a href="/docs/api" class="nav-link">API Reference</a></li>
-      <li><a href="https://github.com" class="nav-link" target="_blank">GitHub</a></li>
+      <li><a href="/docs/api" class="nav-link" data-posthog-event="api_reference_clicked" data-posthog-source="navigation">API Reference</a></li>
+      <li><a href="https://github.com" class="nav-link" target="_blank" data-posthog-event="github_repository_clicked" data-posthog-source="navigation">GitHub</a></li>
       <li><a href="#" class="nav-cta">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  function logNavigationDocumentationAction(eventName, source, destination) {
+    window.posthog?.logger?.info('documentation navigation selected', {
+      action: eventName,
+      source,
+      destination,
+    });
+  }
+
+  document.querySelectorAll('.nav [data-posthog-event]').forEach((link) => {
+    link.addEventListener('click', () => {
+      const eventName = link.dataset.posthogEvent;
+      const source = link.dataset.posthogSource;
+
+      window.posthog?.capture(eventName, { source });
+      logNavigationDocumentationAction(eventName, source, link.getAttribute('href'));
+    });
+  });
+</script>
