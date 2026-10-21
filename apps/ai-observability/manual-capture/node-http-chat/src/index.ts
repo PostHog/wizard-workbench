@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+
 import { lookupOrder } from './orders.js'
 import { posthog } from './posthog.js'
 
@@ -18,6 +20,14 @@ type Completion = {
     toolCalls: ToolCall[]
     promptTokens: number
     completionTokens: number
+    spanId: string
+}
+
+type AiContext = {
+    userId: string
+    sessionId: string
+    traceId: string
+    parentId: string
 }
 
 const TOOLS = [
@@ -35,13 +45,49 @@ const TOOLS = [
     },
 ]
 
-async function complete(messages: Message[]): Promise<Completion> {
+function captureGeneration(
+    messages: Message[],
+    context: AiContext,
+    spanId: string,
+    startedAt: number,
+    status: number,
+    completion?: Completion
+): void {
+    posthog.capture({
+        distinctId: context.userId,
+        event: '$ai_generation',
+        properties: {
+            $ai_trace_id: context.traceId,
+            $ai_session_id: context.sessionId,
+            $ai_span_id: spanId,
+            $ai_parent_id: context.parentId,
+            $ai_span_name: 'chat_completion',
+            $ai_model: MODEL,
+            $ai_provider: 'ollama',
+            $ai_input: messages,
+            $ai_input_tokens: completion?.promptTokens ?? 0,
+            $ai_output_choices: completion
+                ? [{ role: 'assistant', content: completion.text }]
+                : [],
+            $ai_output_tokens: completion?.completionTokens ?? 0,
+            $ai_latency: (Date.now() - startedAt) / 1000,
+            $ai_http_status: status,
+            $ai_is_error: !completion,
+            $ai_tools: TOOLS,
+        },
+    })
+}
+
+async function complete(messages: Message[], context: AiContext): Promise<Completion> {
+    const startedAt = Date.now()
+    const spanId = randomUUID()
     const res = await fetch(LLM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: MODEL, messages, tools: TOOLS }),
     })
     if (!res.ok) {
+        captureGeneration(messages, context, spanId, startedAt, res.status)
         throw new Error(`model returned ${res.status}`)
     }
     const body = (await res.json()) as {
@@ -49,12 +95,15 @@ async function complete(messages: Message[]): Promise<Completion> {
         usage?: { prompt_tokens: number; completion_tokens: number }
     }
     const message = body.choices[0]?.message
-    return {
+    const completion = {
         text: message?.content ?? '',
         toolCalls: message?.tool_calls ?? [],
         promptTokens: body.usage?.prompt_tokens ?? 0,
         completionTokens: body.usage?.completion_tokens ?? 0,
+        spanId,
     }
+    captureGeneration(messages, context, spanId, startedAt, res.status, completion)
+    return completion
 }
 
 type Turn = { question: string; answer: string }
@@ -81,20 +130,50 @@ class Thread {
             { role: 'user', content: question },
         ]
 
-        let result = await complete(messages)
+        const traceId = randomUUID()
+        const sessionId = this.threadId.replace(/[^A-Za-z0-9_~.@()!'|:-]/g, '-')
+        let result = await complete(messages, {
+            userId: this.userId,
+            sessionId,
+            traceId,
+            parentId: traceId,
+        })
 
         if (result.toolCalls.length > 0) {
             messages.push({ role: 'assistant', content: '', tool_calls: result.toolCalls })
+            let lastToolSpanId = result.spanId
             for (const call of result.toolCalls) {
+                const toolSpanId = randomUUID()
+                const startedAt = Date.now()
                 const args = JSON.parse(call.function.arguments) as { user_id?: string }
                 const output = lookupOrder(args.user_id ?? this.userId)
+                posthog.capture({
+                    distinctId: this.userId,
+                    event: '$ai_span',
+                    properties: {
+                        $ai_trace_id: traceId,
+                        $ai_session_id: sessionId,
+                        $ai_span_id: toolSpanId,
+                        $ai_parent_id: result.spanId,
+                        $ai_span_name: call.function.name,
+                        $ai_input_state: { tool: call.function.name },
+                        $ai_output_state: { result_found: output !== null },
+                        $ai_latency: (Date.now() - startedAt) / 1000,
+                    },
+                })
+                lastToolSpanId = toolSpanId
                 messages.push({
                     role: 'tool',
                     tool_call_id: call.id,
                     content: JSON.stringify(output),
                 })
             }
-            result = await complete(messages)
+            result = await complete(messages, {
+                userId: this.userId,
+                sessionId,
+                traceId,
+                parentId: lastToolSpanId,
+            })
         }
 
         this.turns.push({ question, answer: result.text })
