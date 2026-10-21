@@ -4,6 +4,7 @@ import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { stripe } from '@/lib/payments/stripe';
+import { logCheckoutCompleted, logCheckoutFailed } from '@/lib/posthog-logs';
 import Stripe from 'stripe';
 
 export default async function handler(
@@ -95,8 +96,10 @@ export default async function handler(
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    await logCheckoutCompleted();
     return res.redirect('/dashboard');
   } catch (error) {
+    await logCheckoutFailed();
     console.error('Error handling successful checkout:', error);
     return res.redirect('/error');
   }

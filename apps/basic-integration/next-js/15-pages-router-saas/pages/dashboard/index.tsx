@@ -36,6 +36,10 @@ function ManageSubscription() {
       const result = await response.json();
 
       if (response.ok && result.url) {
+        if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {
+          const { default: posthog } = await import('posthog-js');
+          posthog.capture('subscription_management_opened');
+        }
         window.location.href = result.url;
       }
     } catch (err) {
@@ -100,6 +104,11 @@ function TeamMembers() {
         if (!response.ok) {
           setError(result.error || 'Failed to remove member');
           return;
+        }
+
+        if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {
+          const { default: posthog } = await import('posthog-js');
+          posthog.capture('team_member_removed');
         }
 
         // Refresh team data
@@ -208,6 +217,10 @@ function InviteTeamMember() {
         }
 
         setSuccess(result.success);
+        if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {
+          const { default: posthog } = await import('posthog-js');
+          posthog.capture('team_invitation_sent', { invited_role: data.role });
+        }
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {

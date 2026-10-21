@@ -54,6 +54,10 @@ export default function GeneralPage() {
 
         setSuccess(result.success);
         setName(result.name);
+        if (process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST) {
+          const { default: posthog } = await import('posthog-js');
+          posthog.capture('account_updated');
+        }
       } catch (err) {
         setError('An unexpected error occurred. Please try again.');
       }
