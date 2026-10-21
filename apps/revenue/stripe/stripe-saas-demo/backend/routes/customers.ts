@@ -21,19 +21,20 @@ customersRouter.post("/", async (req, res) => {
       return;
     }
 
+    const distinctId = posthogDistinctId || email;
     const customer = await stripe.customers.create({
       email,
       name,
+      metadata: { posthog_person_distinct_id: distinctId },
     });
 
     const user = existing
-      ? updateUser(existing.id, { stripeCustomerId: customer.id, posthogDistinctId })!
-      : createUser(email, name, posthogDistinctId);
+      ? updateUser(existing.id, { stripeCustomerId: customer.id, posthogDistinctId: distinctId })!
+      : createUser(email, name, distinctId);
 
     if (!existing) {
       updateUser(user.id, { stripeCustomerId: customer.id });
 
-      const distinctId = posthogDistinctId || email;
       posthog.identify({ distinctId, properties: { email, name } });
       posthog.capture({
         distinctId,
