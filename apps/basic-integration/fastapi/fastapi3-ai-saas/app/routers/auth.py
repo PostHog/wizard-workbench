@@ -15,6 +15,23 @@ settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
 
 
+def identify_authenticated_user(
+    request: Request,
+    user: User,
+    event: str,
+    properties: dict | None = None,
+) -> None:
+    """Identify a newly authenticated user and capture their completed auth action."""
+    posthog_client = getattr(request.app.state, "posthog_client", None)
+    if not posthog_client:
+        return
+
+    with posthog_client.new_context():
+        posthog_client.identify_context(str(user.id))
+        posthog_client.set(properties={"email": user.email})
+        posthog_client.capture(event, properties=properties)
+
+
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, current_user: CurrentUser):
     """Login page."""
@@ -34,6 +51,7 @@ async def login(
     user = User.authenticate(db, email, password)
 
     if user:
+        identify_authenticated_user(request, user, "user_logged_in")
         response = RedirectResponse(url="/dashboard", status_code=302)
         response.set_cookie(
             key="session_token",
@@ -70,6 +88,12 @@ async def signup(
         )
 
     user = User.create(db, email=email, password=password, credits=settings.default_credits)
+    identify_authenticated_user(
+        request,
+        user,
+        "user_signed_up",
+        properties={"initial_credits": settings.default_credits},
+    )
 
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie(
@@ -82,8 +106,12 @@ async def signup(
 
 
 @router.get("/logout")
-async def logout(current_user: RequiredUser):
+async def logout(request: Request, current_user: RequiredUser):
     """Logout user."""
+    posthog_client = getattr(request.app.state, "posthog_client", None)
+    if posthog_client:
+        posthog_client.capture("user_logged_out")
+
     response = RedirectResponse(url="/", status_code=302)
     response.delete_cookie(key="session_token")
     return response

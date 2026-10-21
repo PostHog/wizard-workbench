@@ -4,6 +4,10 @@ sqlalchemy>=2.0.0
 python-dotenv>=1.0.0
 pydantic[email]>=2.0.0
 pydantic-settings>=2.0.0
+posthog>=3.0.0
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
 jinja2>=3.0.0
 python-multipart>=0.0.9
 werkzeug>=3.0.0

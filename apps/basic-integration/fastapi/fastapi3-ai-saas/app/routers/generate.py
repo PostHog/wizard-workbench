@@ -1,14 +1,16 @@
 """AI generation API routes."""
 
+import logging
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
 
 router = APIRouter(prefix="/api")
+logger = logging.getLogger("posthog.logs")
 
 
 # Credit costs per generation type
@@ -42,6 +44,7 @@ class CreditsResponse(BaseModel):
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_content(
     request: GenerateRequest,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -54,6 +57,13 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        logger.warning(
+            "content_generation_rejected",
+            extra={
+                "generation_type": request.generation_type,
+                "reason": "insufficient_credits",
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -74,6 +84,26 @@ async def generate_content(
         prompt=request.prompt,
         result=mock_content,
         credits_used=credits_needed,
+    )
+
+    posthog_client = getattr(http_request.app.state, "posthog_client", None)
+    if posthog_client:
+        posthog_client.capture(
+            "content_generated",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+                "prompt_length": len(request.prompt),
+            },
+        )
+
+    logger.info(
+        "content_generation_completed",
+        extra={
+            "generation_type": request.generation_type,
+            "credits_used": credits_needed,
+        },
     )
 
     return GenerateResponse(
