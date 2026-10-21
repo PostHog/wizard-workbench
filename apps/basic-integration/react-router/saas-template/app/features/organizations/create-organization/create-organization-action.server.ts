@@ -8,6 +8,7 @@ import { uploadOrganizationLogo } from "~/features/organizations/organizations-h
 import { saveOrganizationWithOwnerToDatabase } from "~/features/organizations/organizations-model.server";
 import { requireAuthenticatedUserExists } from "~/features/user-accounts/user-accounts-helpers.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
+import { logPostHogOperation } from "~/utils/posthog-logs.server";
 import { slugify } from "~/utils/slugify.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -50,6 +51,8 @@ export async function createOrganizationAction({
     },
     userId: user.id,
   });
+
+  logPostHogOperation("organization_created");
 
   return redirect(`/organizations/${organization.slug}`, { headers });
 }

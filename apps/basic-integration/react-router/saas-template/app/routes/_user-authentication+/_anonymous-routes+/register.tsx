@@ -85,6 +85,12 @@ export default function RegisterRoute({
     navigation.formData?.get("intent") === REGISTER_WITH_GOOGLE_INTENT;
   const isSubmitting = isRegisteringWithEmail || isRegisteringWithGoogle;
 
+  const captureRegistrationSubmission = (method: "email" | "google") => {
+    void import("~/lib/posthog.client").then(({ default: posthog }) => {
+      posthog.capture("registration_submitted", { method });
+    });
+  };
+
   if (isAwaitingEmailConfirmation) {
     return (
       <RegistrationVerificationAwaiting
@@ -117,7 +123,11 @@ export default function RegisterRoute({
         </div>
 
         {/* Email Registration Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmit={() => captureRegistrationSubmission("email")}
+          {...form.props}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -161,7 +171,10 @@ export default function RegisterRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Registration Form */}
-        <Form method="POST">
+        <Form
+          method="POST"
+          onSubmit={() => captureRegistrationSubmission("google")}
+        >
           <Field>
             <Button
               name="intent"

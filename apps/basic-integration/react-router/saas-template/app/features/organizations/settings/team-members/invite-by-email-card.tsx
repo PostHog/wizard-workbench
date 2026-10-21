@@ -61,6 +61,12 @@ export function EmailInviteCard({
   const hydrated = useHydrated();
   const disabled = isInvitingByEmail || organizationIsFull;
 
+  const captureTeamInviteSubmission = () => {
+    void import("~/lib/posthog.client").then(({ default: posthog }) => {
+      posthog.capture("team_invite_submitted");
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -70,7 +76,11 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          onSubmit={captureTeamInviteSubmission}
+          {...form.props}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">
