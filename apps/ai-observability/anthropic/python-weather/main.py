@@ -2,13 +2,29 @@
 registered `get_weather` tool before answering, so one question is either one
 model call or two with a tool execution between them."""
 
+import atexit
 import os
+import time
+import uuid
 
 import anthropic
+from posthog import Posthog
+from posthog.ai.anthropic import Anthropic
 
 from weather import get_weather
 
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+posthog_client = Posthog(
+    os.environ["POSTHOG_API_KEY"],
+    host=os.environ["POSTHOG_HOST"],
+    privacy_mode=False,
+    enable_exception_autocapture=True,
+)
+atexit.register(posthog_client.shutdown)
+
+client = Anthropic(
+    api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
+    posthog_client=posthog_client,
+)
 
 MODEL = "claude-opus-5"
 
@@ -38,8 +54,10 @@ def _text(response: anthropic.types.Message) -> str:
     return "".join(block.text for block in response.content if block.type == "text")
 
 
-def ask(question: str) -> str:
+def ask(question: str, session_id: str) -> str:
     """Answer one question, running the tool if the model asks for it."""
+    trace_id = str(uuid.uuid4())
+    posthog_properties = {"$ai_session_id": session_id}
     messages: list[dict] = [{"role": "user", "content": question}]
 
     response = client.messages.create(
@@ -48,13 +66,30 @@ def ask(question: str) -> str:
         tools=TOOLS,
         tool_choice=TOOL_CHOICE,
         messages=messages,
+        posthog_distinct_id=USER_ID,
+        posthog_trace_id=trace_id,
+        posthog_properties=posthog_properties,
     )
 
     tool_use = next((b for b in response.content if b.type == "tool_use"), None)
     if tool_use is None:
         return _text(response)
 
+    start = time.time()
     result = get_weather(**tool_use.input)
+    posthog_client.capture(
+        distinct_id=USER_ID,
+        event="$ai_span",
+        properties={
+            "$ai_trace_id": trace_id,
+            "$ai_session_id": session_id,
+            "$ai_span_id": str(uuid.uuid4()),
+            "$ai_span_name": tool_use.name,
+            "$ai_input_state": tool_use.input,
+            "$ai_output_state": result,
+            "$ai_latency": time.time() - start,
+        },
+    )
 
     messages += [
         {"role": "assistant", "content": response.content},
@@ -72,12 +107,16 @@ def ask(question: str) -> str:
         tools=TOOLS,
         tool_choice=TOOL_CHOICE,
         messages=messages,
+        posthog_distinct_id=USER_ID,
+        posthog_trace_id=trace_id,
+        posthog_properties=posthog_properties,
     )
     return _text(followup)
 
 
 def main() -> None:
-    print(ask("What's the weather in San Francisco?"))
+    session_id = str(uuid.uuid4())
+    print(ask("What's the weather in San Francisco?", session_id))
 
 
 if __name__ == "__main__":

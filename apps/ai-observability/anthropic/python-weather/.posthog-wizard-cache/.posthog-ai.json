@@ -1,0 +1,5 @@
+{
+  "provider": "anthropic",
+  "package": "posthog",
+  "otel_init_file": "main.py"
+}
