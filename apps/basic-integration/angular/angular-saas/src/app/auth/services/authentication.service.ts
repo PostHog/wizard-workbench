@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Observable, of, tap } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PostHogLoggerService, PostHogService } from '@core/services';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,9 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly posthogLogger = inject(PostHogLoggerService);
 
   /**
    * Authenticates the user.
@@ -41,9 +44,25 @@ export class AuthenticationService {
       firstName,
       lastName,
     });
-    this._credentialsService.setCredentials(credentials, context.remember);
+    const currentCredentials = this.credentialsService.credentials();
+    if (currentCredentials?.id && currentCredentials.id !== credentials.id) {
+      this.posthogService.client?.reset();
+    }
+
+    this.credentialsService.setCredentials(credentials, context.remember);
+    this.identify(credentials);
+    this.posthogService.client?.capture('login_completed');
+    this.posthogLogger.info('authentication completed', { flow: 'login' });
 
     return of(credentials);
+  }
+
+  /** Identifies a session restored from persisted credentials after PostHog initializes. */
+  identifyCurrentUser(): void {
+    const credentials = this.credentialsService.credentials();
+    if (credentials) {
+      this.identify(credentials);
+    }
   }
 
   /**
@@ -85,7 +104,35 @@ export class AuthenticationService {
    * Logs out the user and clear credentials.
    * @return True if the user was logged out successfully.
    */
-  logout(): Observable<any> {
-    return of(true);
+  logout(): Observable<boolean> {
+    return of(true).pipe(
+      tap(() => {
+        this.posthogService.client?.capture('logout_completed');
+        this.posthogLogger.info('authentication completed', { flow: 'logout' });
+        this.posthogService.client?.reset();
+      }),
+    );
+  }
+
+  private identify(credentials: Credentials): void {
+    if (!credentials.id) {
+      return;
+    }
+
+    const personProperties: Record<string, string | string[]> = {
+      username: credentials.username,
+      roles: credentials.roles,
+    };
+
+    if (credentials.email) {
+      personProperties['email'] = credentials.email;
+    }
+
+    const name = `${credentials.firstName || ''} ${credentials.lastName || ''}`.trim();
+    if (name) {
+      personProperties['name'] = name;
+    }
+
+    this.posthogService.client?.identify(credentials.id, personProperties);
   }
 }
