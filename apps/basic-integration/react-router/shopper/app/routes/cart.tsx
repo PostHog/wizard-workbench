@@ -1,15 +1,55 @@
 import { Link } from "react-router";
 import { useCart, type CartItem } from "../context/CartContext";
+import { usePostHog } from "@posthog/react";
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+  );
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+    isPostHogConfigured && posthog?.capture("cart_item_removed", {
+      product_id: item.id,
+      product_name: item.name,
+      category: item.category,
+      price: item.price,
+      quantity: item.quantity,
+      removal_source: "remove_button",
+    });
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+    if (newQuantity <= 0) {
+      isPostHogConfigured && posthog?.capture("cart_item_removed", {
+        product_id: item.id,
+        product_name: item.name,
+        category: item.category,
+        price: item.price,
+        quantity: item.quantity,
+        removal_source: "quantity_control",
+      });
+      return;
+    }
+
+    isPostHogConfigured && posthog?.capture("cart_quantity_changed", {
+      product_id: item.id,
+      product_name: item.name,
+      category: item.category,
+      previous_quantity: item.quantity,
+      quantity: newQuantity,
+    });
+  };
+
+  const handleCheckoutStart = () => {
+    isPostHogConfigured && posthog?.capture("checkout_started", {
+      cart_total: getCartTotal() * 1.1,
+      currency: "USD",
+      item_count: cart.reduce((count, item) => count + item.quantity, 0),
+    });
   };
 
   if (cart.length === 0) {
@@ -154,6 +194,7 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={handleCheckoutStart}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout
