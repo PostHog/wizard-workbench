@@ -16,11 +16,24 @@
 
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose)
 }
+
+val postHogEnvironment = Properties()
+val postHogEnvironmentFile = file(".env")
+if (postHogEnvironmentFile.exists()) {
+    postHogEnvironmentFile.inputStream().use(postHogEnvironment::load)
+}
+val postHogApiKey = providers.environmentVariable("POSTHOG_API_KEY").orNull
+    ?: postHogEnvironment.getProperty("POSTHOG_API_KEY")
+    ?: "POSTHOG_API_KEY_NOT_CONFIGURED"
+val postHogHost = providers.environmentVariable("POSTHOG_HOST").orNull
+    ?: postHogEnvironment.getProperty("POSTHOG_HOST")
+    ?: "POSTHOG_HOST_NOT_CONFIGURED"
 
 android {
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -33,6 +46,8 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "POSTHOG_API_KEY", "\"$postHogApiKey\"")
+        buildConfigField("String", "POSTHOG_HOST", "\"$postHogHost\"")
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -75,6 +90,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -88,6 +104,8 @@ android {
 }
 
 dependencies {
+    implementation("com.posthog:posthog-android:3.+")
+
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)
