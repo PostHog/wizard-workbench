@@ -24,6 +24,11 @@ export default function Signup() {
         setIsLoading(false)
 
         if (newUser) {
+          void import('~/lib/posthog.client').then(({ default: posthog, isPostHogConfigured }) => {
+            if (isPostHogConfigured) {
+              posthog.capture('account_signed_up')
+            }
+          })
           navigate('/profile')
         } else {
           setError('Signup failed! (But this is fake, so it should always work)')
