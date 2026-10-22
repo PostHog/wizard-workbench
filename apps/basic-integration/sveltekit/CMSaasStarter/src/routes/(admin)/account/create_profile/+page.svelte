@@ -38,6 +38,13 @@
       await update({ reset: false })
       await applyAction(result)
       loading = false
+      if (result.type === "success") {
+        void import("posthog-js").then(({ default: posthog }) => {
+          if (posthog.__loaded) {
+            posthog.capture("profile_created")
+          }
+        })
+      }
     }
   }
 </script>

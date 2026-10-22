@@ -7,15 +7,23 @@
   let { supabase } = data
   let message = $state("Signing out....")
 
-  // on mount, sign out
+  // on mount, clear analytics identity before ending the Supabase session
   onMount(() => {
-    supabase.auth.signOut().then(({ error }) => {
+    const signOut = async () => {
+      const { default: posthog } = await import("posthog-js")
+      if (posthog.__loaded) {
+        posthog.reset()
+      }
+
+      const { error } = await supabase.auth.signOut()
       if (error) {
         message = "There was an issue signing out."
       } else {
         goto("/")
       }
-    })
+    }
+
+    void signOut()
   })
 </script>
 

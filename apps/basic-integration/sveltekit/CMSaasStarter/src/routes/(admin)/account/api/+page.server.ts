@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { emitPostHogLog } from "$lib/server/posthog-logs"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -303,6 +304,12 @@ export const actions = {
     // If the profile was just created, send an email to the user and admin
     const newProfile =
       priorProfile?.updated_at === null && priorProfileError === null
+
+    emitPostHogLog("profile persisted", {
+      event: "profile_persisted",
+      outcome: "success",
+      profile_created: newProfile,
+    })
     if (newProfile) {
       await sendAdminEmail({
         subject: "Profile Created",

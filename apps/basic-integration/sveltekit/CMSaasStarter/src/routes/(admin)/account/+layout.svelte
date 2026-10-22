@@ -10,13 +10,24 @@
   })
 
   onMount(() => {
-    const { data } = supabase.auth.onAuthStateChange((event, _session) => {
-      if (_session?.expires_at !== session?.expires_at) {
-        invalidate("supabase:auth")
+    // This layout only renders after the authenticated session has been validated.
+    void import("posthog-js").then(({ default: posthog }) => {
+      if (posthog.__loaded) {
+        posthog.identify(data.user.id, {
+          email: data.user.email,
+        })
       }
     })
 
-    return () => data.subscription.unsubscribe()
+    const { data: authStateChangeData } = supabase.auth.onAuthStateChange(
+      (event, _session) => {
+        if (_session?.expires_at !== session?.expires_at) {
+          invalidate("supabase:auth")
+        }
+      },
+    )
+
+    return () => authStateChangeData.subscription.unsubscribe()
   })
 </script>
 
