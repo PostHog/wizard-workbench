@@ -4,6 +4,11 @@ class Cards::PublishesController < ApplicationController
   def create
     @card.publish
 
+    PostHog.capture(
+      distinct_id: Current.identity.posthog_distinct_id,
+      event: "card_published"
+    ) if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+
     if add_another_param?
       card = @board.cards.create!(status: :drafted)
       redirect_to card_draft_path(card), notice: "Card added"

@@ -18,6 +18,12 @@ class Account::SubscriptionsController < ApplicationController
       billing_address_collection: "required",
       customer_update: { address: "auto", name: "auto" }
 
+    PostHog.capture(
+      distinct_id: Current.identity.posthog_distinct_id,
+      event: "subscription_checkout_started",
+      properties: { plan_key: plan_param.key }
+    ) if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+
     redirect_to session.url, allow_other_host: true
   end
 

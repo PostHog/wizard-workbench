@@ -14,6 +14,12 @@ class Account::Subscriptions::UpdatePlanController < ApplicationController
       }
     )
 
+    PostHog.capture(
+      distinct_id: Current.identity.posthog_distinct_id,
+      event: "subscription_plan_change_requested",
+      properties: { target_plan_key: target_plan.key }
+    ) if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+
     redirect_to portal_session.url, allow_other_host: true
   end
 

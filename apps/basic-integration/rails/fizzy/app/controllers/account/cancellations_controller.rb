@@ -3,6 +3,12 @@ class Account::CancellationsController < ApplicationController
 
   def create
     Current.account.cancel
+
+    PostHog.capture(
+      distinct_id: Current.identity.posthog_distinct_id,
+      event: "account_cancelled"
+    ) if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+
     redirect_to session_menu_path(script_name: nil), notice: "Account deleted"
   end
 

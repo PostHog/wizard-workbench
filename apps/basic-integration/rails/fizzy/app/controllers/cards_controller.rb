@@ -14,11 +14,31 @@ class CardsController < ApplicationController
     respond_to do |format|
       format.html do
         card = Current.user.draft_new_card_in(@board)
+        PostHog.capture(
+          distinct_id: Current.identity.posthog_distinct_id,
+          event: "card_created",
+          properties: { creation_type: "draft" }
+        ) if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+        POSTHOG_LOG_CAPTURE_LOGGER.emit(
+          severity_text: "INFO",
+          body: "Card draft creation completed",
+          attributes: { "action" => "card_created", "creation_type" => "draft" }
+        ) if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
         redirect_to card_draft_path(card)
       end
 
       format.json do
         card = @board.cards.create! card_params.merge(creator: Current.user, status: "published")
+        PostHog.capture(
+          distinct_id: Current.identity.posthog_distinct_id,
+          event: "card_created",
+          properties: { creation_type: "published" }
+        ) if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+        POSTHOG_LOG_CAPTURE_LOGGER.emit(
+          severity_text: "INFO",
+          body: "Published card creation completed",
+          attributes: { "action" => "card_created", "creation_type" => "published" }
+        ) if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
         head :created, location: card_path(card, format: :json)
       end
     end

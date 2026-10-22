@@ -4,6 +4,10 @@ class Cards::ClosuresController < ApplicationController
   def create
     capture_card_location
     @card.close
+    PostHog.capture(
+      distinct_id: Current.identity.posthog_distinct_id,
+      event: "card_closed"
+    ) if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
     refresh_stream_if_needed
 
     respond_to do |format|
@@ -14,6 +18,10 @@ class Cards::ClosuresController < ApplicationController
 
   def destroy
     @card.reopen
+    PostHog.capture(
+      distinct_id: Current.identity.posthog_distinct_id,
+      event: "card_reopened"
+    ) if ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
     refresh_stream_after_reopen
 
     respond_to do |format|
