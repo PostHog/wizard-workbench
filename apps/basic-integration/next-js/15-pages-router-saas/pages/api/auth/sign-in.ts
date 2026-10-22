@@ -12,6 +12,8 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { emitPostHogLog, flushPostHogLogs } from '@/instrumentation';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -103,6 +105,12 @@ export default async function handler(
       });
       return res.status(200).json(checkoutResult);
     }
+
+    emitPostHogLog('sign-in completed', SeverityNumber.INFO, {
+      event: 'auth.sign_in.completed',
+      status: 'success'
+    });
+    await flushPostHogLogs();
 
     return res.status(200).json({ success: true, redirectTo: '/dashboard' });
   } catch (error) {
