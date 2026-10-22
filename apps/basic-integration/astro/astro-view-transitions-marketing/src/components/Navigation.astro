@@ -12,10 +12,48 @@ const currentPath = Astro.url.pathname;
       <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
       <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
       <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li><a href="#" class="nav-cta" data-posthog-event="get_started_clicked">Get Started</a></li>
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  if (!window.__posthog_click_tracking_initialized) {
+    window.__posthog_click_tracking_initialized = true;
+
+    document.addEventListener('click', (event) => {
+      if (!(event.target instanceof Element)) return;
+
+      const action = event.target.closest('[data-posthog-event]');
+      const eventName = action?.getAttribute('data-posthog-event');
+      if (!eventName) return;
+
+      const plan = action.getAttribute('data-posthog-plan');
+      const ctaLabel = action.getAttribute('data-posthog-cta-label');
+      const properties = {
+        ...(plan ? { plan } : {}),
+        ...(ctaLabel ? { cta_label: ctaLabel } : {}),
+      };
+
+      window.posthog?.capture(eventName, properties);
+
+      if (eventName === 'get_started_clicked') {
+        window.posthog?.logger?.info('get_started CTA selected', {
+          cta_location: 'navigation',
+        });
+      } else if (eventName === 'free_trial_clicked') {
+        window.posthog?.logger?.info('free_trial CTA selected', {
+          cta_label: ctaLabel,
+        });
+      } else if (eventName === 'pricing_plan_selected') {
+        window.posthog?.logger?.info('pricing plan CTA selected', {
+          plan,
+          cta_label: ctaLabel,
+        });
+      }
+    });
+  }
+</script>
 
 <style>
   .nav-link.active {
