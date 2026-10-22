@@ -11,9 +11,16 @@ const props = withDefaults(defineProps<{
 const trailer = computed(() => getTrailer(props.item))
 
 const showModal = useIframeModal()
+const { $posthog } = useNuxtApp()
+
 function playTrailer() {
-  if (trailer.value)
-    showModal(trailer.value)
+  if (!trailer.value)
+    return
+
+  showModal(trailer.value)
+  $posthog?.capture('trailer_played', {
+    media_id: props.item.id,
+  })
 }
 
 const mounted = useMounted()
