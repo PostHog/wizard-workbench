@@ -9,6 +9,11 @@
   },
   "dependencies": {
     "@astrojs/node": "^9.0.0",
-    "astro": "^5.0.0"
+    "@opentelemetry/exporter-logs-otlp-http": "^0.300.0",
+    "@opentelemetry/resources": "^3.0.0",
+    "@opentelemetry/sdk-logs": "^3.0.0",
+    "astro": "^5.0.0",
+    "posthog-js": "^1.438.17",
+    "posthog-node": "^5.57.0"
   }
 }

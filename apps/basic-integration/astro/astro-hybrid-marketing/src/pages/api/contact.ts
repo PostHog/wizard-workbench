@@ -1,4 +1,6 @@
 import type { APIRoute } from 'astro';
+import { flushPostHogLogs, getPostHogContactLogger } from '../../lib/posthog-logs';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -45,6 +47,33 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    const posthog = getPostHogServer();
+    if (posthog) {
+      const distinctId = request.headers.get('X-PostHog-Distinct-Id') || undefined;
+      const sessionId = request.headers.get('X-PostHog-Session-Id') || undefined;
+
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_submitted',
+        properties: {
+          $process_person_profile: false,
+          $session_id: sessionId,
+          interest: data.interest,
+        },
+      });
+      await posthog.flush();
+    }
+
+    getPostHogContactLogger()?.emit({
+      severityText: 'INFO',
+      body: 'contact form submission processed',
+      attributes: {
+        form: 'contact',
+        interest: data.interest,
+      },
+    });
+    await flushPostHogLogs();
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -54,6 +83,15 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contact form error:', error);
+    getPostHogContactLogger()?.emit({
+      severityText: 'ERROR',
+      body: 'contact form submission failed',
+      attributes: {
+        form: 'contact',
+        stage: 'request_processing',
+      },
+    });
+    await flushPostHogLogs();
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
