@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoTeams } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
+import { posthogLog } from '../../../services/posthogLog';
 
 import { getTeamsSuccess, createTeamSuccess, closeTeamModal } from './actions';
 import { getProjectsRequest } from '../projects/actions';
@@ -34,6 +36,13 @@ export function* createTeam({ payload }) {
       const newTeam = { id: Date.now(), name, slug };
       yield put(createTeamSuccess(newTeam));
       yield put(closeTeamModal());
+      if (posthog) {
+        yield call([posthog, posthog.capture], 'team_created');
+      }
+      posthogLog.info('team creation completed', {
+        operation: 'team_create',
+        mode: 'demo',
+      });
       toast.showSuccess('Team created');
       return;
     }
@@ -42,9 +51,19 @@ export function* createTeam({ payload }) {
 
     yield put(createTeamSuccess(response.data));
     yield put(closeTeamModal());
+    if (posthog) {
+      yield call([posthog, posthog.capture], 'team_created');
+    }
+    posthogLog.info('team creation completed', {
+      operation: 'team_create',
+      mode: 'api',
+    });
 
     toast.showSuccess('Team created');
   } catch (err) {
+    posthogLog.warn('team creation failed', {
+      operation: 'team_create',
+    });
     toast.showError('Error creating team');
   }
 }
