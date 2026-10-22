@@ -30,6 +30,19 @@ export type InviteLinkCardProps = {
   organizationIsFull?: boolean;
 };
 
+function capturePostHogEvent(event: string) {
+  if (
+    !window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+    !window.ENV.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    return;
+  }
+
+  void import("posthog-js").then(({ default: posthog }) => {
+    posthog.capture(event);
+  });
+}
+
 export function InviteLinkCard({
   inviteLink,
   organizationIsFull = false,
@@ -113,6 +126,7 @@ export function InviteLinkCard({
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
                   setLinkCopied(true);
+                  capturePostHogEvent("invite_link_copied");
                 }}
                 size="icon"
                 variant="ghost"
@@ -160,7 +174,14 @@ export function InviteLinkCard({
 
           <CardFooter className="flex-col items-stretch">
             <div className="flex items-center gap-2">
-              <Form className="grow" method="POST" replace>
+              <Form
+                className="grow"
+                method="POST"
+                onSubmit={() =>
+                  capturePostHogEvent("invite_link_creation_requested")
+                }
+                replace
+              >
                 <Button
                   aria-describedby="link-regenerate-warning"
                   className="w-full"
@@ -215,7 +236,14 @@ export function InviteLinkCard({
         </>
       ) : (
         <CardFooter>
-          <Form className="w-full" method="POST" replace>
+          <Form
+            className="w-full"
+            method="POST"
+            onSubmit={() =>
+              capturePostHogEvent("invite_link_creation_requested")
+            }
+            replace
+          >
             <Button
               className="w-full"
               disabled={disabled}

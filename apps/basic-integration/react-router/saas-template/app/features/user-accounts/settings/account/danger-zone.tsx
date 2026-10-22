@@ -25,6 +25,19 @@ import { cn } from "~/lib/utils";
 
 export const DELETE_USER_ACCOUNT_INTENT = "delete-user-account";
 
+function capturePostHogEvent(event: string) {
+  if (
+    !window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+    !window.ENV.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    return;
+  }
+
+  void import("posthog-js").then(({ default: posthog }) => {
+    posthog.capture(event);
+  });
+}
+
 export type DangerZoneProps = {
   imlicitlyDeletedOrganizations: Organization["name"][];
   isDeletingAccount?: boolean;
@@ -105,7 +118,11 @@ function DeleteAccountDialogComponent({
             {t("cancel")}
           </DialogClose>
 
-          <Form method="POST" replace>
+          <Form
+            method="POST"
+            onSubmit={() => capturePostHogEvent("user_account_deletion_requested")}
+            replace
+          >
             <Button
               disabled={isDeletingAccount}
               name="intent"

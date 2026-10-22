@@ -60,6 +60,19 @@ export async function action(args: Route.ActionArgs) {
 
 const ONE_MB = 1_000_000;
 
+function capturePostHogEvent(event: string) {
+  if (
+    !window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+    !window.ENV.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    return;
+  }
+
+  void import("posthog-js").then(({ default: posthog }) => {
+    posthog.capture(event);
+  });
+}
+
 export default function UserAccountOnboardingRoute({
   actionData,
   loaderData,
@@ -75,7 +88,12 @@ export default function UserAccountOnboardingRoute({
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <Form encType="multipart/form-data" method="POST" {...form.props}>
+    <Form
+      encType="multipart/form-data"
+      method="POST"
+      {...form.props}
+      onSubmit={() => capturePostHogEvent("onboarding_user_account_submitted")}
+    >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>
           <div className="flex flex-col gap-1">

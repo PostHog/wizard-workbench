@@ -121,6 +121,16 @@ export function NavUser({ user }: NavUserProps) {
                   <button
                     className="w-full"
                     name="intent"
+                    onClick={() => {
+                      if (
+                        window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                        window.ENV.VITE_PUBLIC_POSTHOG_HOST
+                      ) {
+                        void import("posthog-js").then(({ default: posthog }) => {
+                          posthog.reset();
+                        });
+                      }
+                    }}
                     type="submit"
                     value="logout"
                   />

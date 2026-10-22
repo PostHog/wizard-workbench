@@ -179,6 +179,22 @@ export const meta: Route.MetaFunction = ({ loaderData }) => [
 export default function PastesRoute({ loaderData, params }: Route.ComponentProps) {
   const { pastes, pasteLimits } = loaderData;
 
+  const capturePasteCreationSubmitted = (form: HTMLFormElement) => {
+    if (
+      !window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+      !window.ENV.VITE_PUBLIC_POSTHOG_HOST
+    ) {
+      return;
+    }
+
+    const visibility =
+      new FormData(form).get("isPublic") === "on" ? "public" : "private";
+    void import("posthog-js").then(({ default: posthog }) => {
+      posthog.capture("paste_creation_submitted", { visibility });
+      posthog.logger.info("paste creation submitted", { visibility });
+    });
+  };
+
   return (
     <div className="flex flex-1 flex-col gap-4 px-4 py-4 md:py-6 lg:px-6">
       <div className="flex items-center justify-between">
@@ -246,7 +262,11 @@ export default function PastesRoute({ loaderData, params }: Route.ComponentProps
       {/* Create Paste Form */}
       <div id="create-paste" className="mt-8 rounded-lg border bg-card p-6">
         <h2 className="mb-4 text-xl font-semibold">Create New Paste</h2>
-        <Form method="post" className="space-y-4">
+        <Form
+          className="space-y-4"
+          method="post"
+          onSubmit={(event) => capturePasteCreationSubmitted(event.currentTarget)}
+        >
           <input type="hidden" name="intent" value="create" />
           <div>
             <label htmlFor="title" className="mb-2 block text-sm font-medium">

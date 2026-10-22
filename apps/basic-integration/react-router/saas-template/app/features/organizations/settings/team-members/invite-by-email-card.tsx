@@ -36,6 +36,19 @@ export type EmailInviteCardProps = {
   successEmail?: string;
 };
 
+function capturePostHogEvent(event: string) {
+  if (
+    !window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+    !window.ENV.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    return;
+  }
+
+  void import("posthog-js").then(({ default: posthog }) => {
+    posthog.capture(event);
+  });
+}
+
 export function EmailInviteCard({
   currentUserIsOwner,
   isInvitingByEmail = false,
@@ -70,7 +83,11 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={() => capturePostHogEvent("team_invite_submitted")}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

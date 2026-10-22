@@ -11,16 +11,25 @@ import { ServerRouter } from "react-router";
 
 import { getInstance } from "./features/localization/i18next-middleware.server";
 import { getEnv, init } from "./utils/env.server";
+import {
+  initializePostHogLogs,
+  logPostHogInfo,
+} from "./utils/posthog-logs.server";
 import { NonceProvider } from "./utils/nonce-provider";
 
 init();
 global.ENV = getEnv();
+initializePostHogLogs();
 
 export const streamTimeout = 5000;
 
 const oneSecond = 1000;
 const nonceLength = 16;
 const MODE = process.env.NODE_ENV ?? "development";
+const posthogHost = process.env.VITE_PUBLIC_POSTHOG_HOST;
+const posthogAssetHost = posthogHost
+  ? `https://*.${new URL(posthogHost).hostname.split(".").slice(-2).join(".")}`
+  : undefined;
 
 let mockServerInitialized = false;
 
@@ -52,6 +61,9 @@ export default async function handleRequest(
   routerContext: RouterContextProvider,
 ) {
   await initializeMockServer();
+  logPostHogInfo("server render started", {
+    render_mode: entryContext.isSpaMode ? "spa" : "ssr",
+  });
 
   // Generate a cryptographically random nonce for this request
   const nonce = crypto.randomBytes(nonceLength).toString("hex");
@@ -107,6 +119,7 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    posthogHost,
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],
@@ -120,7 +133,9 @@ export default async function handleRequest(
                     "'strict-dynamic'",
                     "'self'",
                     `'nonce-${nonce}'`,
+                    posthogAssetHost,
                   ],
+                  "worker-src": ["'self'", "blob:"],
                   // Inline event handlers with nonce
                   "script-src-attr": [`'nonce-${nonce}'`],
                 },

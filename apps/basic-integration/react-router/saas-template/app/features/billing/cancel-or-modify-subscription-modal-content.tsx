@@ -62,6 +62,25 @@ export function CancelOrModifySubscriptionModalContent({
   const getFeatures = (key: string): string[] =>
     t(`plans.${key}.features`, "", { returnObjects: true }) as string[];
 
+  const captureSubscriptionChangeRequested = (
+    interval: "monthly" | "annual",
+    tier: "low" | "mid" | "high",
+  ) => {
+    if (
+      !window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+      !window.ENV.VITE_PUBLIC_POSTHOG_HOST
+    ) {
+      return;
+    }
+
+    void import("posthog-js").then(({ default: posthog }) => {
+      posthog.capture("subscription_change_requested", {
+        billing_interval: interval,
+        tier,
+      });
+    });
+  };
+
   const getButtonProps = (
     interval: "monthly" | "annual",
     tier: "low" | "mid" | "high",
@@ -81,9 +100,13 @@ export function CancelOrModifySubscriptionModalContent({
     if (isCurrentTier) {
       if (interval !== currentTierInterval) {
         return interval === "annual"
-          ? { children: tModal("switchToAnnualButton") }
+          ? {
+              children: tModal("switchToAnnualButton"),
+              onClick: () => captureSubscriptionChangeRequested(interval, tier),
+            }
           : {
               children: tModal("switchToMonthlyButton"),
+              onClick: () => captureSubscriptionChangeRequested(interval, tier),
               variant: "outline",
             };
       }
@@ -113,8 +136,16 @@ export function CancelOrModifySubscriptionModalContent({
 
     // 3. Default static buttons for upgrade vs downgrade
     return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+      ? {
+          children: tModal("upgradeButton"),
+          disabled: isSubmitting,
+          onClick: () => captureSubscriptionChangeRequested(interval, tier),
+        }
+      : {
+          children: tModal("downgradeButton"),
+          onClick: () => captureSubscriptionChangeRequested(interval, tier),
+          variant: "outline",
+        };
   };
 
   return (

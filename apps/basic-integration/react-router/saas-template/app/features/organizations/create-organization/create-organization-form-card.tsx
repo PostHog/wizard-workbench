@@ -35,6 +35,20 @@ import { Spinner } from "~/components/ui/spinner";
 
 const ONE_MB = 1_000_000;
 
+function capturePostHogEvent(event: string) {
+  if (
+    !window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+    !window.ENV.VITE_PUBLIC_POSTHOG_HOST
+  ) {
+    return;
+  }
+
+  void import("posthog-js").then(({ default: posthog }) => {
+    posthog.capture(event);
+    posthog.logger.info("organization creation submitted");
+  });
+}
+
 export type CreateOrganizationFormCardProps = {
   isCreatingOrganization?: boolean;
   lastResult?: SubmissionResult;
@@ -61,7 +75,12 @@ export function CreateOrganizationFormCard({
         </CardHeader>
 
         <CardContent>
-          <Form encType="multipart/form-data" method="POST" {...form.props}>
+          <Form
+            encType="multipart/form-data"
+            method="POST"
+            {...form.props}
+            onSubmit={() => capturePostHogEvent("organization_creation_submitted")}
+          >
             <FieldSet
               className="flex flex-col gap-6"
               disabled={isCreatingOrganization}
