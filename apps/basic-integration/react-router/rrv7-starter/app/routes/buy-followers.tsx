@@ -6,6 +6,7 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { addFollowers, addPurchasedFollowers } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import { capturePostHogEvent, posthogLog } from '@/lib/posthog.client'
 
 export const meta: Route.MetaFunction = () => {
   const siteUrl = SITE_URL || 'https://clouthub.fake'
@@ -25,15 +26,27 @@ export default function BuyFollowers() {
 
   const handlePurchase = () => {
     if (selectedPackage === null) return
+    const pkg = followerPackages[selectedPackage]
+    const totalFollowers = pkg.amount + pkg.bonus
+
+    posthogLog.info('follower purchase processing started', {
+      follower_count: totalFollowers,
+      package_price: pkg.price,
+    })
     setPurchased(true)
     
     setTimeout(() => {
-      const pkg = followerPackages[selectedPackage]
-      const totalFollowers = pkg.amount + pkg.bonus
-      
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+      capturePostHogEvent('follower_purchase_completed', {
+        follower_count: totalFollowers,
+        package_price: pkg.price,
+      })
+      posthogLog.info('follower purchase processing completed', {
+        follower_count: totalFollowers,
+        package_price: pkg.price,
+      })
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
@@ -75,7 +88,13 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => {
+                  setSelectedPackage(index)
+                  capturePostHogEvent('follower_package_selected', {
+                    follower_count: totalFollowers,
+                    package_price: pkg.price,
+                  })
+                }}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected

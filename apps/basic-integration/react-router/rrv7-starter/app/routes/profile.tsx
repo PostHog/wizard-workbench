@@ -6,12 +6,15 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import { capturePostHogEvent } from '@/lib/posthog.client'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
   const [isFollowing, setIsFollowing] = useState(false)
 
   const handleClick = () => {
-    setIsFollowing(!isFollowing)
+    const newFollowingState = !isFollowing
+    setIsFollowing(newFollowingState)
+    capturePostHogEvent('follow_back_toggled', { is_following: newFollowingState })
     if (!isFollowing) {
       onFollow()
     }
