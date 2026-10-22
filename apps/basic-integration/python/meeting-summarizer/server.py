@@ -23,6 +23,8 @@ import mimetypes
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+from posthog_client import posthog_client
+from posthog_logs import posthog_log
 
 
 # Session management
@@ -69,6 +71,58 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
     db = UserDatabase()
     sessions = SessionManager()
+
+    def handle_one_request(self):
+        """Bind PostHog identity to the lifetime of each parsed HTTP request."""
+        self.raw_requestline = self.rfile.readline(65537)
+        if len(self.raw_requestline) > 65536:
+            self.requestline = ''
+            self.request_version = ''
+            self.command = ''
+            self.send_error(414, 'Request-URI Too Long')
+            return
+        if not self.raw_requestline:
+            self.close_connection = True
+            return
+        if not self.parse_request():
+            return
+
+        method_name = 'do_' + self.command
+        if not hasattr(self, method_name):
+            self.send_error(501, "Unsupported method (%r)" % self.command)
+            return
+
+        method = getattr(self, method_name)
+        if posthog_client:
+            with posthog_client.new_context(fresh=True):
+                current_user = self._get_current_user()
+                if current_user:
+                    self._identify_posthog_user(current_user, self._get_session_id())
+                method()
+        else:
+            method()
+        self.wfile.flush()
+
+    def _identify_posthog_user(self, user, session_id=None, set_person_properties=False):
+        """Identify the active request with the authenticated user's stable ID."""
+        if not posthog_client:
+            return
+
+        posthog_client.identify_context(user.user_id)
+        if session_id:
+            posthog_client.set_context_session(session_id)
+
+        if set_person_properties:
+            person_properties = {
+                'email': user.email,
+                'username': user.username,
+            }
+            if user.full_name:
+                person_properties['name'] = user.full_name
+            posthog_client.set(
+                distinct_id=user.user_id,
+                properties=person_properties,
+            )
 
     def _set_headers(self, status_code=200, content_type='text/html'):
         """Set response headers"""
@@ -273,6 +327,16 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     logging.info(f"Login successful for: {email}")
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
+                    self._identify_posthog_user(
+                        user,
+                        session_id,
+                        set_person_properties=True,
+                    )
+                    if posthog_client:
+                        posthog_client.capture(
+                            event='user_logged_in',
+                            properties={'login_method': 'password'},
+                        )
 
                     # Send response with session cookie
                     self.send_response(200)
@@ -332,6 +396,8 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_user(user):
+                    if posthog_client:
+                        posthog_client.capture(event='user_created')
                     self._send_json(user.to_dict(), 201)
                 else:
                     self._send_json({'error': 'User already exists'}, 409)
@@ -370,6 +436,25 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    if posthog_client:
+                        posthog_client.capture(
+                            event='meeting_summarized',
+                            properties={
+                                'transcript_word_count': len(transcript.split()),
+                                'duration_minutes': duration,
+                                'action_item_count': len(action_items),
+                                'key_point_count': len(key_points),
+                                'participant_count': len(participants),
+                            },
+                        )
+                    posthog_log.info(
+                        'meeting_summary_created',
+                        extra={
+                            'action_item_count': len(action_items),
+                            'key_point_count': len(key_points),
+                            'participant_count': len(participants),
+                        },
+                    )
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -449,6 +534,17 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    if posthog_client:
+                        posthog_client.capture(
+                            event='meeting_deleted',
+                            properties={
+                                'duration_minutes': meeting.duration_minutes,
+                            },
+                        )
+                    posthog_log.info(
+                        'meeting_deleted',
+                        extra={'duration_minutes': meeting.duration_minutes},
+                    )
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
@@ -566,6 +662,7 @@ def main():
 
     # Create and start server
     server = HTTPServer((host, port), SaaSHandler)
+    posthog_log.info('server_started', extra={'port': port})
     logging.info(f"")
     logging.info(f"═══════════════════════════════════════════════════")
     logging.info(f"  AI Meeting Summarizer")
