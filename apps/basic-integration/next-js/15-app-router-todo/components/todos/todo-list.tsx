@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { Todo } from '@/lib/data';
 import { TodoForm } from './todo-form';
 import { TodoItem } from './todo-item';
@@ -42,6 +43,10 @@ export function TodoList() {
       if (response.ok) {
         const newTodo = await response.json();
         setTodos([...todos, newTodo]);
+        posthog.capture('todo_created', {
+          has_description: Boolean(newTodo.description),
+          todo_count: todos.length + 1,
+        });
       }
     } catch (error) {
       console.error('Failed to add todo:', error);
@@ -60,7 +65,12 @@ export function TodoList() {
 
       if (response.ok) {
         const updatedTodo = await response.json();
-        setTodos(todos.map((todo) => (todo.id === id ? updatedTodo : todo)));
+        const updatedTodos = todos.map((todo) => (todo.id === id ? updatedTodo : todo));
+        setTodos(updatedTodos);
+        posthog.capture(completed ? 'todo_completed' : 'todo_reopened', {
+          active_todo_count: updatedTodos.filter((todo) => !todo.completed).length,
+          completed_todo_count: updatedTodos.filter((todo) => todo.completed).length,
+        });
       }
     } catch (error) {
       console.error('Failed to update todo:', error);
@@ -74,7 +84,11 @@ export function TodoList() {
       });
 
       if (response.ok) {
-        setTodos(todos.filter((todo) => todo.id !== id));
+        const updatedTodos = todos.filter((todo) => todo.id !== id);
+        setTodos(updatedTodos);
+        posthog.capture('todo_deleted', {
+          todo_count: updatedTodos.length,
+        });
       }
     } catch (error) {
       console.error('Failed to delete todo:', error);
