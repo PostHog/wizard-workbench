@@ -87,7 +87,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
+import com.example.compose.jetchat.PostHogAppLogger
 import com.example.compose.jetchat.R
+import com.example.compose.jetchat.capturePostHog
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
@@ -137,6 +139,8 @@ fun ConversationContent(
                 uiState.addMessage(
                     Message(authorMe, clipData.getItemAt(0).text.toString(), timeNow),
                 )
+                capturePostHog("message_sent", mapOf("input_method" to "drag_and_drop"))
+                PostHogAppLogger.messageAdded("drag_and_drop")
 
                 return true
             }
@@ -203,6 +207,8 @@ fun ConversationContent(
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )
+                    capturePostHog("message_sent", mapOf("input_method" to "text"))
+                    PostHogAppLogger.messageAdded("text")
                 },
                 resetScroll = {
                     scope.launch {

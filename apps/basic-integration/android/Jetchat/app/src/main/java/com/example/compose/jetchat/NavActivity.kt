@@ -83,6 +83,8 @@ class NavActivity : AppCompatActivity() {
                         LoginScreen(
                             onLogin = { username, password ->
                                 viewModel.login(username, password)
+                                capturePostHog("user_logged_in")
+                                PostHogAppLogger.loginCompleted()
                             },
                         )
                     } else {
@@ -92,6 +94,7 @@ class NavActivity : AppCompatActivity() {
                             username = loggedInUsername,
                             onChatClicked = {
                                 findNavController().popBackStack(R.id.nav_home, false)
+                                capturePostHog("conversation_selected")
                                 scope.launch {
                                     drawerState.close()
                                 }
@@ -100,6 +103,7 @@ class NavActivity : AppCompatActivity() {
                             onProfileClicked = {
                                 val bundle = bundleOf("userId" to it)
                                 findNavController().navigate(R.id.nav_profile, bundle)
+                                capturePostHog("profile_opened", mapOf("source" to "drawer"))
                                 scope.launch {
                                     drawerState.close()
                                 }
@@ -107,6 +111,7 @@ class NavActivity : AppCompatActivity() {
                             },
                             onLogoutClicked = {
                                 viewModel.logout()
+                                capturePostHog("user_logged_out")
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
                                     drawerState.close()
