@@ -63,6 +63,13 @@ on:
   repository_dispatch:
     types: [wizard-ci-trigger]
 
+# One fleet per source ref: a re-trigger for the same wizard/context-mill ref
+# cancels the previous mid-flight fleet instead of stacking beside it. Manual
+# dispatches with no refs fall back to the run id (never self-grouped).
+concurrency:
+  group: wizard-ci-${{ github.event.client_payload.source || 'manual' }}-${{ github.event.client_payload.wizard_ref || inputs.wizard_ref || github.run_id }}-${{ github.event.client_payload.context_mill_ref || inputs.context_mill_ref || '' }}
+  cancel-in-progress: true
+
 jobs:
   # ============================================================================
   # DISCOVER: Find and select apps to run
