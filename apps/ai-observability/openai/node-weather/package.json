@@ -9,7 +9,9 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "openai": "^4.77.0"
+    "@posthog/ai": "^4.4.0",
+    "openai": "^4.77.0",
+    "posthog-node": "^4.18.0"
   },
   "devDependencies": {
     "tsx": "^4.19.2",
