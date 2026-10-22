@@ -8,6 +8,7 @@ import { Spinner } from "@/components/Spinner";
 import type { Item } from "@/shared/types";
 import { getItemDetails } from "@/api/endpoints";
 import { ITEMS_PER_PAGE } from "@/constants/pagination";
+import { posthogLogger } from "@/lib/posthog";
 import {
   type StoryType,
   MAP_STORY_TYPE_TO_STORY_ENDPOINTS,
@@ -33,6 +34,11 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
       const res = await getItemIds();
       const topStories = await res.json();
 
+      posthogLogger.info("story feed IDs loaded", {
+        story_type: storyType,
+        item_count: topStories.length,
+      });
+
       return topStories;
     },
   });
@@ -52,6 +58,12 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
       const posts = await Promise.all(
         detailsResponses.map((res) => res.json())
       );
+
+      posthogLogger.info("story feed page loaded", {
+        story_type: storyType,
+        item_count: posts.length,
+        page_offset: pageParam,
+      });
 
       return posts;
     },
