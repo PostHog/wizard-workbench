@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import posthog from 'posthog-js'
 import type { Media } from '../types'
 import { getMedia, getRecommendations } from '../composables/useTMDB'
 import { formatTime, formatVote, getTrailer } from '../composables/utils'
@@ -9,6 +10,9 @@ import CarouselBase from '../components/carousel/CarouselBase.vue'
 
 console.log('MediaDetailView component loaded')
 
+const posthogIsConfigured = Boolean(
+  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+)
 const props = defineProps<{
   type?: 'movie' | 'tv'
 }>()
@@ -102,6 +106,12 @@ watch(() => route.fullPath, () => {
 function playTrailer() {
   if (trailerUrl.value) {
     showModal.value = true
+    if (posthogIsConfigured) {
+      posthog.capture('trailer_started', {
+        media_id: id.value,
+        media_type: type.value,
+      })
+    }
   }
 }
 
