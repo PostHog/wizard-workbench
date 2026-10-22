@@ -12,6 +12,8 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
+import { logPostHogServerOperation } from '@/lib/posthog-logs';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -92,7 +94,9 @@ export default async function handler(
 
     await Promise.all([
       setSession(foundUser, res),
-      logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
+      logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN),
+      captureServerEvent(req, String(foundUser.id), 'user_signed_in'),
+      logPostHogServerOperation('Authenticated sign-in completed', 'sign_in')
     ]);
 
     if (redirect === 'checkout' && foundTeam) {

@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -163,7 +164,10 @@ export default async function handler(
     await Promise.all([
       db.insert(teamMembers).values(newTeamMember),
       logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
-      setSession(createdUser, res)
+      setSession(createdUser, res),
+      captureServerEvent(req, String(createdUser.id), 'user_signed_up', {
+        signup_type: inviteId ? 'invited' : 'new_team'
+      })
     ]);
 
     if (redirect === 'checkout' && createdTeam) {

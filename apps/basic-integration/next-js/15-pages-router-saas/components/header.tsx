@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/router';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -25,11 +26,17 @@ function UserMenu() {
   async function handleSignOut() {
     try {
       // Call sign-out API to delete HttpOnly session cookie
-      await fetch('/api/auth/sign-out', {
+      const response = await fetch('/api/auth/sign-out', {
         method: 'POST'
       });
 
-      // Clear SWR cache
+      if (!response.ok) {
+        throw new Error('Failed to sign out');
+      }
+
+      posthog.capture('user_signed_out');
+
+      // Clear SWR cache; the app-level identity boundary resets PostHog.
       mutate('/api/user', null, false);
       mutate('/api/team', null, false);
 

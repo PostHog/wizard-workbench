@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { captureServerEvent } from '@/lib/posthog-server';
+import { logPostHogServerOperation } from '@/lib/posthog-logs';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,6 +27,10 @@ export default async function handler(
     }
 
     const result = await createCheckoutSession({ team, priceId, userId: user.id });
+    await Promise.all([
+      captureServerEvent(req, String(user.id), 'checkout_session_created'),
+      logPostHogServerOperation('Checkout session created', 'checkout_session_created')
+    ]);
     return res.status(200).json(result);
   } catch (error) {
     console.error('Checkout error:', error);
