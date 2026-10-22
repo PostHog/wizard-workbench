@@ -1,3 +1,4 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
@@ -8,6 +9,11 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from posthog import Posthog
+from posthog.integrations.flask import PosthogFlaskIntegration
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -38,6 +44,49 @@ babel = Babel()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    posthog_config = {
+        'POSTHOG_PROJECT_TOKEN': app.config['POSTHOG_PROJECT_TOKEN'],
+        'POSTHOG_HOST': app.config['POSTHOG_HOST'],
+    }
+    missing_posthog_config = [
+        name for name, value in posthog_config.items() if not value
+    ]
+    posthog_log = logging.getLogger('posthog.exporter')
+    posthog_log.propagate = False
+    app.posthog = None
+    if missing_posthog_config:
+        if app.debug:
+            missing_config = missing_posthog_config[0]
+            raise RuntimeError(
+                f'{missing_config} variable required by PostHog is missing or '
+                f'un-configured, this causes events to be silently missed. This '
+                f'error stops appearing once {missing_config} is configured'
+            )
+    else:
+        posthog_client = Posthog(
+            app.config['POSTHOG_PROJECT_TOKEN'],
+            host=app.config['POSTHOG_HOST'],
+            enable_exception_autocapture=True,
+        )
+        PosthogFlaskIntegration(app, client=posthog_client)
+        app.posthog = posthog_client
+        atexit.register(posthog_client.shutdown)
+
+        log_provider = LoggerProvider()
+        log_exporter = OTLPLogExporter(
+            endpoint=f"{app.config['POSTHOG_HOST'].rstrip('/')}/i/v1/logs",
+            headers={
+                'Authorization': (
+                    f"Bearer {app.config['POSTHOG_PROJECT_TOKEN']}"
+                )
+            },
+        )
+        log_provider.add_log_record_processor(
+            BatchLogRecordProcessor(log_exporter))
+        posthog_log.setLevel(logging.INFO)
+        posthog_log.addHandler(LoggingHandler(logger_provider=log_provider))
+        atexit.register(log_provider.shutdown)
 
     db.init_app(app)
     migrate.init_app(app, db)

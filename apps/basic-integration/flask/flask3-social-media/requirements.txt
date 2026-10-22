@@ -12,6 +12,9 @@ Flask-SQLAlchemy
 Flask-WTF
 gunicorn
 langdetect
+opentelemetry-api
+opentelemetry-exporter-otlp
+opentelemetry-sdk
 PyJWT
 python-dotenv
 redis
@@ -20,3 +23,4 @@ rq
 SQLAlchemy
 Werkzeug
 WTForms
+posthog>=7.69.0
