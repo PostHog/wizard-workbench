@@ -1,7 +1,17 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
+import { logPosthog, shutdownPosthogLogs } from './posthog-logs.js';
 
 const app = new Hono();
+
+app.onError((error, c) => {
+  if (posthog) {
+    posthog.captureException(error);
+  }
+
+  return c.text('Internal Server Error', 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +57,19 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+  if (posthog) {
+    posthog.capture({
+      event: 'link_created',
+      properties: {
+        tag_count: tags.length,
+        has_description: Boolean(description),
+      },
+    });
+  }
+  logPosthog('info', 'saved_link_created', {
+    tag_count: tags.length,
+    has_description: Boolean(description),
+  });
   return c.json(link, 201);
 });
 
@@ -76,6 +99,19 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  if (posthog) {
+    posthog.capture({
+      event: 'link_updated',
+      properties: {
+        updated_fields: Object.keys(body),
+        is_favorite: link.favorite,
+      },
+    });
+  }
+  logPosthog('info', 'saved_link_updated', {
+    updated_field_count: Object.keys(body).length,
+    is_favorite: link.favorite,
+  });
   return c.json(link);
 });
 
@@ -88,6 +124,17 @@ app.delete('/api/links/:id', (c) => {
   }
 
   links.splice(index, 1);
+  if (posthog) {
+    posthog.capture({
+      event: 'link_deleted',
+      properties: {
+        remaining_link_count: links.length,
+      },
+    });
+  }
+  logPosthog('info', 'saved_link_deleted', {
+    remaining_link_count: links.length,
+  });
   return c.body(null, 204);
 });
 
@@ -104,6 +151,14 @@ app.get('/api/tags', (c) => {
 
 const PORT = process.env.PORT || 3002;
 
-serve({ fetch: app.fetch, port: PORT }, () => {
+const server = serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Hono links API running on http://localhost:${PORT}`);
 });
+
+async function shutdown() {
+  server.close();
+  await Promise.all([posthog?.shutdown(), shutdownPosthogLogs()]);
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
