@@ -6,7 +6,9 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
+from app.main import posthog_client
 from app.models import Generation
+from app.posthog_logs import posthog_log
 
 router = APIRouter(prefix="/api")
 
@@ -75,6 +77,23 @@ async def generate_content(
         result=mock_content,
         credits_used=credits_needed,
     )
+    if posthog_client:
+        posthog_client.capture(
+            "content_generated",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
+        posthog_log.info(
+            "content_generation_completed",
+            extra={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
 
     return GenerateResponse(
         id=generation.id,

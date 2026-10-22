@@ -1,17 +1,47 @@
 """Acme AI - FastAPI SaaS Application."""
 
+import atexit
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from posthog import Posthog
+from posthog.integrations.asgi import PosthogASGIMiddleware
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
+from app.posthog_logs import (
+    configure_posthog_logs,
+    posthog_log,
+    shutdown_posthog_logs,
+)
 
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
+
+posthog_client: Posthog | None = None
+if settings.posthog_project_token and settings.posthog_host:
+    posthog_client = Posthog(
+        settings.posthog_project_token,
+        host=settings.posthog_host,
+        enable_exception_autocapture=True,
+    )
+    atexit.register(posthog_client.shutdown)
+    configure_posthog_logs(settings.posthog_project_token, settings.posthog_host)
+elif settings.debug:
+    missing_variable = (
+        "POSTHOG_PROJECT_TOKEN"
+        if not settings.posthog_project_token
+        else "POSTHOG_HOST"
+    )
+    raise RuntimeError(
+        f"{missing_variable} variable required by PostHog is missing or un-configured, "
+        f"this causes events to be silently missed. This error stops appearing once "
+        f"{missing_variable} is configured"
+    )
+
+from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
 
 
 @asynccontextmanager
@@ -19,8 +49,15 @@ async def lifespan(app: FastAPI):
     """Application lifespan events for startup/shutdown."""
     # Initialize database
     init_db()
+    if posthog_client:
+        posthog_log.info("application_started", extra={"component": "api"})
 
     yield
+
+    if posthog_client:
+        posthog_log.info("application_stopping", extra={"component": "api"})
+        shutdown_posthog_logs()
+        posthog_client.flush()
 
 
 app = FastAPI(
@@ -28,6 +65,9 @@ app = FastAPI(
     description="AI content generation platform",
     lifespan=lifespan,
 )
+
+if posthog_client:
+    app.add_middleware(PosthogASGIMiddleware, client=posthog_client)
 
 # Include routers
 app.include_router(auth.router)
