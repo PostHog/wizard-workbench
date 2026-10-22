@@ -9,6 +9,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { flushPostHogLogs, logPostHogInfo } from '@/lib/posthog-logs';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -63,6 +64,13 @@ export default async function handler(
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
+
+    logPostHogInfo('account_updated', {
+      event: 'account_updated',
+      posthogDistinctId: String(user.id),
+      team_id: userWithTeam?.teamId ?? 'none'
+    });
+    await flushPostHogLogs();
 
     return res.status(200).json({ name, success: 'Account updated successfully.' });
   } catch (error) {
