@@ -1,5 +1,6 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { Credentials } from '@core/entities';
+import { PostHogService } from '@core/services';
 
 const credentialsKey = 'credentials';
 
@@ -11,6 +12,8 @@ const credentialsKey = 'credentials';
   providedIn: 'root',
 })
 export class CredentialsService {
+  private readonly posthogService = inject(PostHogService);
+
   /** The user credentials signal */
   readonly credentials = signal<Credentials | null>(this.loadCredentials());
 
@@ -39,5 +42,20 @@ export class CredentialsService {
       sessionStorage.removeItem(credentialsKey);
       localStorage.removeItem(credentialsKey);
     }
+  }
+
+  identifyCurrentUser(): void {
+    const credentials = this.credentials();
+    if (!credentials?.id) {
+      return;
+    }
+
+    const name = [credentials.firstName, credentials.lastName].filter(Boolean).join(' ');
+
+    this.posthogService.posthog.identify(credentials.id, {
+      ...(credentials.email ? { email: credentials.email } : {}),
+      ...(name ? { name } : {}),
+      ...(credentials.roles[0] ? { role: credentials.roles[0] } : {}),
+    });
   }
 }
