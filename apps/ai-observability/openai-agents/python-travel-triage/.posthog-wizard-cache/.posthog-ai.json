@@ -1,0 +1,5 @@
+{
+  "provider": "openai-agents",
+  "package": "posthog",
+  "otel_init_file": "main.py"
+}
