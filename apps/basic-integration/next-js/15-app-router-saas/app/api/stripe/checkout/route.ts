@@ -2,9 +2,22 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { loggerProvider } from '@/instrumentation';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+
+const checkoutLogger = loggerProvider?.getLogger('posthog-checkout');
+
+function flushPostHogLogs() {
+  const provider = loggerProvider;
+  if (provider) {
+    after(async () => {
+      await provider.forceFlush();
+    });
+  }
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -89,9 +102,30 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    checkoutLogger?.emit({
+      body: 'Stripe checkout completed',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        event: 'checkout_completed',
+        route: '/api/stripe/checkout',
+        outcome: 'success',
+      },
+    });
+    flushPostHogLogs();
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
+    checkoutLogger?.emit({
+      body: 'Stripe checkout failed',
+      severityNumber: SeverityNumber.ERROR,
+      attributes: {
+        event: 'checkout_completed',
+        route: '/api/stripe/checkout',
+        outcome: 'failure',
+        error_type: error instanceof Error ? error.name : 'unknown_error',
+      },
+    });
+    flushPostHogLogs();
     return NextResponse.redirect(new URL('/error', request.url));
   }
 }

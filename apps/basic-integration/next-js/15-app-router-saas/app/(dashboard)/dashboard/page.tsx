@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -61,7 +62,18 @@ function ManageSubscription() {
               </p>
             </div>
             <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
+              <Button
+                type="submit"
+                variant="outline"
+                onClick={() => {
+                  if (
+                    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                    process.env.NEXT_PUBLIC_POSTHOG_HOST
+                  ) {
+                    posthog.capture('subscription_portal_opened');
+                  }
+                }}
+              >
                 Manage Subscription
               </Button>
             </form>
@@ -154,7 +166,17 @@ function TeamMembers() {
                 </div>
               </div>
               {index > 1 ? (
-                <form action={removeAction}>
+                <form
+                  action={removeAction}
+                  onSubmit={() => {
+                    if (
+                      process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                      process.env.NEXT_PUBLIC_POSTHOG_HOST
+                    ) {
+                      posthog.capture('team_member_removal_requested');
+                    }
+                  }}
+                >
                   <input type="hidden" name="memberId" value={member.id} />
                   <Button
                     type="submit"
@@ -201,7 +223,18 @@ function InviteTeamMember() {
         <CardTitle>Invite Team Member</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={inviteAction} className="space-y-4">
+        <form
+          action={inviteAction}
+          className="space-y-4"
+          onSubmit={() => {
+            if (
+              process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+              process.env.NEXT_PUBLIC_POSTHOG_HOST
+            ) {
+              posthog.capture('team_member_invite_submitted');
+            }
+          }}
+        >
           <div>
             <Label htmlFor="email" className="mb-2">
               Email
