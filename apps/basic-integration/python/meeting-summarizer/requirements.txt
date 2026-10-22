@@ -1,4 +1,6 @@
-# User Service - Pure Python dependencies
-# AI Meeting Summarizer - Pure Python dependencies
-# This service uses only Python standard library
-# No external dependencies required
+# PostHog analytics dependencies
+posthog==7.75.6
+python-dotenv>=1.0.0
+opentelemetry-api==1.45.1
+opentelemetry-sdk==1.45.1
+opentelemetry-exporter-otlp==1.45.1

@@ -7,6 +7,7 @@ Automatically summarize meetings with AI-powered analysis.
 import json
 import logging
 import signal
+from functools import wraps
 import sys
 import os
 import hashlib
@@ -23,6 +24,8 @@ import mimetypes
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+from posthog_client import posthog_client, shutdown as shutdown_posthog
+from posthog_logs import posthog_logger, shutdown as shutdown_posthog_logs
 
 
 # Session management
@@ -64,11 +67,49 @@ class SessionManager:
                 del self.sessions[session_id]
 
 
+def posthog_request_context(handler):
+    """Bind PostHog identity to the full lifetime of an HTTP request."""
+    @wraps(handler)
+    def wrapped(self, *args, **kwargs):
+        if not posthog_client:
+            return handler(self, *args, **kwargs)
+
+        with posthog_client.new_context(fresh=True):
+            user = self._get_current_user()
+            if user:
+                self._identify_posthog_user(user)
+            return handler(self, *args, **kwargs)
+
+    return wrapped
+
+
 class SaaSHandler(BaseHTTPRequestHandler):
     """HTTP request handler for the SaaS application"""
 
     db = UserDatabase()
     sessions = SessionManager()
+
+    def _capture_unexpected_exception(self, exception):
+        """Send exceptions converted to server errors to PostHog."""
+        if posthog_client:
+            posthog_client.capture_exception(exception)
+
+    def _identify_posthog_user(self, user, set_person_properties=False):
+        """Identify the request with the authenticated user's stable UUID."""
+        if not posthog_client:
+            return
+
+        posthog_client.identify_context(user.user_id)
+        if set_person_properties:
+            posthog_client.set(
+                distinct_id=user.user_id,
+                properties={
+                    "email": user.email,
+                    "username": user.username,
+                    "name": user.full_name,
+                    "is_active": user.is_active,
+                },
+            )
 
     def _set_headers(self, status_code=200, content_type='text/html'):
         """Set response headers"""
@@ -135,9 +176,11 @@ class SaaSHandler(BaseHTTPRequestHandler):
             self.wfile.write(content)
         except Exception as e:
             logging.error(f"Error serving static file: {e}")
+            self._capture_unexpected_exception(e)
             self._set_headers(500)
             self.wfile.write(b'Internal server error')
 
+    @posthog_request_context
     def do_GET(self):
         """Handle GET requests"""
         try:
@@ -244,8 +287,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             logging.error(f"Error in GET request: {e}\n{traceback.format_exc()}")
+            self._capture_unexpected_exception(e)
             self._send_json({'error': 'Internal server error'}, 500)
 
+    @posthog_request_context
     def do_POST(self):
         """Handle POST requests"""
         try:
@@ -273,6 +318,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     logging.info(f"Login successful for: {email}")
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
+                    self._identify_posthog_user(user, set_person_properties=True)
+                    if posthog_client:
+                        posthog_client.capture(event="user_logged_in")
+                    posthog_logger.info("login_completed")
 
                     # Send response with session cookie
                     self.send_response(200)
@@ -296,6 +345,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
             # API: Logout
             if path == '/api/auth/logout':
+                current_user = self._get_current_user()
+                if current_user and posthog_client:
+                    posthog_client.capture(event="user_logged_out")
+
                 session_id = self._get_session_id()
                 if session_id:
                     self.sessions.delete_session(session_id)
@@ -332,6 +385,14 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_user(user):
+                    if posthog_client:
+                        posthog_client.capture(
+                            event="user_created",
+                            properties={
+                                "has_full_name": bool(user.full_name),
+                                "has_metadata": bool(user.metadata),
+                            },
+                        )
                     self._send_json(user.to_dict(), 201)
                 else:
                     self._send_json({'error': 'User already exists'}, 409)
@@ -370,6 +431,27 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    if posthog_client:
+                        posthog_client.capture(
+                            event="meeting_analyzed",
+                            properties={
+                                "transcript_word_count": len(transcript.split()),
+                                "action_items_count": len(action_items),
+                                "key_points_count": len(key_points),
+                                "participants_count": len(participants),
+                                "estimated_duration_minutes": duration,
+                            },
+                        )
+                    posthog_logger.info(
+                        "meeting_analysis_completed",
+                        extra={
+                            "transcript_word_count": len(transcript.split()),
+                            "action_items_count": len(action_items),
+                            "key_points_count": len(key_points),
+                            "participants_count": len(participants),
+                            "estimated_duration_minutes": duration,
+                        },
+                    )
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -381,8 +463,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
             self._send_json({'error': 'Invalid JSON'}, 400)
         except Exception as e:
             logging.error(f"Error in POST request: {e}\n{traceback.format_exc()}")
+            self._capture_unexpected_exception(e)
             self._send_json({'error': 'Internal server error'}, 500)
 
+    @posthog_request_context
     def do_PUT(self):
         """Handle PUT requests"""
         try:
@@ -401,6 +485,16 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
                 if self.db.update_user(user_id, **data):
                     updated_user = self.db.get_user(user_id)
+                    if posthog_client:
+                        posthog_client.capture(
+                            event="user_updated",
+                            properties={
+                                "updated_field_count": len(
+                                    set(data) & {"email", "username", "full_name", "is_active", "metadata"}
+                                ),
+                                "updated_own_profile": user_id == current_user.user_id,
+                            },
+                        )
                     self._send_json(updated_user.to_dict())
                 else:
                     self._send_json({'error': 'User not found'}, 404)
@@ -410,8 +504,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             logging.error(f"Error in PUT request: {e}\n{traceback.format_exc()}")
+            self._capture_unexpected_exception(e)
             self._send_json({'error': 'Internal server error'}, 500)
 
+    @posthog_request_context
     def do_DELETE(self):
         """Handle DELETE requests"""
         try:
@@ -428,6 +524,11 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 user_id = path.split('/')[-1]
 
                 if self.db.delete_user(user_id):
+                    if posthog_client:
+                        posthog_client.capture(
+                            event="user_deleted",
+                            properties={"deleted_own_profile": user_id == current_user.user_id},
+                        )
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'User not found'}, 404)
@@ -449,6 +550,25 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    if posthog_client:
+                        posthog_client.capture(
+                            event="meeting_deleted",
+                            properties={
+                                "action_items_count": len(meeting.action_items),
+                                "key_points_count": len(meeting.key_points),
+                                "participants_count": len(meeting.participants),
+                                "estimated_duration_minutes": meeting.duration_minutes,
+                            },
+                        )
+                    posthog_logger.info(
+                        "meeting_deleted",
+                        extra={
+                            "action_items_count": len(meeting.action_items),
+                            "key_points_count": len(meeting.key_points),
+                            "participants_count": len(meeting.participants),
+                            "estimated_duration_minutes": meeting.duration_minutes,
+                        },
+                    )
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
@@ -458,6 +578,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             logging.error(f"Error in DELETE request: {e}\n{traceback.format_exc()}")
+            self._capture_unexpected_exception(e)
             self._send_json({'error': 'Internal server error'}, 500)
 
     def log_message(self, format, *args):
@@ -586,6 +707,8 @@ def main():
         logging.info("Server stopped by user")
     finally:
         server.server_close()
+        shutdown_posthog_logs()
+        shutdown_posthog()
         logging.info("Server shut down")
 
 
