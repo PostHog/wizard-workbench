@@ -10,6 +10,31 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-pro
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
+# PostHog configuration
+POSTHOG_API_KEY = os.environ.get('POSTHOG_API_KEY')
+POSTHOG_HOST = os.environ.get('POSTHOG_HOST')
+
+if DEBUG and not POSTHOG_API_KEY:
+    raise RuntimeError(
+        'POSTHOG_API_KEY variable required by PostHog is missing or un-configured, '
+        'this causes events to be silently missed. This error stops appearing once '
+        'POSTHOG_API_KEY is configured'
+    )
+if DEBUG and not POSTHOG_HOST:
+    raise RuntimeError(
+        'POSTHOG_HOST variable required by PostHog is missing or un-configured, '
+        'this causes events to be silently missed. This error stops appearing once '
+        'POSTHOG_HOST is configured'
+    )
+
+POSTHOG_MW_CLIENT = None
+if POSTHOG_API_KEY and POSTHOG_HOST:
+    from .posthog import create_posthog_client
+    from .posthog_logs import configure_posthog_logs
+
+    POSTHOG_MW_CLIENT = create_posthog_client(POSTHOG_API_KEY, POSTHOG_HOST)
+    configure_posthog_logs(POSTHOG_API_KEY, POSTHOG_HOST)
+
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')]
 
 INSTALLED_APPS = [
@@ -32,6 +57,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    *(
+        ['posthog.integrations.django.PosthogContextMiddleware']
+        if POSTHOG_MW_CLIENT
+        else []
+    ),
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
