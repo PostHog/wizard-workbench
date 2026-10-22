@@ -1,3 +1,5 @@
+import { emitPostHogLog } from '~/server/utils/posthog-logs'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -20,6 +22,8 @@ export default defineEventHandler(async (event) => {
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
+
+    emitPostHogLog('auth_login_succeeded')
 
     return {
       success: true,
