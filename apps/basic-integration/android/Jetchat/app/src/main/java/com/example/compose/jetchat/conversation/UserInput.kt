@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
+import com.example.compose.jetchat.postHogOrNull
 import kotlin.math.absoluteValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -164,6 +165,16 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                     textFieldFocusState = focused
                 },
                 onMessageSent = {
+                    postHogOrNull()?.apply {
+                        capture(
+                            "message_sent",
+                            mapOf("message_length" to textState.text.length),
+                        )
+                        logger.info(
+                            "Chat message sent",
+                            mapOf("message_length" to textState.text.length),
+                        )
+                    }
                     onMessageSent(textState.text)
                     // Reset text field and close keyboard
                     textState = TextFieldValue()
@@ -176,6 +187,16 @@ fun UserInput(onMessageSent: (String) -> Unit, modifier: Modifier = Modifier, re
                 onSelectorChange = { currentInputSelector = it },
                 sendMessageEnabled = textState.text.isNotBlank(),
                 onMessageSent = {
+                    postHogOrNull()?.apply {
+                        capture(
+                            "message_sent",
+                            mapOf("message_length" to textState.text.length),
+                        )
+                        logger.info(
+                            "Chat message sent",
+                            mapOf("message_length" to textState.text.length),
+                        )
+                    }
                     onMessageSent(textState.text)
                     // Reset text field and close keyboard
                     textState = TextFieldValue()

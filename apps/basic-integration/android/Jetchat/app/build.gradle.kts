@@ -15,6 +15,7 @@
  */
 
 
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -27,12 +28,23 @@ android {
     namespace = "com.example.compose.jetchat"
 
     defaultConfig {
+        val posthogProperties = Properties().apply {
+            val envFile = rootProject.file(".env")
+            if (envFile.exists()) {
+                envFile.inputStream().use(::load)
+            }
+        }
+        val posthogApiKey = posthogProperties.getProperty("POSTHOG_API_KEY").orEmpty()
+        val posthogHost = posthogProperties.getProperty("POSTHOG_HOST").orEmpty()
+
         applicationId = "com.example.compose.jetchat"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "POSTHOG_API_KEY", "\"$posthogApiKey\"")
+        buildConfigField("String", "POSTHOG_HOST", "\"$posthogHost\"")
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -75,6 +87,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -88,6 +101,8 @@ android {
 }
 
 dependencies {
+    implementation("com.posthog:posthog-android:3.+")
+
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)

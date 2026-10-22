@@ -83,6 +83,10 @@ class NavActivity : AppCompatActivity() {
                         LoginScreen(
                             onLogin = { username, password ->
                                 viewModel.login(username, password)
+                                postHogOrNull()?.apply {
+                                    capture("login_succeeded")
+                                    logger.info("Demo login completed")
+                                }
                             },
                         )
                     } else {
@@ -91,6 +95,7 @@ class NavActivity : AppCompatActivity() {
                             selectedMenu = selectedMenu,
                             username = loggedInUsername,
                             onChatClicked = {
+                                postHogOrNull()?.capture("chat_opened")
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
                                     drawerState.close()
@@ -98,6 +103,7 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onProfileClicked = {
+                                postHogOrNull()?.capture("profile_opened")
                                 val bundle = bundleOf("userId" to it)
                                 findNavController().navigate(R.id.nav_profile, bundle)
                                 scope.launch {
@@ -107,6 +113,7 @@ class NavActivity : AppCompatActivity() {
                             },
                             onLogoutClicked = {
                                 viewModel.logout()
+                                postHogOrNull()?.capture("logout_completed")
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
                                     drawerState.close()
