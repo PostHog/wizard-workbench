@@ -1,4 +1,6 @@
 import { api } from '../api.js';
+import { posthog, isPostHogEnabled } from '../posthog.js';
+import { posthogAppLogger } from '../posthog-logger.js';
 import { router } from '../router.js';
 import { renderShell } from '../components/shell.js';
 import { showModal } from '../components/modal.js';
@@ -75,6 +77,16 @@ export async function renderProjects() {
 
           try {
             const project = await api.createProject(name, desc);
+            if (isPostHogEnabled) {
+              posthog.capture('project_created', {
+                project_id: project.id,
+                has_description: Boolean(project.description),
+              });
+            }
+            posthogAppLogger.info('project created', {
+              project_id: project.id,
+              has_description: Boolean(project.description),
+            });
             router.navigate(`/projects/${project.id}`);
           } catch (err) {
             alert(err.message);
@@ -88,8 +100,15 @@ export async function renderProjects() {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
+        const project = projects.find((item) => item.id === id);
         if (confirm('Delete this project and all its tasks?')) {
           await api.deleteProject(id);
+          if (isPostHogEnabled) {
+            posthog.capture('project_deleted', {
+              project_id: id,
+              task_count: project?.tasks.length || 0,
+            });
+          }
           renderProjects();
         }
       });

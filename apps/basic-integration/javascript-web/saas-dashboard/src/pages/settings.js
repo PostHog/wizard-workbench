@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import { posthog, isPostHogEnabled } from '../posthog.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
 
@@ -83,21 +84,40 @@ export async function renderSettings() {
     // Theme
     document.getElementById('theme-select').addEventListener('change', async (e) => {
       await api.updateSettings({ theme: e.target.value });
+      if (isPostHogEnabled) {
+        posthog.capture('settings_updated', {
+          setting: 'theme',
+          value: e.target.value,
+        });
+      }
       document.body.dataset.theme = e.target.value;
     });
 
     // Notifications
     document.getElementById('email-notif').addEventListener('change', async (e) => {
       await api.updateSettings({ emailNotifications: e.target.checked });
+      if (isPostHogEnabled) {
+        posthog.capture('settings_updated', {
+          setting: 'email_notifications',
+          value: e.target.checked,
+        });
+      }
     });
 
     document.getElementById('weekly-digest').addEventListener('change', async (e) => {
       await api.updateSettings({ weeklyDigest: e.target.checked });
+      if (isPostHogEnabled) {
+        posthog.capture('settings_updated', {
+          setting: 'weekly_digest',
+          value: e.target.checked,
+        });
+      }
     });
 
     // Reset
     document.getElementById('reset-data-btn').addEventListener('click', () => {
       if (confirm('Reset all data to defaults? This cannot be undone.')) {
+        if (isPostHogEnabled) posthog.capture('workspace_data_reset');
         store.reset();
         store.login(user.email);
         renderSettings();
