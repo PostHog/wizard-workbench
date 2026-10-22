@@ -21,6 +21,8 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { captureServerEvent } from '@/lib/posthog-server';
+import { logPostHogIntegration } from '@/lib/posthog-logs';
 import {
   validatedAction,
   validatedActionWithUser
@@ -90,6 +92,12 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
+  await captureServerEvent(String(foundUser.id), 'sign_in_completed', {
+    sign_in_method: 'email_password'
+  });
+  await logPostHogIntegration('Sign-in completed', {
+    action: 'sign_in_completed'
+  });
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -211,6 +219,14 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
     setSession(createdUser)
   ]);
+  await captureServerEvent(String(createdUser.id), 'sign_up_completed', {
+    account_role: userRole,
+    is_invitation_signup: Boolean(inviteId)
+  });
+  await logPostHogIntegration('Sign-up completed', {
+    action: 'sign_up_completed',
+    is_invitation_signup: Boolean(inviteId)
+  });
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -281,6 +297,7 @@ export const updatePassword = validatedActionWithUser(
         .where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PASSWORD)
     ]);
+    await captureServerEvent(String(user.id), 'password_updated');
 
     return {
       success: 'Password updated successfully.'
@@ -333,6 +350,7 @@ export const deleteAccount = validatedActionWithUser(
         );
     }
 
+    await captureServerEvent(String(user.id), 'account_deleted');
     (await cookies()).delete('session');
     redirect('/sign-in');
   }
@@ -353,6 +371,9 @@ export const updateAccount = validatedActionWithUser(
       db.update(users).set({ name, email }).where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
+    await captureServerEvent(String(user.id), 'account_updated', {
+      updated_field_count: 2
+    });
 
     return { name, success: 'Account updated successfully.' };
   }
@@ -386,6 +407,7 @@ export const removeTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.REMOVE_TEAM_MEMBER
     );
+    await captureServerEvent(String(user.id), 'team_member_removed');
 
     return { success: 'Team member removed successfully' };
   }
@@ -450,6 +472,9 @@ export const inviteTeamMember = validatedActionWithUser(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+    await captureServerEvent(String(user.id), 'team_member_invited', {
+      invited_role: role
+    });
 
     // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
     // await sendInvitationEmail(email, userWithTeam.team.name, role)
