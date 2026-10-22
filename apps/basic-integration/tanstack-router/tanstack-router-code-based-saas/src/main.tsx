@@ -20,6 +20,11 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import {
+  PostHogErrorBoundary,
+  PostHogProvider,
+  usePostHog,
+} from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -84,7 +89,64 @@ function RouterSpinner() {
   return <Spinner show={isLoading} />
 }
 
+const posthogProjectToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
 function RootComponent() {
+  if (!posthogProjectToken) {
+    if (import.meta.env.DEV) {
+      throw new Error(
+        'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_PROJECT_TOKEN is configured',
+      )
+    }
+
+    return <RootLayout />
+  }
+
+  if (!posthogHost) {
+    if (import.meta.env.DEV) {
+      throw new Error(
+        'VITE_PUBLIC_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_HOST is configured',
+      )
+    }
+
+    return <RootLayout />
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={posthogProjectToken}
+      options={{
+        api_host: posthogHost,
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+        logs: {
+          serviceName: 'cloudflow-web',
+          environment: import.meta.env.MODE,
+        },
+      }}
+    >
+      <PostHogErrorBoundary fallback={<GlobalErrorFallback />}>
+        <RootLayout />
+      </PostHogErrorBoundary>
+    </PostHogProvider>
+  )
+}
+
+function GlobalErrorFallback() {
+  return (
+    <div role="alert" className="min-h-screen flex items-center justify-center p-6">
+      <div className="max-w-md text-center">
+        <h1 className="text-xl font-semibold">Something went wrong</h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
+          Please refresh the page and try again.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function RootLayout() {
   return (
     <>
       <div className={`min-h-screen flex flex-col`}>
@@ -433,9 +495,14 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async ({ data }) => {
+      posthog?.capture('invoice_created', { invoice_id: data.id })
+      posthog?.logger.info('invoice created', { invoice_id: data.id })
+      await router.invalidate()
+    },
   })
 
   return (
@@ -517,9 +584,14 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async () => {
+      posthog?.capture('invoice_updated', { invoice_id: invoice.id })
+      posthog?.logger.info('invoice updated', { invoice_id: invoice.id })
+      await router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -1093,6 +1165,7 @@ const loginRoute = createRoute({
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
   const router = useRouter()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -1103,6 +1176,8 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog?.capture('user_logged_in')
+    posthog?.logger.info('demo user logged in')
     router.invalidate()
   }
 
