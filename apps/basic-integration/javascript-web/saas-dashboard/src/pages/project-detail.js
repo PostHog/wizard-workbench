@@ -1,4 +1,6 @@
 import { api } from '../api.js';
+import { posthog } from '../posthog.js';
+import { posthogLogger } from '../posthog-logger.js';
 import { store } from '../store.js';
 import { renderShell } from '../components/shell.js';
 import { showModal } from '../components/modal.js';
@@ -105,6 +107,7 @@ function render(project, members) {
 
         try {
           await api.addTask(project.id, title, priority);
+          posthog?.capture('task_created', { priority });
           document.getElementById('modal-overlay')?.remove();
           const updated = await api.getProject(project.id);
           render(updated, members);
@@ -119,6 +122,8 @@ function render(project, members) {
   content.querySelectorAll('.move-task').forEach((btn) => {
     btn.addEventListener('click', async () => {
       await api.updateTaskStatus(project.id, btn.dataset.taskId, btn.dataset.status);
+      posthog?.capture('task_status_updated', { status: btn.dataset.status });
+      posthogLogger.info('task status update completed', { status: btn.dataset.status });
       const updated = await api.getProject(project.id);
       render(updated, members);
     });
@@ -136,6 +141,7 @@ function render(project, members) {
         modalEl.querySelectorAll('.assign-option').forEach((opt) => {
           opt.addEventListener('click', async () => {
             await api.assignTask(project.id, btn.dataset.taskId, opt.dataset.assignee || null);
+            posthog?.capture('task_assigned', { is_assigned: Boolean(opt.dataset.assignee) });
             document.getElementById('modal-overlay')?.remove();
             const updated = await api.getProject(project.id);
             render(updated, members);
@@ -149,6 +155,7 @@ function render(project, members) {
   content.querySelectorAll('.delete-task').forEach((btn) => {
     btn.addEventListener('click', async () => {
       await api.deleteTask(project.id, btn.dataset.taskId);
+      posthog?.capture('task_deleted');
       const updated = await api.getProject(project.id);
       render(updated, members);
     });
