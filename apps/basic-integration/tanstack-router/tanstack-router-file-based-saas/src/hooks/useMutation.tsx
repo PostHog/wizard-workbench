@@ -3,6 +3,7 @@ import * as React from 'react'
 export function useMutation<TVariables, TData, TError = Error>(opts: {
   fn: (variables: TVariables) => Promise<TData>
   onSuccess?: (ctx: { data: TData }) => void | Promise<void>
+  onError?: () => void | Promise<void>
 }) {
   const [submittedAt, setSubmittedAt] = React.useState<number | undefined>()
   const [variables, setVariables] = React.useState<TVariables | undefined>()
@@ -26,11 +27,12 @@ export function useMutation<TVariables, TData, TError = Error>(opts: {
         setData(data)
         return data
       } catch (err: any) {
+        await opts.onError?.()
         setStatus('error')
         setError(err)
       }
     },
-    [opts.fn],
+    [opts.fn, opts.onSuccess, opts.onError],
   )
 
   return {
