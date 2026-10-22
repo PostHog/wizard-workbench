@@ -6,4 +6,6 @@ export const environment = {
   defaultLanguage: 'en-US',
   supportedLanguages: ['en-US'],
   buildYear: 2024,
+  posthogKey: env['POSTHOG_KEY'],
+  posthogHost: env['POSTHOG_HOST'],
 };
