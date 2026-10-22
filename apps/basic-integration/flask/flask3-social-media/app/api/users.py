@@ -1,5 +1,5 @@
 import sqlalchemy as sa
-from flask import request, url_for, abort
+from flask import current_app, request, url_for, abort
 from app import db
 from app.models import User
 from app.api import bp
@@ -78,4 +78,6 @@ def update_user(id):
         return bad_request('please use a different email address')
     user.from_dict(data, new_user=False)
     db.session.commit()
+    if current_app.posthog_client:
+        current_app.posthog_client.capture('api_profile_updated')
     return user.to_dict()

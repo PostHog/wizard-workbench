@@ -1,7 +1,10 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from flask import Flask, request, current_app
+from posthog import Posthog
+from posthog.integrations.flask import PosthogFlaskIntegration
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -33,6 +36,37 @@ login.login_message = _l('Please log in to access this page.')
 mail = Mail()
 moment = Moment()
 babel = Babel()
+_posthog_log_provider = None
+_posthog_log_logger = None
+
+
+def configure_posthog_log_exporter(project_token, posthog_host):
+    """Create the dedicated logger used for PostHog log export."""
+    global _posthog_log_provider, _posthog_log_logger
+    if _posthog_log_logger is not None:
+        return _posthog_log_logger
+
+    from opentelemetry._logs import set_logger_provider
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import \
+        OTLPLogExporter
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+
+    _posthog_log_provider = LoggerProvider()
+    set_logger_provider(_posthog_log_provider)
+    exporter = OTLPLogExporter(
+        endpoint=f'{posthog_host.rstrip("/")}/i/v1/logs',
+        headers={'Authorization': f'Bearer {project_token}'},
+    )
+    _posthog_log_provider.add_log_record_processor(
+        BatchLogRecordProcessor(exporter))
+    _posthog_log_logger = logging.getLogger('microblog.posthog_logs')
+    _posthog_log_logger.setLevel(logging.INFO)
+    _posthog_log_logger.propagate = False
+    _posthog_log_logger.addHandler(
+        LoggingHandler(logger_provider=_posthog_log_provider))
+    atexit.register(_posthog_log_provider.shutdown)
+    return _posthog_log_logger
 
 
 def create_app(config_class=Config):
@@ -53,6 +87,32 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    posthog_project_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    app.posthog_log_logger = None
+    if posthog_project_token and posthog_host:
+        app.posthog_client = Posthog(
+            posthog_project_token,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        PosthogFlaskIntegration(app, client=app.posthog_client)
+        atexit.register(app.posthog_client.shutdown)
+        app.posthog_log_logger = configure_posthog_log_exporter(
+            posthog_project_token, posthog_host)
+    else:
+        app.posthog_client = None
+        if app.debug:
+            missing_variable = (
+                'POSTHOG_PROJECT_TOKEN'
+                if not posthog_project_token else 'POSTHOG_HOST'
+            )
+            raise RuntimeError(
+                f'{missing_variable} variable required by PostHog is missing or '
+                f'un-configured, this causes events to be silently missed. This '
+                f'error stops appearing once {missing_variable} is configured'
+            )
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
