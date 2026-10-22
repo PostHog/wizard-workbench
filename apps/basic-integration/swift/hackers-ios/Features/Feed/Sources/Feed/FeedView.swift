@@ -349,6 +349,7 @@ public struct FeedView<Store: NavigationStoreProtocol>: View {
     private func postTypeMenuButton(for postType: Domain.PostType) -> some View {
         Button {
             selectedPostType = postType
+            Analytics.capture("feed_category_selected", properties: ["feed_category": postType.displayName])
             Task {
                 await viewModel.changePostType(postType)
             }

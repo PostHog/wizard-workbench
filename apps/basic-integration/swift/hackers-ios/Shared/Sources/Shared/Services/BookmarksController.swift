@@ -64,6 +64,10 @@ public final class BookmarksController: @unchecked Sendable {
                 object: nil,
                 userInfo: ["postId": post.id, "isBookmarked": newState]
             )
+            Analytics.capture(
+                newState ? "post_bookmark_added" : "post_bookmark_removed",
+                properties: ["post_id": post.id]
+            )
             return newState
         } catch {
             return cachedIDs.contains(post.id)

@@ -59,6 +59,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.upvote(item: postForVoting)
+            Analytics.capture("post_upvoted", properties: ["post_id": post.id])
 
         } catch {
             // Revert optimistic changes on error
@@ -96,6 +97,7 @@ public final class VotingViewModel {
 
         do {
             try await votingStateProvider.unvote(item: postForVoting)
+            Analytics.capture("post_unvoted", properties: ["post_id": post.id])
 
         } catch {
             // Revert optimistic changes on error
@@ -128,6 +130,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.upvoteComment(commentForVoting, for: post)
+            Analytics.capture("comment_upvoted", properties: ["comment_id": comment.id, "post_id": post.id])
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = false
@@ -155,6 +158,7 @@ public final class VotingViewModel {
 
         do {
             try await commentVotingStateProvider.unvoteComment(commentForVoting, for: post)
+            Analytics.capture("comment_unvoted", properties: ["comment_id": comment.id, "post_id": post.id])
         } catch {
             // Revert optimistic changes on error
             comment.upvoted = true
