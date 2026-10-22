@@ -1,3 +1,4 @@
+import logging
 import uuid
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -9,6 +10,9 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import timedelta
 from .models import Plan, Subscription
+
+
+posthog_logger = logging.getLogger('posthog.logs')
 
 # Check if Stripe is configured
 STRIPE_CONFIGURED = bool(getattr(settings, 'STRIPE_SECRET_KEY', ''))
@@ -55,6 +59,21 @@ def subscribe(request, plan_slug):
                     },
                     allow_promotion_codes=True,
                 )
+                if settings.POSTHOG_MW_CLIENT:
+                    settings.POSTHOG_MW_CLIENT.capture(
+                        'subscription_checkout_started',
+                        properties={
+                            'plan_slug': plan.slug,
+                            'billing_interval': plan.interval,
+                        },
+                    )
+                posthog_logger.info(
+                    'subscription_checkout_started',
+                    extra={
+                        'plan_slug': plan.slug,
+                        'billing_interval': plan.interval,
+                    },
+                )
                 return redirect(checkout_session.url)
             except Exception as e:
                 messages.error(request, f'Payment error: {str(e)}')
@@ -69,6 +88,23 @@ def subscribe(request, plan_slug):
                 current_period_start=now,
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
+            )
+            if settings.POSTHOG_MW_CLIENT:
+                settings.POSTHOG_MW_CLIENT.capture(
+                    'subscription_started',
+                    properties={
+                        'plan_slug': plan.slug,
+                        'billing_interval': plan.interval,
+                        'is_demo': True,
+                    },
+                )
+            posthog_logger.info(
+                'subscription_started',
+                extra={
+                    'plan_slug': plan.slug,
+                    'billing_interval': plan.interval,
+                    'is_demo': True,
+                },
             )
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
@@ -130,6 +166,15 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+                if settings.POSTHOG_MW_CLIENT:
+                    settings.POSTHOG_MW_CLIENT.capture(
+                        'subscription_plan_changed',
+                        properties={
+                            'plan_slug': plan.slug,
+                            'billing_interval': plan.interval,
+                            'is_demo': False,
+                        },
+                    )
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
                 messages.error(request, f'Error changing plan: {str(e)}')
@@ -137,6 +182,15 @@ def change_plan(request, plan_slug):
             # Demo mode
             subscription.plan = plan
             subscription.save()
+            if settings.POSTHOG_MW_CLIENT:
+                settings.POSTHOG_MW_CLIENT.capture(
+                    'subscription_plan_changed',
+                    properties={
+                        'plan_slug': plan.slug,
+                        'billing_interval': plan.interval,
+                        'is_demo': True,
+                    },
+                )
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -171,6 +225,15 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        if settings.POSTHOG_MW_CLIENT:
+            settings.POSTHOG_MW_CLIENT.capture(
+                'subscription_canceled',
+                properties={
+                    'plan_slug': subscription.plan.slug,
+                    'billing_interval': subscription.plan.interval,
+                    'is_demo': subscription.stripe_subscription_id.startswith('sub_demo_'),
+                },
+            )
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 

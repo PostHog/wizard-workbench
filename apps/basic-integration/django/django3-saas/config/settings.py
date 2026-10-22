@@ -10,6 +10,31 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-pro
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
+POSTHOG_PROJECT_TOKEN = os.environ.get('POSTHOG_PROJECT_TOKEN')
+POSTHOG_HOST = os.environ.get('POSTHOG_HOST')
+POSTHOG_MW_CLIENT = None
+
+for posthog_env_var, posthog_env_value in (
+    ('POSTHOG_PROJECT_TOKEN', POSTHOG_PROJECT_TOKEN),
+    ('POSTHOG_HOST', POSTHOG_HOST),
+):
+    if not posthog_env_value:
+        if DEBUG:
+            from django.core.exceptions import ImproperlyConfigured
+
+            raise ImproperlyConfigured(
+                f'{posthog_env_var} variable required by PostHog is missing or un-configured, '
+                f'this causes events to be silently missed. This error stops appearing once '
+                f'{posthog_env_var} is configured'
+            )
+        break
+else:
+    from config.posthog import posthog_client
+    from config.posthog_logs import configure_posthog_logs
+
+    POSTHOG_MW_CLIENT = posthog_client
+    configure_posthog_logs()
+
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')]
 
 INSTALLED_APPS = [
@@ -32,6 +57,10 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    *(
+        ['posthog.integrations.django.PosthogContextMiddleware']
+        if POSTHOG_MW_CLIENT else []
+    ),
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
