@@ -1,15 +1,65 @@
 import { Link } from "react-router";
+import { usePostHog } from "@posthog/react";
 import { useCart, type CartItem } from "../context/CartContext";
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
+  const posthog = usePostHog();
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+    if (posthog.__loaded) {
+      posthog.capture("cart_item_removed", {
+        product_id: item.id,
+        product_category: item.category,
+        product_price: item.price,
+        quantity: item.quantity,
+        removal_method: "remove_button",
+      });
+    }
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+    if (!posthog.__loaded) return;
+
+    if (newQuantity <= 0) {
+      posthog.capture("cart_item_removed", {
+        product_id: item.id,
+        product_category: item.category,
+        product_price: item.price,
+        quantity: item.quantity,
+        removal_method: "quantity_decrement",
+      });
+      return;
+    }
+
+    posthog.capture("cart_item_quantity_updated", {
+      product_id: item.id,
+      product_category: item.category,
+      previous_quantity: item.quantity,
+      quantity: newQuantity,
+    });
+  };
+
+  const handleCheckoutStart = () => {
+    if (posthog.__loaded) {
+      const cartItemCount = cart.reduce(
+        (count, item) => count + item.quantity,
+        0,
+      );
+      const cartTotal = getCartTotal();
+
+      posthog.capture("checkout_started", {
+        cart_item_count: cartItemCount,
+        cart_total: cartTotal,
+      });
+      posthog.logger.info("checkout navigation initiated", {
+        event: "checkout_navigation_initiated",
+        cart_item_count: cartItemCount,
+        cart_total: cartTotal,
+      });
+    }
   };
 
   if (cart.length === 0) {
@@ -154,6 +204,7 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={handleCheckoutStart}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout
