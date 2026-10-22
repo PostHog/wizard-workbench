@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -26,6 +27,9 @@ type ActionState = {
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const isPostHogConfigured = Boolean(
+  process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST
+);
 
 function SubscriptionSkeleton() {
   return (
@@ -60,7 +64,14 @@ function ManageSubscription() {
                   : 'No active subscription'}
               </p>
             </div>
-            <form action={customerPortalAction}>
+            <form
+              action={customerPortalAction}
+              onSubmit={() => {
+                if (isPostHogConfigured) {
+                  posthog.capture('subscription_management_opened');
+                }
+              }}
+            >
               <Button type="submit" variant="outline">
                 Manage Subscription
               </Button>
@@ -154,7 +165,14 @@ function TeamMembers() {
                 </div>
               </div>
               {index > 1 ? (
-                <form action={removeAction}>
+                <form
+                  action={removeAction}
+                  onSubmit={() => {
+                    if (isPostHogConfigured) {
+                      posthog.capture('team_member_removal_submitted');
+                    }
+                  }}
+                >
                   <input type="hidden" name="memberId" value={member.id} />
                   <Button
                     type="submit"
@@ -201,7 +219,21 @@ function InviteTeamMember() {
         <CardTitle>Invite Team Member</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={inviteAction} className="space-y-4">
+        <form
+          action={inviteAction}
+          className="space-y-4"
+          onSubmit={(event) => {
+            if (isPostHogConfigured) {
+              const invitedRole = new FormData(event.currentTarget).get('role');
+              posthog.capture('team_member_invitation_submitted', {
+                invited_role:
+                  invitedRole === 'member' || invitedRole === 'owner'
+                    ? invitedRole
+                    : undefined
+              });
+            }
+          }}
+        >
           <div>
             <Label htmlFor="email" className="mb-2">
               Email
