@@ -1,6 +1,11 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { usePostHog } from '@posthog/react'
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react'
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
+
+export const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+)
 
 interface AuthContextType {
   user: FakeUser | null
@@ -14,15 +19,36 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
+  const hasRestoredSession = useRef(false)
+  const posthog = usePostHog()
+
+  const identifyUser = (currentUser: FakeUser) => {
+    if (!isPostHogConfigured) return
+
+    posthog.identify(currentUser.id, {
+      email: currentUser.email,
+      username: currentUser.username,
+    })
+  }
 
   useEffect(() => {
+    if (hasRestoredSession.current) return
+
+    hasRestoredSession.current = true
     const currentUser = getCurrentUser()
+    if (currentUser) {
+      identifyUser(currentUser)
+    }
     setUser(currentUser)
-  }, [])
+  }, [posthog])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      if (user && user.id !== loggedInUser.id && isPostHogConfigured) {
+        posthog.reset()
+      }
+      identifyUser(loggedInUser)
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      if (user && user.id !== newUser.id && isPostHogConfigured) {
+        posthog.reset()
+      }
+      identifyUser(newUser)
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,29 +71,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    if (user && isPostHogConfigured) {
+      posthog.reset()
+    }
     fakeLogout()
     setUser(null)
   }
 
   // Sync user state when localStorage changes
   useEffect(() => {
-    const handleStorageChange = () => {
+    const syncUser = () => {
       const currentUser = getCurrentUser()
+      if (currentUser?.id === user?.id) return
+
+      if (isPostHogConfigured) {
+        if (user) {
+          posthog.reset()
+        }
+        if (currentUser) {
+          identifyUser(currentUser)
+        }
+      }
       setUser(currentUser)
     }
-    window.addEventListener('storage', handleStorageChange)
-    const interval = setInterval(() => {
-      const currentUser = getCurrentUser()
-      if (currentUser?.id !== user?.id) {
-        setUser(currentUser)
-      }
-    }, 1000)
+
+    window.addEventListener('storage', syncUser)
+    const interval = setInterval(syncUser, 1000)
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('storage', syncUser)
       clearInterval(interval)
     }
-  }, [user?.id])
+  }, [posthog, user?.id])
 
   return (
     <AuthContext.Provider
