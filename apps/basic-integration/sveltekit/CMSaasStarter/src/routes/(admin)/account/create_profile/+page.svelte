@@ -1,6 +1,8 @@
 <script lang="ts">
   import { applyAction, enhance } from "$app/forms"
+  import { env } from "$env/dynamic/public"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import posthog from "posthog-js"
   import "../../../../app.css"
 
   interface User {
@@ -37,6 +39,9 @@
     return async ({ update, result }) => {
       await update({ reset: false })
       await applyAction(result)
+      if (result.type === "success" && env.PUBLIC_POSTHOG_KEY && env.PUBLIC_POSTHOG_HOST) {
+        posthog.capture("profile_created")
+      }
       loading = false
     }
   }
