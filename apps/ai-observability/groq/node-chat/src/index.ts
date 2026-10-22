@@ -1,9 +1,39 @@
-import OpenAI from 'openai'
+import { randomUUID } from 'node:crypto'
+import { OpenAI } from '@posthog/ai/openai'
+import OpenAIClient from 'openai'
+import { PostHog } from 'posthog-node'
 
-const client = new OpenAI({
+const posthogApiKey = process.env.POSTHOG_API_KEY
+const posthogHost = process.env.POSTHOG_HOST
+
+if (!posthogApiKey && process.env.NODE_ENV !== 'production') {
+    throw new Error('POSTHOG_API_KEY variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_API_KEY is configured')
+}
+
+if (!posthogHost && process.env.NODE_ENV !== 'production') {
+    throw new Error('POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured')
+}
+
+const posthog = posthogApiKey && posthogHost
+    ? new PostHog(posthogApiKey, {
+        host: posthogHost,
+        privacyMode: false,
+        enableExceptionAutocapture: true,
+    })
+    : undefined
+
+const client = new OpenAIClient({
     apiKey: process.env.GROQ_API_KEY ?? '',
     baseURL: 'https://api.groq.com/openai/v1',
 })
+
+const observableClient = posthog
+    ? new OpenAI({
+        apiKey: process.env.GROQ_API_KEY ?? '',
+        baseURL: 'https://api.groq.com/openai/v1',
+        posthog,
+    })
+    : undefined
 
 const MODEL = 'llama-3.3-70b-versatile'
 
@@ -16,14 +46,26 @@ function moderate(question: string): void {
     }
 }
 
-async function complete(system: string, user: string): Promise<string> {
-    const response = await client.chat.completions.create({
+type ObservabilityContext = {
+    posthogDistinctId: string
+    posthogTraceId: string
+    posthogProperties: {
+        $ai_session_id: string
+        $ai_provider: 'groq'
+    }
+}
+
+async function complete(system: string, user: string, observability: ObservabilityContext): Promise<string> {
+    const request = {
         model: MODEL,
         messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user },
+            { role: 'system' as const, content: system },
+            { role: 'user' as const, content: user },
         ],
-    })
+    }
+    const response = observableClient
+        ? await observableClient.chat.completions.create({ ...request, ...observability })
+        : await client.chat.completions.create(request)
     return response.choices[0]?.message?.content ?? ''
 }
 
@@ -41,28 +83,40 @@ class Thread {
     /** Answer one question, end to end. */
     async ask(question: string): Promise<string> {
         moderate(question)
-        const context = this.turns.length > 0 ? await this.condense() : ''
-        const answer = await this.reply(context, question)
+        const observability: ObservabilityContext = {
+            posthogDistinctId: this.userId,
+            posthogTraceId: randomUUID(),
+            posthogProperties: {
+                $ai_session_id: this.threadId,
+                $ai_provider: 'groq',
+            },
+        }
+        const context = this.turns.length > 0 ? await this.condense(observability) : ''
+        const answer = await this.reply(context, question, observability)
         this.turns.push({ question, answer })
         return answer
     }
 
     /** Squash the thread so far into a short recap the next call can use. */
-    private condense(): Promise<string> {
+    private condense(observability: ObservabilityContext): Promise<string> {
         const transcript = this.turns.map((t) => `Q: ${t.question}\nA: ${t.answer}`).join('\n\n')
-        return complete('Summarize this conversation in two sentences.', transcript)
+        return complete('Summarize this conversation in two sentences.', transcript, observability)
     }
 
-    private reply(context: string, question: string): Promise<string> {
+    private reply(context: string, question: string, observability: ObservabilityContext): Promise<string> {
         const prompt = context ? `Earlier in this thread: ${context}\n\nQuestion: ${question}` : question
-        return complete('You are a concise assistant.', prompt)
+        return complete('You are a concise assistant.', prompt, observability)
     }
 }
 
 async function main(): Promise<void> {
     const thread = new Thread('user_123', 'thread_abc')
-    console.log(await thread.ask('What is a feature flag?'))
-    console.log(await thread.ask('How is that different from an experiment?'))
+    try {
+        console.log(await thread.ask('What is a feature flag?'))
+        console.log(await thread.ask('How is that different from an experiment?'))
+    } finally {
+        await posthog?.shutdown()
+    }
 }
 
 main().catch((err) => {
