@@ -2,7 +2,7 @@
 
 from typing import Annotated, Optional
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, Request, status
 from itsdangerous import BadSignature, URLSafeSerializer
 from sqlalchemy.orm import Session
 
@@ -25,14 +25,33 @@ def get_session_user_id(session_token: Annotated[Optional[str], Cookie()] = None
         return None
 
 
+def identify_current_user(
+    request: Request, user: User, *, set_person_properties: bool = False
+) -> None:
+    """Bind an authenticated user to the active PostHog request context."""
+    posthog_client = getattr(request.app.state, "posthog", None)
+    if not posthog_client:
+        return
+
+    distinct_id = str(user.id)
+    posthog_client.identify_context(distinct_id)
+    if set_person_properties:
+        posthog_client.set(distinct_id=distinct_id, properties={"email": user.email})
+
+
 def get_current_user(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     user_id: Annotated[Optional[int], Depends(get_session_user_id)],
 ) -> Optional[User]:
-    """Get the current authenticated user, or None if not authenticated."""
+    """Get and identify the current authenticated user for this request."""
     if user_id is None:
         return None
-    return User.get_by_id(db, user_id)
+
+    user = User.get_by_id(db, user_id)
+    if user:
+        identify_current_user(request, user)
+    return user
 
 
 def require_auth(
