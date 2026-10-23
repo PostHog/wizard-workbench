@@ -28,15 +28,17 @@ const OUTPUT_FORMAT_REVENUE = readFileSync(
   join(__dirname, "prompts/output-format-revenue.md"),
   "utf-8",
 ).trim();
+const OUTPUT_FORMAT_AI_OBSERVABILITY = readFileSync(
+  join(__dirname, "prompts/output-format-ai-observability.md"),
+  "utf-8",
+).trim();
 
 /** Per-command prompt overrides. Extend when a new command gets its own rubric. */
 const PROMPTS_BY_COMMAND: Record<string, { rubric: string; outputFormat: string }> = {
   revenue: { rubric: EVALUATION_CRITERIA_REVENUE, outputFormat: OUTPUT_FORMAT_REVENUE },
-  // Reuses the default output format — the AIO rubric keeps the same four
-  // dimensions, only the items differ.
   "ai-observability": {
     rubric: EVALUATION_CRITERIA_AI_OBSERVABILITY,
-    outputFormat: OUTPUT_FORMAT,
+    outputFormat: OUTPUT_FORMAT_AI_OBSERVABILITY,
   },
   // Reuses the default output format - the replay-vision rubric keeps the same
   // four dimensions, only the items differ.
