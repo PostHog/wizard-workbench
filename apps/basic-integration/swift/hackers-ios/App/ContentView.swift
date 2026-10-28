@@ -10,6 +10,7 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import PostHog
 import Settings
 import Shared
 import SwiftUI
@@ -79,12 +80,8 @@ struct MainContentView: View {
                                 viewModel: settingsViewModel,
                                 isAuthenticated: sessionService.authenticationState == .authenticated,
                                 currentUsername: sessionService.username,
-                                onLogin: { username, password in
-                                    _ = try await sessionService.authenticate(username: username, password: password)
-                                },
-                                onLogout: {
-                                    sessionService.unauthenticate()
-                                },
+                                onLogin: authenticate,
+                                onLogout: logout,
                                 onShowOnboarding: {
                                     showOnboarding = true
                                 }
@@ -101,12 +98,8 @@ struct MainContentView: View {
             LoginView(
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
-                onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
-                },
-                onLogout: {
-                    sessionService.unauthenticate()
-                },
+                onLogin: authenticate,
+                onLogout: logout,
                 textSize: settingsViewModel.textSize
             )
             .textScaling(for: settingsViewModel.textSize)
@@ -117,12 +110,8 @@ struct MainContentView: View {
                 viewModel: settingsViewModel,
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
-                onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
-                },
-                onLogout: {
-                    sessionService.unauthenticate()
-                },
+                onLogin: authenticate,
+                onLogout: logout,
                 onShowOnboarding: {
                     showOnboarding = true
                 }
@@ -132,9 +121,7 @@ struct MainContentView: View {
         }
         .sheet(isPresented: $showOnboarding) {
             onboardingCoordinator
-                .makeOnboardingView {
-                    showOnboarding = false
-                }
+                .makeOnboardingView(onDismiss: onboardingDismissed)
                 .textScaling(for: settingsViewModel.textSize)
                 .toastOverlay(toastPresenter)
         }
@@ -143,6 +130,32 @@ struct MainContentView: View {
                 showOnboarding = true
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .bookmarksDidChange)) { notification in
+            guard let isBookmarked = notification.userInfo?["isBookmarked"] as? Bool else { return }
+            PostHogSDK.shared.capture(isBookmarked ? "bookmark_added" : "bookmark_removed")
+            PostHogSDK.shared.logger?.info(
+                "Bookmark state changed",
+                attributes: ["is_bookmarked": isBookmarked]
+            )
+        }
+    }
+
+    private func authenticate(username: String, password: String) async throws {
+        _ = try await sessionService.authenticate(username: username, password: password)
+        PostHogSDK.shared.capture("login_succeeded")
+        PostHogSDK.shared.logger?.info("Authentication completed")
+    }
+
+    private func logout() {
+        PostHogSDK.shared.capture("logout_requested")
+        PostHogSDK.shared.logger?.info("Logout requested")
+        sessionService.unauthenticate()
+    }
+
+    private func onboardingDismissed() {
+        PostHogSDK.shared.capture("onboarding_dismissed")
+        PostHogSDK.shared.logger?.info("Onboarding dismissed")
+        showOnboarding = false
     }
 
     private var isPresentingModal: Bool {

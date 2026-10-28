@@ -6,6 +6,7 @@
 //
 
 import Data
+import PostHog
 import Shared
 import UIKit
 
@@ -13,6 +14,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_: UIApplication,
                      didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]?) -> Bool
     {
+        configurePostHog()
+
         // Configure a modest shared URL cache to limit on-disk growth from image/HTTP caching
         // This affects system components like AsyncImage that use URLSession.shared
         let memoryCapacity = 64 * 1024 * 1024 // 64 MB
@@ -35,5 +38,38 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         UserDefaults.standard.registerDefaults()
 
         return true
+    }
+
+    private func configurePostHog() {
+        guard let projectToken = Bundle.main.object(forInfoDictionaryKey: "POSTHOG_PROJECT_TOKEN") as? String,
+              !projectToken.isEmpty,
+              !projectToken.hasPrefix("$(")
+        else {
+            #if DEBUG
+                assertionFailure("POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_PROJECT_TOKEN is configured")
+            #endif
+            return
+        }
+
+        guard let host = Bundle.main.object(forInfoDictionaryKey: "POSTHOG_HOST") as? String,
+              !host.isEmpty,
+              !host.hasPrefix("$(")
+        else {
+            #if DEBUG
+                assertionFailure("POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured")
+            #endif
+            return
+        }
+
+        let config = PostHogConfig(projectToken: projectToken, host: host)
+        config.errorTrackingConfig.autoCapture = true
+        config.logs.serviceName = Bundle.main.bundleIdentifier ?? "Hackers"
+        #if DEBUG
+        config.logs.environment = "debug"
+        #else
+        config.logs.environment = "production"
+        #endif
+        PostHogSDK.shared.setup(config)
+        PostHogSDK.shared.logger?.info("PostHog log capture initialized")
     }
 }
