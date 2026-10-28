@@ -3,6 +3,7 @@ import {
   IconRosetteDiscountCheck,
   IconSelector,
 } from "@tabler/icons-react";
+import { usePostHog } from "@posthog/react";
 import { useTranslation } from "react-i18next";
 import { Form, href, Link } from "react-router";
 import { useHydrated } from "remix-utils/use-hydrated";
@@ -38,6 +39,19 @@ export function NavUser({ user }: NavUserProps) {
     keyPrefix: "layout.navUser",
   });
   const hydrated = useHydrated();
+  const posthog = usePostHog();
+
+  const handleLogout = () => {
+    if (
+      window.ENV.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      window.ENV.VITE_PUBLIC_POSTHOG_HOST
+    ) {
+      posthog?.logger.info("authenticated session ended", {
+        event: "authenticated_session_ended",
+      });
+      posthog?.reset();
+    }
+  };
 
   return (
     <SidebarMenu>
@@ -115,7 +129,7 @@ export function NavUser({ user }: NavUserProps) {
 
             <DropdownMenuSeparator />
 
-            <Form action="/logout" method="post" replace>
+            <Form action="/logout" method="post" onSubmit={handleLogout} replace>
               <DropdownMenuItem
                 render={
                   <button
