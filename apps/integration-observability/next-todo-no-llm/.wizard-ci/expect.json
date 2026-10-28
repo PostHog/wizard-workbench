@@ -1,0 +1,6 @@
+{
+  "program": "posthog-integration",
+  "seeded": true,
+  "sourceApp": "basic-integration/next-js/15-app-router-todo",
+  "expectAbort": null
+}
