@@ -8,6 +8,7 @@ import { Spinner } from "@/components/Spinner";
 import type { Item } from "@/shared/types";
 import { getItemDetails } from "@/api/endpoints";
 import { ITEMS_PER_PAGE } from "@/constants/pagination";
+import { posthogLogs } from "@/lib/posthog-logs";
 import {
   type StoryType,
   MAP_STORY_TYPE_TO_STORY_ENDPOINTS,
@@ -29,11 +30,27 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
   const storyListQuery = useQuery({
     queryKey: ["storyIds", storyType],
     queryFn: async () => {
-      const getItemIds = MAP_STORY_TYPE_TO_STORY_ENDPOINTS[storyType];
-      const res = await getItemIds();
-      const topStories = await res.json();
+      const startedAt = Date.now();
 
-      return topStories;
+      try {
+        const getItemIds = MAP_STORY_TYPE_TO_STORY_ENDPOINTS[storyType];
+        const res = await getItemIds();
+        const topStories = await res.json();
+
+        posthogLogs.info("story feed loaded", {
+          story_type: storyType,
+          story_count: topStories.length,
+          duration_ms: Date.now() - startedAt,
+        });
+
+        return topStories;
+      } catch (error) {
+        posthogLogs.error("story feed load failed", {
+          story_type: storyType,
+          duration_ms: Date.now() - startedAt,
+        });
+        throw error;
+      }
     },
   });
 
@@ -42,18 +59,36 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
     queryFn: async ({ pageParam = 0 }) => {
       if (!storyListQuery.data) return [];
 
+      const startedAt = Date.now();
       const pageIds = storyListQuery.data.slice(
         pageParam,
         pageParam + ITEMS_PER_PAGE
       );
-      const detailsResponses = await Promise.all(
-        pageIds.map((id) => getItemDetails(id))
-      );
-      const posts = await Promise.all(
-        detailsResponses.map((res) => res.json())
-      );
 
-      return posts;
+      try {
+        const detailsResponses = await Promise.all(
+          pageIds.map((id) => getItemDetails(id))
+        );
+        const posts = await Promise.all(
+          detailsResponses.map((res) => res.json())
+        );
+
+        posthogLogs.info("story page loaded", {
+          story_type: storyType,
+          page_offset: pageParam,
+          story_count: posts.length,
+          duration_ms: Date.now() - startedAt,
+        });
+
+        return posts;
+      } catch (error) {
+        posthogLogs.error("story page load failed", {
+          story_type: storyType,
+          page_offset: pageParam,
+          duration_ms: Date.now() - startedAt,
+        });
+        throw error;
+      }
     },
     getNextPageParam: (lastPage, allPages) => {
       if (!storyListQuery.data) return undefined;

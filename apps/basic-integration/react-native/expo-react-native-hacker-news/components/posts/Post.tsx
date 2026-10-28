@@ -14,6 +14,7 @@ import { Link2, MessageSquareText } from "lucide-react-native";
 
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
+import { posthog } from "@/lib/posthog";
 
 export const Post = ({ id, title, url, score, text, kids }: Item) => {
   const QC = useQueryClient();
@@ -22,7 +23,10 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     return text === undefined;
   }, [text]);
 
-  const navigateToDetails = async () => {
+  const navigateToDetails = async (
+    entryPoint: "story_title" | "comments_button"
+  ) => {
+    posthog?.capture("story_details_opened", { entry_point: entryPoint });
     await QC.prefetchQuery({
       queryKey: getItemDetailsQueryKey(id),
       queryFn: getItemQueryFn,
@@ -34,8 +38,12 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
-          if (isExternal) Linking.openURL(url);
-          else await navigateToDetails();
+          if (isExternal) {
+            posthog?.capture("story_link_opened", { source: "story_title" });
+            Linking.openURL(url);
+          } else {
+            await navigateToDetails("story_title");
+          }
         }}
       >
         <Text style={{ color: "black", fontSize: 20, fontWeight: 500 }}>
@@ -66,7 +74,7 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
-            await navigateToDetails();
+            await navigateToDetails("comments_button");
           }}
         >
           <MessageSquareText color="black" width={16} />
@@ -86,6 +94,7 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           <Pressable
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              posthog?.capture("story_link_opened", { source: "link_button" });
               Linking.openURL(url);
             }}
           >
