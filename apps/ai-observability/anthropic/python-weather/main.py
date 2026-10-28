@@ -2,17 +2,34 @@
 registered `get_weather` tool before answering, so one question is either one
 model call or two with a tool execution between them."""
 
+import atexit
 import os
+import time
+import uuid
 
 import anthropic
+from posthog import Posthog
+from posthog.ai.anthropic import Anthropic
 
 from weather import get_weather
 
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+posthog_client = Posthog(
+    os.environ["POSTHOG_API_KEY"],
+    host=os.environ["POSTHOG_HOST"],
+    privacy_mode=False,
+    enable_exception_autocapture=True,
+)
+atexit.register(posthog_client.shutdown)
+
+client = Anthropic(
+    api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
+    posthog_client=posthog_client,
+)
 
 MODEL = "claude-opus-5"
 
 USER_ID = "user_123"
+AI_SESSION_ID = str(uuid.uuid4())
 
 TOOLS = [
     {
@@ -40,6 +57,7 @@ def _text(response: anthropic.types.Message) -> str:
 
 def ask(question: str) -> str:
     """Answer one question, running the tool if the model asks for it."""
+    trace_id = str(uuid.uuid4())
     messages: list[dict] = [{"role": "user", "content": question}]
 
     response = client.messages.create(
@@ -48,13 +66,30 @@ def ask(question: str) -> str:
         tools=TOOLS,
         tool_choice=TOOL_CHOICE,
         messages=messages,
+        posthog_distinct_id=USER_ID,
+        posthog_trace_id=trace_id,
+        posthog_properties={"$ai_session_id": AI_SESSION_ID},
     )
 
     tool_use = next((b for b in response.content if b.type == "tool_use"), None)
     if tool_use is None:
         return _text(response)
 
+    tool_started_at = time.perf_counter()
     result = get_weather(**tool_use.input)
+    posthog_client.capture(
+        event="$ai_span",
+        distinct_id=USER_ID,
+        properties={
+            "$ai_trace_id": trace_id,
+            "$ai_session_id": AI_SESSION_ID,
+            "$ai_span_id": str(uuid.uuid4()),
+            "$ai_span_name": tool_use.name,
+            "$ai_input_state": tool_use.input,
+            "$ai_output_state": result,
+            "$ai_latency": time.perf_counter() - tool_started_at,
+        },
+    )
 
     messages += [
         {"role": "assistant", "content": response.content},
@@ -72,6 +107,9 @@ def ask(question: str) -> str:
         tools=TOOLS,
         tool_choice=TOOL_CHOICE,
         messages=messages,
+        posthog_distinct_id=USER_ID,
+        posthog_trace_id=trace_id,
+        posthog_properties={"$ai_session_id": AI_SESSION_ID},
     )
     return _text(followup)
 
