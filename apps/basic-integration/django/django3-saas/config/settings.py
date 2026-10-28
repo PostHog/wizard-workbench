@@ -10,6 +10,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-pro
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
+from .posthog import posthog_client
+from .posthog_logs import configure_posthog_logs
+
+configure_posthog_logs()
+
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')]
 
 INSTALLED_APPS = [
@@ -35,6 +40,13 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+POSTHOG_MW_CLIENT = posthog_client
+if posthog_client:
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index('django.contrib.auth.middleware.AuthenticationMiddleware') + 1,
+        'posthog.integrations.django.PosthogContextMiddleware',
+    )
 
 ROOT_URLCONF = 'config.urls'
 

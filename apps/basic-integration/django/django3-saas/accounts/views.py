@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
 from django.contrib.auth.views import (
     LoginView, LogoutView,
     PasswordResetView, PasswordResetDoneView,
@@ -8,12 +10,39 @@ from django.contrib.auth.views import (
 )
 from django.contrib import messages
 from django.urls import reverse_lazy
+
+from config.posthog import posthog_client
 from .forms import RegisterForm, LoginForm, ProfileForm
+
+
+@receiver(user_logged_in, dispatch_uid='accounts.posthog_identify_user')
+def identify_posthog_user(sender, request, user, **kwargs):
+    """Identify the login request after Django has authenticated the user."""
+    if posthog_client is None:
+        return
+
+    distinct_id = str(user.pk)
+    posthog_client.identify_context(distinct_id)
+    posthog_client.set(
+        distinct_id=distinct_id,
+        properties={
+            'email': user.email,
+            'name': user.get_full_name(),
+            'username': user.username,
+            'company_name': user.company_name,
+        },
+    )
 
 
 class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if posthog_client is not None:
+            posthog_client.capture('user_logged_in')
+        return response
 
 
 class CustomLogoutView(LogoutView):
@@ -49,6 +78,8 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            if posthog_client is not None:
+                posthog_client.capture('user_registered')
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +94,8 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            if posthog_client is not None:
+                posthog_client.capture('profile_updated')
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
