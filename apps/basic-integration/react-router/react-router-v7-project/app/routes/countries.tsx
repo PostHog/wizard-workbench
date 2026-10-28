@@ -19,15 +19,28 @@ export async function clientLoader() {
     // Check if API returned an error object
     if (data.status === 404 || (data.message && !Array.isArray(data))) {
       console.error("API Error:", data.message || data.status);
+      const { posthogLogger } = await import("~/lib/posthog-logger.client");
+      posthogLogger.warn("countries_catalog_api_rejected", {
+        source: "rest_countries",
+      });
       return [];
     }
     
     // Ensure we return an array
     const countries = Array.isArray(data) ? data : [];
     console.log(`Loaded ${countries.length} countries from API`);
+    const { posthogLogger } = await import("~/lib/posthog-logger.client");
+    posthogLogger.info("countries_catalog_loaded", {
+      country_count: countries.length,
+      source: "rest_countries",
+    });
     return countries;
   } catch (error) {
     console.error("Error loading countries:", error);
+    const { posthogLogger } = await import("~/lib/posthog-logger.client");
+    posthogLogger.error("countries_catalog_fetch_failed", {
+      source: "rest_countries",
+    });
     // Return empty array on error to prevent crashes
     return [];
   }
@@ -48,6 +61,16 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
   const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRegion = e.target.value;
     setRegion(newRegion);
+  };
+
+  const captureCountryAction = async (
+    event: "country_claimed" | "country_liked" | "country_visited",
+    countryName: string,
+  ) => {
+    const { default: posthog, isPostHogEnabled } = await import("~/lib/posthog.client");
+    if (isPostHogEnabled) {
+      posthog.capture(event, { country_name: countryName });
+    }
   };
 
   // Ensure loaderData is an array, fallback to empty array
@@ -110,6 +133,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
             const countryName = country.name.common;
             const isClaimed = user?.claimedCountries.includes(countryName);
             const isLiked = user?.likedCountries.includes(countryName);
+            const isVisited = user?.visitedCountries.includes(countryName);
             
             return (
               <li
@@ -136,8 +160,11 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
-                        claimCountry(countryName);
+                      onClick={async () => {
+                        if (!isClaimed) {
+                          claimCountry(countryName);
+                          await captureCountryAction("country_claimed", countryName);
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -149,8 +176,11 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
-                        likeCountry(countryName);
+                      onClick={async () => {
+                        if (!isLiked) {
+                          likeCountry(countryName);
+                          await captureCountryAction("country_liked", countryName);
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -162,8 +192,11 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
-                        visitCountry(countryName);
+                      onClick={async () => {
+                        if (!isVisited) {
+                          visitCountry(countryName);
+                          await captureCountryAction("country_visited", countryName);
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"

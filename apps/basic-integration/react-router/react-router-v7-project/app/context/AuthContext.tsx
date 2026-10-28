@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react'
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
 
@@ -14,11 +14,40 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
+  const identifiedUserId = useRef<string | null>(null)
 
   useEffect(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (!user) {
+      return () => {
+        cancelled = true
+      }
+    }
+
+    void import('~/lib/posthog.client').then(({ default: posthog, isPostHogEnabled }) => {
+      if (cancelled || !isPostHogEnabled) return
+
+      if (identifiedUserId.current && identifiedUserId.current !== user.id) {
+        posthog.reset()
+      }
+
+      posthog.identify(user.id, {
+        email: user.email,
+        username: user.username,
+      })
+      identifiedUserId.current = user.id
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
@@ -41,6 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    void import('~/lib/posthog.client').then(({ default: posthog, isPostHogEnabled }) => {
+      if (isPostHogEnabled) {
+        posthog.reset()
+      }
+    })
+    identifiedUserId.current = null
     fakeLogout()
     setUser(null)
   }
