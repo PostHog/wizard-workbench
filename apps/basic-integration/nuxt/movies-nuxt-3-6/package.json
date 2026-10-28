@@ -10,6 +10,15 @@
     "lint": "eslint .",
     "typecheck": "vue-tsc --noEmit"
   },
+  "dependencies": {
+    "@opentelemetry/api-logs": "^0.223.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.300.0",
+    "@opentelemetry/resources": "^3.0.0",
+    "@opentelemetry/sdk-logs": "^3.0.0",
+    "@opentelemetry/sdk-node": "^0.300.0",
+    "posthog-js": "^1.441.2",
+    "posthog-node": "^5.58.0"
+  },
   "devDependencies": {
     "@antfu/eslint-config": "^0.39.5",
     "@iconify-json/carbon": "^1.1.17",

@@ -5,11 +5,20 @@ defineProps<{
   type: MediaType
   item: Media
 }>()
+
+const { $posthog } = useNuxtApp()
+
+function trackMediaSelection(mediaType: MediaType) {
+  $posthog?.capture('media_selected', {
+    media_type: mediaType,
+  })
+}
 </script>
 
 <template>
   <NuxtLink
     :to="`/${item.media_type || type}/${item.id}`" pb2
+    @click="trackMediaSelection(item.media_type || type)"
   >
     <div
       block bg-gray4:10 p1
