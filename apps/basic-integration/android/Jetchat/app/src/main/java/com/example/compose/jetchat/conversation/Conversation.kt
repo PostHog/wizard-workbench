@@ -87,10 +87,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
+import com.example.compose.jetchat.JetchatApplication
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.launch
 
 /**
@@ -137,6 +139,9 @@ fun ConversationContent(
                 uiState.addMessage(
                     Message(authorMe, clipData.getItemAt(0).text.toString(), timeNow),
                 )
+                if (JetchatApplication.isPostHogInitialized) {
+                    PostHogAndroid.getInstance().capture("message_sent")
+                }
 
                 return true
             }
@@ -203,6 +208,9 @@ fun ConversationContent(
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )
+                    if (JetchatApplication.isPostHogInitialized) {
+                        PostHogAndroid.getInstance().capture("message_sent")
+                    }
                 },
                 resetScroll = {
                     scope.launch {
