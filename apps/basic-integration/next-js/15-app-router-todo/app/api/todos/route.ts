@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { getTodos, createTodo } from '@/lib/data';
+import { flushPosthogLogs, posthogLog, SeverityNumber } from '@/instrumentation';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -33,6 +35,18 @@ export async function POST(request: NextRequest) {
       description: validatedData.description,
       completed: validatedData.completed,
     });
+
+    posthogLog?.emit({
+      body: 'todo creation completed',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        operation: 'todo_create',
+        outcome: 'success',
+        has_description: Boolean(validatedData.description),
+        completed: Boolean(newTodo.completed),
+      },
+    });
+    after(flushPosthogLogs);
 
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
