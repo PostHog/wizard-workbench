@@ -6,7 +6,7 @@
   "description": "Chat assistant reaching an OpenAI-compatible endpoint over plain fetch. Has PostHog product analytics but no AI observability. Fixture for `wizard ai-observability`.",
   "scripts": {
     "build": "tsc --noEmit",
-    "start": "tsx src/index.ts"
+    "start": "tsx --env-file=.env src/index.ts"
   },
   "dependencies": {
     "posthog-node": "^4.2.0"
