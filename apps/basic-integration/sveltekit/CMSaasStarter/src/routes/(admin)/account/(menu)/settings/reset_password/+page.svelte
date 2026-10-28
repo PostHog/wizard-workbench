@@ -19,6 +19,7 @@
   saveButtonTitle="Reset Password"
   successTitle="Password Changed"
   successBody="On next sign in, use your new password."
+  analyticsEvent="password_updated"
   formTarget="/account/api?/updatePassword"
   fields={[
     {

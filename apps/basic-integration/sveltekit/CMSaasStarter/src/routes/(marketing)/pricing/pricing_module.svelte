@@ -1,5 +1,19 @@
 <script lang="ts">
   import { pricingPlans } from "./pricing_plans"
+  import posthog from "posthog-js"
+
+  const captureCheckoutStart = (plan: (typeof pricingPlans)[number]) => {
+    if (plan.stripe_price_id) {
+      posthog.capture("subscription_checkout_started", {
+        plan_id: plan.id,
+        billing_interval: plan.priceIntervalName,
+      })
+      posthog.logger.info("subscription checkout started", {
+        plan_id: plan.id,
+        billing_interval: plan.priceIntervalName,
+      })
+    }
+  }
 
   interface Props {
     // Module context
@@ -57,6 +71,7 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() => captureCheckoutStart(plan)}
               >
                 {callToAction}
               </a>
