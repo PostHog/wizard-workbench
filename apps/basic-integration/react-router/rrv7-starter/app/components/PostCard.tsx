@@ -20,6 +20,15 @@ export function PostCard({ post }: PostCardProps) {
     const newLikedState = toggleLikedPost(post.id)
     setLiked(newLikedState)
     setLikes((prev) => (prev + (newLikedState ? 1 : -1)))
+
+    if (newLikedState) {
+      void import('@/lib/posthog-logs.client').then(({ default: posthog, isPostHogConfigured, posthogLogger }) => {
+        if (isPostHogConfigured) {
+          posthog.capture('post_liked')
+          posthogLogger.info('post liked', { event: 'post_liked' })
+        }
+      })
+    }
   }
 
   return (

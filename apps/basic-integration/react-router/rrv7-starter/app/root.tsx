@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import {
   isRouteErrorResponse,
   Links,
@@ -87,6 +88,10 @@ export default function App() {
   const element = useOutlet()
 
   const location = useLocation()
+
+  useEffect(() => {
+    void import('@/lib/posthog.client')
+  }, [])
 
   return (
     <RouteTransitionManager

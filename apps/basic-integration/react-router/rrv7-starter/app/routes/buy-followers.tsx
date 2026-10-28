@@ -23,6 +23,21 @@ export default function BuyFollowers() {
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
 
+  const handlePackageSelection = (packageIndex: number) => {
+    const pkg = followerPackages[packageIndex]
+    setSelectedPackage(packageIndex)
+
+    void import('@/lib/posthog.client').then(({ default: posthog, isPostHogConfigured }) => {
+      if (isPostHogConfigured) {
+        posthog.capture('follower_package_selected', {
+          follower_amount: pkg.amount,
+          bonus_amount: pkg.bonus,
+          price: pkg.price,
+        })
+      }
+    })
+  }
+
   const handlePurchase = () => {
     if (selectedPackage === null) return
     setPurchased(true)
@@ -34,6 +49,23 @@ export default function BuyFollowers() {
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+
+      void import('@/lib/posthog-logs.client').then(({ default: posthog, isPostHogConfigured, posthogLogger }) => {
+        if (isPostHogConfigured) {
+          const purchaseDetails = {
+            follower_amount: pkg.amount,
+            bonus_amount: pkg.bonus,
+            total_follower_amount: totalFollowers,
+            price: pkg.price,
+          }
+
+          posthog.capture('follower_purchase_completed', purchaseDetails)
+          posthogLogger.info('follower purchase completed', {
+            event: 'follower_purchase_completed',
+            ...purchaseDetails,
+          })
+        }
+      })
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
@@ -75,7 +107,7 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => handlePackageSelection(index)}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected
