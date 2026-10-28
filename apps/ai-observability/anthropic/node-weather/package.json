@@ -6,10 +6,11 @@
   "description": "PostHog-less weather assistant (Anthropic Node SDK, tool use) for testing `wizard ai-observability`.",
   "scripts": {
     "build": "tsc --noEmit",
-    "start": "tsx src/index.ts"
+    "start": "tsx --env-file=.env src/index.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.0"
+    "@anthropic-ai/sdk": "^0.32.0",
+    "posthog-node": "^5.58.0"
   },
   "devDependencies": {
     "tsx": "^4.19.2",
