@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import { NotFound } from '~/components/NotFound'
 import { PostErrorComponent } from '~/components/PostError'
@@ -15,9 +16,11 @@ export const Route = createFileRoute('/posts/$postId')({
 function PostComponent() {
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
 
   const handleMarkAsPaid = async () => {
     await markInvoicePaid({ data: String(invoice.id) })
+    posthog.capture('invoice_marked_paid')
     router.invalidate()
   }
 
