@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { emitPostHogLog } from '../../lib/posthog-logs';
 
 export const prerender = false;
 
@@ -45,6 +46,16 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    await emitPostHogLog({
+      severityText: 'INFO',
+      body: 'contact form request completed',
+      attributes: {
+        endpoint: '/api/contact',
+        outcome: 'accepted',
+        interest: data.interest,
+      },
+    });
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -54,6 +65,15 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contact form error:', error);
+    await emitPostHogLog({
+      severityText: 'ERROR',
+      body: 'contact form request failed',
+      attributes: {
+        endpoint: '/api/contact',
+        outcome: 'failed',
+        error_type: error instanceof Error ? error.name : 'unknown_error',
+      },
+    });
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
