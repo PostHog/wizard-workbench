@@ -1,4 +1,5 @@
 import { env } from './.env';
+import { posthogEnvironment } from './posthog.generated';
 
 export const environment = {
   production: true,
@@ -6,4 +7,6 @@ export const environment = {
   defaultLanguage: 'de-DE',
   supportedLanguages: ['de-DE', 'en-US', 'es-ES', 'fr-FR', 'it-IT'],
   buildYear: 2024,
+  posthogProjectToken: posthogEnvironment.projectToken,
+  posthogHost: posthogEnvironment.host,
 };
