@@ -4,6 +4,7 @@ from typing import Annotated, Optional
 
 from fastapi import Cookie, Depends, HTTPException, status
 from itsdangerous import BadSignature, URLSafeSerializer
+from posthog import identify_context
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -25,14 +26,42 @@ def get_session_user_id(session_token: Annotated[Optional[str], Cookie()] = None
         return None
 
 
+def identify_user(user: User) -> None:
+    """Bind the authenticated user to the active PostHog request context."""
+    identify_context(str(user.id))
+
+
+def set_person_properties(user: User) -> None:
+    """Update PII only on the PostHog person profile, never event properties."""
+    from app.main import posthog_client
+
+    if posthog_client:
+        posthog_client.set(
+            distinct_id=str(user.id),
+            properties={"email": user.email},
+        )
+
+
+def capture_event(event: str, properties: dict | None = None) -> None:
+    """Capture an event using the active request's PostHog identity context."""
+    from app.main import posthog_client
+
+    if posthog_client:
+        posthog_client.capture(event, properties=properties)
+
+
 def get_current_user(
     db: Annotated[Session, Depends(get_db)],
     user_id: Annotated[Optional[int], Depends(get_session_user_id)],
 ) -> Optional[User]:
-    """Get the current authenticated user, or None if not authenticated."""
+    """Get and identify the current authenticated user for this request."""
     if user_id is None:
         return None
-    return User.get_by_id(db, user_id)
+
+    user = User.get_by_id(db, user_id)
+    if user:
+        identify_user(user)
+    return user
 
 
 def require_auth(
