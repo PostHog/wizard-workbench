@@ -11,6 +11,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { emitPostHogLog } from '@/instrumentation';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -108,6 +109,10 @@ export default async function handler(
       ActivityType.INVITE_TEAM_MEMBER
     );
 
+    await emitPostHogLog('team_invitation_created', {
+      endpoint: '/api/team/invite',
+      invited_role: role
+    });
     return res.status(200).json({ success: 'Invitation sent successfully' });
   } catch (error) {
     console.error('Invite team member error:', error);

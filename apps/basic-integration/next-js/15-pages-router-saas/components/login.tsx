@@ -6,7 +6,10 @@ import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { User } from '@/lib/db/schema';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import { mutate } from 'swr';
+import posthog from 'posthog-js';
 
 export function Login({
   mode = 'signin',
@@ -55,6 +58,28 @@ export function Login({
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
           return;
+        }
+
+        const user = await mutate<User | null>('/api/user');
+
+        if (
+          user &&
+          process.env.NEXT_PUBLIC_POSTHOG_KEY &&
+          process.env.NEXT_PUBLIC_POSTHOG_HOST
+        ) {
+          const userId = String(user.id);
+          const identifiedUserId = posthog.get_property('$user_id');
+
+          if (identifiedUserId && identifiedUserId !== userId) {
+            posthog.reset();
+          }
+
+          posthog.identify(userId, {
+            email: user.email,
+            role: user.role,
+            ...(user.name ? { name: user.name } : {})
+          });
+          posthog.capture(mode === 'signin' ? 'user_signed_in' : 'user_signed_up');
         }
 
         if (result.success && result.redirectTo) {
