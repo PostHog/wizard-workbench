@@ -4,10 +4,6 @@ permissions:
   contents: read
 
 on:
-  # Scheduled runs (Wed at 11 AM EST / 4 PM UTC)
-  schedule:
-    - cron: '0 16 * * 3'
-
   # Manual and programmatic triggers
   workflow_dispatch:
     inputs:
@@ -75,7 +71,7 @@ jobs:
       first_app: ${{ steps.select-apps.outputs.first_app }}
       e2e_apps: ${{ steps.select-apps.outputs.e2e_apps }}
       trigger_id: ${{ steps.generate-id.outputs.trigger_id }}
-      # Resolved inputs (from workflow_dispatch, repository_dispatch, or schedule)
+      # Resolved inputs (from workflow_dispatch or repository_dispatch)
       input_app: ${{ steps.resolve-inputs.outputs.app }}
       input_evaluate: ${{ steps.resolve-inputs.outputs.evaluate }}
       input_base_branch: ${{ steps.resolve-inputs.outputs.base_branch }}
@@ -120,22 +116,7 @@ jobs:
           INPUT_TRIGGER_ID: ${{ inputs.trigger_id }}
           INPUT_NOTIFY_SLACK: ${{ inputs.notify_slack }}
         run: |
-          if [ "$EVENT_NAME" = "schedule" ]; then
-            APP="all"
-            EVALUATE="true"
-            BASE_BRANCH="main"
-            WIZARD_REF="main"
-            CONTEXT_MILL_REF="main"
-            POSTHOG_REF="master"
-            POSTHOG_REGION="us"
-            TRIGGER_ID=""
-            SOURCE="scheduled"
-            NOTIFY_SLACK="true"
-            NOTIFY_PR="false"
-            SOURCE_REPO=""
-            SOURCE_PR_NUMBER=""
-            SOURCE_PR_URL=""
-          elif [ "$EVENT_NAME" = "repository_dispatch" ]; then
+          if [ "$EVENT_NAME" = "repository_dispatch" ]; then
             APP="${CP_APP:-all}"
             EVALUATE="${CP_EVALUATE:-true}"
             BASE_BRANCH="${CP_BASE_BRANCH:-main}"
@@ -320,8 +301,8 @@ jobs:
 
           # Which of the selected apps run under --e2e rather than the diff
           # pipeline. Read from the manifest's e2eOnly flag, not from the app
-          # path, so a new e2e category needs no edit here. The scheduled sweep
-          # runs "all", so these categories join it as soon as they exist.
+          # path, so a new e2e category needs no edit here. A run on "all"
+          # picks these categories up as soon as they exist.
           E2E_DIRS=$(jq -r '.workflows[] | select(.e2eOnly == true) | .dir' apps/manifest.json \
             | jq -R -s -c 'split("\n") | map(select(length > 0))')
           E2E_APPS=$(echo "$SELECTED" | jq -c --argjson dirs "$E2E_DIRS" \
@@ -1173,80 +1154,6 @@ jobs:
           fi
           echo "::error title=Warehouse e2e failed::$APP — status=$STATUS checks=$CHECKS. See the job summary for the failing check."
           exit 1
-
-  # ============================================================================
-  # MCP-STUB-DRIFT: Re-record the stub's fixtures against prod and fail if they
-  # moved. The stub answers the warehouse e2e runs from fixtures recorded off
-  # production, so PostHog can change a credential field or reword a validation
-  # error and every one of those runs keeps passing against yesterday's API.
-  # This job is what stops the stub rotting.
-  #
-  # Weekly only — it talks to prod, and the fixtures change rarely.
-  # ============================================================================
-  mcp-stub-drift:
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-
-      - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: '24'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Re-record the fixtures and diff them
-        id: drift
-        env:
-          POSTHOG_PERSONAL_API_KEY: ${{ secrets.GH_APP_POSTHOG_WIZARD_CI_BOT_POSTHOG_PERSONAL_KEY }}
-        run: |
-          # `--dry-run` prints what it would write but does not compare, so it
-          # cannot detect drift. Record for real into the working tree and let
-          # git do the comparison — the checkout is thrown away either way.
-          pnpm mcp-stub:record
-
-          # Every fixture carries a provenance header stamped with the time it
-          # was recorded, so a plain `git diff` is never quiet and this job
-          # would cry drift every week. Ignore that one line and compare the
-          # bodies, which are what the stub actually answers from.
-          IGNORE_VOLATILE='"recordedAt"'
-
-          if git diff --quiet -I "$IGNORE_VOLATILE" -- services/mcp-stub/fixtures; then
-            echo "✓ fixtures match production"
-            exit 0
-          fi
-
-          {
-            echo "## MCP stub fixtures have drifted from production"
-            echo ""
-            echo "The warehouse e2e runs answer from these fixtures, so they are"
-            echo "now testing against an API PostHog no longer serves."
-            echo ""
-            echo "Refresh them:"
-            echo ""
-            echo '```'
-            echo "POSTHOG_PERSONAL_API_KEY=phx_... pnpm mcp-stub:record"
-            echo '```'
-            echo ""
-            echo '```diff'
-            git diff -I "$IGNORE_VOLATILE" -- services/mcp-stub/fixtures | head -300
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          echo "::error title=MCP stub fixtures drifted::Run pnpm mcp-stub:record and commit the diff."
-          exit 1
-
-      - name: Check the stub still answers its own tests
-        if: always()
-        run: pnpm test:mcp-stub
 
   # ============================================================================
   # SUMMARY: Final summary of all triggered workflows
