@@ -49,8 +49,28 @@ def export_posts(user_id):
             attachments=[('posts.json', 'application/json',
                           json.dumps({'posts': data}, indent=4))],
             sync=True)
-    except Exception:
+        posthog_logger = app.extensions.get('posthog_log_logger')
+        if posthog_logger:
+            posthog_logger.info(
+                'post_export_completed',
+                extra={
+                    'event': 'post_export_completed',
+                    'post_count': i,
+                    'status': 'success',
+                },
+            )
+    except Exception as error:
         _set_task_progress(100)
         app.logger.error('Unhandled exception', exc_info=sys.exc_info())
+        posthog_logger = app.extensions.get('posthog_log_logger')
+        if posthog_logger:
+            posthog_logger.error(
+                'post_export_completed',
+                extra={
+                    'event': 'post_export_completed',
+                    'error_type': type(error).__name__,
+                    'status': 'failed',
+                },
+            )
     finally:
         _set_task_progress(100)

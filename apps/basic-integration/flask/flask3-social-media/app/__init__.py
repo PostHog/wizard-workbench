@@ -1,7 +1,10 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from flask import Flask, request, current_app
+from posthog import Posthog
+from posthog.integrations.flask import PosthogFlaskIntegration
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -25,6 +28,24 @@ def get_locale():
     return request.accept_languages.best_match(current_app.config['LANGUAGES'])
 
 
+def identify_posthog_user(user, set_person_properties=False):
+    """Associate the current PostHog request context with an authenticated user."""
+    posthog_client = current_app.extensions.get('posthog')
+    if posthog_client is None:
+        return
+
+    distinct_id = str(user.id)
+    posthog_client.identify_context(distinct_id)
+    if set_person_properties:
+        posthog_client.set(
+            distinct_id=distinct_id,
+            properties={
+                'email': user.email,
+                'username': user.username,
+            },
+        )
+
+
 db = SQLAlchemy()
 migrate = Migrate()
 login = LoginManager()
@@ -33,11 +54,78 @@ login.login_message = _l('Please log in to access this page.')
 mail = Mail()
 moment = Moment()
 babel = Babel()
+_posthog_client = None
+_posthog_log_handler = None
+
+
+def configure_posthog_log_exporter(posthog_host, posthog_token):
+    """Export only records emitted through the dedicated PostHog log logger."""
+    global _posthog_log_handler
+
+    posthog_logger = logging.getLogger('microblog.posthog')
+    if _posthog_log_handler is None:
+        from opentelemetry._logs import set_logger_provider
+        from opentelemetry.exporter.otlp.proto.http._log_exporter import \
+            OTLPLogExporter
+        from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+        from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+
+        logger_provider = LoggerProvider()
+        set_logger_provider(logger_provider)
+        exporter = OTLPLogExporter(
+            endpoint=f"{posthog_host.rstrip('/')}/i/v1/logs",
+            headers={'Authorization': f'Bearer {posthog_token}'},
+        )
+        logger_provider.add_log_record_processor(
+            BatchLogRecordProcessor(exporter))
+        atexit.register(logger_provider.shutdown)
+        _posthog_log_handler = LoggingHandler(logger_provider=logger_provider)
+        posthog_logger.addHandler(_posthog_log_handler)
+
+    posthog_logger.setLevel(logging.INFO)
+    posthog_logger.propagate = False
+    return posthog_logger
 
 
 def create_app(config_class=Config):
+    global _posthog_client
+
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    posthog_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    if not posthog_token or not posthog_host:
+        missing_variable = (
+            'POSTHOG_PROJECT_TOKEN' if not posthog_token else 'POSTHOG_HOST'
+        )
+        if app.debug:
+            raise RuntimeError(
+                f'{missing_variable} variable required by PostHog is missing or '
+                f'un-configured, this causes events to be silently missed. This '
+                f'error stops appearing once {missing_variable} is configured'
+            )
+    else:
+        if _posthog_client is None:
+            _posthog_client = Posthog(
+                posthog_token,
+                host=posthog_host,
+                enable_exception_autocapture=True,
+            )
+            atexit.register(_posthog_client.shutdown)
+        app.extensions['posthog'] = _posthog_client
+        PosthogFlaskIntegration(
+            app,
+            client=_posthog_client,
+            capture_exceptions=True,
+        )
+        posthog_logger = configure_posthog_log_exporter(
+            posthog_host, posthog_token)
+        app.extensions['posthog_log_logger'] = posthog_logger
+        posthog_logger.info(
+            'application_started',
+            extra={'event': 'application_started', 'runtime': 'flask'},
+        )
 
     db.init_app(app)
     migrate.init_app(app, db)
