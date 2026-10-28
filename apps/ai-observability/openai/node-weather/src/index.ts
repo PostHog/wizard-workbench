@@ -1,12 +1,25 @@
-import OpenAI from 'openai'
+import { randomUUID } from 'node:crypto'
+import type OpenAI from 'openai'
+import { OpenAI as PostHogOpenAI } from '@posthog/ai/openai'
+import { PostHog } from 'posthog-node'
 
 import { getWeather } from './weather.js'
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? '' })
+const posthog = new PostHog(process.env.POSTHOG_API_KEY!, {
+    host: process.env.POSTHOG_HOST,
+    enableExceptionAutocapture: true,
+    privacyMode: false,
+})
+
+const client = new PostHogOpenAI({
+    apiKey: process.env.OPENAI_API_KEY ?? '',
+    posthog,
+})
 
 const MODEL = 'gpt-5-mini'
 
 const USER_ID = 'user_123'
+const SESSION_ID = randomUUID()
 
 const tools: OpenAI.ChatCompletionTool[] = [
     {
@@ -27,6 +40,7 @@ const tools: OpenAI.ChatCompletionTool[] = [
 
 /** Answer one question, running the tool if the model asks for it. */
 async function ask(question: string): Promise<string> {
+    const traceId = randomUUID()
     const messages: OpenAI.ChatCompletionMessageParam[] = [{ role: 'user', content: question }]
 
     const response = await client.chat.completions.create({
@@ -34,6 +48,9 @@ async function ask(question: string): Promise<string> {
         messages,
         tools,
         parallel_tool_calls: false,
+        posthogDistinctId: USER_ID,
+        posthogTraceId: traceId,
+        posthogProperties: { $ai_session_id: SESSION_ID },
     })
     const message = response.choices[0]?.message
 
@@ -43,7 +60,22 @@ async function ask(question: string): Promise<string> {
     }
 
     const { location } = JSON.parse(call.function.arguments) as { location: string }
+    const toolStartedAt = Date.now()
     const result = getWeather(location)
+
+    posthog.capture({
+        distinctId: USER_ID,
+        event: '$ai_span',
+        properties: {
+            $ai_trace_id: traceId,
+            $ai_session_id: SESSION_ID,
+            $ai_span_id: randomUUID(),
+            $ai_span_name: call.function.name,
+            $ai_input_state: call.function.arguments,
+            $ai_output_state: result,
+            $ai_latency: (Date.now() - toolStartedAt) / 1000,
+        },
+    })
 
     messages.push(message, { role: 'tool', tool_call_id: call.id, content: result })
 
@@ -52,6 +84,9 @@ async function ask(question: string): Promise<string> {
         messages,
         tools,
         parallel_tool_calls: false,
+        posthogDistinctId: USER_ID,
+        posthogTraceId: traceId,
+        posthogProperties: { $ai_session_id: SESSION_ID },
     })
     return followup.choices[0]?.message?.content ?? ''
 }
@@ -60,7 +95,11 @@ async function main(): Promise<void> {
     console.log(await ask("What's the weather in San Francisco?"))
 }
 
-main().catch((err) => {
-    console.error(`fatal: ${String(err)}`)
-    process.exit(1)
-})
+main()
+    .catch((err) => {
+        console.error(`fatal: ${String(err)}`)
+        process.exitCode = 1
+    })
+    .finally(async () => {
+        await posthog.shutdown()
+    })
