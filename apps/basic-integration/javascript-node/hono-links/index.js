@@ -1,7 +1,21 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
+import { logPostHogEvent } from './posthog-logs.js';
 
 const app = new Hono();
+
+app.onError((error, c) => {
+  if (posthog) {
+    posthog.captureException(error);
+  }
+
+  logPostHogEvent('ERROR', 'link request failed', {
+    outcome: 'error',
+  });
+
+  return c.json({ error: 'Internal server error' }, 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +61,23 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_created',
+      properties: {
+        tag_count: tags.length,
+        has_description: Boolean(description),
+      },
+    });
+  }
+
+  logPostHogEvent('INFO', 'link created', {
+    outcome: 'created',
+    tag_count: tags.length,
+    has_description: Boolean(description),
+  });
+
   return c.json(link, 201);
 });
 
@@ -76,6 +107,28 @@ app.patch('/api/links/:id', async (c) => {
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
 
+  const updatedFields = Object.keys(body).filter((field) =>
+    ['url', 'title', 'description', 'tags', 'favorite'].includes(field)
+  );
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_updated',
+      properties: {
+        updated_fields: updatedFields,
+        tag_count: link.tags.length,
+        favorite: link.favorite,
+      },
+    });
+  }
+
+  logPostHogEvent('INFO', 'link updated', {
+    outcome: 'updated',
+    updated_field_count: updatedFields.length,
+    tag_count: link.tags.length,
+    favorite: link.favorite,
+  });
+
   return c.json(link);
 });
 
@@ -88,6 +141,15 @@ app.delete('/api/links/:id', (c) => {
   }
 
   links.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({ event: 'link_deleted' });
+  }
+
+  logPostHogEvent('INFO', 'link deleted', {
+    outcome: 'deleted',
+  });
+
   return c.body(null, 204);
 });
 
