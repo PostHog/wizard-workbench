@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogErrorBoundary, PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -85,6 +86,45 @@ function RouterSpinner() {
 }
 
 function RootComponent() {
+  const projectToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+  const host = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
+  if (!projectToken || !host) {
+    if (import.meta.env.DEV) {
+      const missingVariable = projectToken
+        ? 'VITE_PUBLIC_POSTHOG_HOST'
+        : 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN'
+
+      throw new Error(
+        `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+      )
+    }
+
+    return <RootLayout />
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={projectToken}
+      options={{
+        api_host: host,
+        defaults: '2026-01-30',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+        logs: {
+          serviceName: 'cloudflow-web',
+          environment: import.meta.env.MODE,
+        },
+      }}
+    >
+      <PostHogErrorBoundary>
+        <RootLayout />
+      </PostHogErrorBoundary>
+    </PostHogProvider>
+  )
+}
+
+function RootLayout() {
   return (
     <>
       <div className={`min-h-screen flex flex-col`}>
@@ -433,9 +473,17 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async () => {
+      posthog?.capture('invoice_created')
+      posthog?.logger.info('invoice_created', {
+        event: 'invoice_created',
+        operation: 'create',
+      })
+      await router.invalidate()
+    },
   })
 
   return (
@@ -517,9 +565,17 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: async () => {
+      posthog?.capture('invoice_updated')
+      posthog?.logger.info('invoice_updated', {
+        event: 'invoice_updated',
+        operation: 'update',
+      })
+      await router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -1003,6 +1059,7 @@ const profileRoute = createRoute({
 
 function ProfileComponent() {
   const { username } = profileRoute.useRouteContext()
+  const posthog = usePostHog()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
 
@@ -1049,7 +1106,10 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => posthog?.capture('upgrade_clicked')}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Upgrade
             </button>
           </div>
@@ -1067,6 +1127,7 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                posthog?.capture('user_logged_out')
                 auth.logout()
                 router.invalidate()
               }}
@@ -1094,6 +1155,7 @@ const loginRoute = createRoute({
 
 function LoginComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
   })
@@ -1102,7 +1164,11 @@ function LoginComponent() {
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    posthog?.capture('user_logged_in')
     auth.login(username)
+    posthog?.logger.info('demo_login_completed', {
+      event: 'demo_login_completed',
+    })
     router.invalidate()
   }
 
@@ -1138,6 +1204,7 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog?.capture('user_logged_out')
                 auth.logout()
                 router.invalidate()
               }}
