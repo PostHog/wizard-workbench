@@ -1,0 +1,459 @@
+{
+  "app": "next-16-app",
+  "lifecycle": {
+    "install": {
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ]
+    },
+    "build": {
+      "argv": [
+        "npm",
+        "run",
+        "build"
+      ]
+    },
+    "start": {
+      "argv": [
+        "npm",
+        "run",
+        "start",
+        "--",
+        "-p",
+        "{port}"
+      ],
+      "ready": {
+        "path": "/",
+        "timeoutMs": 60000
+      }
+    },
+    "env": {},
+    "flushWaitMs": 15000
+  },
+  "scenarios": [
+    {
+      "id": "client-render-segment",
+      "surface": "Client Component render error caught by a segment error.tsx (surfaces/nextjs.md §2)",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/reports?range=q5",
+        "expectText": "load this report"
+      },
+      "throws": {
+        "match": "RX20",
+        "file": "app/reports/revenue-chart.tsx"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "app/reports/revenue-chart.tsx"
+        }
+      }
+    },
+    {
+      "id": "client-render-root",
+      "surface": "Client render error caught by a custom global-error.tsx (explicit boundary: no reportError on >= 15.2)",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/settings?import=legacy",
+        "expectText": "Ledgerly hit a snag"
+      },
+      "throws": {
+        "match": "PF88",
+        "file": "app/settings/preferences-panel.tsx"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "app/settings/preferences-panel.tsx"
+        }
+      }
+    },
+    {
+      "id": "client-onclick",
+      "surface": "Client event handler throw",
+      "requirement": "COV-1",
+      "trigger": {
+        "kind": "browser",
+        "page": "/invoices/INV-3003",
+        "actions": [
+          {
+            "click": "button:has-text('Download CSV')"
+          }
+        ],
+        "expectPageError": "CE03"
+      },
+      "throws": {
+        "match": "CE03",
+        "file": "app/invoices/[id]/invoice-actions.tsx"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "handled": false,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "app/invoices/[id]/invoice-actions.tsx"
+        }
+      }
+    },
+    {
+      "id": "rsc-render-navigation",
+      "surface": "Server Component render error on a document navigation (cookie only)",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/",
+        "actions": [
+          {
+            "wait": 2500
+          },
+          {
+            "goto": "/invoices/INV-4471"
+          }
+        ]
+      },
+      "throws": {
+        "match": "TM71",
+        "file": "lib/invoices.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "posthog-node",
+        "linked": true,
+        "request": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "lib/invoices.ts"
+        }
+      }
+    },
+    {
+      "id": "metadata-cookie",
+      "surface": "generateMetadata throws, page request carrying only the PostHog cookie",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "http",
+        "path": "/invoices/INV-0913",
+        "identity": "cookie"
+      },
+      "throws": {
+        "match": "MX13",
+        "file": "lib/invoices.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "posthog-node",
+        "linked": true,
+        "request": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "lib/invoices.ts"
+        }
+      }
+    },
+    {
+      "id": "route-handler-headers",
+      "surface": "Route Handler throws, request with X-POSTHOG-* tracing headers",
+      "requirement": "CTX-1",
+      "trigger": {
+        "kind": "http",
+        "path": "/api/invoices/INV-5150/pdf",
+        "identity": "headers",
+        "expectStatus": 500
+      },
+      "throws": {
+        "match": "PD50",
+        "file": "lib/invoices.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "posthog-node",
+        "linked": true,
+        "request": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "lib/invoices.ts"
+        }
+      }
+    },
+    {
+      "id": "route-handler-browser",
+      "surface": "Route Handler throws, called by fetch from the page",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/invoices/INV-2202",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "button:has-text('Send reminder')"
+          }
+        ],
+        "expectText": "Could not send reminder"
+      },
+      "throws": {
+        "match": "RQ02",
+        "file": "lib/invoices.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "posthog-node",
+        "linked": true,
+        "request": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "lib/invoices.ts"
+        }
+      }
+    },
+    {
+      "id": "server-action-form",
+      "surface": "Server Action throws, submitted from a form",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/invoices/new",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "fill": {
+              "selector": "input[name=customer]",
+              "value": "ACME-0042"
+            }
+          },
+          {
+            "click": "button[type=submit]"
+          }
+        ]
+      },
+      "throws": {
+        "match": "CL42",
+        "file": "lib/invoices.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "posthog-node",
+        "linked": true,
+        "request": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "lib/invoices.ts"
+        }
+      }
+    },
+    {
+      "id": "proxy-cookie",
+      "surface": "proxy.ts throws (Next 16, Node.js runtime)",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "http",
+        "path": "/portal/~bad",
+        "identity": "cookie",
+        "expectStatus": 500
+      },
+      "throws": {
+        "match": "TN09",
+        "file": "proxy.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "posthog-",
+        "linked": true,
+        "request": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "proxy.ts"
+        }
+      }
+    },
+    {
+      "id": "edge-route-headers",
+      "surface": "Route Handler on the edge runtime throws",
+      "requirement": "COV-3",
+      "trigger": {
+        "kind": "http",
+        "path": "/api/geo?country=ZZ",
+        "identity": "headers",
+        "expectStatus": 500
+      },
+      "throws": {
+        "match": "GX01",
+        "file": "app/api/geo/route.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "posthog-",
+        "linked": true,
+        "request": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "app/api/geo/route.ts"
+        }
+      }
+    },
+    {
+      "id": "after-callback",
+      "surface": "after() callback throws (onRequestError is not called)",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "http",
+        "method": "POST",
+        "path": "/api/webhooks/payment",
+        "body": {
+          "id": "PAY-3321",
+          "invoice": "INV-2202"
+        },
+        "identity": "none",
+        "expectStatus": 200
+      },
+      "throws": {
+        "match": "RC21",
+        "file": "lib/invoices.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "posthog-node",
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "lib/invoices.ts"
+        }
+      }
+    },
+    {
+      "id": "background-rejection",
+      "surface": "Fire-and-forget promise in a Route Handler rejects (process unhandledRejection)",
+      "requirement": "COV-1",
+      "trigger": {
+        "kind": "http",
+        "method": "POST",
+        "path": "/api/exports",
+        "body": {
+          "batch": "EX-77"
+        },
+        "identity": "headers",
+        "expectStatus": 202
+      },
+      "throws": {
+        "match": "EX77",
+        "file": "app/api/exports/route.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "posthog-node",
+        "handled": false,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "app/api/exports/route.ts"
+        }
+      }
+    },
+    {
+      "id": "uncaught-timer",
+      "surface": "Timer callback throws on the Node server (process uncaughtException)",
+      "requirement": "COV-1",
+      "trigger": {
+        "kind": "http",
+        "method": "POST",
+        "path": "/api/cache/warm",
+        "body": {
+          "region": "eu-2"
+        },
+        "identity": "none",
+        "expectStatus": 202
+      },
+      "throws": {
+        "match": "CW02",
+        "file": "app/api/cache/warm/route.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "posthog-node",
+        "handled": false,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "app/api/cache/warm/route.ts"
+        }
+      }
+    },
+    {
+      "id": "not-found",
+      "surface": "notFound() control flow",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "http",
+        "path": "/invoices/INV-9999",
+        "identity": "cookie",
+        "expectStatus": 404
+      },
+      "throws": {
+        "match": "NEXT_HTTP_ERROR_FALLBACK"
+      },
+      "expect": {
+        "count": 0
+      }
+    },
+    {
+      "id": "action-redirect",
+      "surface": "redirect() inside a Server Action",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/invoices/new",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "fill": {
+              "selector": "input[name=customer]",
+              "value": "ACME-0007"
+            }
+          },
+          {
+            "click": "button[type=submit]"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Annual support plan"
+      },
+      "throws": {
+        "match": "NEXT_REDIRECT"
+      },
+      "expect": {
+        "count": 0
+      }
+    }
+  ]
+}
