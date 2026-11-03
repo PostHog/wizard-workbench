@@ -2,4 +2,4 @@
 name = "wb-python-stdio-server"
 version = "0.1.0"
 requires-python = ">=3.10"
-dependencies = ["mcp>=2"]
+dependencies = ["mcp>=2", "posthog>=7.62.0"]
