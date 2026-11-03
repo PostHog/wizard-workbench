@@ -505,10 +505,6 @@ jobs:
     outputs:
       pr_url: ${{ steps.process-results.outputs.pr_url }}
       pr_number: ${{ steps.process-results.outputs.pr_number }}
-    env:
-      # The runner's system gem directory isn't writable; without this the agent
-      # writes a project-local .bundle/config into the app.
-      BUNDLE_PATH: ${{ github.workspace }}/../bundle
 
     steps:
       - name: Generate GitHub App token
