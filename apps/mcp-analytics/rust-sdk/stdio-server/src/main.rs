@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig};
 use rmcp::schemars::{self, JsonSchema};
@@ -30,6 +32,15 @@ impl ServerHandler for Notes {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    Notes.serve(rmcp::transport::stdio()).await?.waiting().await?;
+    let token = std::env::var("POSTHOG_PROJECT_TOKEN")?;
+    let host = std::env::var("POSTHOG_HOST")?;
+    let posthog = Arc::new(posthog_rs::client((token.as_str(), host.as_str())).await);
+
+    let server = posthog_rs::mcp::instrument(Notes, posthog.clone());
+    let service = server.serve(rmcp::transport::stdio()).await?;
+    let result = service.waiting().await;
+
+    posthog.shutdown().await;
+    result?;
     Ok(())
 }

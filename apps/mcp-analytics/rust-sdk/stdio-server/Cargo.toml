@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+posthog-rs = { version = "0.30.0", features = ["mcp"] }
 rmcp = { version = "3.8", features = ["server", "macros", "transport-io", "schemars"] }
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
