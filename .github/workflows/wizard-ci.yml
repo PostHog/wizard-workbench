@@ -505,6 +505,10 @@ jobs:
     outputs:
       pr_url: ${{ steps.process-results.outputs.pr_url }}
       pr_number: ${{ steps.process-results.outputs.pr_number }}
+    env:
+      # The runner's system gem directory isn't writable; without this the agent
+      # writes a project-local .bundle/config into the app.
+      BUNDLE_PATH: ${{ github.workspace }}/../bundle
 
     steps:
       - name: Generate GitHub App token
@@ -539,6 +543,10 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061
+
+      # Python apps with a uv.lock install the way the project does.
+      - name: Setup uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
