@@ -1,4 +1,6 @@
+import 'dotenv/config'
 import { serve } from '@hono/node-server'
+import { PostHogMCP } from '@posthog/mcp'
 import { Hono } from 'hono'
 
 // A custom MCP dispatcher: it speaks the MCP JSON-RPC protocol directly over
@@ -12,6 +14,14 @@ type JsonRpcRequest = {
     method: string
     params?: Record<string, unknown>
 }
+
+const projectToken = process.env.POSTHOG_PROJECT_TOKEN
+const posthogHost = process.env.POSTHOG_HOST
+if (!projectToken || !posthogHost) {
+    throw new Error('POSTHOG_PROJECT_TOKEN and POSTHOG_HOST are required')
+}
+
+const posthog = new PostHogMCP(projectToken, { host: posthogHost })
 
 const TOOLS = [
     {
@@ -51,33 +61,90 @@ app.post('/mcp', async (c) => {
     const body = (await c.req.json()) as JsonRpcRequest
 
     if (body.method === 'initialize') {
-        return c.json({
-            jsonrpc: '2.0',
-            id: body.id,
-            result: {
-                protocolVersion: '2024-11-05',
-                capabilities: { tools: {} },
-                serverInfo: { name: 'workbench-hono-dispatcher', version: '1.0.0' },
-            },
+        const result = {
+            protocolVersion: '2024-11-05',
+            capabilities: { tools: {} },
+            serverInfo: { name: 'workbench-hono-dispatcher', version: '1.0.0' },
+        }
+        const clientInfo = body.params?.clientInfo as Record<string, unknown> | undefined
+        posthog.captureInitialize({
+            clientName: typeof clientInfo?.name === 'string' ? clientInfo.name : undefined,
+            clientVersion: typeof clientInfo?.version === 'string' ? clientInfo.version : undefined,
+            protocolVersion: result.protocolVersion,
+            clientUserAgent: c.req.header('user-agent'),
+            vendorClient: c.req.header('x-anthropic-client'),
+            parameters: body.params,
+            response: result,
         })
+        return c.json({ jsonrpc: '2.0', id: body.id, result })
     }
 
     if (body.method === 'tools/list') {
-        return c.json({ jsonrpc: '2.0', id: body.id, result: { tools: TOOLS } })
+        const tools = posthog.prepareToolList(TOOLS)
+        posthog.captureToolsList({
+            toolNames: tools.map((tool) => tool.name),
+            protocolVersion: c.req.header('MCP-Protocol-Version'),
+            clientUserAgent: c.req.header('user-agent'),
+            vendorClient: c.req.header('x-anthropic-client'),
+            parameters: body.params,
+        })
+        return c.json({ jsonrpc: '2.0', id: body.id, result: { tools } })
     }
 
     if (body.method === 'tools/call') {
         const params = body.params ?? {}
         const name = String(params.name)
         const args = (params.arguments as Record<string, unknown>) ?? {}
+        const originalTool = TOOLS.find((tool) => tool.name === name)
+        const prepared = posthog.prepareToolCall(name, args, {
+            originalTool,
+            requestMeta: params._meta as Record<string, unknown> | undefined,
+            sessionId: c.req.header('Mcp-Session-Id'),
+        })
+        const startedAt = Date.now()
         try {
-            return c.json({ jsonrpc: '2.0', id: body.id, result: runTool(name, args) })
-        } catch (err) {
-            return c.json({
-                jsonrpc: '2.0',
-                id: body.id,
-                result: { isError: true, content: [{ type: 'text', text: String(err) }] },
+            const result = runTool(name, prepared.args ?? {})
+            const final = posthog.prepareToolResult(result, prepared)
+            posthog.captureToolCall({
+                toolName: name,
+                toolDescription: originalTool?.description,
+                intent: prepared.intent,
+                intentSource: prepared.intentSource,
+                llmModel: prepared.llmModel,
+                llmModelSource: prepared.llmModelSource,
+                parameters: prepared.args,
+                response: final.result,
+                durationMs: Date.now() - startedAt,
+                isError: false,
+                sessionId: final.sessionId,
+                conversationId: final.conversationId,
+                protocolVersion: c.req.header('MCP-Protocol-Version'),
+                clientUserAgent: c.req.header('user-agent'),
+                vendorClient: c.req.header('x-anthropic-client'),
             })
+            return c.json({ jsonrpc: '2.0', id: body.id, result: final.result })
+        } catch (err) {
+            const result = { isError: true, content: [{ type: 'text', text: String(err) }] }
+            const final = posthog.prepareToolResult(result, prepared)
+            posthog.captureToolCall({
+                toolName: name,
+                toolDescription: originalTool?.description,
+                intent: prepared.intent,
+                intentSource: prepared.intentSource,
+                llmModel: prepared.llmModel,
+                llmModelSource: prepared.llmModelSource,
+                parameters: prepared.args,
+                response: final.result,
+                durationMs: Date.now() - startedAt,
+                isError: true,
+                error: err,
+                sessionId: final.sessionId,
+                conversationId: final.conversationId,
+                protocolVersion: c.req.header('MCP-Protocol-Version'),
+                clientUserAgent: c.req.header('user-agent'),
+                vendorClient: c.req.header('x-anthropic-client'),
+            })
+            return c.json({ jsonrpc: '2.0', id: body.id, result: final.result })
         }
     }
 
@@ -89,3 +156,8 @@ app.post('/mcp', async (c) => {
 })
 
 serve({ fetch: app.fetch, port: 3000 })
+
+process.on('SIGTERM', async () => {
+    await posthog.shutdown()
+    process.exit(0)
+})
