@@ -2,6 +2,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     bigdecimal (4.1.3)
+    concurrent-ruby (1.3.8)
     hana (1.3.7)
     json_schemer (2.5.0)
       bigdecimal
@@ -10,6 +11,8 @@ GEM
       simpleidn (~> 0.2)
     mcp (1.8.2)
       json_schemer (>= 2.4)
+    posthog-ruby (3.29.0)
+      concurrent-ruby (~> 1)
     regexp_parser (2.13.1)
     simpleidn (0.3.0)
 
@@ -20,13 +23,16 @@ PLATFORMS
 
 DEPENDENCIES
   mcp (~> 1.8)
+  posthog-ruby (>= 3.29.0)
 
 CHECKSUMS
   bigdecimal (4.1.3) sha256=61ebe1e5e559bdc3cc6f2c0ee7f427321fc838f59611c294356eb04d6e21cf66
   bundler (4.0.13) sha256=19f08be7f27022cf0b89f27da0b044ae075e8270a9ef44ad248a932614e1ca3b
+  concurrent-ruby (1.3.8) sha256=b2f1be836e968ccc78ccfce277ea79c72a88633f22306782c16ff23fb415d1e1
   hana (1.3.7) sha256=5425db42d651fea08859811c29d20446f16af196308162894db208cac5ce9b0d
   json_schemer (2.5.0) sha256=2f01fb4cce721a4e08dd068fc2030cffd0702a7f333f1ea2be6e8991f00ae396
   mcp (1.8.2) sha256=59843aaceb060260bfcf38692d1c99ec497eefc039a6174237f53a59ee71d323
+  posthog-ruby (3.29.0) sha256=c677f86e9c0d1ac34b1a8bc3e1cc7b00a6f4c629b48333b3c0f44b432ac2a07e
   regexp_parser (2.13.1) sha256=5aedb6b7c35688f51e86eef17a15374dfd287c83f4ca644b2c5f3ec50a33b44b
   simpleidn (0.3.0) sha256=12ca730bed2f3db04d11e9bfd1bca3e11fb37f55b21eb2e9793fb5814bf54d03
 
