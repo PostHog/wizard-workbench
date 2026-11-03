@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig};
 use rmcp::schemars::{self, JsonSchema};
@@ -28,8 +30,31 @@ impl ServerHandler for Notes {
     }
 }
 
+fn posthog_env(name: &str) -> Option<String> {
+    let value = std::env::var(name).ok().filter(|value| !value.is_empty());
+
+    if value.is_none() && cfg!(debug_assertions) {
+        panic!(
+            "{name} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once {name} is configured"
+        );
+    }
+
+    value
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    Notes.serve(rmcp::transport::stdio()).await?.waiting().await?;
+    let (Some(token), Some(host)) = (
+        posthog_env("POSTHOG_PROJECT_TOKEN"),
+        posthog_env("POSTHOG_HOST"),
+    ) else {
+        Notes.serve(rmcp::transport::stdio()).await?.waiting().await?;
+        return Ok(());
+    };
+    let posthog = Arc::new(posthog_rs::client((token.as_str(), host.as_str())).await);
+    let server = posthog_rs::mcp::instrument(Notes, posthog.clone());
+
+    server.serve(rmcp::transport::stdio()).await?.waiting().await?;
+    posthog.shutdown().await;
     Ok(())
 }
