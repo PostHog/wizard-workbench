@@ -40,7 +40,7 @@
       "id": "mcp-analytics",
       "dir": "mcp-analytics",
       "label": "MCP Analytics",
-      "description": "Instrument an MCP server with the @posthog/mcp SDK",
+      "description": "Instrument an MCP server with the PostHog MCP Analytics SDKs (TypeScript, Python, Go, Ruby, Rust)",
       "ciCapable": true
     },
     {
