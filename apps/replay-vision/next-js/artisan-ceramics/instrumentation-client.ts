@@ -5,5 +5,5 @@ posthog.init(process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN!, {
   defaults: '2026-01-30',
   // Recording was switched off while the shop iterated on its cookie banner.
   // The replay-vision wizard run is expected to remove this override.
-  disable_session_recording: true,
+  disable_session_recording: false,
 })
