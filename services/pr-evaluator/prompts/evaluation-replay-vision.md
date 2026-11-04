@@ -36,11 +36,11 @@ Make session replay record (server-side enable, plus removing any client-side `d
 
 | Tier | When | Query | Sampling | `free_only` |
 | --- | --- | --- | --- | --- |
-| No recordings yet | The project has 0 recordings | No filters on all three | 1.0 | on |
-| Low volume | Under 250 sessions a month | No filters on all three | Sized to the free credits, at least 0.01 | on |
+| No scannable sessions yet | 0 recordings, or only recordings too short to scan | No filters on all three | Sized to its share of the free credits left (as if 250 sessions a month), at least 0.01 | on |
+| Low volume | 1 to 249 sessions a month | No filters on all three | Sized to its share of the free credits left, at least 0.01 | on |
 | High volume | 250 sessions a month or more | Problems monitor: `visited_page` on the real completion flow, 0.5. Classifier: `visited_page` on the flow's first page, 0.3. Summarizer: no filters, 0.1 | As listed | off |
 
-No filters and a sampling rate of 1.0 are correct on the first two tiers, not a widened query. When the run could not read the volume (for example, missing scopes), a report that says the tier was unknown and defers the scanners is correct.
+No filters are correct on the first two tiers, not a widened query. When the organization's free credits are used up, a rate of 0.01 and a report that says the scanners are paused until the credits reset are correct. When the run could not read the volume (for example, missing scopes), a report that says the tier was unknown and defers the scanners is correct.
 
 **The report must also lead with what blocks the first observation:** "session replay is off" (only when the run read the setting as off), then "Deploy this change" with the files to deploy and the env var names (never values, never `.env` files) when the run changed code.
 
@@ -66,7 +66,8 @@ No filters and a sampling rate of 1.0 are correct on the first two tiers, not a 
 ### 3. Scanner customization (replay-vision-specific)
 
 - **sc_three_scanners** — The report lists exactly three scanners (problems monitor, key flow outcome classifier, summarizer) — none missing, none invented. A classifier skipped because the repo shows no completion flow, with the reason stated, is YES. **N/A** for the abort fixture (zero is correct there).
-- **sc_names_custom** — Every scanner name is specific to this product (the README names the identity to expect). A scanner named "Broken experiences", "User frustration", or "Session summaries" is NO.
+- **sc_names_custom** — Every scanner name starts with this product's name (the README names the identity to expect). A scanner named "Broken experiences", "User frustration", or "Session summaries", or a generic name such as "Checkout outcome", is NO.
+- **sc_rerun_respects_other_scanners** — The CI project is shared, so it may hold scanners from earlier runs and from other apps. A scanner the run updated in place is about this same product; another app's scanner is left untouched and mentioned. On an update, the scanner keeps its `credit_limit`, and keeps its rate and `free_only` unless its tier changed; `free_only` never changes from false to true. **N/A** when no earlier scanner matched.
 - **sc_tier_stated** — The report states the volume tier (no recordings, low, high, or unknown) and the scanners' query and sampling match that tier, per the table above.
 - **sc_flow_from_real_routes** — The completion flow the problems monitor and the classifier describe uses paths that exist in this app's route tree (check the code). A guessed path the app doesn't have — e.g. `/checkout` on an app whose flow is `/book` — is NO. On the high tier, the problems monitor's `visited_page` scope uses those paths.
 - **sc_classifier_tags_locked** — The classifier uses exactly the five locked tags (`completed`, `abandoned`, `blocked-by-error`, `confused`, `not-attempted`). **N/A** when the classifier was skipped with a stated reason.
@@ -76,5 +77,6 @@ No filters and a sampling rate of 1.0 are correct on the first two tiers, not a 
 
 - **cd_estimates_reported** — The report states each scanner's estimated monthly credit spend (credits, not just observation counts), or says it is unavailable because the connection lacks the Replay Vision scopes.
 - **cd_no_pricier_model** — Scanners use the default flash-tier model; a pricier model chosen during setup is NO.
-- **cd_sampling_matches_tier** — Sampling rates match the tier: 1.0 with no recordings, sized to the free credits on low volume, and 0.5 / 0.3 / 0.1 on high volume. Any rate above its tier's rate is NO.
-- **cd_free_only_on_unfiltered** — Every scanner with no filters (no recordings or low tier) is `free_only`; high-tier scanners are not. **N/A** when the tier is unknown and the scanners were deferred.
+- **cd_sampling_matches_tier** — Sampling rates on new scanners match the tier: sized to the free credits left on the first two tiers (at least 0.01), and 0.5 / 0.3 / 0.1 on high volume. Any rate above its tier's rate is NO. An updated scanner that kept its earlier rate, per the re-run rules, is YES.
+- **cd_free_only_on_unfiltered** — Every new scanner with no filters (the first two tiers) is `free_only`; high-tier scanners are not. An updated scanner that kept `free_only: false` from an earlier run is YES. **N/A** when the tier is unknown and the scanners were deferred.
+- **cd_created_enabled** — New scanners are created enabled. An earlier scanner a person paused stays paused. **N/A** when the scanners were deferred.
