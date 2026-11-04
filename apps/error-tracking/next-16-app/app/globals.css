@@ -1,0 +1,8 @@
+body { font-family: system-ui, sans-serif; margin: 0; color: #1f2933; }
+header { display: flex; gap: 1rem; padding: 1rem 2rem; background: #102a43; }
+header a { color: #f0f4f8; text-decoration: none; }
+main { padding: 2rem; max-width: 56rem; }
+table { border-collapse: collapse; width: 100%; }
+td, th { border-bottom: 1px solid #d9e2ec; padding: 0.4rem; text-align: left; }
+button { padding: 0.4rem 0.8rem; margin-right: 0.5rem; }
+.notice { padding: 0.6rem; background: #fff3c4; }

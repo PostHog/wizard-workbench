@@ -101,6 +101,16 @@ Each of these apps has a setup that a generic integration gets wrong. As with th
 - `posthog-js` kept as an exact pin, upgraded only when the install fails on it
 - no `posthog-node` in the edge runtime (`middleware.ts`, `app/api/edge/route.ts`)
 
+**`no-posthog-next-16-app`**, **`next-16-app`**, **`no-posthog-next-14-app`**, **`no-posthog-next-15-pages`**: one invoicing app (Ledgerly) on Next.js 16 App Router (Turbopack build), the same app with PostHog already used for analytics and a branded `global-error.tsx`, Next.js 14 App Router, and Next.js 15 Pages Router. Each has a scenario manifest in `.scenarios/` that names every error surface it exercises. Expected:
+
+- `capture_exceptions: true` in the browser init, and capture added to every existing `error.tsx` and custom `global-error.tsx` (a custom `global-error.tsx` turns off root autocapture on Next.js ≥ 15.2; on 14 and the Pages Router, every client render error needs a boundary capture: `_app` boundary or `_error`)
+- server errors captured on 15 and 16 through `instrumentation.ts` `onRequestError`, in both the Node.js and the edge runtime, with the browser's distinct ID and session ID read from the `X-POSTHOG-*` headers first and the PostHog cookie second, and `tracing_headers: [window.location.hostname]` in the browser init
+- on 14, which has no `onRequestError`: no `onRequestError` export that never runs; server errors captured where the app handles them (route handlers, server actions), or the report says server-side capture needs Next.js 15; `experimental.instrumentationHook` set when `instrumentation.ts` is added
+- posthog-node exception autocapture started from `register()`, not lazily from the first request error
+- the existing `posthog-js` and `posthog-node` clients in `next-16-app` kept as they were, including their host fallback
+- `notFound()`, `redirect()` and 404 pages produce no `$exception`
+- source maps uploaded only when the upload credentials are present, so a build without them still passes
+
 **`vite-yarn-pnp`**: Vite and React on Yarn 4 Plug'n'Play, with no `node_modules` and a seven-day `npmMinimalAgeGate`. `posthog-js` runs through `PostHogProvider` with `VITE_PH_PROJECT_TOKEN`. The build emits hidden source maps and `.gz` and `.br` copies, and the GitHub Pages workflow publishes all of `dist/`. Expected:
 
 - packages added with `yarn add`, so `.pnp.cjs` and `yarn.lock` change together, never with npm or a switch to `nodeLinker: node-modules`
