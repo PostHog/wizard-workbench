@@ -7,6 +7,41 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+import posthog from 'posthog-js';
+
+interface AuthenticatedUser {
+  id: number;
+  email: string;
+  name: string | null;
+  role: string;
+}
+
+function isAuthenticatedUser(value: unknown): value is AuthenticatedUser {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const user = value as Record<string, unknown>;
+  return (
+    typeof user.id === 'number' &&
+    typeof user.email === 'string' &&
+    (typeof user.name === 'string' || user.name === null) &&
+    typeof user.role === 'string'
+  );
+}
+
+function identifyUser(user: AuthenticatedUser) {
+  if (
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+    process.env.NEXT_PUBLIC_POSTHOG_HOST
+  ) {
+    posthog.identify(String(user.id), {
+      email: user.email,
+      role: user.role,
+      ...(user.name ? { name: user.name } : {})
+    });
+  }
+}
 
 export function Login({
   mode = 'signin',
@@ -55,6 +90,18 @@ export function Login({
           setEmail(result.email || data.email);
           setPassword(result.password || data.password);
           return;
+        }
+
+        if (isAuthenticatedUser(result.user)) {
+          identifyUser(result.user);
+          if (
+            process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+            process.env.NEXT_PUBLIC_POSTHOG_HOST
+          ) {
+            posthog.capture(
+              mode === 'signin' ? 'user_signed_in' : 'user_signed_up'
+            );
+          }
         }
 
         if (result.success && result.redirectTo) {
