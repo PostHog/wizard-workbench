@@ -1,15 +1,46 @@
 import { Link } from "react-router";
+import { usePostHog } from "@posthog/react";
 import { useCart, type CartItem } from "../context/CartContext";
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+  );
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+    if (isPostHogConfigured) {
+      posthog.capture("cart_item_removed", {
+        product_id: item.id,
+        product_category: item.category,
+        quantity: item.quantity,
+        removal_method: "remove_button",
+      });
+    }
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+    if (!isPostHogConfigured) return;
+
+    if (newQuantity <= 0) {
+      posthog.capture("cart_item_removed", {
+        product_id: item.id,
+        product_category: item.category,
+        quantity: item.quantity,
+        removal_method: "quantity_decrement",
+      });
+      return;
+    }
+
+    posthog.capture("cart_quantity_updated", {
+      product_id: item.id,
+      product_category: item.category,
+      previous_quantity: item.quantity,
+      quantity: newQuantity,
+    });
   };
 
   if (cart.length === 0) {
