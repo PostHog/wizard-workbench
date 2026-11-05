@@ -1,5 +1,6 @@
 ---
 import Navigation from '../components/Navigation.astro';
+import PostHog from '../components/posthog.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -18,9 +19,50 @@ const { title, description = 'NeuralFlow Documentation - Learn how to build with
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title} | NeuralFlow Docs</title>
+    <PostHog />
   </head>
   <body>
     <Navigation />
     <slot />
+    <script is:inline>
+      document.addEventListener('click', (event) => {
+        const link = event.target.closest('a');
+        if (!link) return;
+
+        const location = link.closest('.nav')
+          ? 'header'
+          : link.closest('.docs-sidebar')
+            ? 'sidebar'
+            : link.closest('.hero')
+              ? 'homepage_hero'
+              : link.closest('.features')
+                ? 'homepage_feature'
+                : 'documentation_content';
+
+        const isExternal = link.target === '_blank';
+        const destination = link.getAttribute('href');
+        const posthogLogger = window.posthog?.logger;
+
+        window.posthog?.capture('documentation_link_clicked', {
+          destination: destination || undefined,
+          link_text: link.textContent?.trim() || undefined,
+          location,
+          is_external: isExternal,
+        });
+
+        if (destination === '#') {
+          posthogLogger?.warn('documentation navigation unavailable', {
+            location,
+            navigation_type: 'fragment',
+          });
+          return;
+        }
+
+        posthogLogger?.info('documentation navigation selected', {
+          location,
+          navigation_type: isExternal ? 'external' : 'internal',
+        });
+      });
+    </script>
   </body>
 </html>
