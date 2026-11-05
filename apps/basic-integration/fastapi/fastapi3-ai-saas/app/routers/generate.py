@@ -2,11 +2,12 @@
 
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
 from app.models import Generation
+from app.posthog_logs import get_posthog_logger
 
 router = APIRouter(prefix="/api")
 
@@ -41,7 +42,8 @@ class CreditsResponse(BaseModel):
 
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_content(
-    request: GenerateRequest,
+    generation_request: GenerateRequest,
+    request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -50,10 +52,19 @@ async def generate_content(
     This endpoint would integrate with an LLM API in production.
     For testing, it returns a mock response.
     """
-    credits_needed = CREDIT_COSTS.get(request.generation_type, 5)
+    credits_needed = CREDIT_COSTS.get(generation_request.generation_type, 5)
 
     # Check credits
     if current_user.credits < credits_needed:
+        if request.app.state.posthog_log_provider:
+            get_posthog_logger().warning(
+                "Content generation rejected for insufficient credits",
+                extra={
+                    "generation_type": generation_request.generation_type,
+                    "credits_needed": credits_needed,
+                    "credits_available": current_user.credits,
+                },
+            )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -64,22 +75,45 @@ async def generate_content(
     db.commit()
 
     # Mock AI generation (would call OpenAI/Anthropic in production)
-    mock_content = _generate_mock_content(request.generation_type, request.prompt)
+    mock_content = _generate_mock_content(
+        generation_request.generation_type, generation_request.prompt
+    )
 
     # Record generation
     generation = Generation.create(
         db,
         user_id=current_user.id,
-        generation_type=request.generation_type,
-        prompt=request.prompt,
+        generation_type=generation_request.generation_type,
+        prompt=generation_request.prompt,
         result=mock_content,
         credits_used=credits_needed,
     )
 
+    if request.app.state.posthog_log_provider:
+        get_posthog_logger().info(
+            "Content generation completed",
+            extra={
+                "generation_type": generation_request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
+
+    posthog_client = request.app.state.posthog_client
+    if posthog_client:
+        posthog_client.capture(
+            "content_generated",
+            properties={
+                "generation_type": generation_request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
+
     return GenerateResponse(
         id=generation.id,
         content=mock_content,
-        generation_type=request.generation_type,
+        generation_type=generation_request.generation_type,
         credits_used=credits_needed,
         credits_remaining=current_user.credits,
     )

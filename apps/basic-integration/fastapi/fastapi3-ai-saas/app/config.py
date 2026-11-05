@@ -1,6 +1,7 @@
 """Application configuration using Pydantic Settings."""
 
 from functools import lru_cache
+from typing import Optional
 
 from pydantic_settings import BaseSettings
 
@@ -24,6 +25,10 @@ class Settings(BaseSettings):
 
     # Credits
     default_credits: int = 100
+
+    # PostHog
+    posthog_api_key: Optional[str] = None
+    posthog_host: Optional[str] = None
 
     class Config:
         env_file = ".env"
