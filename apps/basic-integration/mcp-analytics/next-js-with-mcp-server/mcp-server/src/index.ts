@@ -2,8 +2,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 
-// A minimal, PostHog-less MCP server. The `wizard mcp-analytics` flow should
-// detect the McpServer object below and wrap it with `instrument(server, posthog)`.
 const server = new McpServer({ name: 'workbench-stdio-server', version: '1.0.0' })
 
 server.tool(
