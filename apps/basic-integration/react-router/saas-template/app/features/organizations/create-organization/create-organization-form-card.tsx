@@ -52,6 +52,14 @@ export function CreateOrganizationFormCard({
     },
   );
 
+  const captureOrganizationCreated = () => {
+    void import("~/lib/posthog.client").then(({ isPostHogEnabled, posthog }) => {
+      if (isPostHogEnabled) {
+        posthog.capture("organization_created");
+      }
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -61,7 +69,15 @@ export function CreateOrganizationFormCard({
         </CardHeader>
 
         <CardContent>
-          <Form encType="multipart/form-data" method="POST" {...form.props}>
+          <Form
+            encType="multipart/form-data"
+            method="POST"
+            {...form.props}
+            onSubmit={(event) => {
+              form.props.onSubmit?.(event);
+              captureOrganizationCreated();
+            }}
+          >
             <FieldSet
               className="flex flex-col gap-6"
               disabled={isCreatingOrganization}

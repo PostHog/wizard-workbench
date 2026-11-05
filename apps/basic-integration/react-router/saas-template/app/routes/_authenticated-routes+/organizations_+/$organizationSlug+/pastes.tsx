@@ -179,6 +179,14 @@ export const meta: Route.MetaFunction = ({ loaderData }) => [
 export default function PastesRoute({ loaderData, params }: Route.ComponentProps) {
   const { pastes, pasteLimits } = loaderData;
 
+  const capturePasteCreated = () => {
+    void import("~/lib/posthog.client").then(({ isPostHogEnabled, posthog }) => {
+      if (isPostHogEnabled) {
+        posthog.capture("paste_created");
+      }
+    });
+  };
+
   return (
     <div className="flex flex-1 flex-col gap-4 px-4 py-4 md:py-6 lg:px-6">
       <div className="flex items-center justify-between">
@@ -246,7 +254,11 @@ export default function PastesRoute({ loaderData, params }: Route.ComponentProps
       {/* Create Paste Form */}
       <div id="create-paste" className="mt-8 rounded-lg border bg-card p-6">
         <h2 className="mb-4 text-xl font-semibold">Create New Paste</h2>
-        <Form method="post" className="space-y-4">
+        <Form
+          method="post"
+          className="space-y-4"
+          onSubmit={capturePasteCreated}
+        >
           <input type="hidden" name="intent" value="create" />
           <div>
             <label htmlFor="title" className="mb-2 block text-sm font-medium">

@@ -61,6 +61,14 @@ export function EmailInviteCard({
   const hydrated = useHydrated();
   const disabled = isInvitingByEmail || organizationIsFull;
 
+  const captureTeamMemberInviteRequested = () => {
+    void import("~/lib/posthog.client").then(({ isPostHogEnabled, posthog }) => {
+      if (isPostHogEnabled) {
+        posthog.capture("team_member_invite_requested");
+      }
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -70,7 +78,14 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(event) => {
+            form.props.onSubmit?.(event);
+            captureTeamMemberInviteRequested();
+          }}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

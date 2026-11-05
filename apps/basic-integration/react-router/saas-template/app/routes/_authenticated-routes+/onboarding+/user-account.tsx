@@ -74,8 +74,24 @@ export default function UserAccountOnboardingRoute({
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
 
+  const captureOnboardingProfileSubmitted = () => {
+    void import("~/lib/posthog.client").then(({ isPostHogEnabled, posthog }) => {
+      if (isPostHogEnabled) {
+        posthog.capture("onboarding_profile_submitted");
+      }
+    });
+  };
+
   return (
-    <Form encType="multipart/form-data" method="POST" {...form.props}>
+    <Form
+      encType="multipart/form-data"
+      method="POST"
+      {...form.props}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        captureOnboardingProfileSubmitted();
+      }}
+    >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>
           <div className="flex flex-col gap-1">

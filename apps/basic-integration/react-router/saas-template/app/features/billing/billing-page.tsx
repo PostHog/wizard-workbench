@@ -213,6 +213,14 @@ export function BillingPage({
   const isUpdatingBillingEmail =
     navigation.formData?.get("intent") === UPDATE_BILLING_EMAIL_INTENT;
 
+  const captureSubscriptionCancelled = () => {
+    void import("~/lib/posthog.client").then(({ isPostHogEnabled, posthog }) => {
+      if (isPostHogEnabled) {
+        posthog.capture("subscription_cancelled");
+      }
+    });
+  };
+
   return (
     <div className="px-4 py-4 md:py-6 lg:px-6">
       <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -631,6 +639,7 @@ export function BillingPage({
                 <Button
                   disabled={isSubmitting}
                   name="intent"
+                  onClick={captureSubscriptionCancelled}
                   type="submit"
                   value={CANCEL_SUBSCRIPTION_INTENT}
                   variant="destructive"

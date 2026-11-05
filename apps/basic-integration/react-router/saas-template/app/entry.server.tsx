@@ -21,6 +21,11 @@ export const streamTimeout = 5000;
 const oneSecond = 1000;
 const nonceLength = 16;
 const MODE = process.env.NODE_ENV ?? "development";
+const posthogHost = process.env.VITE_POSTHOG_HOST;
+const posthogAssetsHost = posthogHost?.replace(
+  ".i.posthog.com",
+  "-assets.i.posthog.com",
+);
 
 let mockServerInitialized = false;
 
@@ -107,6 +112,7 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    posthogHost,
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],
@@ -120,7 +126,9 @@ export default async function handleRequest(
                     "'strict-dynamic'",
                     "'self'",
                     `'nonce-${nonce}'`,
+                    posthogAssetsHost,
                   ],
+                  "worker-src": ["'self'", "blob:"],
                   // Inline event handlers with nonce
                   "script-src-attr": [`'nonce-${nonce}'`],
                 },

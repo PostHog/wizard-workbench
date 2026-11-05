@@ -48,6 +48,17 @@ export function CreateSubscriptionModalContent({
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
 
+  const captureSubscriptionCheckoutStarted = (tier: Tier, interval: Interval) => {
+    void import("~/lib/posthog.client").then(({ isPostHogEnabled, posthog }) => {
+      if (isPostHogEnabled) {
+        posthog.capture("subscription_checkout_started", {
+          billing_interval: interval,
+          plan_tier: tier,
+        });
+      }
+    });
+  };
+
   const navigation = useNavigation();
   const isSubmitting =
     navigation.formData?.get("intent") === OPEN_CHECKOUT_SESSION_INTENT;
@@ -97,6 +108,7 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () => captureSubscriptionCheckoutStarted(tier, interval),
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };

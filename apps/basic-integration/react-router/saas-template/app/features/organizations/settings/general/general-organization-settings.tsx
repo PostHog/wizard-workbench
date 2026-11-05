@@ -81,11 +81,23 @@ export function GeneralOrganizationSettings({
     navigation.state === "submitting" &&
     navigation.formData?.get("intent") === UPDATE_ORGANIZATION_INTENT;
 
+  const captureOrganizationSettingsUpdated = () => {
+    void import("~/lib/posthog.client").then(({ isPostHogEnabled, posthog }) => {
+      if (isPostHogEnabled) {
+        posthog.capture("organization_settings_updated");
+      }
+    });
+  };
+
   return (
     <Form
       encType="multipart/form-data"
       method="POST"
       {...form.props}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        captureOrganizationSettingsUpdated();
+      }}
       aria-describedby={
         form.errors && form.errors.length > 0
           ? `${form.descriptionId} ${form.errorId}`

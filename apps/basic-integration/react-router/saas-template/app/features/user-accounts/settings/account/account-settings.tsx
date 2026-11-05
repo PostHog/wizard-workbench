@@ -53,11 +53,23 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
     navigation.state === "submitting" &&
     navigation.formData?.get("intent") === UPDATE_USER_ACCOUNT_INTENT;
 
+  const captureAccountSettingsUpdated = () => {
+    void import("~/lib/posthog.client").then(({ isPostHogEnabled, posthog }) => {
+      if (isPostHogEnabled) {
+        posthog.capture("account_settings_updated");
+      }
+    });
+  };
+
   return (
     <Form
       encType="multipart/form-data"
       method="POST"
       {...form.props}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        captureAccountSettingsUpdated();
+      }}
       aria-describedby={
         form.errors && form.errors.length > 0
           ? `${form.descriptionId} ${form.errorId}`
