@@ -1,6 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { loggerProvider } from '@/instrumentation';
 import { z } from 'zod';
+
+const todoLogger = loggerProvider?.getLogger('posthog-todo-api');
+
+function logTodoOperation(operation: string, statusCode: number) {
+  todoLogger?.emit({
+    body: 'Todo API operation completed',
+    severityNumber: SeverityNumber.INFO,
+    attributes: {
+      operation,
+      outcome: 'success',
+      status_code: statusCode,
+    },
+  });
+
+  const provider = loggerProvider;
+  if (provider) {
+    after(async () => {
+      await provider.forceFlush();
+    });
+  }
+}
 
 const updateTodoSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -59,6 +82,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    logTodoOperation('todo_update', 200);
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -94,6 +118,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    logTodoOperation('todo_delete', 200);
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
     console.error('Error deleting todo:', error);

@@ -1,6 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import { getTodos, createTodo } from '@/lib/data';
+import { loggerProvider } from '@/instrumentation';
 import { z } from 'zod';
+
+const todoLogger = loggerProvider?.getLogger('posthog-todo-api');
+
+function logTodoOperation(operation: string, statusCode: number) {
+  todoLogger?.emit({
+    body: 'Todo API operation completed',
+    severityNumber: SeverityNumber.INFO,
+    attributes: {
+      operation,
+      outcome: 'success',
+      status_code: statusCode,
+    },
+  });
+
+  const provider = loggerProvider;
+  if (provider) {
+    after(async () => {
+      await provider.forceFlush();
+    });
+  }
+}
 
 const todoSchema = z.object({
   title: z.string().min(1).max(255),
@@ -34,6 +57,7 @@ export async function POST(request: NextRequest) {
       completed: validatedData.completed,
     });
 
+    logTodoOperation('todo_create', 201);
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
