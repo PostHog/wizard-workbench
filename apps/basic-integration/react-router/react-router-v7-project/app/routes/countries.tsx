@@ -2,7 +2,13 @@ import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
+import { usePostHog } from "posthog-js/react";
 import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
+import { posthogLogger } from "~/lib/posthog-logs.client";
+
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_POSTHOG_HOST,
+);
 
 export async function clientLoader() {
   try {
@@ -18,15 +24,18 @@ export async function clientLoader() {
     
     // Check if API returned an error object
     if (data.status === 404 || (data.message && !Array.isArray(data))) {
+      posthogLogger.warn("Country catalog returned an invalid response");
       console.error("API Error:", data.message || data.status);
       return [];
     }
     
     // Ensure we return an array
     const countries = Array.isArray(data) ? data : [];
+    posthogLogger.info("Country catalog loaded", { country_count: countries.length });
     console.log(`Loaded ${countries.length} countries from API`);
     return countries;
   } catch (error) {
+    posthogLogger.warn("Country catalog request failed");
     console.error("Error loading countries:", error);
     // Return empty array on error to prevent crashes
     return [];
@@ -35,6 +44,7 @@ export async function clientLoader() {
 
 export default function Countries({ loaderData }: Route.ComponentProps) {
   const { user } = useAuth();
+  const posthog = usePostHog();
   const [search, setSearch] = useState<string>("");
   const [region, setRegion] = useState<string>("");
 
@@ -110,6 +120,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
             const countryName = country.name.common;
             const isClaimed = user?.claimedCountries.includes(countryName);
             const isLiked = user?.likedCountries.includes(countryName);
+            const isVisited = user?.visitedCountries.includes(countryName);
             
             return (
               <li
@@ -137,7 +148,16 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
-                        claimCountry(countryName);
+                        if (!isClaimed) {
+                          if (isPostHogConfigured) {
+                            posthog?.capture('country_claimed', {
+                              country_code: country.cca3,
+                              region: country.region,
+                              total_claimed_countries: user.claimedCountries.length + 1,
+                            });
+                          }
+                          claimCountry(countryName);
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -150,7 +170,16 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
-                        likeCountry(countryName);
+                        if (!isLiked) {
+                          if (isPostHogConfigured) {
+                            posthog?.capture('country_liked', {
+                              country_code: country.cca3,
+                              region: country.region,
+                              total_liked_countries: user.likedCountries.length + 1,
+                            });
+                          }
+                          likeCountry(countryName);
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -163,7 +192,16 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
-                        visitCountry(countryName);
+                        if (!isVisited) {
+                          if (isPostHogConfigured) {
+                            posthog?.capture('country_visited', {
+                              country_code: country.cca3,
+                              region: country.region,
+                              total_visited_countries: user.visitedCountries.length + 1,
+                            });
+                          }
+                          visitCountry(countryName);
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
