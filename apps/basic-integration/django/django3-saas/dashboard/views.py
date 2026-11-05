@@ -2,7 +2,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
+from posthog import capture
 from datetime import timedelta
+from config.posthog_logs import posthog_logs_logger
 from .models import Project, ActivityLog
 from .forms import ProjectForm
 
@@ -59,6 +61,12 @@ def create_project(request):
                 action='project_created',
                 description=f'Created project: {project.name}'
             )
+            capture('project_created', properties={
+                'is_active': project.is_active,
+            })
+            posthog_logs_logger.info(
+                'project_created', extra={'is_active': project.is_active}
+            )
 
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
@@ -82,6 +90,12 @@ def edit_project(request, pk):
                 action='project_updated',
                 description=f'Updated project: {project.name}'
             )
+            capture('project_updated', properties={
+                'is_active': project.is_active,
+            })
+            posthog_logs_logger.info(
+                'project_updated', extra={'is_active': project.is_active}
+            )
 
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
@@ -104,6 +118,8 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+        capture('project_deleted')
+        posthog_logs_logger.info('project_deleted')
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')

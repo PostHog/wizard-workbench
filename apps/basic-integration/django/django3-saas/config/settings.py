@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,6 +11,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
+
+POSTHOG_PROJECT_TOKEN = os.environ.get('POSTHOG_PROJECT_TOKEN')
+POSTHOG_HOST = os.environ.get('POSTHOG_HOST')
+POSTHOG_MW_CLIENT = None
+
+if POSTHOG_PROJECT_TOKEN and POSTHOG_HOST:
+    from .posthog import create_posthog_client
+    from .posthog_logs import configure_posthog_logs
+
+    POSTHOG_MW_CLIENT = create_posthog_client(POSTHOG_PROJECT_TOKEN, POSTHOG_HOST)
+    configure_posthog_logs(POSTHOG_PROJECT_TOKEN, POSTHOG_HOST)
+elif DEBUG:
+    missing_variable = 'POSTHOG_PROJECT_TOKEN' if not POSTHOG_PROJECT_TOKEN else 'POSTHOG_HOST'
+    raise ImproperlyConfigured(
+        f'{missing_variable} variable required by PostHog is missing or un-configured, '
+        f'this causes events to be silently missed. This error stops appearing once '
+        f'{missing_variable} is configured'
+    )
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')]
 
@@ -35,6 +55,12 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if POSTHOG_MW_CLIENT:
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index('django.contrib.auth.middleware.AuthenticationMiddleware') + 1,
+        'posthog.integrations.django.PosthogContextMiddleware',
+    )
 
 ROOT_URLCONF = 'config.urls'
 

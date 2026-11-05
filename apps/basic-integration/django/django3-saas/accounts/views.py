@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
+from django.contrib.auth.signals import user_logged_in
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import (
     LoginView, LogoutView,
@@ -8,7 +9,15 @@ from django.contrib.auth.views import (
 )
 from django.contrib import messages
 from django.urls import reverse_lazy
+from django.dispatch import receiver
+from posthog import capture, identify_context
 from .forms import RegisterForm, LoginForm, ProfileForm
+
+
+@receiver(user_logged_in)
+def identify_posthog_user(sender, request, user, **kwargs):
+    """Identify login and registration requests after Django sets the user."""
+    identify_context(str(user.pk))
 
 
 class CustomLoginView(LoginView):
@@ -49,6 +58,7 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            capture('user_registered')
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +73,7 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            capture('profile_updated')
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
