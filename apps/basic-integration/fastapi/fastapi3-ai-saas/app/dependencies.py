@@ -25,6 +25,19 @@ def get_session_user_id(session_token: Annotated[Optional[str], Cookie()] = None
         return None
 
 
+def identify_user(user: User) -> None:
+    """Bind an authenticated user to the current PostHog request context."""
+    # Import here to avoid a module cycle while the FastAPI app is constructed.
+    from app.main import posthog_client
+
+    if posthog_client is None:
+        return
+
+    distinct_id = str(user.id)
+    posthog_client.identify_context(distinct_id)
+    posthog_client.set(distinct_id=distinct_id, properties={"email": user.email})
+
+
 def get_current_user(
     db: Annotated[Session, Depends(get_db)],
     user_id: Annotated[Optional[int], Depends(get_session_user_id)],
@@ -32,7 +45,11 @@ def get_current_user(
     """Get the current authenticated user, or None if not authenticated."""
     if user_id is None:
         return None
-    return User.get_by_id(db, user_id)
+
+    user = User.get_by_id(db, user_id)
+    if user:
+        identify_user(user)
+    return user
 
 
 def require_auth(
