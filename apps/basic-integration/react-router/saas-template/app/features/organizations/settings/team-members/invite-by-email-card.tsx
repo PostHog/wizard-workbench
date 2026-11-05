@@ -1,5 +1,6 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
@@ -43,6 +44,7 @@ export function EmailInviteCard({
   organizationIsFull = false,
   successEmail,
 }: EmailInviteCardProps) {
+  const posthog = usePostHog();
   const { t } = useTranslation("organizations", {
     keyPrefix: "settings.teamMembers.inviteByEmail",
   });
@@ -163,6 +165,7 @@ export function EmailInviteCard({
           disabled={disabled}
           form={form.props.id}
           name="intent"
+          onClick={() => posthog?.capture("team_invite_requested")}
           type="submit"
           value={INVITE_BY_EMAIL_INTENT}
         >

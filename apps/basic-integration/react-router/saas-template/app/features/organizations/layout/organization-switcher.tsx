@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconPlus, IconSelector } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { Form, Link, useLocation } from "react-router";
@@ -40,6 +41,7 @@ export function OrganizationSwitcher({
   organizations,
   currentOrganization,
 }: OrganizationSwitcherProps) {
+  const posthog = usePostHog();
   const { isMobile } = useSidebar();
   const { t } = useTranslation("organizations", {
     keyPrefix: "layout.organizationSwitcher",
@@ -108,7 +110,16 @@ export function OrganizationSwitcher({
               </DropdownMenuLabel>
 
               {organizations.map((organization) => (
-                <Form key={organization.id} method="POST" replace>
+                <Form
+                  key={organization.id}
+                  method="POST"
+                  onSubmit={() =>
+                    posthog?.capture("organization_switched", {
+                      organization_id: organization.id,
+                    })
+                  }
+                  replace
+                >
                   <DropdownMenuItem
                     className="w-full gap-2 p-2"
                     render={

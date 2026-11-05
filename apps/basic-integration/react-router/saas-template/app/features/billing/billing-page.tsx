@@ -1,4 +1,5 @@
 import type { SubmissionResult } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden";
 import { IconCircleX } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
@@ -159,6 +160,7 @@ export function BillingPage({
   projectedTotal,
   subscriptionStatus,
 }: BillingPageProps) {
+  const posthog = usePostHog();
   const { t, i18n } = useTranslation("billing", { keyPrefix: "billingPage" });
   const { t: tTier } = useTranslation("billing", {
     keyPrefix: "pricing.plans",
@@ -631,6 +633,9 @@ export function BillingPage({
                 <Button
                   disabled={isSubmitting}
                   name="intent"
+                  onClick={() =>
+                    posthog?.capture("subscription_cancellation_requested")
+                  }
                   type="submit"
                   value={CANCEL_SUBSCRIPTION_INTENT}
                   variant="destructive"
