@@ -1,4 +1,6 @@
 import { api } from '../api.js';
+import { posthog } from '../posthog.js';
+import { logProjectCreated } from '../posthog-logger.js';
 import { router } from '../router.js';
 import { renderShell } from '../components/shell.js';
 import { showModal } from '../components/modal.js';
@@ -75,6 +77,11 @@ export async function renderProjects() {
 
           try {
             const project = await api.createProject(name, desc);
+            posthog?.capture('created_project', {
+              project_id: project.id,
+              has_description: Boolean(desc.trim()),
+            });
+            logProjectCreated(Boolean(desc.trim()));
             router.navigate(`/projects/${project.id}`);
           } catch (err) {
             alert(err.message);
@@ -90,6 +97,7 @@ export async function renderProjects() {
         const id = btn.dataset.id;
         if (confirm('Delete this project and all its tasks?')) {
           await api.deleteProject(id);
+          posthog?.capture('deleted_project', { project_id: id });
           renderProjects();
         }
       });

@@ -1,3 +1,5 @@
+import { posthog } from './posthog.js';
+import { logApplicationStarted } from './posthog-logger.js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -39,4 +41,14 @@ router.notFound(() => {
 
 // --- Start ---
 
+const currentUser = store.state.currentUser;
+if (currentUser) {
+  posthog?.identify(currentUser.id, {
+    email: currentUser.email,
+    name: currentUser.name,
+    role: currentUser.role,
+  });
+}
+
+logApplicationStarted(Boolean(currentUser));
 router.start();
