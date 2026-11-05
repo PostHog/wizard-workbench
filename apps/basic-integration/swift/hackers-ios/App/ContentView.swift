@@ -6,15 +6,17 @@
 //
 
 import Authentication
+import Combine
 import Comments
 import DesignSystem
 import Domain
 import Feed
+import Foundation
+import PostHog
 import Settings
 import Shared
 import SwiftUI
 import UIKit
-import Foundation
 
 @MainActor
 struct MainContentView: View {
@@ -79,12 +81,8 @@ struct MainContentView: View {
                                 viewModel: settingsViewModel,
                                 isAuthenticated: sessionService.authenticationState == .authenticated,
                                 currentUsername: sessionService.username,
-                                onLogin: { username, password in
-                                    _ = try await sessionService.authenticate(username: username, password: password)
-                                },
-                                onLogout: {
-                                    sessionService.unauthenticate()
-                                },
+                                onLogin: authenticate,
+                                onLogout: logout,
                                 onShowOnboarding: {
                                     showOnboarding = true
                                 }
@@ -97,16 +95,15 @@ struct MainContentView: View {
         .textScaling(for: settingsViewModel.textSize)
         .accentColor(.accentColor)
         .toastOverlay(toastPresenter, isActive: !isPresentingModal)
+        .onReceive(NotificationCenter.default.publisher(for: .userDidLogout)) { _ in
+            PostHogSDK.shared.reset()
+        }
         .sheet(isPresented: showingLoginBinding) {
             LoginView(
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
-                onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
-                },
-                onLogout: {
-                    sessionService.unauthenticate()
-                },
+                onLogin: authenticate,
+                onLogout: logout,
                 textSize: settingsViewModel.textSize
             )
             .textScaling(for: settingsViewModel.textSize)
@@ -117,12 +114,8 @@ struct MainContentView: View {
                 viewModel: settingsViewModel,
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
-                onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
-                },
-                onLogout: {
-                    sessionService.unauthenticate()
-                },
+                onLogin: authenticate,
+                onLogout: logout,
                 onShowOnboarding: {
                     showOnboarding = true
                 }
@@ -143,6 +136,31 @@ struct MainContentView: View {
                 showOnboarding = true
             }
         }
+    }
+
+    private func authenticate(username: String, password: String) async throws {
+        _ = try await sessionService.authenticate(username: username, password: password)
+
+        guard let accountResourceName = sessionService.username, !accountResourceName.isEmpty else {
+            return
+        }
+
+        PostHogSDK.shared.identify("hacker-news-account:\(accountResourceName)")
+        PostHogSDK.shared.capture("user_signed_in")
+        PostHogSDK.shared.logger?.info(
+            "authentication_completed",
+            attributes: ["authentication_result": "signed_in"]
+        )
+    }
+
+    private func logout() {
+        PostHogSDK.shared.capture("user_signed_out")
+        PostHogSDK.shared.logger?.info(
+            "authentication_completed",
+            attributes: ["authentication_result": "signed_out"]
+        )
+        PostHogSDK.shared.reset()
+        sessionService.unauthenticate()
     }
 
     private var isPresentingModal: Bool {
