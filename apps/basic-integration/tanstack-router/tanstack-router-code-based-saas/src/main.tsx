@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -84,9 +85,51 @@ function RouterSpinner() {
   return <Spinner show={isLoading} />
 }
 
+function PostHogRoot({ children }: { children: React.ReactNode }) {
+  const projectToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+  const host = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
+  if (!projectToken) {
+    if (import.meta.env.DEV) {
+      throw new Error(
+        'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_PROJECT_TOKEN is configured',
+      )
+    }
+
+    return children
+  }
+
+  if (!host) {
+    if (import.meta.env.DEV) {
+      throw new Error(
+        'VITE_PUBLIC_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_HOST is configured',
+      )
+    }
+
+    return children
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={projectToken}
+      options={{
+        api_host: host,
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+        logs: {
+          serviceName: 'cloudflow-web',
+          environment: import.meta.env.MODE,
+        },
+      }}
+    >
+      {children}
+    </PostHogProvider>
+  )
+}
+
 function RootComponent() {
   return (
-    <>
+    <PostHogRoot>
       <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
@@ -132,7 +175,7 @@ function RootComponent() {
         </div>
       </div>
       <TanStackRouterDevtools position="bottom-right" />
-    </>
+    </PostHogRoot>
   )
 }
 
@@ -433,6 +476,7 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
     onSuccess: () => router.invalidate(),
@@ -453,10 +497,19 @@ function InvoicesIndexComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
-            createInvoiceMutation.mutate({
-              title: formData.get('title') as string,
-              body: formData.get('body') as string,
-            })
+            void createInvoiceMutation
+              .mutate({
+                title: formData.get('title') as string,
+                body: formData.get('body') as string,
+              })
+              .then((invoice) => {
+                if (invoice) {
+                  posthog.capture('invoice_created', { invoice_id: invoice.id })
+                  posthog.logger.info('invoice created', {
+                    invoice_id: invoice.id,
+                  })
+                }
+              })
           }}
           className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-4"
         >
@@ -517,6 +570,7 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
     onSuccess: () => router.invalidate(),
@@ -578,11 +632,20 @@ function InvoiceComponent() {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
-            updateInvoiceMutation.mutate({
-              id: invoice.id,
-              title: formData.get('title') as string,
-              body: formData.get('body') as string,
-            })
+            void updateInvoiceMutation
+              .mutate({
+                id: invoice.id,
+                title: formData.get('title') as string,
+                body: formData.get('body') as string,
+              })
+              .then((updatedInvoice) => {
+                if (updatedInvoice) {
+                  posthog.capture('invoice_updated', { invoice_id: invoice.id })
+                  posthog.logger.info('invoice updated', {
+                    invoice_id: invoice.id,
+                  })
+                }
+              })
           }}
           className="space-y-4"
         >
@@ -1003,6 +1066,7 @@ const profileRoute = createRoute({
 
 function ProfileComponent() {
   const { username } = profileRoute.useRouteContext()
+  const posthog = usePostHog()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
 
@@ -1049,7 +1113,10 @@ function ProfileComponent() {
               <div className="font-medium">Free Plan</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Basic features included</div>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => posthog.capture('subscription_upgrade_clicked')}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Upgrade
             </button>
           </div>
@@ -1098,11 +1165,14 @@ function LoginComponent() {
     select: ({ auth }) => ({ auth, status: auth.status }),
   })
   const search = useSearch({ from: loginRoute.fullPath })
+  const posthog = usePostHog()
   const [username, setUsername] = React.useState('')
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog.capture('user_logged_in')
+    posthog.logger.info('demo user logged in')
     router.invalidate()
   }
 
