@@ -1,7 +1,17 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
+import { posthogLogger } from './posthog-logs.js';
 
 const app = new Hono();
+
+app.onError((error, c) => {
+  if (posthog) {
+    posthog.captureException(error, c.req.header('X-POSTHOG-DISTINCT-ID'));
+  }
+
+  return c.json({ error: 'Internal server error' }, 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +57,31 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_created',
+      properties: {
+        link_id: link.id,
+        tag_count: tags.length,
+        has_description: Boolean(description),
+      },
+    });
+  }
+
+  if (posthogLogger) {
+    posthogLogger.emit({
+      severityText: 'INFO',
+      body: 'link created',
+      attributes: {
+        operation: 'link_created',
+        link_id: link.id,
+        tag_count: tags.length,
+        has_description: Boolean(description),
+      },
+    });
+  }
+
   return c.json(link, 201);
 });
 
@@ -70,11 +105,37 @@ app.patch('/api/links/:id', async (c) => {
   }
 
   const body = await c.req.json();
+  const updatedFields = Object.keys(body).filter((field) =>
+    ['url', 'title', 'description', 'tags', 'favorite'].includes(field)
+  );
+
   if (body.url !== undefined) link.url = body.url;
   if (body.title !== undefined) link.title = body.title;
   if (body.description !== undefined) link.description = body.description;
   if (body.tags !== undefined) link.tags = body.tags;
   if (body.favorite !== undefined) link.favorite = body.favorite;
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_updated',
+      properties: {
+        link_id: link.id,
+        updated_fields: updatedFields,
+      },
+    });
+  }
+
+  if (posthogLogger) {
+    posthogLogger.emit({
+      severityText: 'INFO',
+      body: 'link updated',
+      attributes: {
+        operation: 'link_updated',
+        link_id: link.id,
+        updated_field_count: updatedFields.length,
+      },
+    });
+  }
 
   return c.json(link);
 });
@@ -87,7 +148,30 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [link] = links.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_deleted',
+      properties: {
+        link_id: link.id,
+        was_favorite: link.favorite,
+      },
+    });
+  }
+
+  if (posthogLogger) {
+    posthogLogger.emit({
+      severityText: 'INFO',
+      body: 'link deleted',
+      attributes: {
+        operation: 'link_deleted',
+        link_id: link.id,
+        was_favorite: link.favorite,
+      },
+    });
+  }
+
   return c.body(null, 204);
 });
 
