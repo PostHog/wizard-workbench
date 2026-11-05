@@ -16,3 +16,14 @@ const isDocs = currentPath.startsWith('/docs');
     </ul>
   </div>
 </nav>
+
+<script is:inline>
+  document.querySelector('.nav-links a[href="https://github.com"]')?.addEventListener('click', () => {
+    window.posthog?.capture('github_link_clicked', {
+      source: 'primary_navigation',
+    });
+    window.posthog?.logger?.info('documentation github link selected', {
+      source: 'primary_navigation',
+    });
+  });
+</script>

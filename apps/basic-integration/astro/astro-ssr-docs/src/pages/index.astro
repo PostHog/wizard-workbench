@@ -54,3 +54,14 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </footer>
 </Layout>
+
+<script is:inline>
+  document.querySelector('.hero-buttons .btn-primary')?.addEventListener('click', () => {
+    window.posthog?.capture('documentation_get_started_clicked', {
+      source: 'homepage_hero',
+    });
+    window.posthog?.logger?.info('documentation get started selected', {
+      source: 'homepage_hero',
+    });
+  });
+</script>
