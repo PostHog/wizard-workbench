@@ -1,10 +1,21 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from .models import Project, ActivityLog
 from .forms import ProjectForm
+
+
+def _capture(event, properties=None):
+    posthog_client = settings.POSTHOG_MW_CLIENT
+    if posthog_client is not None:
+        posthog_client.capture(event, properties=properties)
+
+
+def _log_project_outcome(event, **attributes):
+    settings.POSTHOG_LOGGER.info(event, extra={'event': event, **attributes})
 
 
 @login_required
@@ -59,6 +70,13 @@ def create_project(request):
                 action='project_created',
                 description=f'Created project: {project.name}'
             )
+            _capture('project_created', {
+                'has_description': bool(project.description),
+            })
+            _log_project_outcome(
+                'project_created',
+                has_description=bool(project.description),
+            )
 
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
@@ -82,6 +100,13 @@ def edit_project(request, pk):
                 action='project_updated',
                 description=f'Updated project: {project.name}'
             )
+            _capture('project_updated', {
+                'has_description': bool(project.description),
+            })
+            _log_project_outcome(
+                'project_updated',
+                has_description=bool(project.description),
+            )
 
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
@@ -104,6 +129,8 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+        _capture('project_deleted')
+        _log_project_outcome('project_deleted')
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')

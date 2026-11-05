@@ -10,6 +10,21 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Plan, Subscription
 
+
+def _capture(event, properties=None, distinct_id=None):
+    posthog_client = settings.POSTHOG_MW_CLIENT
+    if posthog_client is None:
+        return
+    if distinct_id is None:
+        posthog_client.capture(event, properties=properties)
+    else:
+        posthog_client.capture(
+            event,
+            properties=properties,
+            distinct_id=distinct_id,
+        )
+
+
 # Check if Stripe is configured
 STRIPE_CONFIGURED = bool(getattr(settings, 'STRIPE_SECRET_KEY', ''))
 
@@ -55,6 +70,10 @@ def subscribe(request, plan_slug):
                     },
                     allow_promotion_codes=True,
                 )
+                _capture('checkout_started', {
+                    'plan_slug': plan.slug,
+                    'billing_interval': plan.interval,
+                })
                 return redirect(checkout_session.url)
             except Exception as e:
                 messages.error(request, f'Payment error: {str(e)}')
@@ -70,6 +89,11 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            _capture('subscription_created', {
+                'plan_slug': plan.slug,
+                'billing_interval': plan.interval,
+                'billing_mode': 'demo',
+            })
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -86,7 +110,7 @@ def success(request):
 
     if STRIPE_CONFIGURED and session_id:
         try:
-            session = stripe.checkout.Session.retrieve(session_id)
+            stripe.checkout.Session.retrieve(session_id)
             messages.success(request, 'Subscription successful! Welcome aboard.')
         except Exception:
             messages.warning(request, 'Could not verify payment. Please check your subscription status.')
@@ -130,6 +154,11 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+                _capture('subscription_plan_changed', {
+                    'plan_slug': plan.slug,
+                    'billing_interval': plan.interval,
+                    'billing_mode': 'stripe',
+                })
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
                 messages.error(request, f'Error changing plan: {str(e)}')
@@ -137,6 +166,11 @@ def change_plan(request, plan_slug):
             # Demo mode
             subscription.plan = plan
             subscription.save()
+            _capture('subscription_plan_changed', {
+                'plan_slug': plan.slug,
+                'billing_interval': plan.interval,
+                'billing_mode': 'demo',
+            })
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -171,6 +205,9 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        _capture('subscription_canceled', {
+            'billing_mode': 'stripe' if STRIPE_CONFIGURED else 'demo',
+        })
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -268,6 +305,13 @@ def _handle_checkout_completed(session):
         ),
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
+    )
+    _capture(
+        'subscription_checkout_completed',
+        {
+            'checkout_mode': session.get('mode'),
+        },
+        distinct_id=str(user.pk),
     )
 
 
