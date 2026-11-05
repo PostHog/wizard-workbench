@@ -12,6 +12,13 @@ export default function Profile() {
 
   const currentUser = getCurrentUser() || user
 
+  const handleLogout = () => {
+    void import('~/lib/posthog.client').then(({ default: posthog }) => {
+      posthog.capture('user_logged_out')
+    })
+    logout()
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
       <div className="container mx-auto max-w-4xl">
@@ -64,7 +71,7 @@ export default function Profile() {
                   View Stats
                 </Link>
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
                 >
                   Logout

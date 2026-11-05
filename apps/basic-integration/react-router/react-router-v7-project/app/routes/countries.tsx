@@ -136,8 +136,18 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                 {user ? (
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        const isNewClaim = !isClaimed;
                         claimCountry(countryName);
+                        if (isNewClaim) {
+                          const { default: posthog, posthogLog } = await import('~/lib/posthog.client');
+                          const totalClaimed = user.claimedCountries.length + 1;
+                          posthog.capture('country_claimed', {
+                            country_name: countryName,
+                            total_claimed: totalClaimed,
+                          });
+                          posthogLog.countryActionCompleted("claim", totalClaimed);
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -149,8 +159,18 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isClaimed ? '👑 Claimed' : '🏴 Claim'}
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        const isNewLike = !isLiked;
                         likeCountry(countryName);
+                        if (isNewLike) {
+                          const { default: posthog, posthogLog } = await import('~/lib/posthog.client');
+                          const totalLiked = user.likedCountries.length + 1;
+                          posthog.capture('country_liked', {
+                            country_name: countryName,
+                            total_liked: totalLiked,
+                          });
+                          posthogLog.countryActionCompleted("like", totalLiked);
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -162,8 +182,18 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                       {isLiked ? '❤️' : '🤍'}
                     </button>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        const isNewVisit = !user.visitedCountries.includes(countryName);
                         visitCountry(countryName);
+                        if (isNewVisit) {
+                          const { default: posthog, posthogLog } = await import('~/lib/posthog.client');
+                          const totalVisited = user.visitedCountries.length + 1;
+                          posthog.capture('country_visited', {
+                            country_name: countryName,
+                            total_visited: totalVisited,
+                          });
+                          posthogLog.countryActionCompleted("visit", totalVisited);
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
