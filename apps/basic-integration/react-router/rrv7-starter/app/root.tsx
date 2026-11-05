@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import {
   isRouteErrorResponse,
   Links,
@@ -20,6 +21,7 @@ import Footer from '@/components/footer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+import posthog from '@/lib/posthog.client'
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -132,6 +134,12 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  useEffect(() => {
+    if (error instanceof Error) {
+      posthog?.captureException(error)
+    }
+  }, [error])
+
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined
