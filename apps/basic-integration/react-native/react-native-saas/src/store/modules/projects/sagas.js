@@ -1,6 +1,8 @@
 import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
+import { posthog } from '../../../config/posthog';
+import { posthogLogs } from '../../../services/posthogLogger';
 import { isDemoMode, demoProjects } from '../../../services/demoData';
 
 import {
@@ -34,6 +36,13 @@ export function* createProject({ payload }) {
     if (isDemoMode(token)) {
       const newProject = { id: Date.now(), title };
       yield put(createProjectSuccess(newProject));
+      if (posthog) {
+        yield call([posthog, 'capture'], 'project_created', { mode: 'demo' });
+      }
+      yield call([posthogLogs, 'info'], 'project creation completed', {
+        mode: 'demo',
+        outcome: 'success',
+      });
       yield put(closeProjectModal());
       toast.showSuccess('Project created');
       return;
@@ -42,10 +51,20 @@ export function* createProject({ payload }) {
     const response = yield call(api.post, 'projects', { title });
 
     yield put(createProjectSuccess(response.data));
+    if (posthog) {
+      yield call([posthog, 'capture'], 'project_created', { mode: 'api' });
+    }
+    yield call([posthogLogs, 'info'], 'project creation completed', {
+      mode: 'api',
+      outcome: 'success',
+    });
     yield put(closeProjectModal());
 
     toast.showSuccess('Project created');
   } catch (err) {
+    yield call([posthogLogs, 'error'], 'project creation failed', {
+      operation: 'create_project',
+    });
     toast.showError('Error creating project');
   }
 }
