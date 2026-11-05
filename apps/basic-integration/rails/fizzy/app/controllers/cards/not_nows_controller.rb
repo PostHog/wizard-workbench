@@ -4,6 +4,14 @@ class Cards::NotNowsController < ApplicationController
   def create
     capture_card_location
     @card.postpone
+
+    if Rails.configuration.x.posthog_configured
+      PostHog.capture(
+        distinct_id: Current.user.posthog_distinct_id,
+        event: "card_postponed"
+      )
+    end
+
     refresh_stream_if_needed
 
     respond_to do |format|

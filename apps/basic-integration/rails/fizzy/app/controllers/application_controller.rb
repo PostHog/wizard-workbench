@@ -10,4 +10,20 @@ class ApplicationController < ActionController::Base
   etag { "v1" }
   stale_when_importmap_changes
   allow_browser versions: :modern
+
+  private
+    # posthog-rails calls this once per request when associating captured errors.
+    def posthog_current_user
+      Current.user
+    end
+
+    # The dedicated provider in the PostHog initializer exports only these
+    # explicit, non-PII lifecycle messages; Rails.logger remains untouched.
+    def posthog_log(message, attributes = {})
+      Rails.configuration.x.posthog_log_logger&.emit(
+        severity_text: "INFO",
+        body: message,
+        attributes: attributes
+      )
+    end
 end

@@ -4,6 +4,7 @@ class Cards::ClosuresController < ApplicationController
   def create
     capture_card_location
     @card.close
+    capture_card_closed
     refresh_stream_if_needed
 
     respond_to do |format|
@@ -14,6 +15,7 @@ class Cards::ClosuresController < ApplicationController
 
   def destroy
     @card.reopen
+    capture_card_reopened
     refresh_stream_after_reopen
 
     respond_to do |format|
@@ -23,6 +25,24 @@ class Cards::ClosuresController < ApplicationController
   end
 
   private
+    def capture_card_closed
+      return unless Rails.configuration.x.posthog_configured
+
+      PostHog.capture(
+        distinct_id: Current.user.posthog_distinct_id,
+        event: "card_closed"
+      )
+    end
+
+    def capture_card_reopened
+      return unless Rails.configuration.x.posthog_configured
+
+      PostHog.capture(
+        distinct_id: Current.user.posthog_distinct_id,
+        event: "card_reopened"
+      )
+    end
+
     def refresh_stream_after_reopen
       if @card.awaiting_triage?
         set_page_and_extract_portion_from @board.cards.awaiting_triage.latest.with_golden_first.preloaded
