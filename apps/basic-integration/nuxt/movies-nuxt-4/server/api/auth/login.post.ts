@@ -21,6 +21,10 @@ export default defineEventHandler(async (event) => {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
+    await logPostHogServer('authentication_completed', {
+      authentication_method: 'demo',
+    })
+
     return {
       success: true,
       user: sanitizedUsername,
