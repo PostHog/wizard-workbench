@@ -86,11 +86,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.compose.jetchat.BuildConfig
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.launch
 
 /**
@@ -134,8 +137,28 @@ fun ConversationContent(
                     return false
                 }
 
+                val content = clipData.getItemAt(0).text.toString()
+                if (BuildConfig.POSTHOG_API_KEY.isNotBlank() && BuildConfig.POSTHOG_HOST.isNotBlank()) {
+                    PostHogAndroid.getInstance().capture(
+                        "message_sent",
+                        mapOf(
+                            "channel_name" to uiState.channelName,
+                            "input_method" to "drag_and_drop",
+                            "message_length" to content.length,
+                        ),
+                    )
+                    PostHog.logger.info(
+                        "message sent",
+                        mapOf(
+                            "event" to "message_sent",
+                            "channel_name" to uiState.channelName,
+                            "input_method" to "drag_and_drop",
+                            "message_length" to content.length,
+                        ),
+                    )
+                }
                 uiState.addMessage(
-                    Message(authorMe, clipData.getItemAt(0).text.toString(), timeNow),
+                    Message(authorMe, content, timeNow),
                 )
 
                 return true
@@ -200,6 +223,25 @@ fun ConversationContent(
             )
             UserInput(
                 onMessageSent = { content ->
+                    if (BuildConfig.POSTHOG_API_KEY.isNotBlank() && BuildConfig.POSTHOG_HOST.isNotBlank()) {
+                        PostHogAndroid.getInstance().capture(
+                            "message_sent",
+                            mapOf(
+                                "channel_name" to uiState.channelName,
+                                "input_method" to "text",
+                                "message_length" to content.length,
+                            ),
+                        )
+                        PostHog.logger.info(
+                            "message sent",
+                            mapOf(
+                                "event" to "message_sent",
+                                "channel_name" to uiState.channelName,
+                                "input_method" to "text",
+                                "message_length" to content.length,
+                            ),
+                        )
+                    }
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )

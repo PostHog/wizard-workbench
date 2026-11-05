@@ -40,6 +40,7 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.compose.jetchat.auth.LoginScreen
 import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.launch
 
 /**
@@ -91,6 +92,12 @@ class NavActivity : AppCompatActivity() {
                             selectedMenu = selectedMenu,
                             username = loggedInUsername,
                             onChatClicked = {
+                                if (BuildConfig.POSTHOG_API_KEY.isNotBlank() && BuildConfig.POSTHOG_HOST.isNotBlank()) {
+                                    PostHogAndroid.getInstance().capture(
+                                        "chat_selected",
+                                        mapOf("channel_name" to it),
+                                    )
+                                }
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
                                     drawerState.close()
@@ -98,6 +105,9 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onProfileClicked = {
+                                if (BuildConfig.POSTHOG_API_KEY.isNotBlank() && BuildConfig.POSTHOG_HOST.isNotBlank()) {
+                                    PostHogAndroid.getInstance().capture("profile_opened")
+                                }
                                 val bundle = bundleOf("userId" to it)
                                 findNavController().navigate(R.id.nav_profile, bundle)
                                 scope.launch {
