@@ -1,4 +1,6 @@
 import { createServer } from 'node:http';
+import { emitPostHogLog } from './posthog-logs.js';
+import { posthog } from './posthog.js';
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -47,6 +49,15 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      posthog?.capture({
+        event: 'group_created',
+        properties: { group_count: groups.length },
+      });
+      emitPostHogLog({
+        severityText: 'INFO',
+        body: 'group_created',
+        attributes: { group_count: groups.length },
+      });
       return json(res, 201, group);
     }
 
@@ -90,6 +101,21 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      posthog?.capture({
+        event: 'contact_created',
+        properties: {
+          has_phone: Boolean(contact.phone),
+          has_company: Boolean(contact.company),
+        },
+      });
+      emitPostHogLog({
+        severityText: 'INFO',
+        body: 'contact_created',
+        attributes: {
+          has_phone: Boolean(contact.phone),
+          has_company: Boolean(contact.company),
+        },
+      });
       return json(res, 201, contact);
     }
 
@@ -114,6 +140,14 @@ const server = createServer(async (req, res) => {
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      posthog?.capture({
+        event: 'contact_updated',
+        properties: {
+          updated_fields: Object.keys(body).filter((field) =>
+            ['name', 'email', 'phone', 'company', 'group_id'].includes(field)
+          ),
+        },
+      });
       return json(res, 200, contact);
     }
 
@@ -124,12 +158,29 @@ const server = createServer(async (req, res) => {
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
       contacts.splice(index, 1);
+      posthog?.capture({
+        event: 'contact_deleted',
+        properties: { remaining_contact_count: contacts.length },
+      });
+      emitPostHogLog({
+        severityText: 'INFO',
+        body: 'contact_deleted',
+        attributes: { remaining_contact_count: contacts.length },
+      });
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    posthog?.captureException(err);
+    emitPostHogLog({
+      severityText: 'ERROR',
+      body: 'request_failed',
+      attributes: {
+        error_type: err instanceof Error ? err.name : 'unknown_error',
+      },
+    });
     json(res, 500, { error: 'Internal server error' });
   }
 });
