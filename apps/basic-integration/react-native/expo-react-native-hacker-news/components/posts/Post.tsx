@@ -10,13 +10,15 @@ import { useMemo } from "react";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePostHog } from "posthog-react-native";
 import { Link2, MessageSquareText } from "lucide-react-native";
 
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
-export const Post = ({ id, title, url, score, text, kids }: Item) => {
+export const Post = ({ id, title, url, score, text, kids, type }: Item) => {
   const QC = useQueryClient();
+  const posthog = usePostHog();
 
   const isExternal = useMemo(() => {
     return text === undefined;
@@ -34,8 +36,18 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
-          if (isExternal) Linking.openURL(url);
-          else await navigateToDetails();
+          if (isExternal) {
+            posthog?.capture("external_link_opened", {
+              source: "feed_title",
+            });
+            Linking.openURL(url);
+          } else {
+            posthog?.capture("item_opened", {
+              item_type: type,
+              source: "feed_title",
+            });
+            await navigateToDetails();
+          }
         }}
       >
         <Text style={{ color: "black", fontSize: 20, fontWeight: 500 }}>
@@ -66,6 +78,10 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         <Pressable
           style={[styles.baseButton, styles.button]}
           onPress={async () => {
+            posthog?.capture("item_opened", {
+              item_type: type,
+              source: "feed_comments",
+            });
             await navigateToDetails();
           }}
         >
@@ -86,6 +102,9 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
           <Pressable
             style={[styles.baseButton, styles.link]}
             onPress={() => {
+              posthog?.capture("external_link_opened", {
+                source: "feed_link",
+              });
               Linking.openURL(url);
             }}
           >
