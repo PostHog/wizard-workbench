@@ -1,7 +1,10 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from flask import Flask, request, current_app
+from posthog import Posthog
+from posthog.integrations.flask import PosthogFlaskIntegration
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -33,6 +36,8 @@ login.login_message = _l('Please log in to access this page.')
 mail = Mail()
 moment = Moment()
 babel = Babel()
+_posthog_log_logger = None
+_posthog_log_provider = None
 
 
 def create_app(config_class=Config):
@@ -53,6 +58,55 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    posthog_api_key = app.config['POSTHOG_API_KEY']
+    posthog_host = app.config['POSTHOG_HOST']
+    app.posthog_log_logger = None
+    if not posthog_api_key or not posthog_host:
+        if app.debug:
+            missing_variable = (
+                'POSTHOG_API_KEY' if not posthog_api_key else 'POSTHOG_HOST'
+            )
+            raise RuntimeError(
+                f'{missing_variable} variable required by PostHog is missing or '
+                f'un-configured, this causes events to be silently missed. This '
+                f'error stops appearing once {missing_variable} is configured'
+            )
+        app.posthog_client = None
+    else:
+        app.posthog_client = Posthog(
+            posthog_api_key,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        atexit.register(app.posthog_client.shutdown)
+        PosthogFlaskIntegration(app, client=app.posthog_client)
+
+        global _posthog_log_logger, _posthog_log_provider
+        if _posthog_log_logger is None:
+            from opentelemetry._logs import set_logger_provider
+            from opentelemetry.exporter.otlp.proto.http._log_exporter import \
+                OTLPLogExporter
+            from opentelemetry.sdk._logs import LoggingHandler, LoggerProvider
+            from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+
+            _posthog_log_provider = LoggerProvider()
+            set_logger_provider(_posthog_log_provider)
+            log_exporter = OTLPLogExporter(
+                endpoint=f"{posthog_host.rstrip('/')}/i/v1/logs",
+                headers={'Authorization': f'Bearer {posthog_api_key}'},
+            )
+            _posthog_log_provider.add_log_record_processor(
+                BatchLogRecordProcessor(log_exporter))
+            _posthog_log_logger = logging.getLogger('microblog.posthog_logs')
+            _posthog_log_logger.setLevel(logging.INFO)
+            _posthog_log_logger.propagate = False
+            _posthog_log_logger.addHandler(
+                LoggingHandler(logger_provider=_posthog_log_provider))
+            atexit.register(_posthog_log_provider.shutdown)
+        app.posthog_log_logger = _posthog_log_logger
+        app.posthog_log_logger.info(
+            'posthog_log_exporter_configured', extra={'runtime': 'flask'})
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
