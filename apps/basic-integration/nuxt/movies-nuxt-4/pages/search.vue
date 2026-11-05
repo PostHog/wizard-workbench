@@ -7,6 +7,7 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
+const { $posthog: posthog } = useNuxtApp()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
@@ -21,6 +22,7 @@ function search() {
   currentSearch.value = input.value.toString()
   count.value = undefined
   items.value = []
+  posthog?.capture('search_performed')
   router.replace({ query: { s: input.value } })
 }
 
@@ -31,9 +33,19 @@ async function fetch(page: number) {
     const data = await searchShows(currentSearch.value, page)
     count.value = data.total_results ?? count.value
     items.value.push(...data.results)
+    posthog?.logger.info('media_search_page_loaded', {
+      event: 'media_search.page_loaded',
+      page,
+      result_count: data.results.length,
+    })
   }
   catch (e: any) {
     error.value = e
+    posthog?.logger.warn('media_search_page_failed', {
+      event: 'media_search.page_loaded',
+      page,
+      outcome: 'failure',
+    })
   }
 }
 
