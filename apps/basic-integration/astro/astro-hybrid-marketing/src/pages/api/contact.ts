@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { flushPostHogLogs, getPostHogLogger } from '../../lib/posthog-logs';
 
 export const prerender = false;
 
@@ -16,6 +17,13 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
+      getPostHogLogger()?.emit({
+        severityText: 'WARN',
+        body: 'contact_form_validation_failed',
+        attributes: { validation_reason: 'missing_required_fields' },
+      });
+      await flushPostHogLogs();
+
       return new Response(
         JSON.stringify({ error: 'Please fill in all required fields.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -25,6 +33,13 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
+      getPostHogLogger()?.emit({
+        severityText: 'WARN',
+        body: 'contact_form_validation_failed',
+        attributes: { validation_reason: 'invalid_email_format' },
+      });
+      await flushPostHogLogs();
+
       return new Response(
         JSON.stringify({ error: 'Please enter a valid email address.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -45,6 +60,13 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    getPostHogLogger()?.emit({
+      severityText: 'INFO',
+      body: 'contact_form_accepted',
+      attributes: { interest: data.interest },
+    });
+    await flushPostHogLogs();
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -54,6 +76,12 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contact form error:', error);
+    getPostHogLogger()?.emit({
+      severityText: 'ERROR',
+      body: 'contact_form_processing_failed',
+    });
+    await flushPostHogLogs();
+
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
