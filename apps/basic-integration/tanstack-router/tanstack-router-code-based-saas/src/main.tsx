@@ -20,6 +20,8 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogErrorBoundary, PostHogProvider, usePostHog } from 'posthog-js/react'
+import posthog from 'posthog-js'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -35,6 +37,34 @@ import type { Invoice } from './mockTodos'
 import './styles.css'
 
 //
+
+const posthogToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
+if (posthogToken && posthogHost) {
+  posthog.init(posthogToken, {
+    api_host: posthogHost,
+    capture_exceptions: {
+      capture_unhandled_errors: true,
+      capture_unhandled_rejections: true,
+      capture_console_errors: false,
+    },
+    logs: {
+      serviceName: 'cloudflow-web',
+      environment: import.meta.env.MODE,
+    },
+    debug: import.meta.env.DEV,
+  })
+} else if (import.meta.env.DEV) {
+  const missingVariable = posthogToken
+    ? 'VITE_PUBLIC_POSTHOG_HOST'
+    : 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN'
+  throw new Error(
+    `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+  )
+}
+
+const posthogLogger = posthog.logger
 
 type UsersViewSortBy = 'name' | 'id' | 'email'
 
@@ -86,53 +116,55 @@ function RouterSpinner() {
 
 function RootComponent() {
   return (
-    <>
-      <div className={`min-h-screen flex flex-col`}>
-        <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
-          <div className={`flex items-center gap-2 p-3`}>
-            <div className={`w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center`}>
-              <span className={`text-white font-bold text-sm`}>CF</span>
+    <PostHogProvider client={posthog}>
+      <PostHogErrorBoundary>
+        <div className={`min-h-screen flex flex-col`}>
+          <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
+            <div className={`flex items-center gap-2 p-3`}>
+              <div className={`w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center`}>
+                <span className={`text-white font-bold text-sm`}>CF</span>
+              </div>
+              <h1 className={`text-xl font-semibold`}>CloudFlow</h1>
             </div>
-            <h1 className={`text-xl font-semibold`}>CloudFlow</h1>
+            <div className={`flex-1`} />
+            <div className={`text-xl pr-4`}>
+              <RouterSpinner />
+            </div>
           </div>
-          <div className={`flex-1`} />
-          <div className={`text-xl pr-4`}>
-            <RouterSpinner />
+          <div className={`flex-1 flex`}>
+            <div className={`w-56 bg-gray-50 dark:bg-gray-800/50 border-r`}>
+              <nav className={`p-2 space-y-1`}>
+                {(
+                  [
+                    ['/', 'Home', '🏠'],
+                    ['/dashboard', 'Dashboard', '📊'],
+                    ['/profile', 'Account', '👤'],
+                    ...(auth.status === 'loggedOut' ? [['/login', 'Sign In', '🔐']] : []),
+                  ] as const
+                ).map(([to, label, icon]) => {
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      preload="intent"
+                      className={`flex items-center gap-2 py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors`}
+                      activeProps={{ className: `bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium` }}
+                    >
+                      <span>{icon}</span>
+                      {label}
+                    </Link>
+                  )
+                })}
+              </nav>
+            </div>
+            <div className={`flex-1 bg-white dark:bg-gray-900`}>
+              <Outlet />
+            </div>
           </div>
         </div>
-        <div className={`flex-1 flex`}>
-          <div className={`w-56 bg-gray-50 dark:bg-gray-800/50 border-r`}>
-            <nav className={`p-2 space-y-1`}>
-              {(
-                [
-                  ['/', 'Home', '🏠'],
-                  ['/dashboard', 'Dashboard', '📊'],
-                  ['/profile', 'Account', '👤'],
-                  ...(auth.status === 'loggedOut' ? [['/login', 'Sign In', '🔐']] : []),
-                ] as const
-              ).map(([to, label, icon]) => {
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    preload="intent"
-                    className={`flex items-center gap-2 py-2 px-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors`}
-                    activeProps={{ className: `bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium` }}
-                  >
-                    <span>{icon}</span>
-                    {label}
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-          <div className={`flex-1 bg-white dark:bg-gray-900`}>
-            <Outlet />
-          </div>
-        </div>
-      </div>
-      <TanStackRouterDevtools position="bottom-right" />
-    </>
+        <TanStackRouterDevtools position="bottom-right" />
+      </PostHogErrorBoundary>
+    </PostHogProvider>
   )
 }
 
@@ -433,9 +465,17 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      posthog.capture('invoice_created')
+      posthogLogger.info('invoice created', {
+        event: 'invoice.created',
+        outcome: 'success',
+      })
+      router.invalidate()
+    },
   })
 
   return (
@@ -517,9 +557,17 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: () => {
+      posthog.capture('invoice_updated')
+      posthogLogger.info('invoice updated', {
+        event: 'invoice.updated',
+        outcome: 'success',
+      })
+      router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -1003,6 +1051,7 @@ const profileRoute = createRoute({
 
 function ProfileComponent() {
   const { username } = profileRoute.useRouteContext()
+  const posthog = usePostHog()
 
   const initials = username?.slice(0, 2).toUpperCase() ?? 'U'
 
@@ -1067,6 +1116,7 @@ function ProfileComponent() {
             </Link>
             <button
               onClick={() => {
+                posthog.capture('user_logged_out')
                 auth.logout()
                 router.invalidate()
               }}
@@ -1094,6 +1144,7 @@ const loginRoute = createRoute({
 
 function LoginComponent() {
   const router = useRouter()
+  const posthog = usePostHog()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
   })
@@ -1103,6 +1154,12 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog.capture('user_logged_in')
+    posthogLogger.info('demo session authenticated', {
+      event: 'session.authenticated',
+      auth_provider: 'demo',
+      outcome: 'success',
+    })
     router.invalidate()
   }
 
@@ -1138,6 +1195,7 @@ function LoginComponent() {
             <p className="text-xl font-semibold mb-6">{auth.username}</p>
             <button
               onClick={() => {
+                posthog.capture('user_logged_out')
                 auth.logout()
                 router.invalidate()
               }}
