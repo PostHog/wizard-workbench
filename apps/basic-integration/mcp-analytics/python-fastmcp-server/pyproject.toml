@@ -2,7 +2,7 @@
 name = "notes-server"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["mcp>=1.26"]
+dependencies = ["mcp>=1.26,<2"]
 
 [project.scripts]
 notes-server = "notes_server.server:main"
