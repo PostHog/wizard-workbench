@@ -1,3 +1,4 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
@@ -8,6 +9,8 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog
+from posthog.integrations.flask import PosthogFlaskIntegration
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -53,6 +56,55 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    app.posthog_client = None
+    posthog_api_key = app.config['POSTHOG_API_KEY']
+    posthog_host = app.config['POSTHOG_HOST']
+    if not posthog_api_key:
+        if app.debug:
+            raise RuntimeError(
+                'POSTHOG_API_KEY variable required by PostHog is missing or '
+                'un-configured, this causes events to be silently missed. This '
+                'error stops appearing once POSTHOG_API_KEY is configured')
+    elif not posthog_host:
+        if app.debug:
+            raise RuntimeError(
+                'POSTHOG_HOST variable required by PostHog is missing or '
+                'un-configured, this causes events to be silently missed. This '
+                'error stops appearing once POSTHOG_HOST is configured')
+    else:
+        from opentelemetry._logs import set_logger_provider
+        from opentelemetry.exporter.otlp.proto.http._log_exporter import \
+            OTLPLogExporter
+        from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+        from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+
+        app.posthog_client = Posthog(
+            posthog_api_key,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        atexit.register(app.posthog_client.shutdown)
+        PosthogFlaskIntegration(
+            app,
+            client=app.posthog_client,
+            capture_exceptions=True,
+        )
+
+        logger_provider = LoggerProvider()
+        set_logger_provider(logger_provider)
+        otlp_exporter = OTLPLogExporter(
+            endpoint=f'{posthog_host.rstrip("/")}/i/v1/logs',
+            headers={'Authorization': f'Bearer {posthog_api_key}'},
+        )
+        logger_provider.add_log_record_processor(
+            BatchLogRecordProcessor(otlp_exporter))
+        posthog_logger = logging.getLogger('posthog.exporter')
+        posthog_logger.setLevel(logging.INFO)
+        posthog_logger.propagate = False
+        posthog_logger.addHandler(LoggingHandler(
+            logger_provider=logger_provider))
+        atexit.register(logger_provider.shutdown)
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
