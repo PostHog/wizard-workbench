@@ -5,6 +5,8 @@ import type { Route } from './+types/buy-followers'
 import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { addFollowers, addPurchasedFollowers } from '@/lib/utils/localStorage'
+import { getPostHog } from '@/lib/posthog-client'
+import { posthogLog } from '@/lib/posthog-logger'
 import cn from '@/lib/utils/cn'
 
 export const meta: Route.MetaFunction = () => {
@@ -23,6 +25,28 @@ export default function BuyFollowers() {
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
 
+  const handlePackageSelection = (packageIndex: number) => {
+    const pkg = followerPackages[packageIndex]
+    setSelectedPackage(packageIndex)
+    posthogLog.info('follower package selected', {
+      package_index: packageIndex,
+      follower_count: pkg.amount,
+      bonus_follower_count: pkg.bonus,
+      price_usd: pkg.price,
+    })
+
+    if (import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+      void getPostHog().then((posthog) => {
+        posthog.capture('follower_package_selected', {
+          package_index: packageIndex,
+          follower_count: pkg.amount,
+          bonus_follower_count: pkg.bonus,
+          price_usd: pkg.price,
+        })
+      })
+    }
+  }
+
   const handlePurchase = () => {
     if (selectedPackage === null) return
     setPurchased(true)
@@ -34,6 +58,25 @@ export default function BuyFollowers() {
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+      posthogLog.info('follower purchase completed', {
+        package_index: selectedPackage,
+        follower_count: pkg.amount,
+        bonus_follower_count: pkg.bonus,
+        total_follower_count: totalFollowers,
+        price_usd: pkg.price,
+      })
+
+      if (import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+        void getPostHog().then((posthog) => {
+          posthog.capture('follower_purchase_completed', {
+            package_index: selectedPackage,
+            follower_count: pkg.amount,
+            bonus_follower_count: pkg.bonus,
+            total_follower_count: totalFollowers,
+            price_usd: pkg.price,
+          })
+        })
+      }
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
@@ -75,7 +118,7 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => handlePackageSelection(index)}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected

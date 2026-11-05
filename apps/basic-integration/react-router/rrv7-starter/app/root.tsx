@@ -16,6 +16,7 @@ import { RouteTransitionManager } from '@joycostudio/transitions'
 import routes from './routes'
 import { promisifyGsap } from '@/lib/gsap'
 import { Header } from '@/components/header'
+import { PostHogInit } from '@/components/posthog-init'
 import Footer from '@/components/footer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
@@ -89,45 +90,48 @@ export default function App() {
   const location = useLocation()
 
   return (
-    <RouteTransitionManager
-      appear
-      routes={routes}
-      pathname={location.pathname}
-      onEntering={{
-        default: () => {
-          window.scrollTo({ top: 0 })
-        },
-      }}
-      onEnter={{
-        default: (node) => {
-          return promisifyGsap(
-            gsap
-              .timeline({
-                onComplete: () => {
-                  gsap.set(node, { clearProps: 'all' })
-                },
-              })
-              .fromTo(node, { opacity: 0 }, { opacity: 1, duration: 1 })
-          )
-        },
-      }}
-      onExit={{
-        default: (node) => {
-          return promisifyGsap(gsap.timeline().fromTo(node, { opacity: 1 }, { opacity: 0, duration: 0.5 }, 0))
-        },
-      }}
-    >
-      {(ref) => (
-        <main
-          style={{ opacity: 0 }}
-          className="overflow-y-clip flex flex-col min-h-svh"
-          data-pathname={location.pathname}
-          ref={ref}
-        >
-          {element}
-        </main>
-      )}
-    </RouteTransitionManager>
+    <>
+      <PostHogInit />
+      <RouteTransitionManager
+        appear
+        routes={routes}
+        pathname={location.pathname}
+        onEntering={{
+          default: () => {
+            window.scrollTo({ top: 0 })
+          },
+        }}
+        onEnter={{
+          default: (node) => {
+            return promisifyGsap(
+              gsap
+                .timeline({
+                  onComplete: () => {
+                    gsap.set(node, { clearProps: 'all' })
+                  },
+                })
+                .fromTo(node, { opacity: 0 }, { opacity: 1, duration: 1 })
+            )
+          },
+        }}
+        onExit={{
+          default: (node) => {
+            return promisifyGsap(gsap.timeline().fromTo(node, { opacity: 1 }, { opacity: 0, duration: 0.5 }, 0))
+          },
+        }}
+      >
+        {(ref) => (
+          <main
+            style={{ opacity: 0 }}
+            className="overflow-y-clip flex flex-col min-h-svh"
+            data-pathname={location.pathname}
+            ref={ref}
+          >
+            {element}
+          </main>
+        )}
+      </RouteTransitionManager>
+    </>
   )
 }
 

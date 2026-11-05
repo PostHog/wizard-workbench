@@ -5,6 +5,7 @@ import type { Route } from './+types/profile'
 import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
+import { getPostHog } from '@/lib/posthog-client'
 import cn from '@/lib/utils/cn'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
@@ -14,6 +15,14 @@ function FollowButton({ username, onFollow }: { username: string; onFollow: () =
     setIsFollowing(!isFollowing)
     if (!isFollowing) {
       onFollow()
+
+      if (import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST) {
+        void getPostHog().then((posthog) => {
+          posthog.capture('follower_followed_back', {
+            source: 'profile_recent_followers',
+          })
+        })
+      }
     }
   }
 
