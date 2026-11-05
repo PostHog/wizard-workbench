@@ -7,8 +7,10 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
+import { useEffect } from "react";
 import * as Haptics from "expo-haptics";
 import { useQuery } from "@tanstack/react-query";
+import { usePostHog } from "posthog-react-native";
 import RenderHTML from "react-native-render-html";
 import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -22,6 +24,13 @@ import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 export default function ItemDetails() {
   const { itemId } = useLocalSearchParams();
   const { width: windowWidth } = useWindowDimensions();
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    if (typeof itemId === "string") {
+      posthog?.screen("item_details");
+    }
+  }, [itemId, posthog]);
 
   if (typeof itemId !== "string") {
     return router.back();
@@ -72,7 +81,12 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              onPress={() => {
+                posthog?.capture("profile_opened");
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -163,6 +177,9 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog?.capture("external_link_opened", {
+                    link_type: "item_source",
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +211,10 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog?.capture("parent_item_opened");
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
