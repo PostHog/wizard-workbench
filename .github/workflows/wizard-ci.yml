@@ -52,6 +52,10 @@ on:
         description: 'Run real-TUI snapshots instead of the evaluator (opens a review PR)'
         type: boolean
         default: false
+      flag_overrides:
+        description: 'WIZARD_CI_FLAG_OVERRIDES JSON for the wizard legs'
+        type: string
+        default: '{"wizard-orchestrator":"true"}'
 
   # Webhook trigger from external repos (wizard, context-mill, posthog)
   # POST https://api.github.com/repos/{owner}/{repo}/dispatches
@@ -701,7 +705,7 @@ jobs:
           # closed set is WIZARD_FLAG_KEYS, and the pi key in it is
           # `wizard-self-driving-use-pi-harness`, scoped to `self-driving`. The
           # override did nothing.
-          WIZARD_CI_FLAG_OVERRIDES: '{"wizard-orchestrator":"true"}'
+          WIZARD_CI_FLAG_OVERRIDES: ${{ inputs.flag_overrides || '{"wizard-orchestrator":"true"}' }}
           # workflow_dispatch sets inputs.snapshots; a /wizard-ci-snapshots comment
           # arrives as a repository_dispatch carrying client_payload.snapshots.
           SNAPSHOTS: ${{ inputs.snapshots || github.event.client_payload.snapshots }}
@@ -746,7 +750,7 @@ jobs:
           # so it runs the anthropic harness from its binding default whatever
           # is set here. That is intended: anthropic is what warehouse-source
           # ships on, so the e2e tier grades the harness real users get.
-          WIZARD_CI_FLAG_OVERRIDES: '{"wizard-orchestrator":"true"}'
+          WIZARD_CI_FLAG_OVERRIDES: ${{ inputs.flag_overrides || '{"wizard-orchestrator":"true"}' }}
           MATRIX_APP: ${{ matrix.app }}
           TRIGGER_ID: ${{ needs.discover.outputs.trigger_id }}
           POSTHOG_REGION: ${{ needs.discover.outputs.input_posthog_region }}

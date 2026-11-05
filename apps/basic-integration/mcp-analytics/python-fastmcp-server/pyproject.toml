@@ -1,0 +1,12 @@
+[project]
+name = "notes-server"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["mcp>=1.26"]
+
+[project.scripts]
+notes-server = "notes_server.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
