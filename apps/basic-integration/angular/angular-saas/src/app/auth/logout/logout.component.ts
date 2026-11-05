@@ -16,7 +16,6 @@ export class LogoutComponent implements OnInit {
 
   ngOnInit() {
     if (!this.credentialsService.isAuthenticated()) {
-      this.credentialsService.setCredentials();
       this.router.navigate(['/login']).then(() => {
         window.location.reload();
       });
