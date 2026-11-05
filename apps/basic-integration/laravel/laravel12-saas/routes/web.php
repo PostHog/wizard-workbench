@@ -3,8 +3,24 @@
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ThemeController;
+use App\Services\PostHogService;
+use Closure;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use PostHog\PostHog;
 
+Route::middleware(static function (Request $request, Closure $next) {
+    $context = PostHog::contextFromHeaders($request->headers->all());
+
+    if ($user = $request->user()) {
+        $context['distinctId'] = (string) $user->getAuthIdentifier();
+    }
+
+    return app(PostHogService::class)->withContext(
+        $context,
+        static fn () => $next($request)
+    );
+})->group(function (): void {
 Route::view('/', 'marketing.home')->name('home');
 Route::view('/features', 'marketing.features')->name('features');
 Route::view('/pricing', 'marketing.pricing')->name('pricing');
@@ -59,3 +75,4 @@ Route::get('/auth/{provider}/callback', [SocialiteController::class, 'callback']
     ->name('socialite.callback');
 
 require __DIR__.'/auth.php';
+});
