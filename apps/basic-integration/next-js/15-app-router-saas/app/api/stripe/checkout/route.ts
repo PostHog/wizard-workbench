@@ -2,9 +2,13 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { loggerProvider } from '@/instrumentation';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+
+const posthogLogger = loggerProvider?.getLogger('posthog.checkout');
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -89,8 +93,31 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    posthogLogger?.emit({
+      body: 'checkout completion processed',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        operation: 'checkout_completion',
+        outcome: 'success',
+      },
+    });
+    after(async () => {
+      await loggerProvider?.forceFlush();
+    });
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
+    posthogLogger?.emit({
+      body: 'checkout completion processed',
+      severityNumber: SeverityNumber.ERROR,
+      attributes: {
+        operation: 'checkout_completion',
+        outcome: 'failure',
+        error_type: error instanceof Error ? error.name : 'unknown',
+      },
+    });
+    after(async () => {
+      await loggerProvider?.forceFlush();
+    });
     console.error('Error handling successful checkout:', error);
     return NextResponse.redirect(new URL('/error', request.url));
   }
