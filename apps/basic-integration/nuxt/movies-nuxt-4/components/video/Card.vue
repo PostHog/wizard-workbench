@@ -5,14 +5,22 @@ const props = defineProps<{
   item: Video
 }>()
 
+const { $posthog } = useNuxtApp()
 const showModal = useIframeModal()
 function play() {
-  return showModal(getVideoLink(props.item)!)
+  const videoLink = getVideoLink(props.item)
+  if (!videoLink)
+    return
+
+  $posthog?.capture('video_played', {
+    video_type: props.item.type,
+  })
+  showModal(videoLink)
 }
 </script>
 
 <template>
-  <button pb2 text-left data-testid="play-button" @click="play()" :aria-label="`Play ${props.item.name}`">
+  <button pb2 text-left data-testid="play-button" :aria-label="`Play ${props.item.name}`" @click="play()">
     <span
       block bg-gray4:10 p1 flex
       class="aspect-16/9"
