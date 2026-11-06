@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PostHogLogService, PostHogService } from '@core/services';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,9 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly posthogLogger = inject(PostHogLogService);
 
   /**
    * Authenticates the user.
@@ -41,9 +44,50 @@ export class AuthenticationService {
       firstName,
       lastName,
     });
-    this._credentialsService.setCredentials(credentials, context.remember);
+    this.credentialsService.setCredentials(credentials, context.remember);
+    this.identify(credentials);
+    this.posthogService.posthog.capture('authentication_succeeded', {
+      authentication_method: 'credentials',
+      remember_me: Boolean(context.remember),
+    });
+    this.posthogLogger.info('authentication completed', {
+      authentication_method: 'credentials',
+      remember_me: Boolean(context.remember),
+    });
 
     return of(credentials);
+  }
+
+  /** Identifies the persisted user after PostHog initializes on a page refresh. */
+  identifyCurrentUser(): void {
+    const credentials = this.credentialsService.credentials();
+    if (credentials) {
+      this.identify(credentials);
+      this.posthogLogger.info('authenticated session restored');
+    }
+  }
+
+  private identify(credentials: Credentials): void {
+    if (!credentials.id) {
+      return;
+    }
+
+    const personProperties: Record<string, string> = {};
+    if (credentials.email) {
+      personProperties['email'] = credentials.email;
+    }
+
+    const name = [credentials.firstName, credentials.lastName].filter(Boolean).join(' ');
+    if (name) {
+      personProperties['name'] = name;
+    }
+
+    const role = credentials.roles?.[0];
+    if (role) {
+      personProperties['role'] = role;
+    }
+
+    this.posthogService.posthog.identify(credentials.id, personProperties);
   }
 
   /**
