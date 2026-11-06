@@ -14,6 +14,7 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { ArrowRightIcon, Link2, MessageSquareText } from "lucide-react-native";
 
+import { posthog } from "@/lib/posthog";
 import { parseTitle } from "@/lib/text";
 import { Colors } from "@/constants/Colors";
 import { Comments } from "@/components/comments/comments";
@@ -72,7 +73,14 @@ export default function ItemDetails() {
               marginBottom: typeof item.text === "string" ? 0 : 24,
             }}
           >
-            <Pressable onPress={() => router.push(`/users/${item.by}`)}>
+            <Pressable
+              onPress={() => {
+                posthog?.capture("author_profile_opened", {
+                  source: "item_details",
+                });
+                router.push(`/users/${item.by}`);
+              }}
+            >
               <Text
                 style={{
                   fontSize: 16,
@@ -120,6 +128,10 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog?.capture("content_reaction_given", {
+                  content_id: item.id,
+                  content_type: item.type,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success
                 );
@@ -141,6 +153,10 @@ export default function ItemDetails() {
             <Pressable
               style={[styles.baseButton, styles.button]}
               onPress={async () => {
+                posthog?.capture("discussion_opened", {
+                  content_id: item.id,
+                  content_type: item.type,
+                });
                 await Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Warning
                 );
@@ -163,6 +179,9 @@ export default function ItemDetails() {
               <Pressable
                 style={[styles.baseButton, styles.link]}
                 onPress={() => {
+                  posthog?.capture("external_link_opened", {
+                    content_id: item.id,
+                  });
                   Linking.openURL(item.url);
                 }}
               >
@@ -194,7 +213,13 @@ export default function ItemDetails() {
                 gap: 4,
                 marginBottom: 24,
               }}
-              onPress={() => router.push(`../${parentItem.id}`)}
+              onPress={() => {
+                posthog?.capture("parent_discussion_opened", {
+                  content_id: item.id,
+                  parent_content_id: parentItem.id,
+                });
+                router.push(`../${parentItem.id}`);
+              }}
             >
               <View
                 style={{
