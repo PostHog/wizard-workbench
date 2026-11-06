@@ -86,11 +86,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.compose.jetchat.BuildConfig
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.launch
 
 /**
@@ -137,6 +139,7 @@ fun ConversationContent(
                 uiState.addMessage(
                     Message(authorMe, clipData.getItemAt(0).text.toString(), timeNow),
                 )
+                captureMessageSent("drag_and_drop")
 
                 return true
             }
@@ -203,6 +206,7 @@ fun ConversationContent(
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )
+                    captureMessageSent("text_input")
                 },
                 resetScroll = {
                     scope.launch {
@@ -214,6 +218,23 @@ fun ConversationContent(
                 modifier = Modifier.navigationBarsPadding().imePadding(),
             )
         }
+    }
+}
+
+private fun captureMessageSent(messageSource: String) {
+    if (BuildConfig.POSTHOG_API_KEY.isNullOrBlank() || BuildConfig.POSTHOG_HOST.isNullOrBlank()) return
+
+    runCatching {
+        PostHogAndroid.getInstance().capture(
+            "message_sent",
+            mapOf("message_source" to messageSource),
+        )
+    }
+    runCatching {
+        PostHogAndroid.getInstance().logger.info(
+            "demo message sent",
+            mapOf("message_source" to messageSource),
+        )
     }
 }
 
