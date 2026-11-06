@@ -10,6 +10,7 @@
     "require": {
         "php": "^8.3 || ^8.5",
         "artesaos/seotools": "^1.3",
+        "posthog/posthog-php": "^4.12.1",
         "filament/filament": "^4.0",
         "larabug/larabug": "^3.1",
         "laravel/cashier": "^15.3",
