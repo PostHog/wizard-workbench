@@ -40,6 +40,7 @@ import androidx.navigation.fragment.NavHostFragment
 import com.example.compose.jetchat.auth.LoginScreen
 import com.example.compose.jetchat.components.JetchatDrawer
 import com.example.compose.jetchat.databinding.ContentMainBinding
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.launch
 
 /**
@@ -83,6 +84,19 @@ class NavActivity : AppCompatActivity() {
                         LoginScreen(
                             onLogin = { username, password ->
                                 viewModel.login(username, password)
+                                if (
+                                    BuildConfig.POSTHOG_PROJECT_TOKEN.isNotBlank() &&
+                                    BuildConfig.POSTHOG_HOST.isNotBlank()
+                                ) {
+                                    PostHogAndroid.getInstance().capture(
+                                        "demo_login_completed",
+                                        mapOf("auth_mode" to "demo"),
+                                    )
+                                    PostHogAndroid.getInstance().logger.info(
+                                        "demo_login_completed",
+                                        mapOf("auth_mode" to "demo"),
+                                    )
+                                }
                             },
                         )
                     } else {
@@ -107,6 +121,13 @@ class NavActivity : AppCompatActivity() {
                             },
                             onLogoutClicked = {
                                 viewModel.logout()
+                                if (
+                                    BuildConfig.POSTHOG_PROJECT_TOKEN.isNotBlank() &&
+                                    BuildConfig.POSTHOG_HOST.isNotBlank()
+                                ) {
+                                    PostHogAndroid.getInstance().capture("demo_logout_completed")
+                                    PostHogAndroid.getInstance().logger.info("demo_logout_completed")
+                                }
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
                                     drawerState.close()

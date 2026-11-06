@@ -86,11 +86,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.compose.jetchat.BuildConfig
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.android.PostHogAndroid
 import kotlinx.coroutines.launch
 
 /**
@@ -134,8 +136,12 @@ fun ConversationContent(
                     return false
                 }
 
-                uiState.addMessage(
-                    Message(authorMe, clipData.getItemAt(0).text.toString(), timeNow),
+                val content = clipData.getItemAt(0).text.toString()
+                uiState.addMessage(Message(authorMe, content, timeNow))
+                trackMessageSent(
+                    channelName = uiState.channelName,
+                    source = "drag_and_drop",
+                    characterCount = content.length,
                 )
 
                 return true
@@ -200,8 +206,11 @@ fun ConversationContent(
             )
             UserInput(
                 onMessageSent = { content ->
-                    uiState.addMessage(
-                        Message(authorMe, content, timeNow),
+                    uiState.addMessage(Message(authorMe, content, timeNow))
+                    trackMessageSent(
+                        channelName = uiState.channelName,
+                        source = "composer",
+                        characterCount = content.length,
                     )
                 },
                 resetScroll = {
@@ -558,6 +567,29 @@ fun ChannelBarPrev() {
 @Composable
 fun DayHeaderPrev() {
     DayHeader("Aug 6")
+}
+
+private fun trackMessageSent(channelName: String, source: String, characterCount: Int) {
+    if (
+        BuildConfig.POSTHOG_PROJECT_TOKEN.isNotBlank() &&
+        BuildConfig.POSTHOG_HOST.isNotBlank()
+    ) {
+        PostHogAndroid.getInstance().capture(
+            "message_sent",
+            mapOf(
+                "channel_name" to channelName,
+                "source" to source,
+                "character_count" to characterCount,
+            ),
+        )
+        PostHogAndroid.getInstance().logger.info(
+            "message_sent",
+            mapOf(
+                "source" to source,
+                "character_count" to characterCount,
+            ),
+        )
+    }
 }
 
 private val JumpToBottomThreshold = 56.dp

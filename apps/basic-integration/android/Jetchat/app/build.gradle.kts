@@ -15,7 +15,19 @@
  */
 
 
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+val posthogProperties = Properties().apply {
+    val envFile = project.file(".env")
+    if (envFile.exists()) {
+        envFile.inputStream().use(::load)
+    }
+}
+
+fun posthogConfigValue(key: String): String =
+    System.getenv(key)?.takeIf { it.isNotBlank() }
+        ?: posthogProperties.getProperty(key).orEmpty()
 
 plugins {
     alias(libs.plugins.android.application)
@@ -33,6 +45,17 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "POSTHOG_PROJECT_TOKEN",
+            "\"${posthogConfigValue("POSTHOG_PROJECT_TOKEN")}\"",
+        )
+        buildConfigField(
+            "String",
+            "POSTHOG_HOST",
+            "\"${posthogConfigValue("POSTHOG_HOST")}\"",
+        )
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -75,6 +98,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -114,6 +138,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.util)
     implementation(libs.androidx.compose.ui.viewbinding)
     implementation(libs.androidx.compose.ui.googlefonts)
+
+    implementation("com.posthog:posthog-android:3.+")
 
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
