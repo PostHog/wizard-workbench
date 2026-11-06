@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { emitContactLog } from '../../lib/posthog-logs';
 
 export const prerender = false;
 
@@ -16,6 +17,9 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
+      emitContactLog('warn', 'contact_form_validation_failed', {
+        validation_reason: 'missing_required_fields',
+      });
       return new Response(
         JSON.stringify({ error: 'Please fill in all required fields.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -25,6 +29,9 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
+      emitContactLog('warn', 'contact_form_validation_failed', {
+        validation_reason: 'invalid_email_format',
+      });
       return new Response(
         JSON.stringify({ error: 'Please enter a valid email address.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -44,6 +51,9 @@ export const POST: APIRoute = async ({ request }) => {
       message: data.message,
       timestamp: new Date().toISOString(),
     });
+    emitContactLog('info', 'contact_form_submission_accepted', {
+      route: '/api/contact',
+    });
 
     return new Response(
       JSON.stringify({
@@ -54,6 +64,9 @@ export const POST: APIRoute = async ({ request }) => {
     );
   } catch (error) {
     console.error('Contact form error:', error);
+    emitContactLog('error', 'contact_form_submission_error', {
+      error_type: error instanceof Error ? error.name : 'unknown_error',
+    });
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
