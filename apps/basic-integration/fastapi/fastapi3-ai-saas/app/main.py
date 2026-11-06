@@ -1,17 +1,48 @@
 """Acme AI - FastAPI SaaS Application."""
 
+import atexit
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from posthog import Posthog
+from posthog.integrations.asgi import PosthogASGIMiddleware
 
 from app.config import get_settings
 from app.database import init_db
+from app.posthog_logs import configure_posthog_log_export, posthog_logger
 from app.routers import auth, generate, pages, api_keys, usage, settings as settings_router
 
 settings = get_settings()
 templates = Jinja2Templates(directory="app/templates")
+logger = logging.getLogger(__name__)
+
+posthog_client: Posthog | None = None
+posthog_log_provider = None
+if settings.posthog_project_token and settings.posthog_host:
+    posthog_client = Posthog(
+        settings.posthog_project_token,
+        host=settings.posthog_host,
+        enable_exception_autocapture=True,
+    )
+    atexit.register(posthog_client.shutdown)
+    posthog_log_provider = configure_posthog_log_export(
+        settings.posthog_project_token, settings.posthog_host
+    )
+elif settings.debug:
+    missing_var = (
+        "POSTHOG_PROJECT_TOKEN"
+        if not settings.posthog_project_token
+        else "POSTHOG_HOST"
+    )
+    logger.warning(
+        "%s variable required by PostHog is missing or un-configured, this causes "
+        "events to be silently missed. This error stops appearing once %s is configured",
+        missing_var,
+        missing_var,
+    )
 
 
 @asynccontextmanager
@@ -19,8 +50,26 @@ async def lifespan(app: FastAPI):
     """Application lifespan events for startup/shutdown."""
     # Initialize database
     init_db()
+    posthog_logger.info(
+        "application_started", extra={"component": "fastapi", "lifecycle": "startup"}
+    )
 
     yield
+
+    if posthog_log_provider:
+        posthog_logger.info(
+            "application_stopping", extra={"component": "fastapi", "lifecycle": "shutdown"}
+        )
+        try:
+            posthog_log_provider.force_flush(timeout_millis=1000)
+        except Exception:
+            logger.exception("PostHog log flush failed during shutdown")
+
+    if posthog_client:
+        try:
+            posthog_client.flush()
+        except Exception:
+            logger.exception("PostHog flush failed during shutdown")
 
 
 app = FastAPI(
@@ -28,6 +77,10 @@ app = FastAPI(
     description="AI content generation platform",
     lifespan=lifespan,
 )
+
+if posthog_client:
+    app.state.posthog = posthog_client
+    app.add_middleware(PosthogASGIMiddleware, client=posthog_client)
 
 # Include routers
 app.include_router(auth.router)
