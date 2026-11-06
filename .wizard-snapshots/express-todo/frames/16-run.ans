@@ -1,0 +1,49 @@
+                              [0m[38;5;58;48;5;178m PostHog Wizard v2.79.1                                                                    Feedback: wizard@posthog.com [0m                              
+                                                                                                                                                                                    
+                                [0m[1;38;5;178mLearn[0m                                                      [0m[1mTasks[0m                                                                                    
+                                                                                                                                                                                    
+                                                                                           [0m[38;5;2m◼[0m Add PostHog SDK                                                                        
+                                                                                           [0m[38;5;2m◼[0m Initialize PostHog                                                                     
+                                                                                           [0m[38;5;2m◼[0m Capture unhandled errors                                                               
+                                                                                           [0m[38;5;2m◼[0m Instrument product events                                                              
+                                                                                           [0m[38;5;6m▶[0m Instrument LLM calls                                                                   
+                                                                                           [0m[38;5;6m▶[0m Build product dashboard                                                                
+                                                                                           [0m[38;5;8m◻[0m [0m[2mConfigure log capture[0m                                                                  
+                                                                                           [0m[38;5;8m◻[0m [0m[2mReview integration[0m                                                                     
+                                                                                           [0m[38;5;8m◻[0m [0m[2mWrite setup report[0m                                                                     
+                                                                                                                                                                                    
+                                                                                           [0m[38;5;4m⠧[0m [0m[2mProgress: 4/9 completed[0m                                                                
+                                                                                           [0m[2m(1 skipped as not required)[0m                                                              
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                               [0m[38;5;8m──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m                               
+                                [0m[2;38;5;8m┊ Adding minimal guarded captures for successful todo creation, update, and deletion; the anonymous app has no [0m                                     
+                                [0m[2;38;5;8mstable identity, so these remain personless.[0m                                                                                                        
+                                [0m[38;5;8m◆ Verifying the recorded event plan and final route instrumentation by inspection only, with no build or test run.[0m                                  
+                                                                                                                                                                                    
+                                [0m[1;7;38;5;178m Status [0m [0m[38;5;8m Tail logs [0m [0m[38;5;8m Visualizer [0m [0m[38;5;8m HN [0m                                                                                                              
+                                                                                                                                                                                    
+                                [0m[1;38;5;8m←→[0m[2m switch tab[0m  [0m[1;38;5;8ms[0m[2m toggle status[0m                                                                                                                      
