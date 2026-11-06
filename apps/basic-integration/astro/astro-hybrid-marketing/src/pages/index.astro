@@ -61,3 +61,14 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.querySelectorAll('.hero-buttons a').forEach((cta) => {
+    cta.addEventListener('click', () => {
+      window.posthog?.capture('marketing_cta_clicked', {
+        cta_label: cta.textContent?.trim(),
+        placement: 'home_hero',
+      });
+    });
+  });
+</script>
