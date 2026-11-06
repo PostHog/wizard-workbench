@@ -1,6 +1,38 @@
 import Fastify from 'fastify';
+import { emitPostHogLog, shutdownPostHogLogs } from './posthog-logs.js';
+import { posthog } from './posthog.js';
 
 const fastify = Fastify({ logger: true });
+
+function captureEvent(event, properties) {
+  if (!posthog) return;
+
+  try {
+    posthog.capture({ event, properties });
+    emitPostHogLog('info', 'Blog content mutation completed', { event_name: event });
+  } catch (captureError) {
+    fastify.log.warn(captureError, 'Unable to capture event in PostHog');
+  }
+}
+
+fastify.setErrorHandler((error, request, reply) => {
+  if (posthog) {
+    try {
+      posthog.captureException(error, request.id);
+    } catch (captureError) {
+      fastify.log.warn(captureError, 'Unable to capture exception in PostHog');
+    }
+  }
+
+  reply.send(error);
+});
+
+fastify.addHook('onClose', async () => {
+  await Promise.all([
+    shutdownPostHogLogs(),
+    posthog?.shutdown(3000).catch(() => {}),
+  ]);
+});
 
 const posts = [];
 const comments = [];
@@ -39,6 +71,10 @@ fastify.post('/api/posts', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   posts.push(post);
+  captureEvent('post_created', {
+    post_id: post.id,
+    published: post.published,
+  });
   return reply.status(201).send(post);
 });
 
@@ -67,6 +103,16 @@ fastify.patch('/api/posts/:id', async (request, reply) => {
   if (body !== undefined) post.body = body;
   if (published !== undefined) post.published = published;
 
+  captureEvent('post_updated', {
+    post_id: post.id,
+    updated_fields: [
+      ...(title !== undefined ? ['title'] : []),
+      ...(body !== undefined ? ['body'] : []),
+      ...(published !== undefined ? ['published'] : []),
+    ],
+    published: post.published,
+  });
+
   return post;
 });
 
@@ -86,6 +132,7 @@ fastify.delete('/api/posts/:id', async (request, reply) => {
     if (comments[i].post_id === postId) comments.splice(i, 1);
   }
 
+  captureEvent('post_deleted', { post_id: postId });
   return reply.status(204).send();
 });
 
@@ -111,6 +158,10 @@ fastify.post('/api/posts/:id/comments', async (request, reply) => {
     created_at: new Date().toISOString(),
   };
   comments.push(comment);
+  captureEvent('comment_created', {
+    comment_id: comment.id,
+    post_id: comment.post_id,
+  });
   return reply.status(201).send(comment);
 });
 
