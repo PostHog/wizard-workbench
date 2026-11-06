@@ -1,3 +1,6 @@
+import { captureServerEvent } from '~/server/utils/posthog'
+import { createPostHogLogger } from '~/server/utils/posthog-logs'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -20,6 +23,12 @@ export default defineEventHandler(async (event) => {
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
+
+    await captureServerEvent(event, 'user_login_succeeded')
+
+    const posthogLogger = createPostHogLogger()
+    posthogLogger?.emit('Authentication login completed', { operation: 'login' })
+    await posthogLogger?.shutdown()
 
     return {
       success: true,
