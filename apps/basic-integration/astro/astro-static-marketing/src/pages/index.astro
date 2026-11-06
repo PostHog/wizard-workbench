@@ -61,3 +61,15 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.querySelector('.hero-buttons .btn-primary')?.addEventListener('click', () => {
+    window.posthog?.capture('trial_cta_clicked', {
+      cta_location: 'home_hero',
+    });
+    const posthogLogger = window.posthog?.logger;
+    posthogLogger?.info('home trial CTA selected', {
+      cta_location: 'home_hero',
+    });
+  });
+</script>
