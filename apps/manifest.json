@@ -61,7 +61,7 @@
       "id": "warehouse",
       "dir": "warehouse",
       "label": "Data Warehouse",
-      "description": "Detect and connect a data warehouse source (Postgres, Stripe, …)",
+      "description": "Detect and connect a data warehouse source (Postgres, Stripe, \u2026)",
       "ciCapable": true,
       "e2eOnly": true
     },
@@ -70,6 +70,14 @@
       "dir": "warehouse-seeded",
       "label": "Data Warehouse (seeded)",
       "description": "Connect a data warehouse source from the task the default install run offers",
+      "ciCapable": true,
+      "e2eOnly": true
+    },
+    {
+      "id": "integration-observability",
+      "dir": "integration-observability",
+      "label": "Integration + Observability",
+      "description": "Default integration run on the orchestrator sequence \u2014 one app with LLM calls, one without",
       "ciCapable": true,
       "e2eOnly": true
     },
