@@ -1,3 +1,4 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
@@ -8,6 +9,8 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog
+from posthog.integrations.flask import PosthogFlaskIntegration
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -23,6 +26,55 @@ from config import Config
 
 def get_locale():
     return request.accept_languages.best_match(current_app.config['LANGUAGES'])
+
+
+def identify_posthog_user(user, set_properties=False):
+    """Bind the current PostHog request context to an authenticated user."""
+    posthog_client = current_app.extensions.get('posthog_client')
+    if posthog_client is None:
+        return
+
+    distinct_id = str(user.id)
+    posthog_client.identify_context(distinct_id)
+    if set_properties:
+        posthog_client.set(
+            distinct_id=distinct_id,
+            properties={
+                'email': user.email,
+                'username': user.username,
+            },
+        )
+
+
+def configure_posthog_log_export(app, api_key, host):
+    """Export only purpose-built PostHog log records via OTLP."""
+    try:
+        from opentelemetry.exporter.otlp.proto.http._log_exporter import \
+            OTLPLogExporter
+        from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+        from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+    except ImportError:
+        app.logger.warning(
+            'PostHog log export requires the OpenTelemetry log packages')
+        return None
+
+    posthog_logger = logging.getLogger('posthog.export')
+    if getattr(posthog_logger, '_posthog_otlp_configured', False):
+        return posthog_logger
+
+    logger_provider = LoggerProvider()
+    log_exporter = OTLPLogExporter(
+        endpoint=f"{host.rstrip('/')}/i/v1/logs",
+        headers={'Authorization': f'Bearer {api_key}'},
+    )
+    logger_provider.add_log_record_processor(
+        BatchLogRecordProcessor(log_exporter))
+    posthog_logger.addHandler(LoggingHandler(logger_provider=logger_provider))
+    posthog_logger.setLevel(logging.INFO)
+    posthog_logger.propagate = False
+    posthog_logger._posthog_otlp_configured = True
+    atexit.register(logger_provider.shutdown, timeout_millis=3000)
+    return posthog_logger
 
 
 db = SQLAlchemy()
@@ -53,6 +105,44 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    posthog_api_key = app.config['POSTHOG_API_KEY']
+    posthog_host = app.config['POSTHOG_HOST']
+    if posthog_api_key and posthog_host:
+        posthog_client = Posthog(
+            posthog_api_key,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        app.extensions['posthog_client'] = posthog_client
+        PosthogFlaskIntegration(
+            app,
+            client=posthog_client,
+            capture_exceptions=True,
+        )
+        atexit.register(posthog_client.shutdown)
+        posthog_logger = configure_posthog_log_export(
+            app, posthog_api_key, posthog_host)
+        app.extensions['posthog_logger'] = posthog_logger
+        if posthog_logger:
+            posthog_logger.info(
+                'PostHog log export configured',
+                extra={'component': 'flask_application'},
+            )
+    else:
+        app.extensions['posthog_client'] = None
+        app.extensions['posthog_logger'] = None
+        if app.debug:
+            missing_variable = (
+                'POSTHOG_API_KEY' if not posthog_api_key else 'POSTHOG_HOST'
+            )
+            app.logger.warning(
+                '%s variable required by PostHog is missing or un-configured, '
+                'this causes events to be silently missed. This error stops '
+                'appearing once %s is configured',
+                missing_variable,
+                missing_variable,
+            )
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
