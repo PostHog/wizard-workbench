@@ -43,6 +43,8 @@ const sections = [
             <a
               href={link.href}
               class:list={["sidebar-link", { active: currentPath === link.href }]}
+              data-docs-section={section.title.toLowerCase().replaceAll(' ', '_')}
+              data-docs-destination={link.href}
             >
               {link.label}
             </a>
@@ -52,3 +54,19 @@ const sections = [
     </div>
   ))}
 </aside>
+
+<script is:inline>
+  document.querySelectorAll('[data-docs-destination]').forEach((link) => {
+    link.addEventListener('click', () => {
+      window.posthog?.capture('documentation_navigation_selected', {
+        source: 'docs_sidebar',
+        section: link.dataset.docsSection,
+        destination: link.dataset.docsDestination,
+      });
+      window.posthog?.logger?.info('documentation sidebar destination selected', {
+        section: link.dataset.docsSection,
+        destination: link.dataset.docsDestination,
+      });
+    });
+  });
+</script>
