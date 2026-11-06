@@ -1,6 +1,18 @@
 from hashlib import md5
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
 from django.db import models
+from posthog import identify_context
+from config.posthog import posthog_client
+
+
+@receiver(user_logged_in)
+def identify_posthog_user(sender, request, user, **kwargs):
+    """Identify the request context after Django authenticates a user."""
+    identify_context(str(user.pk))
+    if posthog_client:
+        posthog_client.capture(event='user_logged_in')
 
 
 class User(AbstractUser):

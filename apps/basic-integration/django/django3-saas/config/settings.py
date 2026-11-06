@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -9,6 +10,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
+
+POSTHOG_PROJECT_TOKEN = os.environ.get('POSTHOG_PROJECT_TOKEN', '')
+POSTHOG_HOST = os.environ.get('POSTHOG_HOST', '')
+
+if DEBUG:
+    if not POSTHOG_PROJECT_TOKEN:
+        logging.warning(
+            'POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or '
+            'un-configured, this causes events to be silently missed. This error '
+            'stops appearing once POSTHOG_PROJECT_TOKEN is configured'
+        )
+    elif not POSTHOG_HOST:
+        logging.warning(
+            'POSTHOG_HOST variable required by PostHog is missing or un-configured, '
+            'this causes events to be silently missed. This error stops appearing '
+            'once POSTHOG_HOST is configured'
+        )
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')]
 
@@ -32,9 +50,16 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'posthog.integrations.django.PosthogContextMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+from config.posthog import initialize_posthog
+from config.posthog_logs import initialize_posthog_logs
+
+POSTHOG_MW_CLIENT = initialize_posthog(POSTHOG_PROJECT_TOKEN, POSTHOG_HOST)
+initialize_posthog_logs(POSTHOG_PROJECT_TOKEN, POSTHOG_HOST)
 
 ROOT_URLCONF = 'config.urls'
 

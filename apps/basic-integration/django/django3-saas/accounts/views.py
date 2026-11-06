@@ -9,6 +9,7 @@ from django.contrib.auth.views import (
 from django.contrib import messages
 from django.urls import reverse_lazy
 from .forms import RegisterForm, LoginForm, ProfileForm
+from config.posthog import posthog_client
 
 
 class CustomLoginView(LoginView):
@@ -49,6 +50,8 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            if posthog_client:
+                posthog_client.capture(event='user_registered')
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +66,8 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            if posthog_client:
+                posthog_client.capture(event='account_settings_updated')
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
