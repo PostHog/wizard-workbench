@@ -1,3 +1,6 @@
+import process from 'node:process'
+import { emitPostHogLog } from '~/server/utils/posthog-logs'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -13,7 +16,7 @@ export default defineEventHandler(async (event) => {
 
     // Demo auth: accepts any username and password
     const sanitizedUsername = username.trim()
-    
+
     setCookie(event, 'auth-user', sanitizedUsername, {
       httpOnly: false, // Allow client-side access for SSR
       secure: process.env.NODE_ENV === 'production',
@@ -21,11 +24,17 @@ export default defineEventHandler(async (event) => {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
+    emitPostHogLog('Demo authentication login succeeded', {
+      auth_action: 'login',
+      outcome: 'succeeded',
+    })
+
     return {
       success: true,
       user: sanitizedUsername,
     }
-  } catch (error: any) {
+  }
+  catch (error: any) {
     if (error.statusCode) {
       throw error
     }
