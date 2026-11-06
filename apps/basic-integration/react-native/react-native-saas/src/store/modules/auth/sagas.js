@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
+import { posthog, posthogLog } from '../../../config/posthog';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
 
 import {
@@ -12,6 +13,23 @@ import {
 } from './actions';
 
 import { selectTeam } from '../teams/actions';
+
+function getUserDistinctId(email) {
+  const normalizedEmail = email.trim().toLowerCase();
+  let firstHash = 2166136261;
+  let secondHash = 2246822507;
+
+  for (let index = 0; index < normalizedEmail.length; index += 1) {
+    const character = normalizedEmail.charCodeAt(index);
+    firstHash = Math.imul(firstHash, 16777619) + character;
+    secondHash = Math.imul(secondHash, 3266489909) + character;
+  }
+
+  const firstPart = Math.abs(firstHash).toString(16);
+  const secondPart = Math.abs(secondHash).toString(16);
+
+  return `user_${firstPart}${secondPart}`;
+}
 
 export function* init() {
   const token = yield call([AsyncStorage, 'getItem'], '@Omni:token');
@@ -41,6 +59,11 @@ export function* signIn({ payload }) {
     if (email === 'demo@test.com' && password === 'demo') {
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
       yield put(signInSuccess(DEMO_TOKEN));
+      posthog?.identify(getUserDistinctId(email), {
+        $set: { email },
+      });
+      posthog?.capture('user_signed_in', { authentication_method: 'demo' });
+      posthogLog.info('User signed in', { authentication_method: 'demo' });
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
       toast.showSuccess('Welcome to demo mode!');
@@ -53,6 +76,11 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+    posthog?.identify(getUserDistinctId(email), {
+      $set: { email },
+    });
+    posthog?.capture('user_signed_in', { authentication_method: 'password' });
+    posthogLog.info('User signed in', { authentication_method: 'password' });
     NavigationService.navigate('Main');
   } catch (err) {
     toast.showError('Invalid credentials');
@@ -60,6 +88,8 @@ export function* signIn({ payload }) {
 }
 
 export function* signOut() {
+  posthog?.capture('user_signed_out');
+  posthog?.reset();
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
