@@ -2,7 +2,9 @@ import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
-import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
+import { posthog } from "~/lib/posthog.client";
+import { posthogLogger } from "~/lib/posthog-logger.client";
+import { claimCountry, getCurrentUser, likeCountry, visitCountry } from "~/lib/utils/auth";
 
 export async function clientLoader() {
   try {
@@ -19,15 +21,24 @@ export async function clientLoader() {
     // Check if API returned an error object
     if (data.status === 404 || (data.message && !Array.isArray(data))) {
       console.error("API Error:", data.message || data.status);
+      posthogLogger?.warn("country catalog returned an invalid response", {
+        outcome: "invalid_response",
+      });
       return [];
     }
     
     // Ensure we return an array
     const countries = Array.isArray(data) ? data : [];
     console.log(`Loaded ${countries.length} countries from API`);
+    posthogLogger?.info("country catalog loaded", {
+      country_count: countries.length,
+    });
     return countries;
   } catch (error) {
     console.error("Error loading countries:", error);
+    posthogLogger?.error("country catalog request failed", {
+      outcome: "request_failed",
+    });
     // Return empty array on error to prevent crashes
     return [];
   }
@@ -110,6 +121,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
             const countryName = country.name.common;
             const isClaimed = user?.claimedCountries.includes(countryName);
             const isLiked = user?.likedCountries.includes(countryName);
+            const isVisited = user?.visitedCountries.includes(countryName);
             
             return (
               <li
@@ -137,7 +149,14 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => {
-                        claimCountry(countryName);
+                        if (!isClaimed) {
+                          claimCountry(countryName);
+                          posthog?.capture('country_claimed', {
+                            country_name: countryName,
+                            country_region: country.region,
+                            total_points: getCurrentUser()?.totalPoints ?? user.totalPoints,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -150,7 +169,14 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
-                        likeCountry(countryName);
+                        if (!isLiked) {
+                          likeCountry(countryName);
+                          posthog?.capture('country_liked', {
+                            country_name: countryName,
+                            country_region: country.region,
+                            total_points: getCurrentUser()?.totalPoints ?? user.totalPoints,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -163,7 +189,14 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     </button>
                     <button
                       onClick={() => {
-                        visitCountry(countryName);
+                        if (!isVisited) {
+                          visitCountry(countryName);
+                          posthog?.capture('country_visited', {
+                            country_name: countryName,
+                            country_region: country.region,
+                            total_points: getCurrentUser()?.totalPoints ?? user.totalPoints,
+                          });
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
