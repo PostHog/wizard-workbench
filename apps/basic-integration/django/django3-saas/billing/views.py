@@ -55,6 +55,14 @@ def subscribe(request, plan_slug):
                     },
                     allow_promotion_codes=True,
                 )
+                if settings.POSTHOG_MW_CLIENT:
+                    settings.POSTHOG_MW_CLIENT.capture(
+                        event='subscription_checkout_started',
+                        properties={
+                            'plan_slug': plan.slug,
+                            'billing_interval': plan.interval,
+                        },
+                    )
                 return redirect(checkout_session.url)
             except Exception as e:
                 messages.error(request, f'Payment error: {str(e)}')
@@ -70,6 +78,26 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            if settings.POSTHOG_MW_CLIENT:
+                settings.POSTHOG_MW_CLIENT.capture(
+                    event='subscription_activated',
+                    properties={
+                        'plan_slug': plan.slug,
+                        'billing_interval': plan.interval,
+                        'activation_source': 'demo',
+                    },
+                )
+            if settings.POSTHOG_LOGGER:
+                settings.POSTHOG_LOGGER.info(
+                    'demo subscription activation completed',
+                    extra={
+                        'event': 'subscription_activated',
+                        'status': 'success',
+                        'plan_slug': plan.slug,
+                        'billing_interval': plan.interval,
+                        'activation_source': 'demo',
+                    },
+                )
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -116,6 +144,8 @@ def change_plan(request, plan_slug):
         return redirect('billing:subscribe', plan_slug=plan_slug)
 
     if request.method == 'POST':
+        previous_plan_slug = subscription.plan.slug
+        plan_changed = False
         if STRIPE_CONFIGURED and subscription.stripe_subscription_id and not subscription.stripe_subscription_id.startswith('sub_demo_'):
             # Update Stripe subscription
             try:
@@ -130,6 +160,7 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+                plan_changed = True
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
                 messages.error(request, f'Error changing plan: {str(e)}')
@@ -137,7 +168,18 @@ def change_plan(request, plan_slug):
             # Demo mode
             subscription.plan = plan
             subscription.save()
+            plan_changed = True
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
+
+        if plan_changed and settings.POSTHOG_MW_CLIENT:
+            settings.POSTHOG_MW_CLIENT.capture(
+                event='subscription_plan_changed',
+                properties={
+                    'previous_plan_slug': previous_plan_slug,
+                    'plan_slug': plan.slug,
+                    'billing_interval': plan.interval,
+                },
+            )
 
         return redirect('billing:manage')
 
@@ -171,6 +213,14 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        if settings.POSTHOG_MW_CLIENT:
+            settings.POSTHOG_MW_CLIENT.capture(
+                event='subscription_canceled',
+                properties={
+                    'plan_slug': subscription.plan.slug,
+                    'billing_interval': subscription.plan.interval,
+                },
+            )
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -269,6 +319,16 @@ def _handle_checkout_completed(session):
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
     )
+    if settings.POSTHOG_MW_CLIENT:
+        settings.POSTHOG_MW_CLIENT.capture(
+            distinct_id=str(user.pk),
+            event='subscription_activated',
+            properties={
+                'plan_slug': plan.slug,
+                'billing_interval': plan.interval,
+                'activation_source': 'stripe_webhook',
+            },
+        )
 
 
 def _handle_subscription_updated(subscription_data):

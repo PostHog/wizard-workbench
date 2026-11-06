@@ -1,3 +1,5 @@
+import atexit
+import logging
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -11,6 +13,74 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-pro
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')]
+
+POSTHOG_PROJECT_TOKEN = os.environ.get('POSTHOG_PROJECT_TOKEN')
+POSTHOG_HOST = os.environ.get('POSTHOG_HOST')
+POSTHOG_MW_CLIENT = None
+POSTHOG_LOGGER = None
+
+if POSTHOG_PROJECT_TOKEN and POSTHOG_HOST:
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+    from posthog import Posthog
+
+    POSTHOG_MW_CLIENT = Posthog(
+        project_api_key=POSTHOG_PROJECT_TOKEN,
+        host=POSTHOG_HOST,
+        enable_exception_autocapture=True,
+    )
+    atexit.register(POSTHOG_MW_CLIENT.shutdown)
+
+    posthog_logger_provider = LoggerProvider()
+    posthog_log_exporter = OTLPLogExporter(
+        endpoint=f'{POSTHOG_HOST.rstrip("/")}/i/v1/logs',
+        headers={'Authorization': f'Bearer {POSTHOG_PROJECT_TOKEN}'},
+    )
+    posthog_logger_provider.add_log_record_processor(
+        BatchLogRecordProcessor(posthog_log_exporter)
+    )
+    POSTHOG_LOGGER = logging.getLogger('posthog.export')
+    POSTHOG_LOGGER.setLevel(logging.INFO)
+    POSTHOG_LOGGER.addHandler(LoggingHandler(logger_provider=posthog_logger_provider))
+    POSTHOG_LOGGER.propagate = False
+    atexit.register(posthog_logger_provider.shutdown)
+elif DEBUG:
+    missing_posthog_variable = (
+        'POSTHOG_PROJECT_TOKEN' if not POSTHOG_PROJECT_TOKEN else 'POSTHOG_HOST'
+    )
+    logging.getLogger(__name__).warning(
+        '%s variable required by PostHog is missing or un-configured, this causes events '
+        'to be silently missed. This error stops appearing once %s is configured',
+        missing_posthog_variable,
+        missing_posthog_variable,
+    )
+
+# The middleware reads request.user before a login or registration view runs.
+# Refresh the active context at Django's authentication boundary so captures and
+# exception autocapture later in that request use the newly authenticated user.
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
+from posthog import identify_context
+
+
+@receiver(user_logged_in)
+def identify_posthog_user(sender, request, user, **kwargs):
+    if POSTHOG_MW_CLIENT is None:
+        return
+
+    distinct_id = str(user.pk)
+    identify_context(distinct_id)
+    POSTHOG_MW_CLIENT.set(
+        distinct_id=distinct_id,
+        properties={
+            'email': user.email,
+            'name': user.get_full_name() or user.username,
+            'company_name': user.company_name,
+            'is_staff': user.is_staff,
+        },
+    )
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -32,6 +102,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    *(
+        ['posthog.integrations.django.PosthogContextMiddleware']
+        if POSTHOG_MW_CLIENT
+        else []
+    ),
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

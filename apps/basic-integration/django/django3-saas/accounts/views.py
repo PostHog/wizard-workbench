@@ -7,6 +7,7 @@ from django.contrib.auth.views import (
     PasswordResetConfirmView, PasswordResetCompleteView
 )
 from django.contrib import messages
+from django.conf import settings as django_settings
 from django.urls import reverse_lazy
 from .forms import RegisterForm, LoginForm, ProfileForm
 
@@ -15,9 +16,23 @@ class CustomLoginView(LoginView):
     form_class = LoginForm
     template_name = 'accounts/login.html'
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if django_settings.POSTHOG_MW_CLIENT:
+            django_settings.POSTHOG_MW_CLIENT.capture(
+                event='user_logged_in',
+                properties={'login_method': 'password'},
+            )
+        return response
+
 
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('accounts:login')
+
+    def post(self, request, *args, **kwargs):
+        if request.user.is_authenticated and django_settings.POSTHOG_MW_CLIENT:
+            django_settings.POSTHOG_MW_CLIENT.capture(event='user_logged_out')
+        return super().post(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):
@@ -49,6 +64,20 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            if django_settings.POSTHOG_MW_CLIENT:
+                django_settings.POSTHOG_MW_CLIENT.capture(
+                    event='user_registered',
+                    properties={'registration_method': 'password'},
+                )
+            if django_settings.POSTHOG_LOGGER:
+                django_settings.POSTHOG_LOGGER.info(
+                    'account registration completed',
+                    extra={
+                        'event': 'account_registered',
+                        'status': 'success',
+                        'registration_method': 'password',
+                    },
+                )
             messages.success(request, 'Registration successful. Welcome!')
             return redirect('dashboard:index')
     else:
@@ -63,6 +92,13 @@ def settings(request):
         form = ProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
+            if django_settings.POSTHOG_MW_CLIENT:
+                django_settings.POSTHOG_MW_CLIENT.capture(
+                    event='profile_updated',
+                    properties={
+                        'has_company_name': bool(request.user.company_name),
+                    },
+                )
             messages.success(request, 'Settings updated.')
             return redirect('accounts:settings')
     else:
