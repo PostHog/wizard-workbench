@@ -1,5 +1,6 @@
 import sqlalchemy as sa
 from flask import request, url_for, abort
+from posthog import capture, identify_context
 from app import db
 from app.models import User
 from app.api import bp
@@ -57,6 +58,8 @@ def create_user():
     user.from_dict(data, new_user=True)
     db.session.add(user)
     db.session.commit()
+    identify_context(str(user.id))
+    capture('api_user_registered')
     return user.to_dict(), 201, {'Location': url_for('api.get_user',
                                                      id=user.id)}
 
@@ -78,4 +81,5 @@ def update_user(id):
         return bad_request('please use a different email address')
     user.from_dict(data, new_user=False)
     db.session.commit()
+    capture('api_profile_updated')
     return user.to_dict()

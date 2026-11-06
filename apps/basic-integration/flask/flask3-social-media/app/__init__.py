@@ -1,13 +1,28 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from flask import Flask, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog, identify_context
+from posthog.integrations.flask import PosthogFlaskIntegration
+try:
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import \
+        OTLPLogExporter
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+    from opentelemetry.sdk.resources import Resource
+except ImportError:
+    OTLPLogExporter = None
+    LoggerProvider = None
+    LoggingHandler = None
+    BatchLogRecordProcessor = None
+    Resource = None
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -39,9 +54,62 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    posthog_project_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    if posthog_project_token and posthog_host:
+        posthog_client = Posthog(
+            project_api_key=posthog_project_token,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        PosthogFlaskIntegration(app, client=posthog_client)
+        app.extensions['posthog_client'] = posthog_client
+        atexit.register(posthog_client.shutdown)
+
+        if OTLPLogExporter:
+            posthog_log_logger = logging.getLogger('posthog.logs')
+            if not posthog_log_logger.handlers:
+                log_provider = LoggerProvider(resource=Resource.create({
+                    'service.name': 'flask3-social-media',
+                }))
+                log_exporter = OTLPLogExporter(
+                    endpoint=posthog_host.rstrip('/') + '/i/v1/logs',
+                    headers={'Authorization': 'Bearer ' + posthog_project_token},
+                )
+                log_provider.add_log_record_processor(
+                    BatchLogRecordProcessor(log_exporter))
+                posthog_log_logger.setLevel(logging.INFO)
+                posthog_log_logger.propagate = False
+                posthog_log_logger.addHandler(
+                    LoggingHandler(logger_provider=log_provider))
+                atexit.register(log_provider.shutdown)
+            app.extensions['posthog_log_logger'] = posthog_log_logger
+        elif app.debug:
+            app.logger.warning(
+                'OpenTelemetry packages required by PostHog log capture are '
+                'not installed')
+    elif app.debug:
+        for variable_name, value in (
+            ('POSTHOG_PROJECT_TOKEN', posthog_project_token),
+            ('POSTHOG_HOST', posthog_host),
+        ):
+            if not value:
+                app.logger.warning(
+                    '%s variable required by PostHog is missing or '
+                    'un-configured, this causes events to be silently missed. '
+                    'This error stops appearing once %s is configured',
+                    variable_name, variable_name)
+
     db.init_app(app)
     migrate.init_app(app, db)
     login.init_app(app)
+
+    @app.before_request
+    def identify_authenticated_user():
+        """Bind the authenticated Flask-Login user to this request context."""
+        if current_user.is_authenticated:
+            identify_context(str(current_user.id))
+
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
