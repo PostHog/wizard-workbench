@@ -865,8 +865,9 @@ jobs:
           MATRIX_APP: ${{ matrix.app }}
           CONTEXT_MILL_PID: ${{ steps.run-wizard.outputs.context_mill_pid }}
 
+      # The artifacts role trusts only main, so a run from another branch gets no credentials.
       - name: Configure AWS credentials
-        if: always() && !env.ACT
+        if: always() && !env.ACT && github.ref == 'refs/heads/main'
         continue-on-error: true
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
@@ -876,7 +877,7 @@ jobs:
           unset-current-credentials: true
 
       - name: Upload artifacts to S3
-        if: always() && !env.ACT
+        if: always() && !env.ACT && github.ref == 'refs/heads/main'
         continue-on-error: true
         run: |
           SAFE_APP="$MATRIX_APP"
@@ -1187,6 +1188,10 @@ jobs:
           echo "| PostHog Ref | ${{ needs.discover.outputs.input_posthog_ref }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> Search for trigger ID \`${{ needs.discover.outputs.trigger_id }}\` to find all related PRs." >> $GITHUB_STEP_SUMMARY
+
+      - name: Note skipped S3 upload
+        if: github.ref != 'refs/heads/main'
+        run: echo "::notice title=No S3 artifacts::This run is not on main, so it uploaded no artifacts to S3."
 
       - name: Update Slack message
         if: needs.notify-start.outputs.thread_ts != ''
