@@ -4,6 +4,7 @@ class Cards::ClosuresController < ApplicationController
   def create
     capture_card_location
     @card.close
+    capture_posthog_event "card_closed", properties: { board_id: @card.board_id, card_number: @card.number }
     refresh_stream_if_needed
 
     respond_to do |format|
@@ -14,6 +15,7 @@ class Cards::ClosuresController < ApplicationController
 
   def destroy
     @card.reopen
+    capture_posthog_event "card_reopened", properties: { board_id: @card.board_id, card_number: @card.number }
     refresh_stream_after_reopen
 
     respond_to do |format|

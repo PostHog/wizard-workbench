@@ -14,11 +14,13 @@ class CardsController < ApplicationController
     respond_to do |format|
       format.html do
         card = Current.user.draft_new_card_in(@board)
+        capture_posthog_event "card_draft_started", properties: { board_id: @board.id, card_number: card.number }
         redirect_to card_draft_path(card)
       end
 
       format.json do
         card = @board.cards.create! card_params.merge(creator: Current.user, status: "published")
+        capture_posthog_event "card_created", properties: { board_id: @board.id, card_number: card.number }
         head :created, location: card_path(card, format: :json)
       end
     end
@@ -32,6 +34,7 @@ class CardsController < ApplicationController
 
   def update
     @card.update! card_params
+    capture_posthog_event "card_updated", properties: { board_id: @card.board_id, card_number: @card.number }
 
     respond_to do |format|
       format.turbo_stream

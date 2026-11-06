@@ -13,6 +13,7 @@ class Account::ImportsController < ApplicationController
     signup = Signup.new(identity: Current.identity, full_name: "Import", skip_account_seeding: true)
 
     if signup.complete
+      capture_posthog_event "account_import_started", properties: { account_id: signup.account.id }, user: signup.user
       start_import(signup.account)
     else
       render :new, alert: "Couldn't create account."
