@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
+import posthog from 'posthog-js';
 
 type ActionState = {
   error?: string;
@@ -60,7 +61,17 @@ function ManageSubscription() {
                   : 'No active subscription'}
               </p>
             </div>
-            <form action={customerPortalAction}>
+            <form
+              action={customerPortalAction}
+              onSubmit={() => {
+                if (
+                  process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                  process.env.NEXT_PUBLIC_POSTHOG_HOST
+                ) {
+                  posthog.capture('subscription_portal_opened');
+                }
+              }}
+            >
               <Button type="submit" variant="outline">
                 Manage Subscription
               </Button>
@@ -154,7 +165,17 @@ function TeamMembers() {
                 </div>
               </div>
               {index > 1 ? (
-                <form action={removeAction}>
+                <form
+                  action={removeAction}
+                  onSubmit={() => {
+                    if (
+                      process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+                      process.env.NEXT_PUBLIC_POSTHOG_HOST
+                    ) {
+                      posthog.capture('team_member_removed');
+                    }
+                  }}
+                >
                   <input type="hidden" name="memberId" value={member.id} />
                   <Button
                     type="submit"
@@ -201,7 +222,20 @@ function InviteTeamMember() {
         <CardTitle>Invite Team Member</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={inviteAction} className="space-y-4">
+        <form
+          action={inviteAction}
+          className="space-y-4"
+          onSubmit={(event) => {
+            if (
+              process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+              process.env.NEXT_PUBLIC_POSTHOG_HOST
+            ) {
+              posthog.capture('team_member_invited', {
+                role: new FormData(event.currentTarget).get('role')
+              });
+            }
+          }}
+        >
           <div>
             <Label htmlFor="email" className="mb-2">
               Email

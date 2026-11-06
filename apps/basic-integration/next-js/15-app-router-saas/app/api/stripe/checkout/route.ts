@@ -3,8 +3,10 @@ import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { posthogLog, posthogLogProvider, SeverityNumber } from '@/instrumentation';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -89,6 +91,14 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+
+    posthogLog.emit({
+      body: 'billing_checkout_completed',
+      severityNumber: SeverityNumber.INFO,
+      attributes: { subscription_status: subscription.status },
+    });
+    after(() => posthogLogProvider.forceFlush().catch(() => {}));
+
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
