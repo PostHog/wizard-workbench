@@ -1,6 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import { captureServerEvent } from "$lib/server/posthog"
 
 export const actions = {
   toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
@@ -27,6 +28,12 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    await captureServerEvent({
+      distinctId: session.user.id,
+      event: "email_subscription_toggled",
+      properties: { unsubscribed: newUnsubscribedStatus },
+    })
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -70,6 +77,11 @@ export const actions = {
         email,
       })
     }
+
+    await captureServerEvent({
+      distinctId: session.user.id,
+      event: "email_change_requested",
+    })
 
     return {
       email,
@@ -172,6 +184,12 @@ export const actions = {
       })
     }
 
+    await captureServerEvent({
+      distinctId: session.user.id,
+      event: "password_updated",
+      properties: { recovered: Boolean(isRecoverySession) },
+    })
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +238,11 @@ export const actions = {
         currentPassword,
       })
     }
+
+    await captureServerEvent({
+      distinctId: user.id,
+      event: "account_deleted",
+    })
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -303,6 +326,12 @@ export const actions = {
     // If the profile was just created, send an email to the user and admin
     const newProfile =
       priorProfile?.updated_at === null && priorProfileError === null
+
+    await captureServerEvent({
+      distinctId: user.id,
+      event: "profile_saved",
+      properties: { created: newProfile },
+    })
     if (newProfile) {
       await sendAdminEmail({
         subject: "Profile Created",
