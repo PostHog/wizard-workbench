@@ -1,3 +1,4 @@
+import { posthog, posthogLogger } from './posthog.js';
 import { router } from './router.js';
 import { store } from './store.js';
 import { renderLogin } from './pages/login.js';
@@ -20,6 +21,15 @@ function requireAuth(handler) {
   };
 }
 
+const currentUser = store.state.currentUser;
+if (currentUser) {
+  posthog?.identify(currentUser.id, {
+    email: currentUser.email,
+    name: currentUser.name,
+    role: currentUser.role,
+  });
+}
+
 // --- Routes ---
 
 router.on('/login', renderLogin);
@@ -39,4 +49,7 @@ router.notFound(() => {
 
 // --- Start ---
 
+posthogLogger.info('application started', {
+  has_persisted_session: Boolean(currentUser),
+});
 router.start();
