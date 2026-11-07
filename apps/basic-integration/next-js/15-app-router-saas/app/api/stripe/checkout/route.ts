@@ -4,6 +4,12 @@ import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
+import {
+  posthogLogger,
+  posthogLoggerProvider
+} from '@/instrumentation';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
@@ -89,8 +95,25 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    await captureServerEvent(String(user[0].id), 'checkout_completed', {
+      plan_name: (plan.product as Stripe.Product).name,
+      subscription_status: subscription.status
+    });
+    posthogLogger?.emit({
+      body: 'checkout_completed',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        subscription_status: subscription.status
+      }
+    });
+    await posthogLoggerProvider?.forceFlush().catch(() => {});
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
+    posthogLogger?.emit({
+      body: 'checkout_processing_failed',
+      severityNumber: SeverityNumber.ERROR
+    });
+    await posthogLoggerProvider?.forceFlush().catch(() => {});
     console.error('Error handling successful checkout:', error);
     return NextResponse.redirect(new URL('/error', request.url));
   }

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { use, useState, Suspense } from 'react';
+import { use, useEffect, useRef, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
 import {
@@ -15,16 +15,42 @@ import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
+import posthog from 'posthog-js';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: user } = useSWR<User>('/api/user', fetcher);
+  const identifiedUserId = useRef<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const userId = String(user.id);
+    if (identifiedUserId.current === userId) {
+      return;
+    }
+
+    if (identifiedUserId.current) {
+      posthog.reset();
+    }
+
+    posthog.identify(userId, {
+      email: user.email,
+      name: user.name ?? undefined,
+      role: user.role
+    });
+    identifiedUserId.current = userId;
+  }, [user]);
 
   async function handleSignOut() {
     await signOut();
+    posthog.reset();
+    identifiedUserId.current = null;
     mutate('/api/user');
     router.push('/');
   }
