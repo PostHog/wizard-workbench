@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from .models import Project, ActivityLog
@@ -60,6 +61,15 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            posthog_client = settings.POSTHOG_MW_CLIENT
+            if posthog_client is not None:
+                posthog_client.capture('project_created')
+            if settings.POSTHOG_LOGGER is not None:
+                settings.POSTHOG_LOGGER.info(
+                    'project_created',
+                    extra={'operation': 'project_creation'},
+                )
+
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +93,10 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            posthog_client = settings.POSTHOG_MW_CLIENT
+            if posthog_client is not None:
+                posthog_client.capture('project_updated')
+
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -104,6 +118,10 @@ def delete_project(request, pk):
             action='project_deleted',
             description=f'Deleted project: {name}'
         )
+
+        posthog_client = settings.POSTHOG_MW_CLIENT
+        if posthog_client is not None:
+            posthog_client.capture('project_deleted')
 
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
