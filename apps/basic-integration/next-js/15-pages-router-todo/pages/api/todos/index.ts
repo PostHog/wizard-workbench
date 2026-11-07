@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
+import { logTodoOperation } from '@/lib/posthog-logs';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -31,6 +32,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         completed: validatedData.completed,
       });
 
+      logTodoOperation('created');
       return res.status(201).json(newTodo);
     } catch (error) {
       if (error instanceof z.ZodError) {
