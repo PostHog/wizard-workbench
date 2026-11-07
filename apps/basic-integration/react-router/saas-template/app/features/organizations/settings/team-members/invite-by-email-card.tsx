@@ -1,6 +1,7 @@
 import type { SubmissionResult } from "@conform-to/react/future";
 import { useForm } from "@conform-to/react/future";
 import { useEffect } from "react";
+import posthog from "posthog-js";
 import { useTranslation } from "react-i18next";
 import { Form } from "react-router";
 import { useHydrated } from "remix-utils/use-hydrated";
@@ -70,7 +71,16 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(event) => {
+            form.props.onSubmit?.(event);
+            if (!event.defaultPrevented && posthog.__loaded) {
+              posthog.capture("organization_invite_submitted");
+            }
+          }}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

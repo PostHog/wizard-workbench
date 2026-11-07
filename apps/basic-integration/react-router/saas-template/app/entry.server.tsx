@@ -12,6 +12,7 @@ import { ServerRouter } from "react-router";
 import { getInstance } from "./features/localization/i18next-middleware.server";
 import { getEnv, init } from "./utils/env.server";
 import { NonceProvider } from "./utils/nonce-provider";
+import { emitPostHogServerLog } from "./utils/posthog-logs.server";
 
 init();
 global.ENV = getEnv();
@@ -52,6 +53,9 @@ export default async function handleRequest(
   routerContext: RouterContextProvider,
 ) {
   await initializeMockServer();
+  emitPostHogServerLog("server_render_started", {
+    is_spa_mode: entryContext.isSpaMode,
+  });
 
   // Generate a cryptographically random nonce for this request
   const nonce = crypto.randomBytes(nonceLength).toString("hex");
@@ -87,10 +91,16 @@ export default async function handleRequest(
         nonce,
         [readyOption]() {
           shellRendered = true;
+          emitPostHogServerLog("server_render_shell_ready", {
+            render_mode: readyOption,
+          });
           const body = new PassThrough({
             final(callback) {
               clearTimeout(timeoutId);
               timeoutId = undefined;
+              emitPostHogServerLog("server_render_stream_finished", {
+                response_status_code: responseStatusCode,
+              });
               callback();
             },
           });
@@ -107,6 +117,7 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    process.env.VITE_POSTHOG_HOST,
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],
@@ -120,7 +131,9 @@ export default async function handleRequest(
                     "'strict-dynamic'",
                     "'self'",
                     `'nonce-${nonce}'`,
+                    process.env.VITE_POSTHOG_HOST,
                   ],
+                  "worker-src": ["'self'", "blob:"],
                   // Inline event handlers with nonce
                   "script-src-attr": [`'nonce-${nonce}'`],
                 },
