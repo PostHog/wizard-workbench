@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
+import { loggerProvider, posthogLogger } from '@/instrumentation';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -59,6 +61,27 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    if (typeof validatedData.completed === 'boolean') {
+      const posthog = getPostHogClient();
+      if (posthog) {
+        posthog.capture({
+          event: 'todo_completion_changed',
+          properties: { completed: updatedTodo.completed },
+        });
+        await posthog.flush().catch(() => {});
+      }
+
+      posthogLogger.emit({
+        body: 'todo completion change completed',
+        severityText: 'INFO',
+        attributes: {
+          outcome: 'updated',
+          completed: updatedTodo.completed,
+        },
+      });
+      after(() => loggerProvider.forceFlush().catch(() => {}));
+    }
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -93,6 +116,19 @@ export async function DELETE(
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
+
+    const posthog = getPostHogClient();
+    if (posthog) {
+      posthog.capture({ event: 'todo_deleted' });
+      await posthog.flush().catch(() => {});
+    }
+
+    posthogLogger.emit({
+      body: 'todo deletion completed',
+      severityText: 'INFO',
+      attributes: { outcome: 'deleted' },
+    });
+    after(() => loggerProvider.forceFlush().catch(() => {}));
 
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
