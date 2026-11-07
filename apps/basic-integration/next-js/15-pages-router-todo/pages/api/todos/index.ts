@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { flushPostHogLogs, todoApiLogger } from '@/lib/posthog-logs';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -10,7 +12,7 @@ const todoSchema = z.object({
 
 // GET /api/todos - Get all todos
 // POST /api/todos - Create a new todo
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
       const allTodos = getTodos();
@@ -30,6 +32,16 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         description: validatedData.description,
         completed: validatedData.completed,
       });
+
+      todoApiLogger?.emit({
+        body: 'Todo created',
+        severityNumber: SeverityNumber.INFO,
+        attributes: {
+          operation: 'create',
+          completed: newTodo.completed,
+        },
+      });
+      await flushPostHogLogs();
 
       return res.status(201).json(newTodo);
     } catch (error) {
