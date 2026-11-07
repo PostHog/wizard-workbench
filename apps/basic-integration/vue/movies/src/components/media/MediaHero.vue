@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import type { Media } from '../../types'
 import { formatTime, formatVote, getTrailer } from '../../composables/utils'
+import posthog from 'posthog-js'
 
 const props = defineProps<{
   item: Media
@@ -10,6 +11,7 @@ const props = defineProps<{
 const mounted = ref(false)
 const showModal = ref(false)
 const trailerUrl = computed(() => getTrailer(props.item))
+const isPostHogConfigured = Boolean(import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST)
 
 onMounted(() => {
   mounted.value = true
@@ -17,6 +19,13 @@ onMounted(() => {
 
 function playTrailer() {
   if (trailerUrl.value) {
+    if (isPostHogConfigured) {
+      posthog.capture('trailer_started', {
+        media_id: props.item.id,
+        media_type: props.item.media_type,
+        source: 'home_hero',
+      })
+    }
     showModal.value = true
   }
 }

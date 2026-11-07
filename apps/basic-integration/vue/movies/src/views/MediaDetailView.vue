@@ -6,6 +6,7 @@ import { getMedia, getRecommendations } from '../composables/useTMDB'
 import { formatTime, formatVote, getTrailer } from '../composables/utils'
 import MediaCard from '../components/media/MediaCard.vue'
 import CarouselBase from '../components/carousel/CarouselBase.vue'
+import posthog from 'posthog-js'
 
 console.log('MediaDetailView component loaded')
 
@@ -61,6 +62,7 @@ const recommendations = ref<Media[]>([])
 const loading = ref(false)
 const showModal = ref(false)
 const trailerUrl = computed(() => item.value ? getTrailer(item.value) : null)
+const isPostHogConfigured = Boolean(import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST)
 
 async function loadMedia() {
   loading.value = true
@@ -101,6 +103,13 @@ watch(() => route.fullPath, () => {
 
 function playTrailer() {
   if (trailerUrl.value) {
+    if (isPostHogConfigured) {
+      posthog.capture('trailer_started', {
+        media_id: item.value?.id,
+        media_type: type.value,
+        source: 'media_detail',
+      })
+    }
     showModal.value = true
   }
 }
