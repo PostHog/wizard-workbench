@@ -11,6 +11,8 @@ class Signups::CompletionsController < ApplicationController
     @signup = Signup.new(signup_params)
 
     if @signup.complete
+      identify_new_user
+      capture_posthog_event("signup_completed", user: @signup.user)
       welcome_to_account
     else
       invalid_signup
@@ -18,6 +20,17 @@ class Signups::CompletionsController < ApplicationController
   end
 
   private
+    def identify_new_user
+      return unless ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+
+      PostHog.identify(
+        distinct_id: @signup.user.posthog_distinct_id,
+        properties: @signup.user.posthog_properties
+      )
+    rescue StandardError => error
+      Rails.logger.warn("PostHog user identification failed: #{error.message}")
+    end
+
     def signup_params
       params.expect(signup: %i[ full_name ]).with_defaults(identity: Current.identity)
     end

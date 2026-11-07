@@ -16,6 +16,21 @@ class User < ApplicationRecord
   has_many :pinned_cards, through: :pins, source: :card
   has_many :data_exports, class_name: "User::DataExport", dependent: :destroy
 
+  # Used by posthog-rails to associate controller exceptions with this user.
+  # Use the immutable primary key rather than an email address or display name.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  # Person properties are kept off event payloads because they can contain PII.
+  def posthog_properties
+    {
+      email: identity&.email_address,
+      name: name,
+      account_id: account_id
+    }.compact
+  end
+
   def deactivate
     transaction do
       accesses.destroy_all
