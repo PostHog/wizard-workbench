@@ -1,4 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { after } from 'next/server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { flushPostHogLogs, posthogTodoLogger } from '@/instrumentation';
 import { getTodos, createTodo } from '@/lib/data';
 import { z } from 'zod';
 
@@ -30,6 +33,13 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         description: validatedData.description,
         completed: validatedData.completed,
       });
+
+      posthogTodoLogger?.emit({
+        body: 'Todo created',
+        severityNumber: SeverityNumber.INFO,
+        attributes: { operation: 'todo_created' },
+      });
+      after(() => flushPostHogLogs());
 
       return res.status(201).json(newTodo);
     } catch (error) {
