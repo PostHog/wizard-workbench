@@ -1,11 +1,24 @@
 <script setup lang="ts">
 import type { Media } from '~/types'
 
-defineProps<{
+const props = defineProps<{
   item: Media
 }>()
 
 const show = useImageModal()
+const { $posthog } = useNuxtApp()
+
+function openPhoto(photoType: 'backdrop' | 'poster', index: number) {
+  const images = photoType === 'backdrop' ? props.item.images?.backdrops : props.item.images?.posters
+  if (!images)
+    return
+
+  show(images, index)
+  $posthog?.capture('photo_opened', {
+    media_id: props.item.id,
+    photo_type: photoType,
+  })
+}
 </script>
 
 <template>
@@ -25,7 +38,7 @@ const show = useImageModal()
         :item="i"
         class="aspect-16/9"
         w-full
-        @click="show(item.images!.backdrops, idx)"
+        @click="openPhoto('backdrop', idx)"
       />
     </div>
     <div flex mt-10 gap-2 items-baseline>
@@ -42,7 +55,7 @@ const show = useImageModal()
         :key="i.file_path"
         :item="i"
         class="aspect-9/16"
-        @click="show(item.images!.posters, idx)"
+        @click="openPhoto('poster', idx)"
       />
     </div>
   </div>
