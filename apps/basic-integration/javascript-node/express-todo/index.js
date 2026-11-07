@@ -1,4 +1,7 @@
 const express = require('express');
+const { setupExpressErrorHandler } = require('posthog-node');
+const { posthog, shutdownPostHog } = require('./posthog');
+const { emitTodoMutationLog, shutdownPostHogLogs } = require('./posthog-logs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +24,11 @@ app.post('/api/todos', (req, res) => {
 
   const todo = { id: nextId++, title, completed: false };
   todos.push(todo);
+  posthog?.capture({
+    event: 'todo_created',
+    properties: { initial_completion_state: 'incomplete' },
+  });
+  emitTodoMutationLog('created', { initial_completion_state: 'incomplete' });
   res.status(201).json(todo);
 });
 
@@ -34,6 +42,17 @@ app.patch('/api/todos/:id', (req, res) => {
   if (req.body.title !== undefined) todo.title = req.body.title;
   if (req.body.completed !== undefined) todo.completed = req.body.completed;
 
+  posthog?.capture({
+    event: 'todo_updated',
+    properties: {
+      title_updated: req.body.title !== undefined,
+      completion_state_updated: req.body.completed !== undefined,
+    },
+  });
+  emitTodoMutationLog('updated', {
+    title_updated: req.body.title !== undefined,
+    completion_state_updated: req.body.completed !== undefined,
+  });
   res.json(todo);
 });
 
@@ -45,9 +64,19 @@ app.delete('/api/todos/:id', (req, res) => {
   }
 
   todos.splice(index, 1);
+  posthog?.capture({ event: 'todo_deleted' });
+  emitTodoMutationLog('deleted');
   res.status(204).send();
 });
 
+if (posthog) {
+  setupExpressErrorHandler(posthog, app);
+}
+
 app.listen(PORT, () => {
   console.log(`Express todo API running on http://localhost:${PORT}`);
+});
+
+process.once('beforeExit', () => {
+  void Promise.all([shutdownPostHog(), shutdownPostHogLogs()]);
 });
