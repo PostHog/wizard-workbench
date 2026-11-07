@@ -5,8 +5,13 @@ const props = defineProps<{
   item: Video
 }>()
 
+const { $posthog } = useNuxtApp()
 const showModal = useIframeModal()
 function play() {
+  $posthog?.capture('video_played', {
+    video_id: props.item.id,
+    video_type: props.item.type,
+  })
   return showModal(getVideoLink(props.item)!)
 }
 </script>
