@@ -8,3 +8,7 @@ jinja2>=3.0.0
 python-multipart>=0.0.9
 werkzeug>=3.0.0
 itsdangerous>=2.0.0
+posthog==7.86.0
+opentelemetry-api==1.45.2
+opentelemetry-sdk==1.45.2
+opentelemetry-exporter-otlp==1.45.2
