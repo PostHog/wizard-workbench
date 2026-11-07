@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react'
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
 
@@ -11,14 +11,54 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const isPostHogConfigured = Boolean(
+  import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN && import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
+  const identifiedUserId = useRef<string | null>(null)
 
   useEffect(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
   }, [])
+
+  useEffect(() => {
+    if (!isPostHogConfigured) return
+
+    if (!user) {
+      if (identifiedUserId.current) {
+        identifiedUserId.current = null
+        void import('posthog-js').then(({ default: posthog }) => {
+          posthog.reset()
+        })
+      }
+      return
+    }
+
+    if (identifiedUserId.current === user.id) return
+
+    let cancelled = false
+
+    void import('posthog-js').then(({ default: posthog }) => {
+      if (cancelled) return
+
+      if (identifiedUserId.current && identifiedUserId.current !== user.id) {
+        posthog.reset()
+      }
+
+      posthog.identify(user.id, {
+        email: user.email,
+        username: user.username,
+      })
+      identifiedUserId.current = user.id
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
@@ -41,6 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    identifiedUserId.current = null
+    if (isPostHogConfigured) {
+      void import('posthog-js').then(({ default: posthog }) => {
+        posthog.reset()
+      })
+    }
     fakeLogout()
     setUser(null)
   }
