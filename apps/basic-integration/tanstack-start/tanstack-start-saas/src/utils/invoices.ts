@@ -130,7 +130,11 @@ export const createInvoiceFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     console.info('Creating invoice...', data)
-    return createInvoice(data)
+    const invoice = createInvoice(data)
+    await import('./posthog-invoice-logger')
+      .then(({ logInvoiceCreated }) => logInvoiceCreated())
+      .catch(() => {})
+    return invoice
   })
 
 export const markInvoicePaid = createServerFn({ method: 'POST' })
@@ -145,5 +149,8 @@ export const markInvoicePaid = createServerFn({ method: 'POST' })
     if (!invoice) {
       throw new Error('Invoice not found')
     }
+    await import('./posthog-invoice-logger')
+      .then(({ logInvoiceMarkedPaid }) => logInvoiceMarkedPaid())
+      .catch(() => {})
     return invoice
   })
