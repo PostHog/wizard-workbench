@@ -9,6 +9,10 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
-    "fastify": "^5.2.0"
+    "@opentelemetry/exporter-logs-otlp-http": "^0.301.0",
+    "@opentelemetry/resources": "^3.1.0",
+    "@opentelemetry/sdk-logs": "^3.1.0",
+    "fastify": "^5.2.0",
+    "posthog-node": "^5.63.1"
   }
 }
