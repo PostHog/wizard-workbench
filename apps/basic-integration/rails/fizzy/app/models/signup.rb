@@ -26,6 +26,7 @@ class Signup
       begin
         @tenant = create_tenant
         create_account
+        PostHogLogs.info("signup_account_created", { "template_seeded" => !skip_account_seeding })
         true
       rescue => error
         destroy_account
