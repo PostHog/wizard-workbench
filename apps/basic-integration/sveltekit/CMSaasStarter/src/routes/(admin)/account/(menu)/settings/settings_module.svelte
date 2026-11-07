@@ -2,6 +2,7 @@
   import { enhance, applyAction } from "$app/forms"
   import { page } from "$app/stores"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import posthog from "posthog-js"
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -57,8 +58,19 @@
       await applyAction(result)
       loading = false
       if (result.type === "success") {
+        if (posthog.__loaded) {
+          posthog.capture("account_settings_saved", {
+            settings_action: formTarget.split("?/")[1] ?? "unknown",
+          })
+        }
         showSuccess = true
       }
+    }
+  }
+
+  const captureBillingPortalOpened = () => {
+    if (editLink === "/account/billing/manage" && posthog.__loaded) {
+      posthog.capture("billing_portal_opened")
     }
   }
 </script>
@@ -146,7 +158,7 @@
           </div>
         {:else if editButtonTitle && editLink}
           <!-- !editable -->
-          <a href={editLink} class="mt-1">
+          <a href={editLink} class="mt-1" onclick={captureBillingPortalOpened}>
             <button
               class="btn btn-outline btn-sm {dangerous
                 ? 'btn-error'

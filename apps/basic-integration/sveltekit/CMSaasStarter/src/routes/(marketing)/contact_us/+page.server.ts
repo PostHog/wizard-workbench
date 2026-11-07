@@ -1,5 +1,9 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import {
+  flushContactWorkflowLogs,
+  logContactWorkflow,
+} from "$lib/server/posthog-logs"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -69,10 +73,14 @@ export const actions = {
       return fail(500, { errors: { _: "Error saving" } })
     }
 
+    logContactWorkflow("Contact request persisted", "persisted")
+
     // Send email to admin
     await sendAdminEmail({
       subject: "New contact request",
       body: `New contact request from ${firstName} ${lastName}.\n\nEmail: ${email}\n\nPhone: ${phone}\n\nCompany: ${company}\n\nMessage: ${message}`,
     })
+    logContactWorkflow("Contact request notification attempted", "notification_attempted")
+    await flushContactWorkflowLogs()
   },
 }
