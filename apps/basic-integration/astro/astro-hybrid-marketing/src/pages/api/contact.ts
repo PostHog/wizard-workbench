@@ -1,4 +1,6 @@
 import type { APIRoute } from 'astro';
+import { getPostHogLogger } from '../../lib/posthog-logs';
+import { getPostHogServer } from '../../lib/posthog-server';
 
 export const prerender = false;
 
@@ -13,9 +15,23 @@ interface ContactFormData {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const data: ContactFormData = await request.json();
+    const distinctId = request.headers.get('X-PostHog-Distinct-Id');
+    const sessionId = request.headers.get('X-PostHog-Session-Id');
+    const logger = getPostHogLogger();
 
     // Validate required fields
     if (!data.name || !data.email || !data.interest || !data.message) {
+      logger?.emit({
+        severityText: 'WARN',
+        body: 'contact form submission rejected',
+        attributes: {
+          event: 'contact_form_submission',
+          outcome: 'rejected',
+          reason: 'missing_required_fields',
+          posthogDistinctId: distinctId ?? undefined,
+          sessionId: sessionId ?? undefined,
+        },
+      });
       return new Response(
         JSON.stringify({ error: 'Please fill in all required fields.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -25,6 +41,17 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.email)) {
+      logger?.emit({
+        severityText: 'WARN',
+        body: 'contact form submission rejected',
+        attributes: {
+          event: 'contact_form_submission',
+          outcome: 'rejected',
+          reason: 'invalid_email_format',
+          posthogDistinctId: distinctId ?? undefined,
+          sessionId: sessionId ?? undefined,
+        },
+      });
       return new Response(
         JSON.stringify({ error: 'Please enter a valid email address.' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -45,6 +72,33 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    const posthog = getPostHogServer();
+
+    if (posthog && distinctId) {
+      posthog.capture({
+        distinctId,
+        event: 'contact_form_submitted',
+        properties: {
+          interest: data.interest,
+          source: 'contact_api',
+          $session_id: sessionId ?? undefined,
+        },
+      });
+      await posthog.flush().catch(() => {});
+    }
+
+    logger?.emit({
+      severityText: 'INFO',
+      body: 'contact form submission accepted',
+      attributes: {
+        event: 'contact_form_submission',
+        outcome: 'accepted',
+        interest: data.interest,
+        posthogDistinctId: distinctId ?? undefined,
+        sessionId: sessionId ?? undefined,
+      },
+    });
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -53,6 +107,14 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    getPostHogLogger()?.emit({
+      severityText: 'ERROR',
+      body: 'contact form submission failed',
+      attributes: {
+        event: 'contact_form_submission',
+        outcome: 'failed',
+      },
+    });
     console.error('Contact form error:', error);
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
