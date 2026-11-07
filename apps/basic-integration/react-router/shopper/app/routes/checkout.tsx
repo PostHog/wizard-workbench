@@ -42,7 +42,51 @@ export default function Checkout() {
     e.preventDefault();
     setIsProcessing(true);
 
+    if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST) {
+      void import("posthog-js")
+        .then(({ default: posthog }) => {
+          posthog.logger.info("checkout_processing_started", {
+            item_count: cart.length,
+            total_quantity: cart.reduce(
+              (total, item) => total + item.quantity,
+              0,
+            ),
+            subtotal: getCartTotal(),
+          });
+        })
+        .catch(() => undefined);
+    }
+
     setTimeout(() => {
+      const subtotal = getCartTotal();
+
+      if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST) {
+        void import("posthog-js")
+          .then(({ default: posthog }) => {
+            posthog.capture("checkout_completed", {
+              item_count: cart.length,
+              total_quantity: cart.reduce(
+                (total, item) => total + item.quantity,
+                0,
+              ),
+              subtotal,
+              tax: subtotal * 0.1,
+              total: subtotal * 1.1,
+            });
+            posthog.logger.info("checkout_completed", {
+              item_count: cart.length,
+              total_quantity: cart.reduce(
+                (total, item) => total + item.quantity,
+                0,
+              ),
+              subtotal,
+              tax: subtotal * 0.1,
+              total: subtotal * 1.1,
+            });
+          })
+          .catch(() => undefined);
+      }
+
       clearCart();
       setIsProcessing(false);
       alert("Order placed successfully! Thank you for your purchase.");

@@ -6,10 +6,36 @@ export default function Cart() {
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+
+    if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST) {
+      void import("posthog-js")
+        .then(({ default: posthog }) => {
+          posthog.capture("cart_item_removed", {
+            product_id: item.id,
+            product_category: item.category,
+            price: item.price,
+            quantity: item.quantity,
+          });
+        })
+        .catch(() => undefined);
+    }
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+
+    if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST) {
+      void import("posthog-js")
+        .then(({ default: posthog }) => {
+          posthog.capture("cart_quantity_updated", {
+            product_id: item.id,
+            product_category: item.category,
+            previous_quantity: item.quantity,
+            quantity: newQuantity,
+          });
+        })
+        .catch(() => undefined);
+    }
   };
 
   if (cart.length === 0) {

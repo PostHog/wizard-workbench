@@ -19,6 +19,20 @@ export default function Products({ loaderData }: Route.ComponentProps) {
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+
+    if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST) {
+      void import("posthog-js")
+        .then(({ default: posthog }) => {
+          posthog.capture("product_added_to_cart", {
+            product_id: product.id,
+            product_category: product.category,
+            price: product.price,
+            quantity: 1,
+            source: "product_catalog",
+          });
+        })
+        .catch(() => undefined);
+    }
   };
 
   const handleSearch = (term: string) => {

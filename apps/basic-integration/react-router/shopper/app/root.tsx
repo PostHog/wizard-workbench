@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -54,6 +55,23 @@ export default function App() {
   );
 }
 
+function CaptureRouteException({ error }: { error: Error }) {
+  const hasCaptured = useRef(false);
+
+  useEffect(() => {
+    if (hasCaptured.current) return;
+
+    hasCaptured.current = true;
+    void import("posthog-js")
+      .then(({ default: posthog }) => {
+        posthog.captureException(error);
+      })
+      .catch(() => undefined);
+  }, [error]);
+
+  return null;
+}
+
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = "Oops!";
   let details = "An unexpected error occurred.";
@@ -72,6 +90,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 
   return (
     <main className="pt-16 p-4 container mx-auto">
+      {error instanceof Error && <CaptureRouteException error={error} />}
       <h1>{message}</h1>
       <p>{details}</p>
       {stack && (
