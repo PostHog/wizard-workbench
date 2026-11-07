@@ -20,6 +20,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider, usePostHog } from '@posthog/react'
 import { z } from 'zod'
 import {
   fetchInvoiceById,
@@ -79,6 +80,49 @@ const rootRoute = createRootRouteWithContext<{
   component: RootComponent,
 })
 
+const posthogApiKey = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
+
+function AnalyticsProvider({ children }: { children: React.ReactNode }) {
+  if (!posthogApiKey) {
+    if (import.meta.env.DEV) {
+      throw new Error(
+        'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_PROJECT_TOKEN is configured',
+      )
+    }
+
+    return <>{children}</>
+  }
+
+  if (!posthogHost) {
+    if (import.meta.env.DEV) {
+      throw new Error(
+        'VITE_PUBLIC_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_HOST is configured',
+      )
+    }
+
+    return <>{children}</>
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={posthogApiKey}
+      options={{
+        api_host: posthogHost,
+        defaults: '2025-11-30',
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+        logs: {
+          serviceName: 'cloudflow-web',
+          environment: import.meta.env.MODE,
+        },
+      }}
+    >
+      {children}
+    </PostHogProvider>
+  )
+}
+
 function RouterSpinner() {
   const isLoading = useRouterState({ select: (s) => s.status === 'pending' })
   return <Spinner show={isLoading} />
@@ -86,8 +130,9 @@ function RouterSpinner() {
 
 function RootComponent() {
   return (
-    <>
-      <div className={`min-h-screen flex flex-col`}>
+    <AnalyticsProvider>
+      <>
+        <div className={`min-h-screen flex flex-col`}>
         <div className={`flex items-center border-b gap-2 bg-white dark:bg-gray-800 shadow-sm`}>
           <div className={`flex items-center gap-2 p-3`}>
             <div className={`w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center`}>
@@ -131,8 +176,9 @@ function RootComponent() {
           </div>
         </div>
       </div>
-      <TanStackRouterDevtools position="bottom-right" />
-    </>
+        <TanStackRouterDevtools position="bottom-right" />
+      </>
+    </AnalyticsProvider>
   )
 }
 
@@ -433,9 +479,19 @@ const invoicesIndexRoute = createRoute({
 })
 
 function InvoicesIndexComponent() {
+  const posthog = usePostHog()
+  const logger = posthog.logger
   const createInvoiceMutation = useMutation({
     fn: postInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data }) => {
+      posthog.capture('invoice_created', { invoice_id: data.id })
+      logger.info('invoice created', {
+        operation: 'invoice_create',
+        invoice_id: data.id,
+        outcome: 'succeeded',
+      })
+      router.invalidate()
+    },
   })
 
   return (
@@ -517,9 +573,20 @@ function InvoiceComponent() {
   const search = invoiceRoute.useSearch()
   const navigate = useNavigate({ from: invoiceRoute.fullPath })
   const invoice = invoiceRoute.useLoaderData()
+  const posthog = usePostHog()
+  const logger = posthog.logger
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
-    onSuccess: () => router.invalidate(),
+    onSuccess: ({ data }) => {
+      const invoiceId = data?.id ?? invoice.id
+      posthog.capture('invoice_updated', { invoice_id: invoiceId })
+      logger.info('invoice updated', {
+        operation: 'invoice_update',
+        invoice_id: invoiceId,
+        outcome: 'succeeded',
+      })
+      router.invalidate()
+    },
   })
   const [notes, setNotes] = React.useState(search.notes ?? '')
   React.useEffect(() => {
@@ -1093,6 +1160,8 @@ const loginRoute = createRoute({
 })
 
 function LoginComponent() {
+  const posthog = usePostHog()
+  const logger = posthog.logger
   const router = useRouter()
   const { auth, status } = loginRoute.useRouteContext({
     select: ({ auth }) => ({ auth, status: auth.status }),
@@ -1103,6 +1172,11 @@ function LoginComponent() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     auth.login(username)
+    posthog.capture('user_logged_in')
+    logger.info('user signed in', {
+      operation: 'login',
+      outcome: 'succeeded',
+    })
     router.invalidate()
   }
 
