@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
+import { callPostHog, posthogLogger } from '../../../config/posthog';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
 
 import {
@@ -41,6 +42,11 @@ export function* signIn({ payload }) {
     if (email === 'demo@test.com' && password === 'demo') {
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
       yield put(signInSuccess(DEMO_TOKEN));
+      // The session response has no stable user ID, so email is the only available fallback.
+      // It is sent as a person property as well, never as an event property.
+      callPostHog('identify', email, { email });
+      callPostHog('capture', 'user_signed_in', { is_demo_mode: true });
+      posthogLogger.info('sign_in_completed', { is_demo_mode: true });
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
       toast.showSuccess('Welcome to demo mode!');
@@ -53,6 +59,11 @@ export function* signIn({ payload }) {
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
     yield put(signInSuccess(response.data.token));
+    // The session response exposes no stable user ID, so email is the only available fallback.
+    // It is sent as a person property as well, never as an event property.
+    callPostHog('identify', email, { email });
+    callPostHog('capture', 'user_signed_in', { is_demo_mode: false });
+    posthogLogger.info('sign_in_completed', { is_demo_mode: false });
     NavigationService.navigate('Main');
   } catch (err) {
     toast.showError('Invalid credentials');
@@ -60,6 +71,8 @@ export function* signIn({ payload }) {
 }
 
 export function* signOut() {
+  callPostHog('capture', 'user_signed_out');
+  callPostHog('reset');
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
