@@ -3,11 +3,27 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoTeams } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
+import { logWorkspaceOperation } from '../../../config/posthogLogger';
 
 import { getTeamsSuccess, createTeamSuccess, closeTeamModal } from './actions';
 import { getProjectsRequest } from '../projects/actions';
 import { getMembers } from '../members/sagas';
 import { getPermissions } from '../auth/sagas';
+
+function capturePostHog(event, properties) {
+  if (!posthog) {
+    return;
+  }
+
+  try {
+    posthog.capture(event, properties);
+  } catch (error) {
+    if (__DEV__) {
+      console.error(`PostHog could not capture ${event}`, error);
+    }
+  }
+}
 
 export function* getTeams() {
   const token = yield select(state => state.auth.token);
@@ -34,6 +50,11 @@ export function* createTeam({ payload }) {
       const newTeam = { id: Date.now(), name, slug };
       yield put(createTeamSuccess(newTeam));
       yield put(closeTeamModal());
+      capturePostHog('team_created', { creation_mode: 'demo' });
+      logWorkspaceOperation('workspace team creation completed', {
+        operation: 'team_creation',
+        creation_mode: 'demo',
+      });
       toast.showSuccess('Team created');
       return;
     }
@@ -42,6 +63,11 @@ export function* createTeam({ payload }) {
 
     yield put(createTeamSuccess(response.data));
     yield put(closeTeamModal());
+    capturePostHog('team_created', { creation_mode: 'api' });
+    logWorkspaceOperation('workspace team creation completed', {
+      operation: 'team_creation',
+      creation_mode: 'api',
+    });
 
     toast.showSuccess('Team created');
   } catch (err) {
@@ -53,6 +79,7 @@ export function* selectActiveTeam({ payload }) {
   const { team } = payload;
 
   yield call([AsyncStorage, 'setItem'], '@Omni:team', JSON.stringify(team));
+  capturePostHog('team_selected');
 
   yield put(getProjectsRequest());
 }

@@ -2,12 +2,28 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import { isDemoMode, demoProjects } from '../../../services/demoData';
+import { posthog } from '../../../config/posthog';
+import { logWorkspaceOperation } from '../../../config/posthogLogger';
 
 import {
   getProjectsSuccess,
   createProjectSuccess,
   closeProjectModal,
 } from './actions';
+
+function capturePostHog(event, properties) {
+  if (!posthog) {
+    return;
+  }
+
+  try {
+    posthog.capture(event, properties);
+  } catch (error) {
+    if (__DEV__) {
+      console.error(`PostHog could not capture ${event}`, error);
+    }
+  }
+}
 
 export function* getProjects() {
   const token = yield select(state => state.auth.token);
@@ -35,6 +51,11 @@ export function* createProject({ payload }) {
       const newProject = { id: Date.now(), title };
       yield put(createProjectSuccess(newProject));
       yield put(closeProjectModal());
+      capturePostHog('project_created', { creation_mode: 'demo' });
+      logWorkspaceOperation('workspace project creation completed', {
+        operation: 'project_creation',
+        creation_mode: 'demo',
+      });
       toast.showSuccess('Project created');
       return;
     }
@@ -43,6 +64,11 @@ export function* createProject({ payload }) {
 
     yield put(createProjectSuccess(response.data));
     yield put(closeProjectModal());
+    capturePostHog('project_created', { creation_mode: 'api' });
+    logWorkspaceOperation('workspace project creation completed', {
+      operation: 'project_creation',
+      creation_mode: 'api',
+    });
 
     toast.showSuccess('Project created');
   } catch (err) {
