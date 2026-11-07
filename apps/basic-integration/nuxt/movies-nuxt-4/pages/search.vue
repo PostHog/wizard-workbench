@@ -7,6 +7,7 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
+const { $posthogLogger } = useNuxtApp()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
@@ -21,6 +22,11 @@ function search() {
   currentSearch.value = input.value.toString()
   count.value = undefined
   items.value = []
+
+  const queryLength = currentSearch.value.trim().length
+  if (queryLength)
+    useNuxtApp().$posthog?.capture('search_performed', { query_length: queryLength })
+
   router.replace({ query: { s: input.value } })
 }
 
@@ -31,9 +37,16 @@ async function fetch(page: number) {
     const data = await searchShows(currentSearch.value, page)
     count.value = data.total_results ?? count.value
     items.value.push(...data.results)
+    $posthogLogger?.info('Movie search results loaded', {
+      page,
+      result_count: data.results.length,
+    })
   }
   catch (e: any) {
     error.value = e
+    $posthogLogger?.error('Movie search results failed to load', {
+      page,
+    })
   }
 }
 
