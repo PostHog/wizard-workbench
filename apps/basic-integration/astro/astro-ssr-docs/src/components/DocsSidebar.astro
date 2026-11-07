@@ -43,6 +43,7 @@ const sections = [
             <a
               href={link.href}
               class:list={["sidebar-link", { active: currentPath === link.href }]}
+              data-documentation-section={section.title}
             >
               {link.label}
             </a>
@@ -52,3 +53,21 @@ const sections = [
     </div>
   ))}
 </aside>
+
+<script is:inline>
+  document.querySelectorAll('[data-documentation-section]').forEach((link) => {
+    link.addEventListener('click', () => {
+      const section = link.dataset.documentationSection;
+      const destination = link.getAttribute('href');
+
+      window.posthog?.capture('documentation_section_selected', {
+        section,
+        destination,
+      });
+      window.posthog?.logger?.info('documentation section selected', {
+        section,
+        destination,
+      });
+    });
+  });
+</script>
