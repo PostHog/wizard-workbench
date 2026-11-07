@@ -7,6 +7,8 @@ import {
   updateTeamSubscription
 } from '@/lib/db/queries';
 import { stripeStub } from './stripe-stub';
+import { captureServerEvent } from '@/lib/posthog-server';
+import { emitPostHogLog } from '@/lib/posthog-logs';
 
 // Use stub if STRIPE_MODE=stub or if STRIPE_SECRET_KEY is missing/invalid
 const useStub =
@@ -56,6 +58,13 @@ export async function createCheckoutSession({
     }
   });
 
+  await captureServerEvent(String(user.id), 'checkout_started');
+  emitPostHogLog('checkout session created', {
+    event: 'checkout.session_created',
+    posthogDistinctId: String(user.id),
+    provider: 'stripe',
+    status: 'success'
+  });
   redirect(session.url!);
 }
 
