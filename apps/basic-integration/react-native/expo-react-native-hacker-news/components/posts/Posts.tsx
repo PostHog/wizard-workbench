@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { FlatList, ListRenderItem, View } from "react-native";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import { Post } from "@/components/posts/Post";
 import { Spinner } from "@/components/Spinner";
+import { posthogLogger } from "@/lib/posthog";
 
 import type { Item } from "@/shared/types";
 import { getItemDetails } from "@/api/endpoints";
@@ -37,7 +38,7 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
     },
   });
 
-  const { data, hasNextPage, fetchNextPage, isLoading } = useInfiniteQuery({
+  const { data, hasNextPage, fetchNextPage, isError, isLoading } = useInfiniteQuery({
     queryKey: ["storyDetails", storyType],
     queryFn: async ({ pageParam = 0 }) => {
       if (!storyListQuery.data) return [];
@@ -70,6 +71,25 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
       .flat()
       .filter(({ dead, deleted }) => dead !== true && deleted !== true);
   }, [data]);
+
+  useEffect(() => {
+    if (!posts) return;
+
+    posthogLogger.info("story_feed_page_loaded", {
+      story_type: storyType,
+      story_count: posts.length,
+    });
+  }, [posts, storyType]);
+
+  const storyFeedFailed = storyListQuery.isError || isError;
+
+  useEffect(() => {
+    if (!storyFeedFailed) return;
+
+    posthogLogger.warn("story_feed_load_failed", {
+      story_type: storyType,
+    });
+  }, [storyFeedFailed, storyType]);
 
   return (
     <FlatList
