@@ -3,6 +3,7 @@ import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import posthog from "posthog-js";
 import { Form, href, Link, useNavigation } from "react-router";
 
 import type { Interval, Tier } from "./billing-constants";
@@ -97,6 +98,12 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () => {
+        posthog.capture("subscription_checkout_started", {
+          billing_interval: interval,
+          plan_tier: tier,
+        });
+      },
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };

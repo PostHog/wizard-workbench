@@ -44,6 +44,7 @@ import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
 import { badRequest, conflict, forbidden } from "~/utils/http-responses.server";
+import { logPostHogInfo } from "~/utils/posthog-logger.server";
 import { createToastHeaders } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -157,6 +158,11 @@ export async function billingAction({
           priceId: price.stripeId,
           purchasedById: user.id,
           seatsUsed: organization._count.memberships,
+        });
+
+        logPostHogInfo("subscription checkout session created", {
+          action: "subscription_checkout_session_created",
+          seat_count: organization._count.memberships,
         });
 
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL

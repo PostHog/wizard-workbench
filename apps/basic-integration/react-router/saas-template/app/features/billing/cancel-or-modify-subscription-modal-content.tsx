@@ -2,6 +2,7 @@ import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import posthog from "posthog-js";
 import { Form, href, Link } from "react-router";
 
 import type { Interval, Tier } from "./billing-constants";
@@ -81,9 +82,23 @@ export function CancelOrModifySubscriptionModalContent({
     if (isCurrentTier) {
       if (interval !== currentTierInterval) {
         return interval === "annual"
-          ? { children: tModal("switchToAnnualButton") }
+          ? {
+              children: tModal("switchToAnnualButton"),
+              onClick: () => {
+                posthog.capture("subscription_change_requested", {
+                  billing_interval: interval,
+                  plan_tier: tier,
+                });
+              },
+            }
           : {
               children: tModal("switchToMonthlyButton"),
+              onClick: () => {
+                posthog.capture("subscription_change_requested", {
+                  billing_interval: interval,
+                  plan_tier: tier,
+                });
+              },
               variant: "outline",
             };
       }
@@ -112,9 +127,19 @@ export function CancelOrModifySubscriptionModalContent({
     }
 
     // 3. Default static buttons for upgrade vs downgrade
-    return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+    return {
+      children: isUpgrade
+        ? tModal("upgradeButton")
+        : tModal("downgradeButton"),
+      disabled: isUpgrade ? isSubmitting : undefined,
+      onClick: () => {
+        posthog.capture("subscription_change_requested", {
+          billing_interval: interval,
+          plan_tier: tier,
+        });
+      },
+      ...(isUpgrade ? {} : { variant: "outline" }),
+    };
   };
 
   return (
@@ -515,7 +540,10 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={(event) => {
+                  posthog.capture("subscription_cancellation_requested");
+                  onCancelSubscriptionClick?.(event);
+                }}
                 type="button"
                 variant="outline"
               >
