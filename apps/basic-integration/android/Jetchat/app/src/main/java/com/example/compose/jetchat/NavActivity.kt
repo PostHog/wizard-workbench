@@ -83,6 +83,8 @@ class NavActivity : AppCompatActivity() {
                         LoginScreen(
                             onLogin = { username, password ->
                                 viewModel.login(username, password)
+                                JetchatApplication.capture("login_completed")
+                                JetchatApplication.logInfo("Demo login completed")
                             },
                         )
                     } else {
@@ -92,6 +94,7 @@ class NavActivity : AppCompatActivity() {
                             username = loggedInUsername,
                             onChatClicked = {
                                 findNavController().popBackStack(R.id.nav_home, false)
+                                JetchatApplication.capture("conversation_opened")
                                 scope.launch {
                                     drawerState.close()
                                 }
@@ -100,6 +103,7 @@ class NavActivity : AppCompatActivity() {
                             onProfileClicked = {
                                 val bundle = bundleOf("userId" to it)
                                 findNavController().navigate(R.id.nav_profile, bundle)
+                                JetchatApplication.capture("profile_opened")
                                 scope.launch {
                                     drawerState.close()
                                 }
@@ -108,6 +112,8 @@ class NavActivity : AppCompatActivity() {
                             onLogoutClicked = {
                                 viewModel.logout()
                                 findNavController().popBackStack(R.id.nav_home, false)
+                                JetchatApplication.capture("logout_completed")
+                                JetchatApplication.logInfo("Demo logout completed")
                                 scope.launch {
                                     drawerState.close()
                                 }

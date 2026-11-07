@@ -27,6 +27,7 @@ import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.findNavController
+import com.example.compose.jetchat.JetchatApplication
 import com.example.compose.jetchat.MainViewModel
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.data.exampleUiState
@@ -51,6 +52,7 @@ class ConversationFragment : Fragment() {
                                 R.id.nav_profile,
                                 bundle,
                             )
+                            JetchatApplication.capture("profile_opened")
                         },
                         onNavIconPressed = {
                             activityViewModel.openDrawer()
