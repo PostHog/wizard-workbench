@@ -1,8 +1,10 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
+import { usePostHog } from '@posthog/react'
 import * as React from 'react'
 import { z } from 'zod'
 import { InvoiceFields } from '../components/InvoiceFields'
 import { useMutation } from '../hooks/useMutation'
+import { posthogLogger } from '../posthog-logger'
 import { fetchInvoiceById, patchInvoice } from '../utils/mockTodos'
 
 export const Route = createFileRoute('/dashboard/invoices/$invoiceId')({
@@ -28,6 +30,7 @@ function InvoiceComponent() {
   const navigate = useNavigate({ from: Route.fullPath })
   const invoice = Route.useLoaderData()
   const router = useRouter()
+  const posthog = usePostHog()
   const updateInvoiceMutation = useMutation({
     fn: patchInvoice,
     onSuccess: () => router.invalidate(),
@@ -86,15 +89,22 @@ function InvoiceComponent() {
 
         <form
           key={invoice.id}
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
             event.stopPropagation()
             const formData = new FormData(event.target as HTMLFormElement)
-            updateInvoiceMutation.mutate({
+            const updatedInvoice = await updateInvoiceMutation.mutate({
               id: invoice.id,
               title: formData.get('title') as string,
               body: formData.get('body') as string,
             })
+
+            if (updatedInvoice) {
+              posthog.capture('invoice_updated', {
+                invoice_id: updatedInvoice.id,
+              })
+              posthogLogger.invoiceUpdated(updatedInvoice.id)
+            }
           }}
           className="space-y-4"
         >
