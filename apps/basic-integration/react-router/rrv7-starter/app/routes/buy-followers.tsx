@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePostHog } from '@posthog/react'
 import { useNavigate } from 'react-router'
 import { followerPackages } from '@/lib/data/fake-data'
 import type { Route } from './+types/buy-followers'
@@ -19,6 +20,7 @@ export const meta: Route.MetaFunction = () => {
 }
 
 export default function BuyFollowers() {
+  const posthog = usePostHog()
   const navigate = useNavigate()
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
@@ -34,6 +36,15 @@ export default function BuyFollowers() {
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+      posthog?.capture('follower_purchase_completed', {
+        follower_count: totalFollowers,
+        price: pkg.price,
+      })
+      posthog?.logger.info('follower purchase persisted', {
+        follower_count: totalFollowers,
+        price: pkg.price,
+        storage_updated: true,
+      })
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
@@ -75,7 +86,13 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => {
+                  setSelectedPackage(index)
+                  posthog?.capture('follower_package_selected', {
+                    follower_count: totalFollowers,
+                    price: pkg.price,
+                  })
+                }}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected
