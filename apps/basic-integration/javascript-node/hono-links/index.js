@@ -1,7 +1,26 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
+import {
+  posthogLogsLogger,
+  shutdownPostHogLogs,
+} from './posthog-logs.js';
 
 const app = new Hono();
+
+app.onError((err, c) => {
+  if (posthog) {
+    posthog.captureException(err, c.req.header('x-posthog-distinct-id'));
+  }
+
+  posthogLogsLogger?.emit({
+    severityText: 'ERROR',
+    body: 'link request failed',
+    attributes: { event: 'link_request_failed', handler: 'hono_error' },
+  });
+
+  return c.json({ error: 'Internal Server Error' }, 500);
+});
 
 const links = [];
 let nextId = 1;
@@ -47,6 +66,27 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_created',
+      properties: {
+        tag_count: tags.length,
+        has_description: Boolean(description),
+      },
+    });
+  }
+
+  posthogLogsLogger?.emit({
+    severityText: 'INFO',
+    body: 'link created',
+    attributes: {
+      event: 'link_created',
+      tag_count: tags.length,
+      has_description: Boolean(description),
+    },
+  });
+
   return c.json(link, 201);
 });
 
@@ -70,11 +110,49 @@ app.patch('/api/links/:id', async (c) => {
   }
 
   const body = await c.req.json();
-  if (body.url !== undefined) link.url = body.url;
-  if (body.title !== undefined) link.title = body.title;
-  if (body.description !== undefined) link.description = body.description;
-  if (body.tags !== undefined) link.tags = body.tags;
-  if (body.favorite !== undefined) link.favorite = body.favorite;
+  const updatedFields = [];
+  if (body.url !== undefined) {
+    link.url = body.url;
+    updatedFields.push('url');
+  }
+  if (body.title !== undefined) {
+    link.title = body.title;
+    updatedFields.push('title');
+  }
+  if (body.description !== undefined) {
+    link.description = body.description;
+    updatedFields.push('description');
+  }
+  if (body.tags !== undefined) {
+    link.tags = body.tags;
+    updatedFields.push('tags');
+  }
+  if (body.favorite !== undefined) {
+    link.favorite = body.favorite;
+    updatedFields.push('favorite');
+  }
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_updated',
+      properties: {
+        updated_fields: updatedFields,
+        tag_count: link.tags.length,
+        is_favorite: link.favorite,
+      },
+    });
+  }
+
+  posthogLogsLogger?.emit({
+    severityText: 'INFO',
+    body: 'link updated',
+    attributes: {
+      event: 'link_updated',
+      updated_fields: updatedFields,
+      tag_count: link.tags.length,
+      is_favorite: link.favorite,
+    },
+  });
 
   return c.json(link);
 });
@@ -87,7 +165,28 @@ app.delete('/api/links/:id', (c) => {
     return c.json({ error: 'Link not found' }, 404);
   }
 
-  links.splice(index, 1);
+  const [link] = links.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'link_deleted',
+      properties: {
+        tag_count: link.tags.length,
+        was_favorite: link.favorite,
+      },
+    });
+  }
+
+  posthogLogsLogger?.emit({
+    severityText: 'INFO',
+    body: 'link deleted',
+    attributes: {
+      event: 'link_deleted',
+      tag_count: link.tags.length,
+      was_favorite: link.favorite,
+    },
+  });
+
   return c.body(null, 204);
 });
 
@@ -104,6 +203,25 @@ app.get('/api/tags', (c) => {
 
 const PORT = process.env.PORT || 3002;
 
-serve({ fetch: app.fetch, port: PORT }, () => {
+const server = serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Hono links API running on http://localhost:${PORT}`);
 });
+
+let shuttingDown = false;
+
+async function shutdown() {
+  if (shuttingDown) {
+    return;
+  }
+
+  shuttingDown = true;
+  server.close();
+  await Promise.allSettled([
+    posthog?.shutdown(3000),
+    shutdownPostHogLogs(),
+  ]);
+  process.exit(0);
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
