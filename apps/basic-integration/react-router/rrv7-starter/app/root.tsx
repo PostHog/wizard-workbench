@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import {
   isRouteErrorResponse,
   Links,
@@ -17,9 +18,11 @@ import routes from './routes'
 import { promisifyGsap } from '@/lib/gsap'
 import { Header } from '@/components/header'
 import Footer from '@/components/footer'
+import { PostHogInitializer } from '@/components/posthog-initializer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+import { getPostHog } from '@/lib/posthog'
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -73,6 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body suppressHydrationWarning>
+        <PostHogInitializer />
         <Header />
         {children}
         <Footer />
@@ -132,6 +136,12 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  useEffect(() => {
+    if (error instanceof Error) {
+      void getPostHog().then((posthog) => posthog?.captureException(error))
+    }
+  }, [error])
+
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined

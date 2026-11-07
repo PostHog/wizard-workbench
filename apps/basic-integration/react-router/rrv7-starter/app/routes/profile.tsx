@@ -6,15 +6,26 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import { getPostHog } from '@/lib/posthog'
+import { posthogLogger } from '@/lib/posthog-logger'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
   const [isFollowing, setIsFollowing] = useState(false)
 
   const handleClick = () => {
-    setIsFollowing(!isFollowing)
-    if (!isFollowing) {
+    const newFollowingState = !isFollowing
+
+    setIsFollowing(newFollowingState)
+    if (newFollowingState) {
       onFollow()
     }
+    void getPostHog().then((posthog) =>
+      posthog?.capture('follow_back_toggled', { following: newFollowingState })
+    )
+    posthogLogger.info('follow back preference updated', {
+      event: 'follow_back_toggled',
+      following: newFollowingState,
+    })
   }
 
   return (

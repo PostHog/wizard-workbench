@@ -6,6 +6,8 @@ import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { addFollowers, addPurchasedFollowers } from '@/lib/utils/localStorage'
 import cn from '@/lib/utils/cn'
+import { getPostHog } from '@/lib/posthog'
+import { posthogLogger } from '@/lib/posthog-logger'
 
 export const meta: Route.MetaFunction = () => {
   const siteUrl = SITE_URL || 'https://clouthub.fake'
@@ -23,6 +25,19 @@ export default function BuyFollowers() {
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
   const [purchased, setPurchased] = useState(false)
 
+  const handlePackageSelection = (index: number) => {
+    const pkg = followerPackages[index]
+    const totalFollowers = pkg.amount + pkg.bonus
+
+    setSelectedPackage(index)
+    void getPostHog().then((posthog) =>
+      posthog?.capture('follower_package_selected', {
+        follower_total: totalFollowers,
+        package_price: pkg.price,
+      })
+    )
+  }
+
   const handlePurchase = () => {
     if (selectedPackage === null) return
     setPurchased(true)
@@ -34,6 +49,17 @@ export default function BuyFollowers() {
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+      void getPostHog().then((posthog) =>
+        posthog?.capture('fake_followers_purchased', {
+          follower_total: totalFollowers,
+          package_price: pkg.price,
+        })
+      )
+      posthogLogger.info('fake follower purchase persisted', {
+        event: 'fake_followers_purchased',
+        follower_total: totalFollowers,
+        package_price: pkg.price,
+      })
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
@@ -75,7 +101,7 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => handlePackageSelection(index)}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected
