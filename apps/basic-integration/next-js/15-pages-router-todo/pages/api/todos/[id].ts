@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
 import { z } from 'zod';
+import { SeverityNumber, todoLifecycleLogger } from '@/instrumentation';
 
 const updateTodoSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -44,6 +45,12 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(404).json({ error: 'Todo not found' });
       }
 
+      todoLifecycleLogger?.emit({
+        body: 'todo_updated',
+        severityNumber: SeverityNumber.INFO,
+        attributes: { completed: updatedTodo.completed },
+      });
+
       return res.status(200).json(updatedTodo);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -64,6 +71,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       if (!deleted) {
         return res.status(404).json({ error: 'Todo not found' });
       }
+
+      todoLifecycleLogger?.emit({
+        body: 'todo_deleted',
+        severityNumber: SeverityNumber.INFO,
+      });
 
       return res.status(200).json({ message: 'Todo deleted successfully' });
     } catch (error) {

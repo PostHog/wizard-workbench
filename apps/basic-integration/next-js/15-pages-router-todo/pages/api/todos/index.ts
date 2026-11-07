@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
 import { z } from 'zod';
+import { SeverityNumber, todoLifecycleLogger } from '@/instrumentation';
 
 const todoSchema = z.object({
   title: z.string().min(1).max(255),
@@ -29,6 +30,12 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         title: validatedData.title,
         description: validatedData.description,
         completed: validatedData.completed,
+      });
+
+      todoLifecycleLogger?.emit({
+        body: 'todo_created',
+        severityNumber: SeverityNumber.INFO,
+        attributes: { completed: newTodo.completed },
       });
 
       return res.status(201).json(newTodo);
