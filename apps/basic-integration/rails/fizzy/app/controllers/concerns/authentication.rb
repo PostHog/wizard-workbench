@@ -86,9 +86,21 @@ module Authentication
     end
 
     def start_new_session_for(identity)
-      identity.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
-        set_current_session session
-      end
+      session = identity.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip)
+      set_current_session session
+      identify_with_posthog identity
+      session
+    end
+
+    def identify_with_posthog(record)
+      return unless ENV["POSTHOG_PROJECT_TOKEN"].present? && ENV["POSTHOG_HOST"].present?
+
+      PostHog.identify(
+        distinct_id: record.posthog_distinct_id,
+        properties: record.posthog_properties
+      )
+    rescue StandardError => error
+      Rails.logger.warn("PostHog identification failed: #{error.class}")
     end
 
     def set_current_session(session)

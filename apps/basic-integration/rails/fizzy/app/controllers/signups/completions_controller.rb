@@ -11,6 +11,8 @@ class Signups::CompletionsController < ApplicationController
     @signup = Signup.new(signup_params)
 
     if @signup.complete
+      identify_with_posthog @signup.user
+      capture_with_posthog "account_created", actor: Current.identity
       welcome_to_account
     else
       invalid_signup
