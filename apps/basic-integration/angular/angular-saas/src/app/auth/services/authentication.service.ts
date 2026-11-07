@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Observable, of, tap } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PostHogLoggerService, PostHogService } from '@core/services';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,9 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly posthogLogger = inject(PostHogLoggerService);
 
   /**
    * Authenticates the user.
@@ -41,9 +44,40 @@ export class AuthenticationService {
       firstName,
       lastName,
     });
-    this._credentialsService.setCredentials(credentials, context.remember);
+    const previousCredentials = this.credentialsService.credentials();
+    if (previousCredentials && previousCredentials.id !== credentials.id) {
+      this.posthogService.posthog.reset();
+    }
+
+    this.credentialsService.setCredentials(credentials, context.remember);
+    this.identify(credentials);
+    this.posthogService.posthog.capture('user_logged_in', {
+      remember_session: Boolean(context.remember),
+      is_mobile: Boolean(context.isMobile),
+    });
+    this.posthogLogger.loginCompleted(Boolean(context.remember), Boolean(context.isMobile));
 
     return of(credentials);
+  }
+
+  /** Identifies the persisted user after PostHog initializes on page refresh. */
+  identifyCurrentUser(): void {
+    const credentials = this.credentialsService.credentials();
+    if (credentials) {
+      this.identify(credentials);
+    }
+  }
+
+  private identify(credentials: Credentials): void {
+    if (!credentials.id) {
+      return;
+    }
+
+    this.posthogService.posthog.identify(credentials.id, {
+      ...(credentials.email ? { email: credentials.email } : {}),
+      ...(credentials.fullName.trim() ? { name: credentials.fullName.trim() } : {}),
+      ...(credentials.roles.length ? { role: credentials.roles[0] } : {}),
+    });
   }
 
   /**
@@ -86,6 +120,12 @@ export class AuthenticationService {
    * @return True if the user was logged out successfully.
    */
   logout(): Observable<any> {
-    return of(true);
+    return of(true).pipe(
+      tap(() => {
+        this.posthogService.posthog.capture('user_logged_out');
+        this.posthogLogger.logoutCompleted();
+        this.posthogService.posthog.reset();
+      }),
+    );
   }
 }
