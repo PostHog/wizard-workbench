@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { loggerProvider, SeverityNumber, todoApiLogger } from '@/instrumentation';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -59,6 +60,16 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    todoApiLogger.emit({
+      body: 'Todo updated through API',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        todo_id: updatedTodo.id,
+        completed: updatedTodo.completed,
+      },
+    });
+    after(() => loggerProvider.forceFlush().catch(() => undefined));
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -93,6 +104,13 @@ export async function DELETE(
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
+
+    todoApiLogger.emit({
+      body: 'Todo deleted through API',
+      severityNumber: SeverityNumber.INFO,
+      attributes: { todo_id: todoId },
+    });
+    after(() => loggerProvider.forceFlush().catch(() => undefined));
 
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
