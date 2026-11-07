@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
@@ -54,6 +55,11 @@ export function CancelOrModifySubscriptionModalContent({
     keyPrefix: "billingPage.pricingModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const posthog = usePostHog();
+  const isPostHogConfigured = Boolean(
+    import.meta.env.VITE_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_POSTHOG_HOST,
+  );
 
   const isSubmitting =
     isSwitchingToLow || isSwitchingToMid || isSwitchingToHigh;
@@ -77,13 +83,31 @@ export function CancelOrModifySubscriptionModalContent({
       (tier === "mid" && isSwitchingToMid) ||
       (tier === "high" && isSwitchingToHigh);
 
+    const captureSubscriptionChange = () => {
+      if (isPostHogConfigured) {
+        posthog.capture("subscription_change_started", {
+          billing_interval: interval,
+          change_type: isCurrentTier
+            ? "billing_interval"
+            : isUpgrade
+              ? "upgrade"
+              : "downgrade",
+          subscription_tier: tier,
+        });
+      }
+    };
+
     // 1. If this is the current tier but only the billing interval is different
     if (isCurrentTier) {
       if (interval !== currentTierInterval) {
         return interval === "annual"
-          ? { children: tModal("switchToAnnualButton") }
+          ? {
+              children: tModal("switchToAnnualButton"),
+              onClick: captureSubscriptionChange,
+            }
           : {
               children: tModal("switchToMonthlyButton"),
+              onClick: captureSubscriptionChange,
               variant: "outline",
             };
       }
@@ -113,8 +137,16 @@ export function CancelOrModifySubscriptionModalContent({
 
     // 3. Default static buttons for upgrade vs downgrade
     return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+      ? {
+          children: tModal("upgradeButton"),
+          disabled: isSubmitting,
+          onClick: captureSubscriptionChange,
+        }
+      : {
+          children: tModal("downgradeButton"),
+          onClick: captureSubscriptionChange,
+          variant: "outline",
+        };
   };
 
   return (
@@ -515,7 +547,12 @@ export function CancelOrModifySubscriptionModalContent({
               <Button
                 className="@5xl/alert:-translate-y-1/2 @5xl/alert:absolute @5xl/alert:top-1/2 @5xl/alert:right-3 shadow-none"
                 disabled={isSubmitting}
-                onClick={onCancelSubscriptionClick}
+                onClick={(event) => {
+                  if (isPostHogConfigured) {
+                    posthog.capture("subscription_cancellation_started");
+                  }
+                  onCancelSubscriptionClick?.(event);
+                }}
                 type="button"
                 variant="outline"
               >

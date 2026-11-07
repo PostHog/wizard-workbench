@@ -12,9 +12,16 @@ import { ServerRouter } from "react-router";
 import { getInstance } from "./features/localization/i18next-middleware.server";
 import { getEnv, init } from "./utils/env.server";
 import { NonceProvider } from "./utils/nonce-provider";
+import {
+  initializePostHogLogs,
+  logServerRenderCompleted,
+  logServerRenderFailed,
+} from "./utils/posthog-logs.server";
 
 init();
 global.ENV = getEnv();
+
+const posthogLogger = initializePostHogLogs();
 
 export const streamTimeout = 5000;
 
@@ -107,6 +114,7 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    process.env.VITE_POSTHOG_HOST,
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],
@@ -119,8 +127,10 @@ export default async function handleRequest(
                   "script-src": [
                     "'strict-dynamic'",
                     "'self'",
+                    process.env.VITE_POSTHOG_CSP_SCRIPT_SOURCE,
                     `'nonce-${nonce}'`,
                   ],
+                  "worker-src": ["'self'", "blob:"],
                   // Inline event handlers with nonce
                   "script-src-attr": [`'nonce-${nonce}'`],
                 },
@@ -138,6 +148,12 @@ export default async function handleRequest(
             }),
           );
 
+          logServerRenderCompleted(
+            posthogLogger,
+            responseStatusCode,
+            readyOption === "onAllReady" ? "all_ready" : "shell_ready",
+          );
+
           pipe(body);
         },
         onError(error: unknown) {
@@ -147,6 +163,7 @@ export default async function handleRequest(
           // errors encountered during initial shell rendering since they'll
           // reject and get logged in handleDocumentRequest.
           if (shellRendered) {
+            logServerRenderFailed(posthogLogger);
             console.error(error);
           }
         },

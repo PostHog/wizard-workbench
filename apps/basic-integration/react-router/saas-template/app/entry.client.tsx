@@ -4,7 +4,66 @@ import Fetch from "i18next-fetch-backend";
 import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { I18nextProvider, initReactI18next } from "react-i18next";
+import { PostHogErrorBoundary, PostHogProvider } from "@posthog/react";
+import posthog from "posthog-js";
 import { HydratedRouter } from "react-router/dom";
+
+import { createClient as createSupabaseClient } from "./lib/supabase/client";
+
+const posthogProjectToken = import.meta.env.VITE_POSTHOG_PROJECT_TOKEN;
+const posthogHost = import.meta.env.VITE_POSTHOG_HOST;
+
+if (posthogProjectToken && posthogHost) {
+  posthog.init(posthogProjectToken, {
+    api_host: posthogHost,
+    capture_exceptions: {
+      capture_console_errors: false,
+      capture_unhandled_errors: true,
+      capture_unhandled_rejections: true,
+    },
+    defaults: "2026-08-30",
+  });
+
+  const supabase = createSupabaseClient();
+  supabase.auth.onAuthStateChange((event, session) => {
+    const currentUserId = posthog.get_property("$user_id");
+
+    if (event === "SIGNED_OUT" || (event === "INITIAL_SESSION" && !session)) {
+      if (currentUserId) {
+        posthog.reset();
+      }
+      return;
+    }
+
+    if (
+      !session?.user ||
+      (event !== "INITIAL_SESSION" && event !== "SIGNED_IN")
+    ) {
+      return;
+    }
+
+    if (currentUserId && currentUserId !== session.user.id) {
+      posthog.reset();
+    }
+
+    if (event === "INITIAL_SESSION" || currentUserId !== session.user.id) {
+      posthog.identify(
+        session.user.id,
+        session.user.email ? { email: session.user.email } : {},
+      );
+    }
+  });
+} else if (import.meta.env.DEV) {
+  const missingVariable = posthogProjectToken
+    ? "VITE_POSTHOG_HOST"
+    : "VITE_POSTHOG_PROJECT_TOKEN";
+
+  console.error(
+    new Error(
+      `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+    ),
+  );
+}
 
 async function hydrate() {
   await i18next
@@ -23,7 +82,11 @@ async function hydrate() {
       document,
       <I18nextProvider i18n={i18next}>
         <StrictMode>
-          <HydratedRouter />
+          <PostHogProvider client={posthog}>
+            <PostHogErrorBoundary>
+              <HydratedRouter />
+            </PostHogErrorBoundary>
+          </PostHogProvider>
         </StrictMode>
       </I18nextProvider>,
     );
