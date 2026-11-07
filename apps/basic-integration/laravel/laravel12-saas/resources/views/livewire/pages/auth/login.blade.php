@@ -1,6 +1,9 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use App\Models\User;
+use App\Services\PostHogService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -12,11 +15,22 @@ new #[Layout('layouts.guest')] class extends Component
     /**
      * Handle an incoming authentication request.
      */
-    public function login(): void
+    public function login(PostHogService $posthog): void
     {
         $this->validate();
 
         $this->form->authenticate();
+
+        $user = Auth::user();
+
+        if ($user instanceof User) {
+            $distinctId = (string) $user->getAuthIdentifier();
+
+            $posthog->identify($distinctId, $user->getPostHogProperties());
+            $posthog->capture($distinctId, 'user_logged_in', [
+                'login_method' => 'password',
+            ]);
+        }
 
         Session::regenerate();
 
