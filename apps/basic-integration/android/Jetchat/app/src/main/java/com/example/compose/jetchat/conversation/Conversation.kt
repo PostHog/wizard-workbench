@@ -90,6 +90,7 @@ import com.example.compose.jetchat.FunctionalityNotAvailablePopup
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
+import com.example.compose.jetchat.postHogOrNull
 import com.example.compose.jetchat.theme.JetchatTheme
 import kotlinx.coroutines.launch
 
@@ -134,8 +135,19 @@ fun ConversationContent(
                     return false
                 }
 
+                val messageContent = clipData.getItemAt(0).text.toString()
+                postHogOrNull()?.let { postHog ->
+                    postHog.capture(
+                        "message_sent",
+                        mapOf("message_length" to messageContent.length),
+                    )
+                    postHog.logger.info(
+                        "message_submitted",
+                        mapOf("message_length" to messageContent.length),
+                    )
+                }
                 uiState.addMessage(
-                    Message(authorMe, clipData.getItemAt(0).text.toString(), timeNow),
+                    Message(authorMe, messageContent, timeNow),
                 )
 
                 return true
@@ -200,6 +212,16 @@ fun ConversationContent(
             )
             UserInput(
                 onMessageSent = { content ->
+                    postHogOrNull()?.let { postHog ->
+                        postHog.capture(
+                            "message_sent",
+                            mapOf("message_length" to content.length),
+                        )
+                        postHog.logger.info(
+                            "message_submitted",
+                            mapOf("message_length" to content.length),
+                        )
+                    }
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
                     )

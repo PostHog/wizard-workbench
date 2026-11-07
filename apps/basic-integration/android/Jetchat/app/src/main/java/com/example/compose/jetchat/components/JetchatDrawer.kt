@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.data.colleagueProfile
 import com.example.compose.jetchat.data.meProfile
+import com.example.compose.jetchat.postHogOrNull
 import com.example.compose.jetchat.theme.JetchatTheme
 import com.example.compose.jetchat.widget.WidgetReceiver
 
@@ -319,6 +320,7 @@ private fun addWidgetToHomeScreen(context: Context) {
     val appWidgetManager = AppWidgetManager.getInstance(context)
     val myProvider = ComponentName(context, WidgetReceiver::class.java)
     if (widgetAddingIsSupported(context)) {
+        postHogOrNull()?.capture("widget_pin_requested")
         appWidgetManager.requestPinAppWidget(myProvider, null, null)
     }
 }

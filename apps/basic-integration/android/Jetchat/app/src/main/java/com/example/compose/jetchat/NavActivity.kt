@@ -82,6 +82,10 @@ class NavActivity : AppCompatActivity() {
                     if (loggedInUsername == null) {
                         LoginScreen(
                             onLogin = { username, password ->
+                                postHogOrNull()?.let { postHog ->
+                                    postHog.capture("user_logged_in")
+                                    postHog.logger.info("demo_login_completed")
+                                }
                                 viewModel.login(username, password)
                             },
                         )
@@ -91,6 +95,10 @@ class NavActivity : AppCompatActivity() {
                             selectedMenu = selectedMenu,
                             username = loggedInUsername,
                             onChatClicked = {
+                                postHogOrNull()?.let { postHog ->
+                                    postHog.capture("chat_selected")
+                                    postHog.logger.info("drawer_chat_selected")
+                                }
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
                                     drawerState.close()
@@ -98,6 +106,7 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onProfileClicked = {
+                                postHogOrNull()?.capture("profile_viewed")
                                 val bundle = bundleOf("userId" to it)
                                 findNavController().navigate(R.id.nav_profile, bundle)
                                 scope.launch {
@@ -106,6 +115,7 @@ class NavActivity : AppCompatActivity() {
                                 selectedMenu = it
                             },
                             onLogoutClicked = {
+                                postHogOrNull()?.capture("user_logged_out")
                                 viewModel.logout()
                                 findNavController().popBackStack(R.id.nav_home, false)
                                 scope.launch {
