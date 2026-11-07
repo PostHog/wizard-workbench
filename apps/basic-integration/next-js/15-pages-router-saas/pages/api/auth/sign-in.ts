@@ -12,6 +12,8 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
+import { logPostHogInfo } from '@/instrumentation';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -95,12 +97,23 @@ export default async function handler(
       logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
     ]);
 
+    await captureServerEvent(String(foundUser.id), 'user_signed_in');
+    await logPostHogInfo('User sign-in completed', {
+      route: '/api/auth/sign-in',
+      checkout_redirect: redirect === 'checkout'
+    });
+
     if (redirect === 'checkout' && foundTeam) {
       const checkoutResult = await createCheckoutSession({
         team: foundTeam,
         priceId,
         userId: foundUser.id
       });
+
+      await captureServerEvent(String(foundUser.id), 'checkout_started', {
+        entry_point: 'sign_in'
+      });
+
       return res.status(200).json(checkoutResult);
     }
 

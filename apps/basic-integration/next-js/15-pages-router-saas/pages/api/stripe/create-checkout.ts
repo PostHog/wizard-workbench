@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { captureServerEvent } from '@/lib/posthog-server';
+import { logPostHogInfo } from '@/instrumentation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,6 +27,15 @@ export default async function handler(
     }
 
     const result = await createCheckoutSession({ team, priceId, userId: user.id });
+
+    await captureServerEvent(String(user.id), 'checkout_started', {
+      entry_point: 'pricing'
+    });
+    await logPostHogInfo('Checkout session created', {
+      route: '/api/stripe/create-checkout',
+      source: 'pricing'
+    });
+
     return res.status(200).json(result);
   } catch (error) {
     console.error('Checkout error:', error);

@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -166,12 +167,21 @@ export default async function handler(
       setSession(createdUser, res)
     ]);
 
+    await captureServerEvent(String(createdUser.id), 'user_signed_up', {
+      signup_type: inviteId ? 'invitation' : 'self_serve'
+    });
+
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({
         team: createdTeam,
         priceId,
         userId: createdUser.id
       });
+
+      await captureServerEvent(String(createdUser.id), 'checkout_started', {
+        entry_point: 'sign_up'
+      });
+
       return res.status(200).json(checkoutResult);
     }
 
