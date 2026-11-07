@@ -1,5 +1,6 @@
 ---
 import { ViewTransitions } from 'astro:transitions';
+import PostHog from '../components/posthog.astro';
 import Navigation from '../components/Navigation.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/global.css';
@@ -20,6 +21,7 @@ const { title, description = 'NeuralFlow AI - Transform your workflow with intel
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title} | NeuralFlow AI</title>
+    <PostHog />
     <ViewTransitions />
   </head>
   <body>
@@ -28,5 +30,30 @@ const { title, description = 'NeuralFlow AI - Transform your workflow with intel
       <slot />
     </main>
     <Footer />
+    <script is:inline>
+      if (!window.__posthogCaptureListenerAdded) {
+        document.addEventListener('click', (event) => {
+          if (!(event.target instanceof Element)) return;
+
+          const target = event.target.closest('[data-ph-event]');
+          if (!target) return;
+
+          const { phEvent, phLocation, phPlan, phTopic } = target.dataset;
+          if (!phEvent) return;
+
+          const properties = {};
+          if (phLocation) properties.cta_location = phLocation;
+          if (phPlan) properties.plan = phPlan;
+          if (phTopic) properties.topic = phTopic;
+
+          window.posthog?.capture(phEvent, properties);
+          window.posthog?.logger?.info('marketing interaction clicked', {
+            interaction_event: phEvent,
+            ...properties,
+          });
+        });
+        window.__posthogCaptureListenerAdded = true;
+      }
+    </script>
   </body>
 </html>
