@@ -10,6 +10,7 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import PostHog
 import Settings
 import Shared
 import SwiftUI
@@ -81,8 +82,13 @@ struct MainContentView: View {
                                 currentUsername: sessionService.username,
                                 onLogin: { username, password in
                                     _ = try await sessionService.authenticate(username: username, password: password)
+                                    PostHogSDK.shared.capture("login_succeeded")
+                                    logPostHogInfo("login_succeeded", source: "navigation_settings")
                                 },
                                 onLogout: {
+                                    PostHogSDK.shared.capture("logout_requested")
+                                    logPostHogInfo("logout_requested", source: "navigation_settings")
+                                    PostHogSDK.shared.reset()
                                     sessionService.unauthenticate()
                                 },
                                 onShowOnboarding: {
@@ -103,8 +109,13 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    PostHogSDK.shared.capture("login_succeeded")
+                    logPostHogInfo("login_succeeded", source: "login_sheet")
                 },
                 onLogout: {
+                    PostHogSDK.shared.capture("logout_requested")
+                    logPostHogInfo("logout_requested", source: "login_sheet")
+                    PostHogSDK.shared.reset()
                     sessionService.unauthenticate()
                 },
                 textSize: settingsViewModel.textSize
@@ -119,8 +130,13 @@ struct MainContentView: View {
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
                     _ = try await sessionService.authenticate(username: username, password: password)
+                    PostHogSDK.shared.capture("login_succeeded")
+                    logPostHogInfo("login_succeeded", source: "settings_sheet")
                 },
                 onLogout: {
+                    PostHogSDK.shared.capture("logout_requested")
+                    logPostHogInfo("logout_requested", source: "settings_sheet")
+                    PostHogSDK.shared.reset()
                     sessionService.unauthenticate()
                 },
                 onShowOnboarding: {
@@ -133,6 +149,8 @@ struct MainContentView: View {
         .sheet(isPresented: $showOnboarding) {
             onboardingCoordinator
                 .makeOnboardingView {
+                    PostHogSDK.shared.capture("onboarding_dismissed")
+                    logPostHogInfo("onboarding_dismissed")
                     showOnboarding = false
                 }
                 .textScaling(for: settingsViewModel.textSize)
@@ -143,6 +161,14 @@ struct MainContentView: View {
                 showOnboarding = true
             }
         }
+    }
+
+    private func logPostHogInfo(_ message: String, source: String? = nil) {
+        var attributes: [String: Any] = [:]
+        if let source {
+            attributes["source"] = source
+        }
+        PostHogSDK.shared.logger?.info(message, attributes: attributes)
     }
 
     private var isPresentingModal: Bool {
