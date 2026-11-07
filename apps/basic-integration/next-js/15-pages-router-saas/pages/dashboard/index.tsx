@@ -36,6 +36,8 @@ function ManageSubscription() {
       const result = await response.json();
 
       if (response.ok && result.url) {
+        const { default: posthog } = await import('posthog-js');
+        posthog.capture('subscription_portal_opened');
         window.location.href = result.url;
       }
     } catch (err) {
@@ -101,6 +103,9 @@ function TeamMembers() {
           setError(result.error || 'Failed to remove member');
           return;
         }
+
+        const { default: posthog } = await import('posthog-js');
+        posthog.capture('team_member_removed');
 
         // Refresh team data
         mutate('/api/team');
@@ -208,6 +213,12 @@ function InviteTeamMember() {
         }
 
         setSuccess(result.success);
+
+        const { default: posthog } = await import('posthog-js');
+        posthog.capture('team_member_invited', {
+          invited_role: data.role
+        });
+
         // Reset form
         (e.target as HTMLFormElement).reset();
       } catch (err) {

@@ -57,6 +57,31 @@ export function Login({
           return;
         }
 
+        if (result.user && typeof result.user.id === 'number') {
+          const { default: posthog } = await import('posthog-js');
+          posthog.identify(String(result.user.id), {
+            email: result.user.email,
+            name: result.user.name ?? undefined,
+            role: result.user.role
+          });
+          if (mode === 'signin') {
+            posthog.capture('user_signed_in', {
+              continues_to_checkout: Boolean(result.url)
+            });
+          } else {
+            posthog.capture('user_signed_up', {
+              continues_to_checkout: Boolean(result.url),
+              signup_method: inviteId ? 'invitation' : 'direct'
+            });
+          }
+
+          if (result.url) {
+            posthog.capture('checkout_started', {
+              checkout_source: mode
+            });
+          }
+        }
+
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {

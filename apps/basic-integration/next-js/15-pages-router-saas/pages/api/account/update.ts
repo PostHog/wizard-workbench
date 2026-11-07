@@ -9,6 +9,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { logPostHogOperation } from '@/lib/posthog-logs';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -64,6 +65,7 @@ export default async function handler(
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
 
+    logPostHogOperation('account_updated');
     return res.status(200).json({ name, success: 'Account updated successfully.' });
   } catch (error) {
     console.error('Update account error:', error);
