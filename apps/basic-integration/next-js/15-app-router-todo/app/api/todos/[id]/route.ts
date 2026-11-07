@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { posthogLogger, posthogLogSeverity, loggerProvider } from '@/instrumentation';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
 import { z } from 'zod';
 
@@ -59,6 +60,16 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    posthogLogger.emit({
+      body: 'Todo updated through the API',
+      severityNumber: posthogLogSeverity.INFO,
+      attributes: {
+        operation: 'todo_updated',
+        completed: updatedTodo.completed,
+      },
+    });
+    after(() => loggerProvider.forceFlush().catch(() => undefined));
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -93,6 +104,15 @@ export async function DELETE(
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
+
+    posthogLogger.emit({
+      body: 'Todo deleted through the API',
+      severityNumber: posthogLogSeverity.INFO,
+      attributes: {
+        operation: 'todo_deleted',
+      },
+    });
+    after(() => loggerProvider.forceFlush().catch(() => undefined));
 
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {

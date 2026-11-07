@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { posthogLogger, posthogLogSeverity, loggerProvider } from '@/instrumentation';
 import { getTodos, createTodo } from '@/lib/data';
 import { z } from 'zod';
 
@@ -33,6 +34,16 @@ export async function POST(request: NextRequest) {
       description: validatedData.description,
       completed: validatedData.completed,
     });
+
+    posthogLogger.emit({
+      body: 'Todo created through the API',
+      severityNumber: posthogLogSeverity.INFO,
+      attributes: {
+        operation: 'todo_created',
+        completed: newTodo.completed,
+      },
+    });
+    after(() => loggerProvider.forceFlush().catch(() => undefined));
 
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
