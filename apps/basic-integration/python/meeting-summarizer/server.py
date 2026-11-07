@@ -23,6 +23,7 @@ import mimetypes
 from database import UserDatabase
 from models import User, Meeting
 from ai_summarizer import AISummarizer
+from posthog_client import posthog_client, posthog_log
 
 
 # Session management
@@ -62,6 +63,32 @@ class SessionManager:
         with self.lock:
             if session_id in self.sessions:
                 del self.sessions[session_id]
+
+
+def posthog_request_context(handler):
+    """Bind the authenticated user to PostHog for an entire HTTP request."""
+    def wrapped(self, *args, **kwargs):
+        if not posthog_client:
+            return handler(self, *args, **kwargs)
+
+        with posthog_client.new_context(fresh=True):
+            user = self._get_current_user()
+            if user:
+                posthog_client.identify_context(user.user_id)
+            return handler(self, *args, **kwargs)
+
+    return wrapped
+
+
+def log_posthog_event(event, **properties):
+    """Emit an operational log without affecting application work."""
+    if not posthog_log:
+        return
+
+    try:
+        posthog_log.info(event, extra={'event': event, **properties})
+    except Exception:
+        logging.exception("Unable to export PostHog log: %s", event)
 
 
 class SaaSHandler(BaseHTTPRequestHandler):
@@ -108,6 +135,26 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 return self.db.get_user(session['user_id'])
         return None
 
+    def _capture_unexpected_error(self, error):
+        """Report a handled server exception without affecting the response."""
+        if not posthog_client:
+            return
+
+        try:
+            posthog_client.capture_exception(error)
+        except Exception:
+            logging.exception("Unable to report exception to PostHog")
+
+    def _capture_event(self, event, properties=None):
+        """Capture a product event without affecting the request response."""
+        if not posthog_client:
+            return
+
+        try:
+            posthog_client.capture(event, properties=properties or {})
+        except Exception:
+            logging.exception("Unable to capture PostHog event: %s", event)
+
     def _serve_static_file(self, file_path):
         """Serve a static file"""
         try:
@@ -134,10 +181,12 @@ class SaaSHandler(BaseHTTPRequestHandler):
             self._set_headers(200, content_type)
             self.wfile.write(content)
         except Exception as e:
+            self._capture_unexpected_error(e)
             logging.error(f"Error serving static file: {e}")
             self._set_headers(500)
             self.wfile.write(b'Internal server error')
 
+    @posthog_request_context
     def do_GET(self):
         """Handle GET requests"""
         try:
@@ -207,6 +256,9 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 meetings = self.db.list_meetings(user.user_id)
+                self._capture_event('meetings_viewed', {
+                    'meeting_count': len(meetings),
+                })
                 self._send_json({
                     'meetings': [m.to_dict() for m in meetings],
                     'count': len(meetings)
@@ -236,6 +288,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 stats = self.db.get_meeting_stats(user.user_id)
+                self._capture_event('meeting_stats_viewed', {
+                    'total_meetings': stats['total_meetings'],
+                    'total_hours': stats['total_hours'],
+                })
                 self._send_json(stats)
                 return
 
@@ -243,9 +299,11 @@ class SaaSHandler(BaseHTTPRequestHandler):
             self._serve_static_file(path)
 
         except Exception as e:
+            self._capture_unexpected_error(e)
             logging.error(f"Error in GET request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
+    @posthog_request_context
     def do_POST(self):
         """Handle POST requests"""
         try:
@@ -274,6 +332,24 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     # Create session
                     session_id = self.sessions.create_session(user.user_id)
 
+                    # The request began before authentication, so identify its
+                    # existing PostHog context after the authenticated user is known.
+                    if posthog_client:
+                        posthog_client.identify_context(user.user_id)
+                        try:
+                            posthog_client.set(
+                                distinct_id=user.user_id,
+                                properties={
+                                    'email': user.email,
+                                    'username': user.username,
+                                    'name': user.full_name,
+                                },
+                            )
+                        except Exception:
+                            logging.exception("Unable to update PostHog person properties")
+
+                    self._capture_event('user_logged_in')
+
                     # Send response with session cookie
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
@@ -299,6 +375,8 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 session_id = self._get_session_id()
                 if session_id:
                     self.sessions.delete_session(session_id)
+
+                self._capture_event('user_logged_out')
 
                 self._set_headers(200, 'application/json')
                 self.send_header('Set-Cookie', 'session_id=; Path=/; HttpOnly; Max-Age=0')
@@ -332,6 +410,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_user(user):
+                    self._capture_event('user_created', {
+                        'has_full_name': bool(user.full_name),
+                        'metadata_field_count': len(user.metadata or {}),
+                    })
                     self._send_json(user.to_dict(), 201)
                 else:
                     self._send_json({'error': 'User already exists'}, 409)
@@ -370,6 +452,21 @@ class SaaSHandler(BaseHTTPRequestHandler):
                 )
 
                 if self.db.create_meeting(meeting):
+                    self._capture_event('meeting_created', {
+                        'transcript_word_count': len(transcript.split()),
+                        'action_item_count': len(action_items),
+                        'key_point_count': len(key_points),
+                        'participant_count': len(participants),
+                        'duration_minutes': duration,
+                    })
+                    log_posthog_event(
+                        'meeting_summary_created',
+                        transcript_word_count=len(transcript.split()),
+                        action_item_count=len(action_items),
+                        key_point_count=len(key_points),
+                        participant_count=len(participants),
+                        duration_minutes=duration,
+                    )
                     self._send_json(meeting.to_dict(), 201)
                 else:
                     self._send_json({'error': 'Failed to create meeting'}, 500)
@@ -380,9 +477,11 @@ class SaaSHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             self._send_json({'error': 'Invalid JSON'}, 400)
         except Exception as e:
+            self._capture_unexpected_error(e)
             logging.error(f"Error in POST request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
+    @posthog_request_context
     def do_PUT(self):
         """Handle PUT requests"""
         try:
@@ -409,9 +508,11 @@ class SaaSHandler(BaseHTTPRequestHandler):
             self._send_json({'error': 'Not found'}, 404)
 
         except Exception as e:
+            self._capture_unexpected_error(e)
             logging.error(f"Error in PUT request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
+    @posthog_request_context
     def do_DELETE(self):
         """Handle DELETE requests"""
         try:
@@ -449,6 +550,10 @@ class SaaSHandler(BaseHTTPRequestHandler):
                     return
 
                 if self.db.delete_meeting(meeting_id):
+                    self._capture_event('meeting_deleted', {
+                        'duration_minutes': meeting.duration_minutes,
+                        'action_item_count': len(meeting.action_items),
+                    })
                     self._send_json({'success': True})
                 else:
                     self._send_json({'error': 'Failed to delete meeting'}, 500)
@@ -457,6 +562,7 @@ class SaaSHandler(BaseHTTPRequestHandler):
             self._send_json({'error': 'Not found'}, 404)
 
         except Exception as e:
+            self._capture_unexpected_error(e)
             logging.error(f"Error in DELETE request: {e}\n{traceback.format_exc()}")
             self._send_json({'error': 'Internal server error'}, 500)
 
@@ -566,6 +672,7 @@ def main():
 
     # Create and start server
     server = HTTPServer((host, port), SaaSHandler)
+    log_posthog_event('meeting_summarizer_started', port=port)
     logging.info(f"")
     logging.info(f"═══════════════════════════════════════════════════")
     logging.info(f"  AI Meeting Summarizer")
@@ -586,6 +693,7 @@ def main():
         logging.info("Server stopped by user")
     finally:
         server.server_close()
+        log_posthog_event('meeting_summarizer_stopped')
         logging.info("Server shut down")
 
 
