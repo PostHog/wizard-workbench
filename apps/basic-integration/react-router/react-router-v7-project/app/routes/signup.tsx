@@ -24,6 +24,11 @@ export default function Signup() {
         setIsLoading(false)
 
         if (newUser) {
+          window.dispatchEvent(
+            new CustomEvent('posthog:capture', {
+              detail: { eventName: 'user_signed_up' },
+            }),
+          )
           navigate('/profile')
         } else {
           setError('Signup failed! (But this is fake, so it should always work)')

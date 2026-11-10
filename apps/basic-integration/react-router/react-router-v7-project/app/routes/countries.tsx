@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import type { Route } from "./+types/countries";
 import { useState } from "react";
 import { useAuth } from "~/context/AuthContext";
-import { claimCountry, likeCountry, visitCountry } from "~/lib/utils/auth";
+import { claimCountry, getCurrentUser, likeCountry, visitCountry } from "~/lib/utils/auth";
 
 export async function clientLoader() {
   try {
@@ -110,6 +110,7 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
             const countryName = country.name.common;
             const isClaimed = user?.claimedCountries.includes(countryName);
             const isLiked = user?.likedCountries.includes(countryName);
+            const isVisited = user?.visitedCountries.includes(countryName);
             
             return (
               <li
@@ -138,6 +139,22 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         claimCountry(countryName);
+                        if (!isClaimed) {
+                          const updatedUser = getCurrentUser() || user;
+                          window.dispatchEvent(
+                            new CustomEvent('posthog:capture', {
+                              detail: {
+                                eventName: 'country_claimed',
+                                properties: {
+                                  country_code: country.cca3,
+                                  country_region: country.region,
+                                  claimed_country_count: updatedUser.claimedCountries.length,
+                                  total_points: updatedUser.totalPoints,
+                                },
+                              },
+                            }),
+                          );
+                        }
                         window.location.reload();
                       }}
                       className={`flex-1 px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -151,6 +168,22 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         likeCountry(countryName);
+                        if (!isLiked) {
+                          const updatedUser = getCurrentUser() || user;
+                          window.dispatchEvent(
+                            new CustomEvent('posthog:capture', {
+                              detail: {
+                                eventName: 'country_liked',
+                                properties: {
+                                  country_code: country.cca3,
+                                  country_region: country.region,
+                                  liked_country_count: updatedUser.likedCountries.length,
+                                  total_points: updatedUser.totalPoints,
+                                },
+                              },
+                            }),
+                          );
+                        }
                         window.location.reload();
                       }}
                       className={`px-3 py-2 text-xs rounded-lg font-medium transition ${
@@ -164,6 +197,22 @@ export default function Countries({ loaderData }: Route.ComponentProps) {
                     <button
                       onClick={() => {
                         visitCountry(countryName);
+                        if (!isVisited) {
+                          const updatedUser = getCurrentUser() || user;
+                          window.dispatchEvent(
+                            new CustomEvent('posthog:capture', {
+                              detail: {
+                                eventName: 'country_visited',
+                                properties: {
+                                  country_code: country.cca3,
+                                  country_region: country.region,
+                                  visited_country_count: updatedUser.visitedCountries.length,
+                                  total_points: updatedUser.totalPoints,
+                                },
+                              },
+                            }),
+                          );
+                        }
                         window.location.reload();
                       }}
                       className="px-3 py-2 text-xs rounded-lg font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition"

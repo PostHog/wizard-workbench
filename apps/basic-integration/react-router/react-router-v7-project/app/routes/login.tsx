@@ -23,6 +23,11 @@ export default function Login() {
       setIsLoading(false)
 
       if (success) {
+        window.dispatchEvent(
+          new CustomEvent('posthog:capture', {
+            detail: { eventName: 'user_logged_in' },
+          }),
+        )
         navigate('/profile')
       } else {
         setError('Invalid credentials! (But this is fake, so any password works if the username exists)')
