@@ -1,10 +1,25 @@
 import sqlalchemy as sa
-from flask import request, url_for, abort
+from flask import request, url_for, abort, current_app
 from app import db
 from app.models import User
 from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request
+from posthog import identify_context
+
+
+def identify_new_user(user):
+    """Bind a newly registered API user to the active request context."""
+    if current_app.posthog:
+        distinct_id = str(user.id)
+        identify_context(distinct_id)
+        current_app.posthog.set(
+            distinct_id=distinct_id,
+            properties={
+                'email': user.email,
+                'username': user.username,
+            },
+        )
 
 
 @bp.route('/users/<int:id>', methods=['GET'])
@@ -57,6 +72,9 @@ def create_user():
     user.from_dict(data, new_user=True)
     db.session.add(user)
     db.session.commit()
+    identify_new_user(user)
+    if current_app.posthog:
+        current_app.posthog.capture('api_user_registered')
     return user.to_dict(), 201, {'Location': url_for('api.get_user',
                                                      id=user.id)}
 
@@ -76,6 +94,15 @@ def update_user(id):
         db.session.scalar(sa.select(User).where(
             User.email == data['email'])):
         return bad_request('please use a different email address')
+    updated_fields = [
+        field for field in ('username', 'email', 'about_me') if field in data
+    ]
     user.from_dict(data, new_user=False)
     db.session.commit()
+    if current_app.posthog:
+        identify_new_user(user)
+        current_app.posthog.capture(
+            'api_profile_updated',
+            properties={'updated_fields': updated_fields},
+        )
     return user.to_dict()

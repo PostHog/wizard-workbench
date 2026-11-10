@@ -17,6 +17,10 @@ python-dotenv
 redis
 requests
 rq
+posthog==7.86.6
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
 SQLAlchemy
 Werkzeug
 WTForms

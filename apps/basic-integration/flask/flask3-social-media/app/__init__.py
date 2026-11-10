@@ -1,13 +1,19 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from flask import Flask, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog, identify_context
+from posthog.integrations.flask import PosthogFlaskIntegration
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -45,6 +51,66 @@ def create_app(config_class=Config):
     mail.init_app(app)
     moment.init_app(app)
     babel.init_app(app, locale_selector=get_locale)
+
+    posthog_api_key = app.config['POSTHOG_API_KEY']
+    posthog_host = app.config['POSTHOG_HOST']
+    if posthog_api_key and posthog_host:
+        app.posthog = Posthog(
+            posthog_api_key,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        PosthogFlaskIntegration(
+            app,
+            client=app.posthog,
+            capture_exceptions=True,
+        )
+        atexit.register(app.posthog.shutdown)
+
+        posthog_log_provider = LoggerProvider()
+        posthog_log_provider.add_log_record_processor(
+            BatchLogRecordProcessor(
+                OTLPLogExporter(
+                    endpoint=f'{posthog_host}/i/v1/logs',
+                    headers={'Authorization': f'Bearer {posthog_api_key}'},
+                )
+            )
+        )
+        posthog_log_handler = LoggingHandler(
+            level=logging.INFO,
+            logger_provider=posthog_log_provider,
+        )
+        posthog_log_logger = logging.getLogger('microblog.posthog_logs')
+        posthog_log_logger.setLevel(logging.INFO)
+        posthog_log_logger.propagate = False
+        posthog_log_logger.addHandler(posthog_log_handler)
+        atexit.register(posthog_log_provider.shutdown)
+        posthog_log_logger.info(
+            'log capture configured',
+            extra={'event': 'log_capture_configured'},
+        )
+    else:
+        app.posthog = None
+        if app.debug or app.testing:
+            if not posthog_api_key:
+                app.logger.warning(
+                    'POSTHOG_API_KEY variable required by PostHog is missing or '
+                    'un-configured, this causes events to be silently missed. This '
+                    'error stops appearing once POSTHOG_API_KEY is configured'
+                )
+            if not posthog_host:
+                app.logger.warning(
+                    'POSTHOG_HOST variable required by PostHog is missing or '
+                    'un-configured, this causes events to be silently missed. This '
+                    'error stops appearing once POSTHOG_HOST is configured'
+                )
+
+    @app.before_request
+    def identify_authenticated_user():
+        """Associate the request context with the signed-in user."""
+        if app.posthog and current_user.is_authenticated:
+            identify_context(str(current_user.id))
+
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if Elasticsearch and app.config['ELASTICSEARCH_URL'] else None
     if Redis and rq:
