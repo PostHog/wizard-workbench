@@ -77,6 +77,19 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        const posthog = (window as typeof window & {
+          posthog?: {
+            capture: (event: string) => void;
+            logger?: {
+              info: (message: string, attributes: Record<string, string>) => void;
+            };
+          };
+        }).posthog;
+        posthog?.capture('contact_form_submitted');
+        posthog?.logger?.info('Contact form submission completed in the browser.', {
+          route: '/contact',
+          outcome: 'submitted',
+        });
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
