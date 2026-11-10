@@ -103,6 +103,25 @@ export function deleteInvoice(id: number): boolean {
   return invoices.delete(id)
 }
 
+function emitInvoiceWorkflowLog(
+  body: string,
+  eventName: string,
+  invoiceStatus: Invoice['status'],
+) {
+  void import('./posthog-logs.server')
+    .then(({ getPostHogLogger }) => {
+      getPostHogLogger()?.emit({
+        severityText: 'INFO',
+        body,
+        attributes: {
+          event_name: eventName,
+          invoice_status: invoiceStatus,
+        },
+      })
+    })
+    .catch(() => {})
+}
+
 // Server functions for route loaders
 export const fetchInvoices = createServerFn().handler(async () => {
   console.info('Fetching all invoices...')
@@ -130,7 +149,13 @@ export const createInvoiceFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     console.info('Creating invoice...', data)
-    return createInvoice(data)
+    const invoice = createInvoice(data)
+    emitInvoiceWorkflowLog(
+      'Invoice creation completed',
+      'invoice_creation_completed',
+      'pending',
+    )
+    return invoice
   })
 
 export const markInvoicePaid = createServerFn({ method: 'POST' })
@@ -145,5 +170,11 @@ export const markInvoicePaid = createServerFn({ method: 'POST' })
     if (!invoice) {
       throw new Error('Invoice not found')
     }
+
+    emitInvoiceWorkflowLog(
+      'Invoice payment completed',
+      'invoice_payment_completed',
+      'paid',
+    )
     return invoice
   })
