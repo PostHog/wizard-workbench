@@ -5,6 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Project, ActivityLog
 from .forms import ProjectForm
+from config.posthog import posthog_client, posthog_logs_logger
 
 
 @login_required
@@ -60,6 +61,17 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            if posthog_client is not None:
+                posthog_client.capture('project_created', properties={
+                    'has_description': bool(project.description),
+                })
+            posthog_logs_logger.info(
+                'project created',
+                extra={
+                    'event': 'project_created',
+                    'has_description': bool(project.description),
+                },
+            )
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +95,19 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            if posthog_client is not None:
+                posthog_client.capture('project_updated', properties={
+                    'has_description': bool(project.description),
+                    'is_active': project.is_active,
+                })
+            posthog_logs_logger.info(
+                'project updated',
+                extra={
+                    'event': 'project_updated',
+                    'has_description': bool(project.description),
+                    'is_active': project.is_active,
+                },
+            )
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -105,6 +130,8 @@ def delete_project(request, pk):
             description=f'Deleted project: {name}'
         )
 
+        if posthog_client is not None:
+            posthog_client.capture('project_deleted')
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
 
