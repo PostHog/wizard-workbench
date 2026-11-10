@@ -11,6 +11,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { posthogLogger, SeverityNumber } from '@/instrumentation';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -107,6 +108,17 @@ export default async function handler(
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
     );
+
+    posthogLogger.emit({
+      body: 'team_invitation_created',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        operation: 'team_invitation_created',
+        route: '/api/team/invite',
+        role,
+        posthogDistinctId: user.id.toString()
+      }
+    });
 
     return res.status(200).json({ success: 'Invitation sent successfully' });
   } catch (error) {

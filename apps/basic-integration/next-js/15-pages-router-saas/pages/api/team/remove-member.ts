@@ -9,6 +9,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { posthogLogger, SeverityNumber } from '@/instrumentation';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -76,6 +77,16 @@ export default async function handler(
       user.id,
       ActivityType.REMOVE_TEAM_MEMBER
     );
+
+    posthogLogger.emit({
+      body: 'team_member_removed',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        operation: 'team_member_removed',
+        route: '/api/team/remove-member',
+        posthogDistinctId: user.id.toString()
+      }
+    });
 
     return res.status(200).json({ success: 'Team member removed successfully' });
   } catch (error) {
