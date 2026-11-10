@@ -1,12 +1,13 @@
 import { Component, OnInit, inject, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { I18nService } from '@app/i18n';
+import { AuthenticationService } from '@app/auth/services/authentication.service';
 import { Title } from '@angular/platform-browser';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AppUpdateService, Logger } from '@core/services';
+import { AppUpdateService, Logger, PostHogLoggerService, PostHogService } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
 
 @Component({
@@ -23,6 +24,9 @@ export class AppComponent implements OnInit {
   private readonly i18nService = inject(I18nService);
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly posthogLogger = inject(PostHogLoggerService);
+  private readonly authenticationService = inject(AuthenticationService);
   private readonly destroyRef = inject(DestroyRef);
 
   title = 'angular-boilerplate';
@@ -35,6 +39,9 @@ export class AppComponent implements OnInit {
 
     // Initialize i18nService with default language and supported languages
     this.i18nService.init(environment.defaultLanguage, environment.supportedLanguages);
+
+    this.initializePostHog();
+    this.authenticationService.identify();
 
     const onNavigationEnd = this.router.events.pipe(filter((event) => event instanceof NavigationEnd));
 
@@ -62,6 +69,39 @@ export class AppComponent implements OnInit {
 
     // update service
     this.updateService.subscribeForUpdates();
+  }
+
+  private initializePostHog(): void {
+    if (!environment.posthogKey) {
+      if (!environment.production) {
+        throw new Error('NG_APP_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once NG_APP_POSTHOG_PROJECT_TOKEN is configured');
+      }
+      return;
+    }
+
+    if (!environment.posthogHost) {
+      if (!environment.production) {
+        throw new Error('NG_APP_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once NG_APP_POSTHOG_HOST is configured');
+      }
+      return;
+    }
+
+    this.posthogService.init(environment.posthogKey, {
+      api_host: environment.posthogHost,
+      capture_exceptions: {
+        capture_unhandled_errors: true,
+        capture_unhandled_rejections: true,
+        capture_console_errors: false,
+      },
+      logs: {
+        serviceName: 'angular-boilerplate-web',
+        environment: environment.production ? 'production' : 'development',
+      },
+    });
+
+    this.posthogLogger.info('posthog_log_capture_initialized', {
+      runtime: 'browser',
+    });
   }
 
   getTitle(state: any, parent: any): any[] {
