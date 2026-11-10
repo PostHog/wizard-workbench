@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import posthog from 'posthog-js'
 import { useNavigate } from 'react-router'
 import { followerPackages } from '@/lib/data/fake-data'
 import type { Route } from './+types/buy-followers'
 import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { addFollowers, addPurchasedFollowers } from '@/lib/utils/localStorage'
+import { posthogLogger } from '@/lib/utils/posthog-logger'
 import cn from '@/lib/utils/cn'
 
 export const meta: Route.MetaFunction = () => {
@@ -34,6 +36,18 @@ export default function BuyFollowers() {
       // Save to localStorage
       addFollowers(totalFollowers)
       addPurchasedFollowers(totalFollowers)
+
+      if (posthog.__loaded) {
+        const purchaseDetails = {
+          follower_quantity: pkg.amount,
+          bonus_quantity: pkg.bonus,
+          total_follower_quantity: totalFollowers,
+          price: pkg.price,
+        }
+
+        posthog.capture('follower_purchase_completed', purchaseDetails)
+        posthogLogger.info('follower purchase completed', purchaseDetails)
+      }
       
       alert(`Purchase complete! You now have ${totalFollowers.toLocaleString()} more fake followers! (Saved to localStorage)`)
       setPurchased(false)
@@ -75,7 +89,18 @@ export default function BuyFollowers() {
             return (
               <div
                 key={index}
-                onClick={() => setSelectedPackage(index)}
+                onClick={() => {
+                  setSelectedPackage(index)
+
+                  if (posthog.__loaded) {
+                    posthog.capture('follower_package_selected', {
+                      follower_quantity: pkg.amount,
+                      bonus_quantity: pkg.bonus,
+                      total_follower_quantity: totalFollowers,
+                      price: pkg.price,
+                    })
+                  }
+                }}
                 className={cn(
                   'bg-primary/5 border-2 rounded-lg p-6 cursor-pointer transition',
                   isSelected

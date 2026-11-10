@@ -1,19 +1,29 @@
 import { useState, useEffect } from 'react'
+import posthog from 'posthog-js'
 import { fakeUser } from '@/lib/data/fake-data'
 import { fakeFollowers } from '@/lib/data/fake-data'
 import type { Route } from './+types/profile'
 import { generateMeta } from '@/lib/utils/meta'
 import { SITE_URL } from '@/lib/constants'
 import { getFollowers, getFollowing, getPosts, setFollowing } from '@/lib/utils/localStorage'
+import { posthogLogger } from '@/lib/utils/posthog-logger'
 import cn from '@/lib/utils/cn'
 
 function FollowButton({ username, onFollow }: { username: string; onFollow: () => void }) {
   const [isFollowing, setIsFollowing] = useState(false)
 
   const handleClick = () => {
-    setIsFollowing(!isFollowing)
-    if (!isFollowing) {
+    const newFollowingState = !isFollowing
+    setIsFollowing(newFollowingState)
+    if (newFollowingState) {
       onFollow()
+    }
+
+    if (posthog.__loaded) {
+      const action = newFollowingState ? 'followed' : 'unfollowed'
+
+      posthog.capture('follow_back_changed', { action })
+      posthogLogger.info('profile follow-back changed', { action })
     }
   }
 
