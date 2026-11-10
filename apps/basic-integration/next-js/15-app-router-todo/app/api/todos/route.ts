@@ -1,6 +1,17 @@
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { getTodos, createTodo } from '@/lib/data';
+import { loggerProvider } from '@/instrumentation';
 import { z } from 'zod';
+
+const logger = loggerProvider?.getLogger('posthog.todo-api');
+
+function flushLogsAfterResponse() {
+  after(async () => {
+    await loggerProvider?.forceFlush().catch(() => {});
+  });
+}
 
 const todoSchema = z.object({
   title: z.string().min(1).max(255),
@@ -33,6 +44,13 @@ export async function POST(request: NextRequest) {
       description: validatedData.description,
       completed: validatedData.completed,
     });
+
+    logger?.emit({
+      body: 'Todo created through API',
+      severityNumber: SeverityNumber.INFO,
+      attributes: { endpoint: '/api/todos', method: 'POST' },
+    });
+    flushLogsAfterResponse();
 
     return NextResponse.json(newTodo, { status: 201 });
   } catch (error) {
