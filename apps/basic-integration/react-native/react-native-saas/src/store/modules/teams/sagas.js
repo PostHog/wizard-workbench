@@ -2,6 +2,8 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
+import { posthog } from '../../../config/posthog';
+import { posthogLogger } from '../../../services/posthogLogger';
 import { isDemoMode, demoTeams } from '../../../services/demoData';
 
 import { getTeamsSuccess, createTeamSuccess, closeTeamModal } from './actions';
@@ -33,6 +35,8 @@ export function* createTeam({ payload }) {
       const slug = name.toLowerCase().replace(/\s+/g, '-');
       const newTeam = { id: Date.now(), name, slug };
       yield put(createTeamSuccess(newTeam));
+      posthog?.capture('team_created', { is_demo_mode: true });
+      posthogLogger.info('team creation completed', { is_demo_mode: true });
       yield put(closeTeamModal());
       toast.showSuccess('Team created');
       return;
@@ -41,6 +45,8 @@ export function* createTeam({ payload }) {
     const response = yield call(api.post, 'teams', { name });
 
     yield put(createTeamSuccess(response.data));
+    posthog?.capture('team_created', { is_demo_mode: false });
+    posthogLogger.info('team creation completed', { is_demo_mode: false });
     yield put(closeTeamModal());
 
     toast.showSuccess('Team created');
