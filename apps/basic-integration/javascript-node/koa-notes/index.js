@@ -1,11 +1,45 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { posthog } from './posthog.js';
+import { posthogLogger, shutdownPostHogLogs } from './posthog-logs.js';
 
 const app = new Koa();
 const router = new Router();
 
 app.use(bodyParser());
+
+app.use(async (ctx, next) => {
+  await next();
+
+  if (
+    ctx.status < 400 &&
+    ['POST', 'PATCH', 'DELETE'].includes(ctx.method) &&
+    ctx.path.startsWith('/api/')
+  ) {
+    posthogLogger?.emit({
+      severityText: 'INFO',
+      body: 'notes mutation completed',
+      attributes: {
+        event: 'notes.mutation.completed',
+        request_method: ctx.method,
+        status_code: ctx.status,
+      },
+    });
+  }
+});
+
+app.on('error', (error) => {
+  posthog?.captureException(error);
+  posthogLogger?.emit({
+    severityText: 'ERROR',
+    body: 'notes request failed',
+    attributes: {
+      event: 'notes.request.failed',
+      error_type: error.name,
+    },
+  });
+});
 
 const folders = [{ id: 1, name: 'General' }];
 const notes = [];
@@ -32,6 +66,10 @@ router.post('/api/folders', (ctx) => {
 
   const folder = { id: nextFolderId++, name };
   folders.push(folder);
+  posthog?.capture({
+    event: 'folder_created',
+    properties: { folder_id: folder.id },
+  });
   ctx.status = 201;
   ctx.body = folder;
 });
@@ -53,12 +91,17 @@ router.delete('/api/folders/:id', (ctx) => {
     return;
   }
 
+  const moved_note_count = notes.filter((note) => note.folder_id === folderId).length;
+
   // Move notes from deleted folder to General
   for (const note of notes) {
     if (note.folder_id === folderId) note.folder_id = 1;
   }
-
   folders.splice(index, 1);
+  posthog?.capture({
+    event: 'folder_deleted',
+    properties: { folder_id: folderId, moved_note_count },
+  });
   ctx.status = 204;
 });
 
@@ -105,6 +148,14 @@ router.post('/api/notes', (ctx) => {
     updated_at: new Date().toISOString(),
   };
   notes.push(note);
+  posthog?.capture({
+    event: 'note_created',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+      content_length: note.content.length,
+    },
+  });
   ctx.status = 201;
   ctx.body = note;
 });
@@ -142,6 +193,16 @@ router.patch('/api/notes/:id', (ctx) => {
     note.folder_id = folder_id;
   }
   note.updated_at = new Date().toISOString();
+  posthog?.capture({
+    event: 'note_updated',
+    properties: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+      title_updated: title !== undefined,
+      content_updated: content !== undefined,
+      folder_changed: folder_id !== undefined,
+    },
+  });
 
   ctx.body = note;
 });
@@ -155,7 +216,11 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
-  notes.splice(index, 1);
+  const [note] = notes.splice(index, 1);
+  posthog?.capture({
+    event: 'note_deleted',
+    properties: { note_id: note.id, folder_id: note.folder_id },
+  });
   ctx.status = 204;
 });
 
@@ -164,6 +229,31 @@ app.use(router.allowedMethods());
 
 const PORT = process.env.PORT || 3003;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Koa notes API running on http://localhost:${PORT}`);
+  posthogLogger?.emit({
+    severityText: 'INFO',
+    body: 'notes API started',
+    attributes: { event: 'notes.api.started' },
+  });
 });
+
+let shuttingDown = false;
+
+function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  const exitTimer = setTimeout(() => process.exit(0), 3000);
+  exitTimer.unref();
+
+  server.close(() => {
+    void Promise.allSettled([posthog?.shutdown(2500), shutdownPostHogLogs()]).finally(() => {
+      clearTimeout(exitTimer);
+      process.exit(0);
+    });
+  });
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
