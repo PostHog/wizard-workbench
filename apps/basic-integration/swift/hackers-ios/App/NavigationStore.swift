@@ -8,6 +8,7 @@
 import Combine
 import Domain
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 import UIKit
@@ -51,6 +52,8 @@ class NavigationStore: NavigationStoreProtocol {
         detailPath.removeAll()
         selectedPost = post
         selectedPostId = post.id
+        PostHogSDK.shared.capture("post_opened")
+        PostHogSDK.shared.logger?.info("post navigation completed", attributes: ["destination": "comments"])
 
         // For iPhone navigation, use NavigationPath
         if UIDevice.current.userInterfaceIdiom != .pad && !isRunningOnMac {
@@ -63,6 +66,8 @@ class NavigationStore: NavigationStoreProtocol {
         detailPath.removeAll()
         selectedPost = nil
         selectedPostId = id
+        PostHogSDK.shared.capture("post_opened_by_id")
+        PostHogSDK.shared.logger?.info("post navigation completed", attributes: ["destination": "comments"])
 
         if UIDevice.current.userInterfaceIdiom != .pad && !isRunningOnMac {
             path.append(NavigationDestination.comments(postID: id))
@@ -82,6 +87,7 @@ class NavigationStore: NavigationStoreProtocol {
 
     func showSettings() {
         showingSettings = true
+        PostHogSDK.shared.capture("settings_opened")
     }
 
     func selectPostType(_ type: Domain.PostType) {
@@ -102,11 +108,13 @@ class NavigationStore: NavigationStoreProtocol {
 
         if pushOntoDetailStack, selectedPost != nil {
             detailPath.append(.web(url))
+            PostHogSDK.shared.capture("web_link_opened_in_app", properties: ["presentation": "detail_stack"])
             return true
         }
 
         embeddedBrowserURL = url
         detailPath.removeAll()
+        PostHogSDK.shared.capture("web_link_opened_in_app", properties: ["presentation": "primary"])
         return true
     }
 
