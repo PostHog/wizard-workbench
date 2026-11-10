@@ -27,6 +27,7 @@ import {
 } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { OrganizationMembershipRole } from "~/generated/browser";
+import posthog, { isPostHogEnabled } from "~/lib/posthog.client";
 
 export type EmailInviteCardProps = {
   currentUserIsOwner: boolean;
@@ -70,7 +71,16 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(event) => {
+            if (isPostHogEnabled) {
+              posthog.capture("team_email_invitation_submitted");
+            }
+            form.props.onSubmit(event);
+          }}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

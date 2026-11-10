@@ -30,6 +30,10 @@ import { registerWithEmailSchema } from "~/features/user-authentication/registra
 import { RegistrationVerificationAwaiting } from "~/features/user-authentication/registration/registration-verification-awaiting";
 import { registerIntents } from "~/features/user-authentication/user-authentication-constants";
 import { getIsAwaitingEmailConfirmation } from "~/features/user-authentication/user-authentication-helpers";
+import posthog, {
+  isPostHogEnabled,
+  posthogLogger,
+} from "~/lib/posthog.client";
 import { cn } from "~/lib/utils";
 import { getPageTitle } from "~/utils/get-page-title.server";
 
@@ -117,7 +121,20 @@ export default function RegisterRoute({
         </div>
 
         {/* Email Registration Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(event) => {
+            if (isPostHogEnabled) {
+              posthog.capture("registration_requested", { method: "email" });
+              posthogLogger.info("authentication_submission_requested", {
+                authentication_flow: "registration",
+                method: "email",
+              });
+            }
+            form.props.onSubmit(event);
+          }}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -161,7 +178,18 @@ export default function RegisterRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Registration Form */}
-        <Form method="POST">
+        <Form
+          method="POST"
+          onSubmit={() => {
+            if (isPostHogEnabled) {
+              posthog.capture("registration_requested", { method: "google" });
+              posthogLogger.info("authentication_submission_requested", {
+                authentication_flow: "registration",
+                method: "google",
+              });
+            }
+          }}
+        >
           <Field>
             <Button
               name="intent"

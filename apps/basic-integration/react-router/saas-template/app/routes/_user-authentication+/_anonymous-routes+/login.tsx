@@ -30,6 +30,10 @@ import { loginWithEmailSchema } from "~/features/user-authentication/login/login
 import { LoginVerificationAwaiting } from "~/features/user-authentication/login/login-verification-awaiting";
 import { loginIntents } from "~/features/user-authentication/user-authentication-constants";
 import { getIsAwaitingEmailConfirmation } from "~/features/user-authentication/user-authentication-helpers";
+import posthog, {
+  isPostHogEnabled,
+  posthogLogger,
+} from "~/lib/posthog.client";
 import { cn } from "~/lib/utils";
 import { getPageTitle } from "~/utils/get-page-title.server";
 
@@ -116,7 +120,20 @@ export default function LoginRoute({
         </div>
 
         {/* Email Login Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(event) => {
+            if (isPostHogEnabled) {
+              posthog.capture("login_requested", { method: "email" });
+              posthogLogger.info("authentication_submission_requested", {
+                authentication_flow: "login",
+                method: "email",
+              });
+            }
+            form.props.onSubmit(event);
+          }}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -160,7 +177,18 @@ export default function LoginRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Login Form */}
-        <Form method="POST">
+        <Form
+          method="POST"
+          onSubmit={() => {
+            if (isPostHogEnabled) {
+              posthog.capture("login_requested", { method: "google" });
+              posthogLogger.info("authentication_submission_requested", {
+                authentication_flow: "login",
+                method: "google",
+              });
+            }
+          }}
+        >
           <Field>
             <Button
               name="intent"
