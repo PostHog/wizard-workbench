@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
+use PostHog\Laravel\Facades\PostHog;
 
 new #[Layout('layouts.guest')] class extends Component
 {
@@ -31,6 +32,15 @@ new #[Layout('layouts.guest')] class extends Component
         event(new Registered($user = User::create($validated)));
 
         Auth::login($user);
+
+        PostHog::identify([
+            'distinctId' => $user->getPostHogDistinctId(),
+            'properties' => $user->getPostHogProperties(),
+        ]);
+
+        PostHog::capture('user_signed_up', [
+            'signup_method' => 'password',
+        ]);
 
         $this->redirect(route('dashboard', absolute: false), navigate: false);
     }

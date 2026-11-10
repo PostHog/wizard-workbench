@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Validate;
 use Livewire\Form;
+use PostHog\Laravel\Facades\PostHog;
 
 class LoginForm extends Form
 {
@@ -39,6 +40,18 @@ class LoginForm extends Form
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        PostHog::identify([
+            'distinctId' => $user->getPostHogDistinctId(),
+            'properties' => $user->getPostHogProperties(),
+        ]);
+
+        PostHog::capture('user_logged_in', [
+            'login_method' => 'password',
+        ]);
     }
 
     /**

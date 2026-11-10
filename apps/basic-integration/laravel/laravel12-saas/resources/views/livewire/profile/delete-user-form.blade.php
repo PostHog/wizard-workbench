@@ -3,6 +3,7 @@
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Volt\Component;
+use PostHog\Laravel\Facades\PostHog;
 
 new class extends Component
 {
@@ -16,6 +17,8 @@ new class extends Component
         $this->validate([
             'password' => ['required', 'string', 'current_password'],
         ]);
+
+        PostHog::capture('account_deleted');
 
         tap(Auth::user(), $logout(...))->delete();
 

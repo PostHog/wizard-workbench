@@ -7,6 +7,7 @@ use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
+use PostHog\Laravel\Facades\PostHog;
 
 class SocialiteController extends Controller
 {
@@ -39,6 +40,15 @@ class SocialiteController extends Controller
         }
 
         Auth::login($user);
+
+        PostHog::identify([
+            'distinctId' => $user->getPostHogDistinctId(),
+            'properties' => $user->getPostHogProperties(),
+        ]);
+
+        PostHog::capture('social_login_completed', [
+            'provider' => $provider,
+        ]);
 
         return redirect('/dashboard');
     }

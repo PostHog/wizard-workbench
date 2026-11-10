@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
+use PostHog\Laravel\Facades\PostHog;
 
 Route::middleware('guest')->group(function () {
     Volt::route('register', 'pages.auth.register')
@@ -31,6 +32,8 @@ Route::middleware('auth')->group(function () {
         ->name('password.confirm');
 
     Route::get('logout', function () {
+        PostHog::capture('user_logged_out');
+
         Auth::guard('web')->logout();
         request()->session()->invalidate();
         request()->session()->regenerateToken();

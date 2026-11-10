@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
+use PostHog\Laravel\Facades\PostHog;
 
 new class extends Component
 {
@@ -39,6 +40,8 @@ new class extends Component
         }
 
         $user->save();
+
+        PostHog::capture('profile_updated');
 
         $this->dispatch('profile-updated', name: $user->name);
     }
