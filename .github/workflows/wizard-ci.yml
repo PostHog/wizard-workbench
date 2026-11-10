@@ -871,6 +871,7 @@ jobs:
 
       # The artifacts role trusts only main, so a run from another branch gets no credentials.
       - name: Configure AWS credentials
+        id: aws-credentials
         if: always() && !env.ACT && github.ref == 'refs/heads/main'
         continue-on-error: true
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
@@ -1158,6 +1159,13 @@ jobs:
             exit 0
           fi
           echo "::error title=Warehouse e2e failed::$APP — status=$STATUS checks=$CHECKS. See the job summary for the failing check."
+          exit 1
+
+      # The credentials step continues on error so that the later steps still run.
+      - name: Fail the leg when the artifacts role is not available
+        if: always() && steps.aws-credentials.outcome == 'failure'
+        run: |
+          echo "::error title=No S3 artifacts::The run could not assume the artifacts role, so it uploaded no artifacts to S3."
           exit 1
 
   # ============================================================================
