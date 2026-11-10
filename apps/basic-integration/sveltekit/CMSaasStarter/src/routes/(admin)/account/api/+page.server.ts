@@ -1,9 +1,16 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
 import { WebsiteBaseUrl } from "../../../../config"
+import {
+  getPostHogClient,
+  getPostHogSessionProperties,
+} from "$lib/server/posthog"
 
 export const actions = {
-  toggleEmailSubscription: async ({ locals: { supabase, safeGetSession } }) => {
+  toggleEmailSubscription: async ({
+    request,
+    locals: { supabase, safeGetSession },
+  }) => {
     const { session } = await safeGetSession()
 
     if (!session) {
@@ -27,6 +34,17 @@ export const actions = {
       console.error("Error updating subscription status", error)
       return fail(500, { message: "Failed to update subscription status" })
     }
+
+    const posthog = getPostHogClient()
+    posthog?.capture({
+      distinctId: session.user.id,
+      event: "email_subscription_updated",
+      properties: {
+        ...getPostHogSessionProperties(request),
+        subscribed: !newUnsubscribedStatus,
+      },
+    })
+    await posthog?.flush().catch(() => {})
 
     return {
       unsubscribed: newUnsubscribedStatus,
@@ -70,6 +88,14 @@ export const actions = {
         email,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog?.capture({
+      distinctId: session.user.id,
+      event: "email_change_requested",
+      properties: getPostHogSessionProperties(request),
+    })
+    await posthog?.flush().catch(() => {})
 
     return {
       email,
@@ -172,6 +198,17 @@ export const actions = {
       })
     }
 
+    const posthog = getPostHogClient()
+    posthog?.capture({
+      distinctId: session.user.id,
+      event: "password_updated",
+      properties: {
+        ...getPostHogSessionProperties(request),
+        update_method: isRecoverySession ? "recovery" : "current_password",
+      },
+    })
+    await posthog?.flush().catch(() => {})
+
     return {
       newPassword1,
       newPassword2,
@@ -220,6 +257,14 @@ export const actions = {
         currentPassword,
       })
     }
+
+    const posthog = getPostHogClient()
+    posthog?.capture({
+      distinctId: user.id,
+      event: "account_deleted",
+      properties: getPostHogSessionProperties(request),
+    })
+    await posthog?.flush().catch(() => {})
 
     await supabase.auth.signOut()
     redirect(303, "/")
@@ -303,6 +348,17 @@ export const actions = {
     // If the profile was just created, send an email to the user and admin
     const newProfile =
       priorProfile?.updated_at === null && priorProfileError === null
+    const posthog = getPostHogClient()
+    posthog?.capture({
+      distinctId: user.id,
+      event: "profile_saved",
+      properties: {
+        ...getPostHogSessionProperties(request),
+        profile_created: newProfile,
+      },
+    })
+    await posthog?.flush().catch(() => {})
+
     if (newProfile) {
       await sendAdminEmail({
         subject: "Profile Created",
