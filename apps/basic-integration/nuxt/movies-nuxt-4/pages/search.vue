@@ -7,6 +7,8 @@ definePageMeta({
 
 const route = useRoute()
 const router = useRouter()
+const { $posthog } = useNuxtApp()
+const posthogLogger = usePostHogLogger()
 const input = ref((route.query.s || '').toString())
 const error = ref<unknown>()
 const count = ref<undefined | number>()
@@ -19,6 +21,8 @@ function search() {
     return
 
   currentSearch.value = input.value.toString()
+  $posthog?.capture('media_search_performed')
+  posthogLogger?.info('media_search_requested', { search_surface: 'search_page' })
   count.value = undefined
   items.value = []
   router.replace({ query: { s: input.value } })
