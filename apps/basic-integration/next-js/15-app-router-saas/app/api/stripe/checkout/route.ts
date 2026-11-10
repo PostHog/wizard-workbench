@@ -5,6 +5,7 @@ import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { flushPostHogLogs, posthogLog } from '@/instrumentation';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -89,9 +90,28 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    posthogLog?.emit({
+      body: 'checkout completed',
+      severityText: 'INFO',
+      attributes: {
+        event: 'checkout_completed',
+        billing_provider: 'stripe',
+        subscription_status: subscription.status,
+      },
+    });
+    flushPostHogLogs();
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
+    posthogLog?.emit({
+      body: 'checkout processing failed',
+      severityText: 'ERROR',
+      attributes: {
+        event: 'checkout_processing_failed',
+        billing_provider: 'stripe',
+      },
+    });
+    flushPostHogLogs();
     return NextResponse.redirect(new URL('/error', request.url));
   }
 }
