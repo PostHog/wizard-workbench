@@ -22,6 +22,18 @@ plugins {
     alias(libs.plugins.compose)
 }
 
+val posthogProperties = java.util.Properties().apply {
+    val envFile = file(".env")
+    if (envFile.exists()) {
+        envFile.inputStream().use(::load)
+    }
+}
+val posthogApiKey = providers.environmentVariable("POSTHOG_API_KEY").orNull
+    ?: posthogProperties.getProperty("POSTHOG_API_KEY")
+val posthogHost = providers.environmentVariable("POSTHOG_HOST").orNull
+    ?: posthogProperties.getProperty("POSTHOG_HOST")
+fun String.asBuildConfigValue() = "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
 android {
     compileSdk = libs.versions.compileSdk.get().toInt()
     namespace = "com.example.compose.jetchat"
@@ -33,6 +45,17 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "POSTHOG_API_KEY",
+            posthogApiKey?.asBuildConfigValue() ?: "null",
+        )
+        buildConfigField(
+            "String",
+            "POSTHOG_HOST",
+            posthogHost?.asBuildConfigValue() ?: "null",
+        )
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -75,6 +98,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -96,6 +120,7 @@ dependencies {
     implementation(libs.androidx.glance.material3)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
+    implementation("com.posthog:posthog-android:3.+")
 
     implementation(libs.androidx.activity.compose)
 
