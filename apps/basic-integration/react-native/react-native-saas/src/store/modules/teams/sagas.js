@@ -2,6 +2,7 @@ import { takeLatest, call, put, all, select } from 'redux-saga/effects';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
+import { posthog, posthogLogger } from '../../../config/posthog';
 import { isDemoMode, demoTeams } from '../../../services/demoData';
 
 import { getTeamsSuccess, createTeamSuccess, closeTeamModal } from './actions';
@@ -34,6 +35,8 @@ export function* createTeam({ payload }) {
       const newTeam = { id: Date.now(), name, slug };
       yield put(createTeamSuccess(newTeam));
       yield put(closeTeamModal());
+      posthog?.capture('team_created', { creation_mode: 'demo' });
+      posthogLogger.info('team_creation_completed', { creation_mode: 'demo' });
       toast.showSuccess('Team created');
       return;
     }
@@ -42,9 +45,12 @@ export function* createTeam({ payload }) {
 
     yield put(createTeamSuccess(response.data));
     yield put(closeTeamModal());
+    posthog?.capture('team_created', { creation_mode: 'api' });
+    posthogLogger.info('team_creation_completed', { creation_mode: 'api' });
 
     toast.showSuccess('Team created');
   } catch (err) {
+    posthogLogger.warn('team_creation_failed');
     toast.showError('Error creating team');
   }
 }
