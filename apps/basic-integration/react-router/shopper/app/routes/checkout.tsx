@@ -41,10 +41,24 @@ export default function Checkout() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
+    const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
+    const subtotal = getCartTotal();
 
     setTimeout(() => {
       clearCart();
       setIsProcessing(false);
+      void import("posthog-js")
+        .then(({ default: posthog }) => {
+          const attributes = {
+            item_count: itemCount,
+            subtotal,
+            order_total: subtotal * 1.1,
+          };
+
+          posthog.capture("order_completed", attributes);
+          posthog.logger.info("checkout order completed", attributes);
+        })
+        .catch(() => undefined);
       alert("Order placed successfully! Thank you for your purchase.");
       navigate("/products");
     }, 2000);

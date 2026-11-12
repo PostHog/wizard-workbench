@@ -6,10 +6,44 @@ export default function Cart() {
 
   const handleRemoveFromCart = (item: CartItem) => {
     removeFromCart(item.id);
+    void import("posthog-js")
+      .then(({ default: posthog }) =>
+        posthog.capture("cart_item_removed", {
+          product_id: item.id,
+          product_category: item.category,
+          unit_price: item.price,
+          quantity: item.quantity,
+        }),
+      )
+      .catch(() => undefined);
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
     updateQuantity(item.id, newQuantity);
+    void import("posthog-js")
+      .then(({ default: posthog }) =>
+        posthog.capture("cart_quantity_updated", {
+          product_id: item.id,
+          product_category: item.category,
+          previous_quantity: item.quantity,
+          quantity: newQuantity,
+        }),
+      )
+      .catch(() => undefined);
+  };
+
+  const handleCheckoutStart = () => {
+    void import("posthog-js")
+      .then(({ default: posthog }) => {
+        const attributes = {
+          item_count: cart.reduce((count, item) => count + item.quantity, 0),
+          cart_total: getCartTotal(),
+        };
+
+        posthog.capture("checkout_started", attributes);
+        posthog.logger.info("checkout started", attributes);
+      })
+      .catch(() => undefined);
   };
 
   if (cart.length === 0) {
@@ -154,6 +188,7 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={handleCheckoutStart}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout

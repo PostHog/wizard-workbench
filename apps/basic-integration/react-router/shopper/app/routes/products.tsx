@@ -19,6 +19,20 @@ export default function Products({ loaderData }: Route.ComponentProps) {
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
+    void import("posthog-js")
+      .then(({ default: posthog }) => {
+        const attributes = {
+          product_id: product.id,
+          product_category: product.category,
+          unit_price: product.price,
+          quantity: 1,
+          source: "product_catalog",
+        };
+
+        posthog.capture("product_added_to_cart", attributes);
+        posthog.logger.info("catalog item added to cart", attributes);
+      })
+      .catch(() => undefined);
   };
 
   const handleSearch = (term: string) => {
