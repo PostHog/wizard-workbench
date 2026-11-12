@@ -9,7 +9,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "posthog-node": "^4.2.0"
+    "posthog-node": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

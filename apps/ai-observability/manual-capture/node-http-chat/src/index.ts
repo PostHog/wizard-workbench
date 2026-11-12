@@ -1,7 +1,10 @@
+import { randomUUID } from 'node:crypto'
+import { captureGeneration, captureToolSpan, shutdownAiObservability } from './ai-observability.js'
 import { lookupOrder } from './orders.js'
 import { posthog } from './posthog.js'
 
 const LLM_URL = process.env.LLM_URL ?? 'http://localhost:11434/v1/chat/completions'
+const LLM_PROVIDER = process.env.LLM_PROVIDER ?? 'ollama'
 const MODEL = 'llama3.2'
 
 type Message = {
@@ -35,7 +38,10 @@ const TOOLS = [
     },
 ]
 
-async function complete(messages: Message[]): Promise<Completion> {
+type AiContext = { distinctId: string; sessionId: string; traceId: string }
+
+async function complete(messages: Message[], context: AiContext): Promise<Completion> {
+    const startedAt = Date.now()
     const res = await fetch(LLM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,12 +55,23 @@ async function complete(messages: Message[]): Promise<Completion> {
         usage?: { prompt_tokens: number; completion_tokens: number }
     }
     const message = body.choices[0]?.message
-    return {
+    const completion = {
         text: message?.content ?? '',
         toolCalls: message?.tool_calls ?? [],
         promptTokens: body.usage?.prompt_tokens ?? 0,
         completionTokens: body.usage?.completion_tokens ?? 0,
     }
+
+    captureGeneration({
+        ...context,
+        messages: structuredClone(messages),
+        generation: completion,
+        model: MODEL,
+        provider: LLM_PROVIDER,
+        latencyMs: Date.now() - startedAt,
+    })
+
+    return completion
 }
 
 type Turn = { question: string; answer: string }
@@ -81,20 +98,31 @@ class Thread {
             { role: 'user', content: question },
         ]
 
-        let result = await complete(messages)
+        const context: AiContext = {
+            distinctId: this.userId,
+            sessionId: this.threadId.replace(/[^A-Za-z0-9_~.@()!':|-]/g, '_'),
+            traceId: randomUUID(),
+        }
+        let result = await complete(messages, context)
 
         if (result.toolCalls.length > 0) {
             messages.push({ role: 'assistant', content: '', tool_calls: result.toolCalls })
             for (const call of result.toolCalls) {
                 const args = JSON.parse(call.function.arguments) as { user_id?: string }
+                const toolStartedAt = Date.now()
                 const output = lookupOrder(args.user_id ?? this.userId)
+                captureToolSpan({
+                    ...context,
+                    toolName: call.function.name,
+                    latencyMs: Date.now() - toolStartedAt,
+                })
                 messages.push({
                     role: 'tool',
                     tool_call_id: call.id,
                     content: JSON.stringify(output),
                 })
             }
-            result = await complete(messages)
+            result = await complete(messages, context)
         }
 
         this.turns.push({ question, answer: result.text })
@@ -116,11 +144,13 @@ async function main(): Promise<void> {
     console.log(await thread.ask('Where is my order?'))
     console.log(await thread.ask('Can I get a refund instead?'))
 
+    await shutdownAiObservability()
     await posthog.shutdown()
 }
 
 main().catch(async (err) => {
     console.error(`fatal: ${String(err)}`)
+    await shutdownAiObservability()
     await posthog.shutdown()
     process.exit(1)
 })
