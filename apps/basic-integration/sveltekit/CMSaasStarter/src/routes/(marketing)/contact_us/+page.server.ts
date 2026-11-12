@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { logPostHogInfo } from "$lib/server/posthog-logs.js"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -48,6 +49,9 @@ export const actions = {
     }
 
     if (Object.keys(errors).length > 0) {
+      logPostHogInfo("contact request rejected", {
+        outcome: "validation_failed",
+      })
       return fail(400, { errors })
     }
 
@@ -66,8 +70,15 @@ export const actions = {
 
     if (insertError) {
       console.error("Error saving contact request", insertError)
+      logPostHogInfo("contact request persistence failed", {
+        outcome: "database_error",
+      })
       return fail(500, { errors: { _: "Error saving" } })
     }
+
+    logPostHogInfo("contact request persisted", {
+      outcome: "success",
+    })
 
     // Send email to admin
     await sendAdminEmail({
