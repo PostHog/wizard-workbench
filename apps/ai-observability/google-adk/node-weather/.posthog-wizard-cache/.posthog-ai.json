@@ -1,0 +1,5 @@
+{
+  "provider": "google-adk",
+  "package": "@posthog/ai",
+  "otel_init_file": "src/index.ts"
+}
