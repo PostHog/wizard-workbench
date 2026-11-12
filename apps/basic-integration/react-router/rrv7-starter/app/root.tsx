@@ -20,6 +20,7 @@ import Footer from '@/components/footer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+import { PostHogClientProvider } from '@/components/posthog-provider'
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -73,9 +74,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body suppressHydrationWarning>
-        <Header />
-        {children}
-        <Footer />
+        <PostHogClientProvider>
+          <Header />
+          {children}
+          <Footer />
+        </PostHogClientProvider>
         <ScrollRestoration />
         <Scripts />
       </body>
