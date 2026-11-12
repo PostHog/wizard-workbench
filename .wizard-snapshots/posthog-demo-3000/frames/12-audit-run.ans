@@ -1,0 +1,49 @@
+                              [0m[38;5;58;48;5;178m PostHog Wizard v2.79.1                                                                    Feedback: wizard@posthog.com [0m                              
+                                                                                                                                                                                    
+                                [0m[1;38;5;178mWe've wrapped up the review.[0m                               [0m[1mChecks[0m                                                                                   
+                                                                                                                                                                                    
+                                To help you get the most out of your PostHog               [0m[1mInstallation[0m [0m[2m(4/4)[0m                                                                       
+                                integration, we're preparing a report for you at           [0m[38;5;2m✔[0m PostHog SDK installed                                                                  
+                                [0m[38;5;6m./posthog-audit-report.md[0m.                                 [0m[38;5;1m✘[0m SDK version up to date                                                                 
+                                                                                           [0m[38;5;1m✘[0m Initialization is correct                                                              
+                                We'll cover what we checked and suggest where we can       [0m[38;5;2m✔[0m One initialization per runtime                                                         
+                                improve the existing integration.                                                                                                                   
+                                                                                           [0m[1mIdentification[0m [0m[2m(4/4)[0m                                                                     
+                                [0m[2mHang tight![0m                                                [0m[38;5;2m✔[0m Stable distinct_id (not session UUID)                                                  
+                                                                                           [0m[38;5;2m✔[0m identify() called before captures / flag evals                                         
+                                [0m[2m────────────────────────────────────────[0m                   [0m[38;5;1m✘[0m Same distinct_id across client and server                                              
+                                Notebook:                                                  [0m[38;5;1m✘[0m reset() called on logout / account switch                                              
+                                [0m[38;5;6mhttps://us.posthog.com/project/483112/notebooks/8rZyEZda[0m                                                                                            
+                                                                                           [0m[1mEvent Capture[0m [0m[2m(3/3)[0m                                                                      
+                                                                                           [0m[38;5;1m✘[0m Event names are static and consistent                                                  
+                                                                                           [0m[38;5;3m⚠[0m Captures route through a reverse proxy                                                 
+                                                                                           [0m[38;5;2m✔[0m Key activation events captured                                                         
+                                                                                                                                                                                    
+                                                                                           [0m[1mLive Data[0m [0m[2m(1/1)[0m                                                                          
+                                                                                           [0m[38;5;6m•[0m Open findings in PostHog                                                               
+                                                                                                                                                                                    
+                                                                                           [0m[1mWrite report[0m [0m[2m(1/1)[0m                                                                       
+                                                                                           [0m[38;5;2m✔[0m Create posthog-audit-report.md                                                         
+                                                                                                                                                                                    
+                                                                                           [0m[1mUpload notebook[0m [0m[2m(1/1)[0m                                                                    
+                                                                                           [0m[38;5;2m✔[0m Write the report into a PostHog notebook                                               
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                               [0m[38;5;8m──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m                               
+                                [0m[2;38;5;8m┊ Verifying every report section and audit area landed in the notebook.[0m                                                                             
+                                [0m[38;5;8m◆ Marking the verified notebook upload complete.[0m                                                                                                    
+                                                                                                                                                                                    
+                                [0m[1;7;38;5;178m Status [0m [0m[38;5;8m Audit plan [0m [0m[38;5;8m Tail logs [0m [0m[38;5;8m HN [0m                                                                                                              
+                                                                                                                                                                                    
+                                [0m[1;38;5;8m←→[0m[2m switch tab[0m  [0m[1;38;5;8ms[0m[2m toggle status[0m                                                                                                                      

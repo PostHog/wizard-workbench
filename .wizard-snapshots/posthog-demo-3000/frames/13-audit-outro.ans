@@ -1,0 +1,34 @@
+                              [0m[38;5;58;48;5;178m PostHog Wizard v2.79.1                                                                    Feedback: wizard@posthog.com [0m                              
+                                                                                                                                                                                    
+                               [0m[1;38;5;2m✔ Audit complete! You can view the audit report at ./posthog-audit-report.md[0m                                                                         
+                                                                                                                                                                                    
+                               Notebook: [0m[38;5;6mhttps://us.posthog.com/project/483112/notebooks/8rZyEZda[0m                                                                                   
+                                                                                                                                                                                    
+                               [0m[1;38;5;6mReport saved to:[0m                                                                                                                                     
+                               /tmp/wizard-e2e-posthog-demo-3000/posthog-audit-report.md                                                                                            
+                               [0m[2mA markdown file in your project folder. Open it in any editor to read the full audit.[0m                                                                
+                                                                                                                                                                                    
+                               [0m[1;38;5;6mItems audited:[0m                                                                                                                                       
+                               [0m[2m14 checks · 5 errors · 1 warning · 1 suggestion[0m                                                                                                      
+                                                                                                                                                                                    
+                               [0m[38;5;1m✘[0m [0m[1mSDK version up to date[0m [0m[2m(Installation)[0m                                                                                                              
+                                                                                                                                                                                    
+                               [0m[38;5;1m✘[0m [0m[1mInitialization is correct[0m [0m[2m(Installation)[0m                                                                                                           
+                               [0m[2m  static/js/posthog.js:4[0m                                                                                                                             
+                                                                                                                                                                                    
+                               [0m[38;5;1m✘[0m [0m[1mSame distinct_id across client and server[0m [0m[2m(Identification)[0m                                                                                         
+                               [0m[2m  app.py:195[0m                                                                                                                                         
+                                                                                                                                                                                    
+                               [0m[38;5;1m✘[0m [0m[1mreset() called on logout / account switch[0m [0m[2m(Identification)[0m                                                                                         
+                               [0m[2m  app.py:186[0m                                                                                                                                         
+                                                                                                                                                                                    
+                               [0m[38;5;1m✘[0m [0m[1mEvent names are static and consistent[0m [0m[2m(Event Capture)[0m                                                                                              
+                               [0m[2m  templates/base.html:173[0m                                                                                                                            
+                                                                                                                                                                                    
+                               [0m[38;5;3m⚠[0m [0m[1mCaptures route through a reverse proxy[0m [0m[2m(Event Capture)[0m                                                                                             
+                               [0m[2m  templates/base.html:13[0m                                                                                                                             
+                               [0m[2m… and 1 more. See the report for details.[0m                                                                                                            
+                                                                                                                                                                                    
+                               Learn more: [0m[38;5;6mhttps://posthog.com/docs/product-analytics/best-practices[0m                                                                                
+                                                                                                                                                                                    
+                               [0m[38;5;8mPress any key to continue[0m                                                                                                                            
