@@ -1,8 +1,10 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
+use PostHog\Laravel\Facades\PostHog;
 use Livewire\Volt\Component;
 
 new #[Layout('layouts.guest')] class extends Component
@@ -17,6 +19,16 @@ new #[Layout('layouts.guest')] class extends Component
         $this->validate();
 
         $this->form->authenticate();
+
+        $user = Auth::user();
+
+        PostHog::identify([
+            'distinctId' => $user->getPostHogDistinctId(),
+            'properties' => $user->getPostHogProperties(),
+        ]);
+        PostHog::capture('user_logged_in', [
+            'login_method' => 'password',
+        ], $user->getPostHogDistinctId());
 
         Session::regenerate();
 

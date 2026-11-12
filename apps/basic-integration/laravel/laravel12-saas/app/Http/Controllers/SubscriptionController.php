@@ -9,6 +9,7 @@ use App\Actions\Billing\SwapPlan;
 use App\Domains\Billing\PlanCatalog;
 use Exception;
 use Illuminate\Http\Request;
+use PostHog\Laravel\Facades\PostHog;
 
 class SubscriptionController extends Controller
 {
@@ -27,9 +28,15 @@ class SubscriptionController extends Controller
     {
         $plan = $catalog->findOrFail($request->plan);
         $user = $request->user();
+        $isStripeConfigured = CheckoutPlan::isStripeConfigured();
+
+        PostHog::capture('subscription_checkout_started', [
+            'plan_id' => $plan->getKey(),
+            'billing_mode' => $isStripeConfigured ? 'stripe' : 'demo',
+        ]);
 
         // Stub out subscription if Stripe isn't configured (for demo/development)
-        if (!CheckoutPlan::isStripeConfigured()) {
+        if (! $isStripeConfigured) {
             return $this->createStubSubscription($user, $plan);
         }
 
@@ -58,6 +65,11 @@ class SubscriptionController extends Controller
             'amount' => $plan->price ?? 0,
         ]);
 
+        PostHog::capture('subscription_started', [
+            'plan_id' => $plan->getKey(),
+            'billing_mode' => 'demo',
+        ]);
+
         return redirect()->route('dashboard')->with('success', 'Demo subscription created for ' . $plan->name . '. (Stripe not configured)');
     }
 
@@ -70,6 +82,10 @@ class SubscriptionController extends Controller
             try {
                 $swapPlan($user, $plan);
 
+                PostHog::capture('subscription_plan_changed', [
+                    'plan_id' => $plan->getKey(),
+                ]);
+
                 return redirect()->route('subscribe')->with('success', 'Your subscription has been updated to '.$plan->name.'.');
             } catch (Exception $e) {
                 return redirect()->route('subscribe')->with('error', 'There was an error updating your subscription: '.$e->getMessage());
@@ -81,6 +97,10 @@ class SubscriptionController extends Controller
 
     public function redirectToBillingPortal(Request $request, RedirectToBillingPortal $billingPortal)
     {
+        PostHog::capture('billing_portal_requested', [
+            'billing_mode' => CheckoutPlan::isStripeConfigured() ? 'stripe' : 'demo',
+        ]);
+
         return $billingPortal($request->user());
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Volt\Component;
+use PostHog\Laravel\Facades\PostHog;
 
 new #[Layout('layouts.guest')] class extends Component
 {
@@ -51,6 +52,7 @@ new #[Layout('layouts.guest')] class extends Component
                 ])->save();
 
                 event(new PasswordReset($user));
+                PostHog::capture('password_reset', [], $user->getPostHogDistinctId());
             }
         );
 
