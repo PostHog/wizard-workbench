@@ -1,9 +1,11 @@
 import json
 import sys
 import time
+from functools import wraps
 import sqlalchemy as sa
 from flask import render_template
 from rq import get_current_job
+from posthog import identify_context, new_context
 from app import create_app, db
 from app.models import User, Post, Task
 from app.email import send_email
@@ -25,6 +27,18 @@ def _set_task_progress(progress):
         db.session.commit()
 
 
+def identified_task(task):
+    @wraps(task)
+    def wrapper(user_id, *args, **kwargs):
+        if not app.extensions.get('posthog'):
+            return task(user_id, *args, **kwargs)
+        with new_context():
+            identify_context(str(user_id))
+            return task(user_id, *args, **kwargs)
+    return wrapper
+
+
+@identified_task
 def export_posts(user_id):
     try:
         user = db.session.get(User, user_id)
@@ -49,6 +63,14 @@ def export_posts(user_id):
             attachments=[('posts.json', 'application/json',
                           json.dumps({'posts': data}, indent=4))],
             sync=True)
+        posthog_client = app.extensions.get('posthog')
+        if posthog_client:
+            posthog_client.capture(
+                'posts_export_completed', properties={'post_count': total_posts})
+        posthog_logger = app.extensions.get('posthog_logs')
+        if posthog_logger:
+            posthog_logger.info(
+                'Post export completed', extra={'post_count': total_posts})
     except Exception:
         _set_task_progress(100)
         app.logger.error('Unhandled exception', exc_info=sys.exc_info())

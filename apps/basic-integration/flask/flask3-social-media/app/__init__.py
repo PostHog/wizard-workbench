@@ -1,7 +1,13 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
 from flask import Flask, request, current_app
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from posthog import Posthog
+from posthog.integrations.flask import PosthogFlaskIntegration
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -53,6 +59,49 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    posthog_project_api_key = app.config['POSTHOG_PROJECT_API_KEY']
+    posthog_host = app.config['POSTHOG_HOST']
+    if posthog_project_api_key and posthog_host:
+        posthog_client = Posthog(
+            posthog_project_api_key,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        PosthogFlaskIntegration(app, client=posthog_client)
+        atexit.register(posthog_client.shutdown)
+        app.extensions['posthog'] = posthog_client
+
+        log_provider = LoggerProvider()
+        log_provider.add_log_record_processor(BatchLogRecordProcessor(
+            OTLPLogExporter(
+                endpoint=f"{posthog_host.rstrip('/')}/i/v1/logs",
+                headers={'Authorization': f'Bearer {posthog_project_api_key}'},
+            )
+        ))
+        posthog_logger = logging.getLogger('microblog.posthog')
+        posthog_logger.setLevel(logging.INFO)
+        posthog_logger.propagate = False
+        posthog_logger.addHandler(LoggingHandler(logger_provider=log_provider))
+        app.extensions['posthog_logs'] = posthog_logger
+        atexit.register(log_provider.shutdown)
+        posthog_logger.info('PostHog log export configured')
+    else:
+        app.extensions['posthog'] = None
+        app.extensions['posthog_logs'] = None
+        if app.debug or app.testing:
+            for variable_name, value in (
+                ('POSTHOG_PROJECT_API_KEY', posthog_project_api_key),
+                ('POSTHOG_HOST', posthog_host),
+            ):
+                if not value:
+                    app.logger.warning(
+                        '%s variable required by PostHog is missing or '
+                        'un-configured, this causes events to be silently missed. '
+                        'This error stops appearing once %s is configured',
+                        variable_name,
+                        variable_name,
+                    )
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
