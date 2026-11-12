@@ -76,6 +76,30 @@ async def generate_content(
         credits_used=credits_needed,
     )
 
+    from app.main import posthog_client, posthog_logs_logger
+
+    if posthog_client:
+        posthog_client.capture(
+            "content_generated",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+                "prompt_length": len(request.prompt),
+            },
+        )
+
+    posthog_logs_logger.info(
+        "content_generation_completed",
+        extra={
+            "event": "content_generation_completed",
+            "generation_type": request.generation_type,
+            "credits_used": credits_needed,
+            "credits_remaining": current_user.credits,
+            "result_length": len(mock_content),
+        },
+    )
+
     return GenerateResponse(
         id=generation.id,
         content=mock_content,
