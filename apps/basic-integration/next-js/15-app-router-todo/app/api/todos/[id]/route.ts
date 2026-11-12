@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { logTodoOperation, flushPostHogLogs } from '@/instrumentation';
 import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
 import { z } from 'zod';
 
@@ -59,6 +60,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    logTodoOperation('update');
+    after(flushPostHogLogs);
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -93,6 +97,9 @@ export async function DELETE(
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
+
+    logTodoOperation('delete');
+    after(flushPostHogLogs);
 
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
