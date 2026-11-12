@@ -24,7 +24,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Basic integrations</li>
             <li>Email support</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Get Started</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-marketing-cta="starter-get-started">Get Started</a>
         </div>
 
         <div class="pricing-card featured">
@@ -40,7 +40,7 @@ import Layout from '../layouts/Layout.astro';
             <li>Advanced analytics</li>
             <li>Custom workflows</li>
           </ul>
-          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;">Start Free Trial</a>
+          <a href="#" class="btn btn-primary" style="width: 100%; justify-content: center;" data-marketing-cta="pro-free-trial">Start Free Trial</a>
         </div>
 
         <div class="pricing-card">
@@ -57,9 +57,32 @@ import Layout from '../layouts/Layout.astro';
             <li>On-premise deployment</li>
             <li>Custom training</li>
           </ul>
-          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;">Contact Sales</a>
+          <a href="#" class="btn btn-secondary" style="width: 100%; justify-content: center;" data-marketing-cta="enterprise-contact-sales">Contact Sales</a>
         </div>
       </div>
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  const pricingCtas = [
+    ['starter-get-started', 'starter', 'get_started'],
+    ['pro-free-trial', 'pro', 'free_trial'],
+    ['enterprise-contact-sales', 'enterprise', 'contact_sales'],
+  ];
+
+  pricingCtas.forEach(([cta, plan, conversionPath]) => {
+    document.querySelector(`[data-marketing-cta="${cta}"]`)?.addEventListener('click', () => {
+      window.posthog?.logger?.info('marketing CTA selected', {
+        placement: 'pricing',
+        plan,
+        conversion_path: conversionPath,
+      });
+      window.posthog?.capture('marketing_cta_clicked', {
+        placement: 'pricing',
+        plan,
+        conversion_path: conversionPath,
+      });
+    });
+  });
+</script>
