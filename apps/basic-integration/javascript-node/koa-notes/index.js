@@ -1,9 +1,20 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { capturePosthogLog, shutdownPosthogLogs } from './posthog-logs.js';
+import { posthog } from './posthog.js';
 
 const app = new Koa();
 const router = new Router();
+
+app.on('error', (error) => {
+  if (posthog) {
+    posthog.captureException(error, 'koa-server');
+  }
+  capturePosthogLog('ERROR', 'koa request failed', {
+    event: 'koa_request_failed',
+  });
+});
 
 app.use(bodyParser());
 
@@ -32,6 +43,16 @@ router.post('/api/folders', (ctx) => {
 
   const folder = { id: nextFolderId++, name };
   folders.push(folder);
+  if (posthog) {
+    posthog.capture({
+      event: 'folder_created',
+      properties: { folder_id: folder.id },
+    });
+  }
+  capturePosthogLog('INFO', 'folder created', {
+    event: 'folder_created',
+    folder_id: folder.id,
+  });
   ctx.status = 201;
   ctx.body = folder;
 });
@@ -54,11 +75,21 @@ router.delete('/api/folders/:id', (ctx) => {
   }
 
   // Move notes from deleted folder to General
+  let moved_note_count = 0;
   for (const note of notes) {
-    if (note.folder_id === folderId) note.folder_id = 1;
+    if (note.folder_id === folderId) {
+      note.folder_id = 1;
+      moved_note_count += 1;
+    }
   }
 
   folders.splice(index, 1);
+  if (posthog) {
+    posthog.capture({
+      event: 'folder_deleted',
+      properties: { folder_id: folderId, moved_note_count },
+    });
+  }
   ctx.status = 204;
 });
 
@@ -105,6 +136,22 @@ router.post('/api/notes', (ctx) => {
     updated_at: new Date().toISOString(),
   };
   notes.push(note);
+  if (posthog) {
+    posthog.capture({
+      event: 'note_created',
+      properties: {
+        note_id: note.id,
+        folder_id: note.folder_id,
+        content_length: content.length,
+      },
+    });
+  }
+  capturePosthogLog('INFO', 'note created', {
+    event: 'note_created',
+    note_id: note.id,
+    folder_id: note.folder_id,
+    content_length: content.length,
+  });
   ctx.status = 201;
   ctx.body = note;
 });
@@ -131,8 +178,15 @@ router.patch('/api/notes/:id', (ctx) => {
   }
 
   const { title, content, folder_id } = ctx.request.body;
-  if (title !== undefined) note.title = title;
-  if (content !== undefined) note.content = content;
+  const updated_fields = [];
+  if (title !== undefined) {
+    note.title = title;
+    updated_fields.push('title');
+  }
+  if (content !== undefined) {
+    note.content = content;
+    updated_fields.push('content');
+  }
   if (folder_id !== undefined) {
     if (!folders.find((f) => f.id === folder_id)) {
       ctx.status = 400;
@@ -140,9 +194,20 @@ router.patch('/api/notes/:id', (ctx) => {
       return;
     }
     note.folder_id = folder_id;
+    updated_fields.push('folder_id');
   }
   note.updated_at = new Date().toISOString();
 
+  if (posthog) {
+    posthog.capture({
+      event: 'note_updated',
+      properties: {
+        note_id: note.id,
+        folder_id: note.folder_id,
+        updated_fields,
+      },
+    });
+  }
   ctx.body = note;
 });
 
@@ -155,7 +220,13 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
-  notes.splice(index, 1);
+  const [deletedNote] = notes.splice(index, 1);
+  if (posthog) {
+    posthog.capture({
+      event: 'note_deleted',
+      properties: { note_id: deletedNote.id, folder_id: deletedNote.folder_id },
+    });
+  }
   ctx.status = 204;
 });
 
@@ -164,6 +235,29 @@ app.use(router.allowedMethods());
 
 const PORT = process.env.PORT || 3003;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Koa notes API running on http://localhost:${PORT}`);
+  capturePosthogLog('INFO', 'koa notes API started', {
+    event: 'api_started',
+  });
 });
+
+let isShuttingDown = false;
+
+function shutdown() {
+  if (isShuttingDown) {
+    return;
+  }
+
+  isShuttingDown = true;
+  server.close();
+
+  const shutdownTasks = [shutdownPosthogLogs()];
+  if (posthog) {
+    shutdownTasks.push(posthog.shutdown(3000));
+  }
+  void Promise.allSettled(shutdownTasks).finally(() => process.exit(0));
+}
+
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
