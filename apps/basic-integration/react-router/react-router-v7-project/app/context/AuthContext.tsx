@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import type { FakeUser } from '~/lib/utils/auth'
 import { getCurrentUser, setCurrentUser, fakeLogin, fakeSignup, fakeLogout } from '~/lib/utils/auth'
@@ -14,15 +15,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FakeUser | null>(null)
+  const posthog = usePostHog()
+
+  const identifyUser = (currentUser: FakeUser) => {
+    posthog.identify(currentUser.id, {
+      email: currentUser.email,
+      username: currentUser.username,
+    })
+  }
 
   useEffect(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
+
+    if (currentUser) {
+      identifyUser(currentUser)
+    }
   }, [])
 
   const login = (username: string, password: string): boolean => {
     const loggedInUser = fakeLogin(username, password)
     if (loggedInUser) {
+      if (user && user.id !== loggedInUser.id) {
+        posthog.reset()
+      }
+      identifyUser(loggedInUser)
       setUser(loggedInUser)
       return true
     }
@@ -32,6 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = (username: string, email: string, password: string): FakeUser | null => {
     try {
       const newUser = fakeSignup(username, email, password)
+      if (user && user.id !== newUser.id) {
+        posthog.reset()
+      }
+      identifyUser(newUser)
       setUser(newUser)
       return newUser
     } catch (error) {
@@ -41,26 +62,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    posthog.reset()
     fakeLogout()
     setUser(null)
   }
 
   // Sync user state when localStorage changes
   useEffect(() => {
-    const handleStorageChange = () => {
+    const syncCurrentUser = () => {
       const currentUser = getCurrentUser()
+      if (currentUser?.id === user?.id) {
+        return
+      }
+      if (user) {
+        posthog.reset()
+      }
+      if (currentUser) {
+        identifyUser(currentUser)
+      }
       setUser(currentUser)
     }
-    window.addEventListener('storage', handleStorageChange)
-    const interval = setInterval(() => {
-      const currentUser = getCurrentUser()
-      if (currentUser?.id !== user?.id) {
-        setUser(currentUser)
-      }
-    }, 1000)
-    
+
+    window.addEventListener('storage', syncCurrentUser)
+    const interval = setInterval(syncCurrentUser, 1000)
+
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('storage', syncCurrentUser)
       clearInterval(interval)
     }
   }, [user?.id])
