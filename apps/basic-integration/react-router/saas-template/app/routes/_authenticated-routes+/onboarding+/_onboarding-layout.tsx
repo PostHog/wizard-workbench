@@ -4,7 +4,10 @@ import { Outlet, useMatch } from "react-router";
 
 import type { Route } from "./+types/_onboarding-layout";
 import { TalentMap } from "~/features/onboarding/talent-map";
-import { authMiddleware } from "~/features/user-authentication/user-authentication-middleware.server";
+import {
+  authContext,
+  authMiddleware,
+} from "~/features/user-authentication/user-authentication-middleware.server";
 import { cn } from "~/lib/utils";
 
 export const middleware = [authMiddleware];
@@ -15,8 +18,11 @@ export const middleware = [authMiddleware];
  * We disable animations in test mode to significantly speed up Playwright tests
  * and prevent WebGL-related GPU stalls in CI environments.
  */
-export async function loader() {
+export async function loader({ context }: Route.LoaderArgs) {
+  const { user } = context.get(authContext);
+
   return {
+    posthogUser: { email: user.email, id: user.id },
     shouldShowAnimations: process.env.NODE_ENV !== "test",
   };
 }

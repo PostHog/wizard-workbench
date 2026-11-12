@@ -98,6 +98,11 @@ export default async function handleRequest(
 
           responseHeaders.set("Content-Type", "text/html");
 
+          const posthogHost = process.env.VITE_PUBLIC_POSTHOG_HOST;
+          const posthogAssetsHost = posthogHost
+            ? posthogHost.replace(".i.", "-assets.i.")
+            : undefined;
+
           // Configure Content Security Policy with the nonce
           contentSecurity(responseHeaders, {
             contentSecurityPolicy: {
@@ -107,6 +112,7 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    posthogHost,
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],
@@ -120,7 +126,9 @@ export default async function handleRequest(
                     "'strict-dynamic'",
                     "'self'",
                     `'nonce-${nonce}'`,
+                    posthogAssetsHost,
                   ],
+                  "worker-src": ["'self'", "blob:"],
                   // Inline event handlers with nonce
                   "script-src-attr": [`'nonce-${nonce}'`],
                 },

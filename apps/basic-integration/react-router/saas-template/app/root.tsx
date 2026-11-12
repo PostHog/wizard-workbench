@@ -119,7 +119,31 @@ export function Layout({
       match.pathname.startsWith("/onboarding") ||
       match.id === "routes/_user-authentication+/_user-authentication-layout",
   );
+  const posthogUser = matches
+    .map((match) => match.data)
+    .find(
+      (matchData): matchData is { posthogUser: { email?: string; id: string } } =>
+        typeof matchData === "object" &&
+        matchData !== null &&
+        "posthogUser" in matchData &&
+        typeof matchData.posthogUser === "object" &&
+        matchData.posthogUser !== null &&
+        "id" in matchData.posthogUser &&
+        typeof matchData.posthogUser.id === "string",
+    )?.posthogUser;
   useToast(data?.toast);
+
+  useEffect(() => {
+    if (!posthogUser) return;
+
+    void import("~/lib/posthog.client").then(({ default: posthog }) => {
+      if (posthogUser.email) {
+        posthog.identify(posthogUser.id, { email: posthogUser.email });
+      } else {
+        posthog.identify(posthogUser.id);
+      }
+    });
+  }, [posthogUser?.email, posthogUser?.id]);
 
   return (
     <html

@@ -77,13 +77,23 @@ export function CancelOrModifySubscriptionModalContent({
       (tier === "mid" && isSwitchingToMid) ||
       (tier === "high" && isSwitchingToHigh);
 
+    const onClick = () => {
+      void import("~/lib/posthog.client").then(({ default: posthog }) => {
+        posthog.capture("subscription_change_submitted", {
+          billing_interval: interval,
+          tier,
+        });
+      });
+    };
+
     // 1. If this is the current tier but only the billing interval is different
     if (isCurrentTier) {
       if (interval !== currentTierInterval) {
         return interval === "annual"
-          ? { children: tModal("switchToAnnualButton") }
+          ? { children: tModal("switchToAnnualButton"), onClick }
           : {
               children: tModal("switchToMonthlyButton"),
+              onClick,
               variant: "outline",
             };
       }
@@ -113,8 +123,16 @@ export function CancelOrModifySubscriptionModalContent({
 
     // 3. Default static buttons for upgrade vs downgrade
     return isUpgrade
-      ? { children: tModal("upgradeButton"), disabled: isSubmitting }
-      : { children: tModal("downgradeButton"), variant: "outline" };
+      ? {
+          children: tModal("upgradeButton"),
+          disabled: isSubmitting,
+          onClick,
+        }
+      : {
+          children: tModal("downgradeButton"),
+          onClick,
+          variant: "outline",
+        };
   };
 
   return (

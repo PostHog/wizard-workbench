@@ -113,6 +113,9 @@ export function InviteLinkCard({
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
                   setLinkCopied(true);
+                  void import("~/lib/posthog.client").then(({ default: posthog }) => {
+                    posthog.capture("invite_link_copied");
+                  });
                 }}
                 size="icon"
                 variant="ghost"
@@ -168,6 +171,13 @@ export function InviteLinkCard({
                   name="intent"
                   type="submit"
                   value="createNewInviteLink"
+                  onClick={() => {
+                    void import("~/lib/posthog.client").then(({ default: posthog }) => {
+                      posthog.capture("invite_link_submitted", {
+                        action: "regenerate",
+                      });
+                    });
+                  }}
                 >
                   {isCreatingNewLink ? (
                     <>
@@ -187,6 +197,13 @@ export function InviteLinkCard({
                   type="submit"
                   value="deactivateInviteLink"
                   variant="outline"
+                  onClick={() => {
+                    void import("~/lib/posthog.client").then(({ default: posthog }) => {
+                      posthog.capture("invite_link_submitted", {
+                        action: "deactivate",
+                      });
+                    });
+                  }}
                 >
                   {isDeactivatingLink ? (
                     <>
@@ -222,6 +239,11 @@ export function InviteLinkCard({
               name="intent"
               type="submit"
               value="createNewInviteLink"
+              onClick={() => {
+                void import("~/lib/posthog.client").then(({ default: posthog }) => {
+                  posthog.capture("invite_link_submitted", { action: "create" });
+                });
+              }}
             >
               {isCreatingNewLink ? (
                 <>

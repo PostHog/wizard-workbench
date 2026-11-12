@@ -96,6 +96,11 @@ export function CreateSubscriptionModalContent({
         tModal("tierCardCta")
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
+      onClick: () => {
+        void import("~/lib/posthog.client").then(({ default: posthog }) => {
+          posthog.capture("checkout_started", { billing_interval: interval, tier });
+        });
+      },
       name: "lookupKey",
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };

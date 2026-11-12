@@ -39,6 +39,12 @@ export function NavUser({ user }: NavUserProps) {
   });
   const hydrated = useHydrated();
 
+  const handleLogout = () => {
+    void import("~/lib/posthog.client").then(({ default: posthog }) => {
+      posthog.reset();
+    });
+  };
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -115,7 +121,7 @@ export function NavUser({ user }: NavUserProps) {
 
             <DropdownMenuSeparator />
 
-            <Form action="/logout" method="post" replace>
+            <Form action="/logout" method="post" onSubmit={handleLogout} replace>
               <DropdownMenuItem
                 render={
                   <button
