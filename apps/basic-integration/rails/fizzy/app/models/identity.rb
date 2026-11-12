@@ -20,6 +20,15 @@ class Identity < ApplicationRecord
     end
   end
 
+  # Stable UUID used by PostHog to associate requests and person properties.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  def posthog_properties
+    { email: email_address }
+  end
+
   def send_magic_link(**attributes)
     attributes[:purpose] = attributes.delete(:for) if attributes.key?(:for)
 

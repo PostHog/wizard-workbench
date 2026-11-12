@@ -17,6 +17,13 @@ class WebhooksController < ApplicationController
 
   def create
     webhook = @board.webhooks.create!(webhook_params)
+
+    PostHog.capture(
+      distinct_id: Current.identity.posthog_distinct_id,
+      event: "webhook_created",
+      properties: { board_id: @board.id, webhook_id: webhook.id, subscribed_action_count: webhook.subscribed_actions.size }
+    )
+
     redirect_to webhook
   end
 
