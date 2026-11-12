@@ -121,10 +121,19 @@ export interface E2eOptions {
   projectId?: string;
   /** true → keep installed skills; default deletes them. */
   keepSkills?: boolean;
+  record?: boolean;
   /** Wizard program id to drive (e.g. 'self-driving'); default integration. */
   program?: string;
   /** CI trigger id — makes the run's source prefix unique per trigger. */
   triggerId?: string;
+}
+
+function reportRecording(castPath: string, wizardCheckout: string): void {
+  if (existsSync(castPath)) {
+    console.log(`recording  : ${castPath}`);
+    return;
+  }
+  console.warn(`⚠ --record wrote no ${castPath}; the wizard at ${wizardCheckout} may predate SNAP_RECORD. Set WIZARD_PATH to a checkout that records.`);
 }
 
 function wizardRepo(): string {
@@ -366,6 +375,7 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   childEnv.SNAP_OUT = snapsDir;
   childEnv.E2E_RESULT_JSON = resultJson;
   childEnv.E2E_KEEP_SKILLS = opts.keepSkills ? "true" : "false";
+  if (opts.record) childEnv.SNAP_RECORD = "1";
   // Which program the real-TUI host drives — defaults to integration.
   if (opts.program) childEnv.PROGRAM = opts.program;
 
@@ -428,6 +438,8 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
     releaseGatewayTokenDir();
     await stub?.stop();
   }
+
+  if (opts.record) reportRecording(join(snapsDir, "run.cast"), repo);
 
   // Structured assertions — the control plane's payoff over stdout-grepping.
   const resultText = readOrEmpty(resultJson);
