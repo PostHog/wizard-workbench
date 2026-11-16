@@ -28,6 +28,16 @@ class Identity < ApplicationRecord
     end
   end
 
+  # Used by posthog-rails for request error attribution and at sign-in.
+  # The primary key is stable; the email is a person property rather than an event ID.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  def posthog_properties
+    { email: email_address }
+  end
+
   private
     def deactivate_users
       users.find_each(&:deactivate)

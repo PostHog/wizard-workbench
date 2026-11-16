@@ -35,6 +35,11 @@ module Authentication
       Current.identity.present?
     end
 
+    # Used by posthog-rails to associate request errors with the authenticated person.
+    def current_identity
+      Current.identity
+    end
+
     def require_account
       unless Current.account.present?
         redirect_to main_app.session_menu_path(script_name: nil)

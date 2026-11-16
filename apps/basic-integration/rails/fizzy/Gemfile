@@ -38,6 +38,10 @@ gem "mittens"
 gem "useragent", bc: "useragent"
 
 # Operations
+gem "posthog-ruby", "~> 3.0", require: "posthog"
+gem "posthog-rails", "~> 3.0"
+gem "opentelemetry-sdk"
+gem "opentelemetry-exporter-otlp"
 gem "autotuner"
 gem "mission_control-jobs"
 gem "stackprof"
