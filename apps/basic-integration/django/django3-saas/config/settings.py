@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -111,3 +112,38 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@example.com')
 STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY', '')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+
+# PostHog analytics
+POSTHOG_API_KEY = os.environ.get('POSTHOG_API_KEY', '')
+POSTHOG_HOST = os.environ.get('POSTHOG_HOST', '')
+POSTHOG_MW_CLIENT = None
+
+_missing_posthog_variables = [
+    variable
+    for variable, value in {
+        'POSTHOG_API_KEY': POSTHOG_API_KEY,
+        'POSTHOG_HOST': POSTHOG_HOST,
+    }.items()
+    if not value
+]
+
+if _missing_posthog_variables:
+    if DEBUG:
+        for variable in _missing_posthog_variables:
+            logging.getLogger(__name__).warning(
+                '%s variable required by PostHog is missing or un-configured, '
+                'this causes events to be silently missed. This error stops '
+                'appearing once %s is configured',
+                variable,
+                variable,
+            )
+else:
+    from config import posthog_logs
+    from config.posthog import posthog_client
+
+    POSTHOG_LOGGER = posthog_logs.posthog_log_logger
+    POSTHOG_MW_CLIENT = posthog_client
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index('django.contrib.auth.middleware.AuthenticationMiddleware') + 1,
+        'posthog.integrations.django.PosthogContextMiddleware',
+    )
