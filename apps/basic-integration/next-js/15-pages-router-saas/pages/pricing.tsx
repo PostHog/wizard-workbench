@@ -89,6 +89,15 @@ function PricingCard({
         if (result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
+          void import('posthog-js')
+            .then(({ default: posthog }) =>
+              posthog.capture('checkout_started', {
+                plan_name: name,
+                billing_interval: interval,
+                trial_days: trialDays
+              })
+            )
+            .catch(() => {});
           window.location.href = result.url;
         }
       } catch (err) {

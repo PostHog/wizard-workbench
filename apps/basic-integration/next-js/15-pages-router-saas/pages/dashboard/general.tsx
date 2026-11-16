@@ -54,6 +54,9 @@ export default function GeneralPage() {
 
         setSuccess(result.success);
         setName(result.name);
+        void import('posthog-js')
+          .then(({ default: posthog }) => posthog.capture('account_updated'))
+          .catch(() => {});
       } catch (err) {
         setError('An unexpected error occurred. Please try again.');
       }
