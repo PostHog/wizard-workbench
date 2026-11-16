@@ -87,10 +87,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.compose.jetchat.FunctionalityNotAvailablePopup
+import com.example.compose.jetchat.PostHogLog
 import com.example.compose.jetchat.R
 import com.example.compose.jetchat.components.JetchatAppBar
 import com.example.compose.jetchat.data.exampleUiState
 import com.example.compose.jetchat.theme.JetchatTheme
+import com.posthog.PostHog
 import kotlinx.coroutines.launch
 
 /**
@@ -136,6 +138,14 @@ fun ConversationContent(
 
                 uiState.addMessage(
                     Message(authorMe, clipData.getItemAt(0).text.toString(), timeNow),
+                )
+                PostHog.capture(
+                    event = "message_sent",
+                    properties = mapOf("message_source" to "drag_and_drop"),
+                )
+                PostHogLog.info(
+                    "message added",
+                    mapOf("message_source" to "drag_and_drop"),
                 )
 
                 return true
@@ -202,6 +212,14 @@ fun ConversationContent(
                 onMessageSent = { content ->
                     uiState.addMessage(
                         Message(authorMe, content, timeNow),
+                    )
+                    PostHog.capture(
+                        event = "message_sent",
+                        properties = mapOf("message_source" to "composer"),
+                    )
+                    PostHogLog.info(
+                        "message added",
+                        mapOf("message_source" to "composer"),
                     )
                 },
                 resetScroll = {

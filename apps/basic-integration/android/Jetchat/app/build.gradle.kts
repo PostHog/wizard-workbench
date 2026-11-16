@@ -17,6 +17,9 @@
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+val posthogApiKey = System.getenv("POSTHOG_API_KEY").orEmpty()
+val posthogHost = System.getenv("POSTHOG_HOST").orEmpty()
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose)
@@ -35,6 +38,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         vectorDrawables.useSupportLibrary = true
+
+        buildConfigField("String", "POSTHOG_API_KEY", "\"$posthogApiKey\"")
+        buildConfigField("String", "POSTHOG_HOST", "\"$posthogHost\"")
     }
 
     signingConfigs {
@@ -75,6 +81,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
@@ -96,6 +103,7 @@ dependencies {
     implementation(libs.androidx.glance.material3)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.coroutines.android)
+    implementation("com.posthog:posthog-android:3.+")
 
     implementation(libs.androidx.activity.compose)
 
