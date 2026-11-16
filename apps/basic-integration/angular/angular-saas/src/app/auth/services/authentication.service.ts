@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Observable, of, tap } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PostHogLogService, PostHogService } from '@core/services';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,9 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly posthogLogService = inject(PostHogLogService);
 
   /**
    * Authenticates the user.
@@ -41,9 +44,35 @@ export class AuthenticationService {
       firstName,
       lastName,
     });
-    this._credentialsService.setCredentials(credentials, context.remember);
+    this.credentialsService.setCredentials(credentials, context.remember);
+    this.identify(credentials);
+    this.posthogService.posthog.capture('user_logged_in');
+    this.posthogLogService.info('authentication completed', { outcome: 'success' });
 
     return of(credentials);
+  }
+
+  /** Identifies the authenticated user from their stable credentials ID. */
+  identifyCurrentUser(): void {
+    const credentials = this.credentialsService.credentials();
+
+    if (credentials) {
+      this.identify(credentials);
+    }
+  }
+
+  private identify(credentials: Credentials): void {
+    if (!credentials.id) {
+      return;
+    }
+
+    const name = credentials.fullName.trim();
+
+    this.posthogService.posthog.identify(credentials.id, {
+      ...(credentials.email ? { email: credentials.email } : {}),
+      ...(name ? { name } : {}),
+      ...(credentials.roles.length ? { roles: credentials.roles } : {}),
+    });
   }
 
   /**
@@ -86,6 +115,11 @@ export class AuthenticationService {
    * @return True if the user was logged out successfully.
    */
   logout(): Observable<any> {
-    return of(true);
+    return of(true).pipe(
+      tap(() => {
+        this.posthogService.posthog.capture('user_logged_out');
+        this.posthogService.posthog.reset();
+      }),
+    );
   }
 }
