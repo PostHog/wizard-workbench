@@ -2,7 +2,7 @@
 
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.dependencies import DbSession, RequiredUser
@@ -42,6 +42,7 @@ class CreditsResponse(BaseModel):
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_content(
     request: GenerateRequest,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -54,6 +55,20 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        posthog_logs_logger = getattr(
+            http_request.app.state, "posthog_logs_logger", None
+        )
+        if posthog_logs_logger:
+            posthog_logs_logger.warning(
+                "content_generation_rejected",
+                extra={
+                    "event": "content_generation_rejected",
+                    "generation_type": request.generation_type,
+                    "credits_required": credits_needed,
+                    "credits_available": current_user.credits,
+                    "reason": "insufficient_credits",
+                },
+            )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -75,6 +90,27 @@ async def generate_content(
         result=mock_content,
         credits_used=credits_needed,
     )
+    posthog_client = getattr(http_request.app.state, "posthog_client", None)
+    if posthog_client:
+        posthog_client.capture(
+            "content_generated",
+            properties={
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
+    posthog_logs_logger = getattr(http_request.app.state, "posthog_logs_logger", None)
+    if posthog_logs_logger:
+        posthog_logs_logger.info(
+            "content_generation_completed",
+            extra={
+                "event": "content_generation_completed",
+                "generation_type": request.generation_type,
+                "credits_used": credits_needed,
+                "credits_remaining": current_user.credits,
+            },
+        )
 
     return GenerateResponse(
         id=generation.id,
