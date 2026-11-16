@@ -1,7 +1,44 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { posthog } from './posthog.js';
 
 const app = new Hono();
+
+app.onError((error, c) => {
+  if (posthog) {
+    try {
+      posthog.captureException(error);
+    } catch {
+      // Error reporting must not interrupt the API's error response.
+    }
+  }
+  posthogLog('error', 'api_request_failed', {
+    route: c.req.path,
+    status_code: 500,
+  });
+
+  return c.json({ error: 'Internal Server Error' }, 500);
+});
+
+const captureEvent = (event, properties) => {
+  if (posthog) {
+    try {
+      posthog.capture({ event, properties });
+    } catch {
+      // Analytics must not interrupt a successful API action.
+    }
+  }
+};
+
+const posthogLog = (level, message, attributes) => {
+  if (posthog) {
+    try {
+      posthog.logger[level](message, attributes);
+    } catch {
+      // Log capture must not interrupt the API's own work.
+    }
+  }
+};
 
 const links = [];
 let nextId = 1;
@@ -47,6 +84,14 @@ app.post('/api/links', async (c) => {
     created_at: new Date().toISOString(),
   };
   links.push(link);
+  captureEvent('link_created', {
+    tag_count: tags.length,
+    has_description: Boolean(description),
+  });
+  posthogLog('info', 'link_created', {
+    tag_count: tags.length,
+    has_description: Boolean(description),
+  });
   return c.json(link, 201);
 });
 
@@ -70,12 +115,38 @@ app.patch('/api/links/:id', async (c) => {
   }
 
   const body = await c.req.json();
-  if (body.url !== undefined) link.url = body.url;
-  if (body.title !== undefined) link.title = body.title;
-  if (body.description !== undefined) link.description = body.description;
-  if (body.tags !== undefined) link.tags = body.tags;
-  if (body.favorite !== undefined) link.favorite = body.favorite;
+  const updatedFields = [];
+  if (body.url !== undefined) {
+    link.url = body.url;
+    updatedFields.push('url');
+  }
+  if (body.title !== undefined) {
+    link.title = body.title;
+    updatedFields.push('title');
+  }
+  if (body.description !== undefined) {
+    link.description = body.description;
+    updatedFields.push('description');
+  }
+  if (body.tags !== undefined) {
+    link.tags = body.tags;
+    updatedFields.push('tags');
+  }
+  if (body.favorite !== undefined) {
+    link.favorite = body.favorite;
+    updatedFields.push('favorite');
+  }
 
+  captureEvent('link_updated', {
+    updated_fields: updatedFields,
+    tag_count: link.tags.length,
+    is_favorite: link.favorite,
+  });
+  posthogLog('info', 'link_updated', {
+    updated_field_count: updatedFields.length,
+    tag_count: link.tags.length,
+    is_favorite: link.favorite,
+  });
   return c.json(link);
 });
 
@@ -88,6 +159,10 @@ app.delete('/api/links/:id', (c) => {
   }
 
   links.splice(index, 1);
+  captureEvent('link_deleted');
+  posthogLog('info', 'link_deleted', {
+    remaining_link_count: links.length,
+  });
   return c.body(null, 204);
 });
 
