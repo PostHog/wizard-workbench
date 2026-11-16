@@ -3,8 +3,23 @@ import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
+import {
+  posthogLogger,
+  posthogLoggerProvider,
+  SeverityNumber
+} from '@/instrumentation';
 import Stripe from 'stripe';
+
+function flushPostHogLogs() {
+  const loggerProvider = posthogLoggerProvider;
+  if (loggerProvider) {
+    after(async () => {
+      await loggerProvider.forceFlush().catch(() => undefined);
+    });
+  }
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -89,9 +104,21 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    posthogLogger?.emit({
+      body: 'stripe_checkout_completed',
+      severityNumber: SeverityNumber.INFO,
+      attributes: { checkout_outcome: 'completed' }
+    });
+    flushPostHogLogs();
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
+    posthogLogger?.emit({
+      body: 'stripe_checkout_failed',
+      severityNumber: SeverityNumber.ERROR,
+      attributes: { checkout_outcome: 'failed' }
+    });
+    flushPostHogLogs();
     return NextResponse.redirect(new URL('/error', request.url));
   }
 }
