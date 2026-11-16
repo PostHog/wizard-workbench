@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation"
   import { onMount } from "svelte"
+  import posthog from "posthog-js"
 
   let { data } = $props()
 
@@ -13,6 +14,7 @@
       if (error) {
         message = "There was an issue signing out."
       } else {
+        posthog.reset()
         goto("/")
       }
     })

@@ -4,14 +4,23 @@
   import { goto } from "$app/navigation"
   import { onMount } from "svelte"
   import { page } from "$app/stores"
+  import posthog from "posthog-js"
 
   let { data } = $props()
   let { supabase } = data
 
   onMount(() => {
-    supabase.auth.onAuthStateChange((event) => {
-      // Redirect to account after successful login
-      if (event == "SIGNED_IN") {
+    supabase.auth.onAuthStateChange((event, session) => {
+      // Identify at the authentication boundary so anonymous activity is merged.
+      if (event == "SIGNED_IN" && session) {
+        const properties = session.user.email
+          ? { email: session.user.email }
+          : undefined
+        posthog.identify(session.user.id, properties)
+        posthog.capture("user_signed_in")
+        posthog.logger.info("user sign in completed")
+
+        // Redirect to account after successful login
         // Delay needed because order of callback not guaranteed.
         // Give the layout callback priority to update state or
         // we'll just bounch back to login when /account tries to load
