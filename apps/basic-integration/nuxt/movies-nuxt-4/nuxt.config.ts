@@ -1,6 +1,19 @@
 import process from 'node:process'
 
 const isDev = process.env.NODE_ENV === 'development'
+const posthogProjectToken = process.env.NUXT_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = process.env.NUXT_PUBLIC_POSTHOG_HOST
+
+if (process.env.NODE_ENV !== 'production') {
+  for (const [name, value] of Object.entries({
+    NUXT_PUBLIC_POSTHOG_PROJECT_TOKEN: posthogProjectToken,
+    NUXT_PUBLIC_POSTHOG_HOST: posthogHost,
+  })) {
+    if (!value) {
+      console.warn(`${name} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${name} is configured`)
+    }
+  }
+}
 
 // const apiBaseUrl = 'http://localhost:3001'
 const apiBaseUrl = 'https://movies-proxy.vercel.app'
@@ -21,6 +34,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl,
+      posthog: {
+        projectToken: posthogProjectToken,
+        host: posthogHost,
+      },
     },
   },
 
