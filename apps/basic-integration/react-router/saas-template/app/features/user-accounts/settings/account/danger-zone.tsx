@@ -21,6 +21,7 @@ import {
 } from "~/components/ui/item";
 import { Spinner } from "~/components/ui/spinner";
 import type { Organization } from "~/generated/browser";
+import { usePostHogCapture } from "~/hooks/use-posthog-capture";
 import { cn } from "~/lib/utils";
 
 export const DELETE_USER_ACCOUNT_INTENT = "delete-user-account";
@@ -59,6 +60,7 @@ function DeleteAccountDialogComponent({
   });
 
   const hasImplicitDeletions = imlicitlyDeletedOrganizations.length > 0;
+  const capture = usePostHogCapture();
 
   return (
     <Dialog>
@@ -109,6 +111,7 @@ function DeleteAccountDialogComponent({
             <Button
               disabled={isDeletingAccount}
               name="intent"
+              onClick={() => capture("account_deletion_requested")}
               type="submit"
               value={DELETE_USER_ACCOUNT_INTENT}
               variant="destructive"

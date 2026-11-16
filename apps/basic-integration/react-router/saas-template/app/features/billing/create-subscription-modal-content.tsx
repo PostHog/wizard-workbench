@@ -30,6 +30,7 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { usePostHogCapture } from "~/hooks/use-posthog-capture";
 
 export type CreateSubscriptionModalContentProps = {
   /** how many seats your org is currently using */
@@ -47,6 +48,7 @@ export function CreateSubscriptionModalContent({
     keyPrefix: "noCurrentPlanModal",
   });
   const [billingPeriod, setBillingPeriod] = useState("annual");
+  const capture = usePostHogCapture();
 
   const navigation = useNavigation();
   const isSubmitting =
@@ -97,6 +99,11 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () =>
+        capture("subscription_checkout_started", {
+          billing_interval: interval,
+          subscription_tier: tier,
+        }),
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };

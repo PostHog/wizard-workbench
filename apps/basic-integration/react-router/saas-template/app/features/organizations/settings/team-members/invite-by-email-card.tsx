@@ -27,6 +27,7 @@ import {
 } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { OrganizationMembershipRole } from "~/generated/browser";
+import { usePostHogCapture } from "~/hooks/use-posthog-capture";
 
 export type EmailInviteCardProps = {
   currentUserIsOwner: boolean;
@@ -59,6 +60,7 @@ export function EmailInviteCard({
   }, [successEmail, intent]);
 
   const hydrated = useHydrated();
+  const capture = usePostHogCapture();
   const disabled = isInvitingByEmail || organizationIsFull;
 
   return (
@@ -70,7 +72,22 @@ export function EmailInviteCard({
       </CardHeader>
 
       <CardContent>
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(event) => {
+            form.props.onSubmit?.(event);
+            const formData = new FormData(event.currentTarget);
+            const membershipRole = formData.get(fields.role.name);
+
+            capture("team_member_invite_submitted", {
+              membership_role:
+                typeof membershipRole === "string"
+                  ? membershipRole
+                  : OrganizationMembershipRole.member,
+            });
+          }}
+        >
           <FieldSet disabled={disabled}>
             <div className="space-y-2">
               <div className="flex gap-4">

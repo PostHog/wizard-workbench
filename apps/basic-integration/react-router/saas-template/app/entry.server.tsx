@@ -12,6 +12,7 @@ import { ServerRouter } from "react-router";
 import { getInstance } from "./features/localization/i18next-middleware.server";
 import { getEnv, init } from "./utils/env.server";
 import { NonceProvider } from "./utils/nonce-provider";
+import { emitPostHogLog } from "./utils/posthog-logs.server";
 
 init();
 global.ENV = getEnv();
@@ -21,6 +22,29 @@ export const streamTimeout = 5000;
 const oneSecond = 1000;
 const nonceLength = 16;
 const MODE = process.env.NODE_ENV ?? "development";
+
+function getPostHogCspSource() {
+  const posthogHost = process.env.VITE_PUBLIC_POSTHOG_HOST;
+
+  if (!posthogHost) {
+    if (MODE !== "production") {
+      console.warn(
+        "VITE_PUBLIC_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_PUBLIC_POSTHOG_HOST is configured",
+      );
+    }
+    return undefined;
+  }
+
+  try {
+    const { hostname, protocol } = new URL(posthogHost);
+    const domain = hostname.split(".").slice(-2).join(".");
+    return `${protocol}//*.${domain}`;
+  } catch {
+    return undefined;
+  }
+}
+
+const posthogCspSource = getPostHogCspSource();
 
 let mockServerInitialized = false;
 
@@ -97,6 +121,11 @@ export default async function handleRequest(
           const stream = createReadableStreamFromReadable(body);
 
           responseHeaders.set("Content-Type", "text/html");
+          emitPostHogLog("SSR response started", "INFO", {
+            "log.event": "ssr_response_started",
+            render_strategy: readyOption,
+            response_status: responseStatusCode,
+          });
 
           // Configure Content Security Policy with the nonce
           contentSecurity(responseHeaders, {
@@ -107,6 +136,7 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    posthogCspSource,
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],
@@ -120,9 +150,11 @@ export default async function handleRequest(
                     "'strict-dynamic'",
                     "'self'",
                     `'nonce-${nonce}'`,
+                    posthogCspSource,
                   ],
                   // Inline event handlers with nonce
                   "script-src-attr": [`'nonce-${nonce}'`],
+                  "worker-src": ["'self'", "blob:"],
                 },
               },
               // Report-only in dev/test, enforce in production
@@ -147,6 +179,10 @@ export default async function handleRequest(
           // errors encountered during initial shell rendering since they'll
           // reject and get logged in handleDocumentRequest.
           if (shellRendered) {
+            emitPostHogLog("SSR stream rendering failed", "ERROR", {
+              "log.event": "ssr_stream_render_failed",
+              response_status: responseStatusCode,
+            });
             console.error(error);
           }
         },

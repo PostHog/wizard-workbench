@@ -32,6 +32,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import type { Organization } from "~/generated/browser";
+import { usePostHogCapture } from "~/hooks/use-posthog-capture";
 
 const ONE_MB = 1_000_000;
 
@@ -77,6 +78,7 @@ export function GeneralOrganizationSettings({
   );
 
   const navigation = useNavigation();
+  const capture = usePostHogCapture();
   const isSubmitting =
     navigation.state === "submitting" &&
     navigation.formData?.get("intent") === UPDATE_ORGANIZATION_INTENT;
@@ -92,6 +94,10 @@ export function GeneralOrganizationSettings({
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        capture("organization_settings_updated");
+      }}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldLegend>

@@ -46,6 +46,7 @@ import {
   onboardingOrganizationSchema,
   REFERRAL_SOURCE_OPTIONS,
 } from "~/features/onboarding/organization/onboarding-organization-schemas";
+import { usePostHogCapture } from "~/hooks/use-posthog-capture";
 import { getPageTitle } from "~/utils/get-page-title.server";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -88,6 +89,7 @@ export default function OrganizationOnboardingRoute({
   );
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const capture = usePostHogCapture();
 
   return (
     <Form
@@ -100,6 +102,10 @@ export default function OrganizationOnboardingRoute({
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        capture("onboarding_organization_submitted");
+      }}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldGroup>

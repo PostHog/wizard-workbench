@@ -28,6 +28,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
 import type { UserAccount } from "~/generated/browser";
+import { usePostHogCapture } from "~/hooks/use-posthog-capture";
 
 const ONE_MB = 1_000_000;
 
@@ -49,6 +50,7 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
   );
 
   const navigation = useNavigation();
+  const capture = usePostHogCapture();
   const isSubmitting =
     navigation.state === "submitting" &&
     navigation.formData?.get("intent") === UPDATE_USER_ACCOUNT_INTENT;
@@ -64,6 +66,10 @@ export function AccountSettings({ lastResult, user }: AccountSettingsProps) {
           : form.descriptionId
       }
       aria-invalid={form.errors && form.errors.length > 0 ? true : undefined}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        capture("account_settings_updated");
+      }}
     >
       <FieldSet disabled={isSubmitting}>
         <FieldLegend>

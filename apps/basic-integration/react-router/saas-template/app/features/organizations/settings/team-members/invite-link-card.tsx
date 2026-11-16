@@ -23,6 +23,7 @@ import {
 } from "~/components/ui/card";
 import { inputClassName } from "~/components/ui/input";
 import { Spinner } from "~/components/ui/spinner";
+import { usePostHogCapture } from "~/hooks/use-posthog-capture";
 import { cn } from "~/lib/utils";
 
 export type InviteLinkCardProps = {
@@ -39,6 +40,7 @@ export function InviteLinkCard({
   });
 
   const [linkCopied, setLinkCopied] = useState(false);
+  const capture = usePostHogCapture();
 
   // Focus management, so that the input's auto focus the link if it changes.
   const mounted = useRef<boolean | null>(null);
@@ -113,6 +115,7 @@ export function InviteLinkCard({
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
                   setLinkCopied(true);
+                  capture("invite_link_copied");
                 }}
                 size="icon"
                 variant="ghost"
