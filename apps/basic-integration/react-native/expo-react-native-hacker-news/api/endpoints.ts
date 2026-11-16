@@ -1,3 +1,4 @@
+import { posthogLog } from "@/lib/posthog";
 import type { Item, User } from "@/shared/types";
 
 interface TypedResponse<T> extends Response {
@@ -6,37 +7,33 @@ interface TypedResponse<T> extends Response {
 
 export type GetStoriesEndpoint = () => Promise<TypedResponse<number[]>>;
 
-export const getTopStories = () => {
-  return fetch("https://hacker-news.firebaseio.com/v0/topstories.json", {
+const getStories = (feed: "top" | "best" | "ask" | "show") => {
+  posthogLog.info("hacker_news_feed_requested", { feed });
+
+  return fetch(`https://hacker-news.firebaseio.com/v0/${feed}stories.json`, {
     method: "GET",
   }) as Promise<TypedResponse<number[]>>;
 };
 
-export const getBestStories = () => {
-  return fetch("https://hacker-news.firebaseio.com/v0/beststories.json", {
-    method: "GET",
-  }) as Promise<TypedResponse<number[]>>;
-};
+export const getTopStories = () => getStories("top");
 
-export const getAskStories = () => {
-  return fetch("https://hacker-news.firebaseio.com/v0/askstories.json", {
-    method: "GET",
-  }) as Promise<TypedResponse<number[]>>;
-};
+export const getBestStories = () => getStories("best");
 
-export const getShowStories = () => {
-  return fetch("https://hacker-news.firebaseio.com/v0/showstories.json", {
-    method: "GET",
-  }) as Promise<TypedResponse<number[]>>;
-};
+export const getAskStories = () => getStories("ask");
+
+export const getShowStories = () => getStories("show");
 
 export const getItemDetails = (id: number | string) => {
+  posthogLog.info("hacker_news_item_requested", { resource_type: "item" });
+
   return fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`, {
     method: "GET",
   }) as Promise<TypedResponse<Item>>;
 };
 
 export const getUserDetails = (id: number | string) => {
+  posthogLog.info("hacker_news_profile_requested", { resource_type: "user" });
+
   return fetch(`https://hacker-news.firebaseio.com/v0/user/${id}.json`, {
     method: "GET",
   }) as Promise<TypedResponse<User>>;

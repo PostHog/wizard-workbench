@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 
+import { posthog } from "@/lib/posthog";
 import { Posts } from "@/components/posts/Posts";
 import { Option, StoriesSelect } from "@/components/Select";
 
@@ -41,7 +42,12 @@ export default function HomeScreen() {
       <Posts storyType={storyType} />
       <StoriesSelect
         value={storyType}
-        onChange={setStoryType}
+        onChange={(selectedStoryType) => {
+          posthog?.capture("story_feed_selected", {
+            story_type: selectedStoryType,
+          });
+          setStoryType(selectedStoryType);
+        }}
         options={storyOptions}
       />
     </>
