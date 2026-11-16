@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useCart } from "../context/CartContext";
+import { getPostHog } from "../posthog.client";
 
 export default function Checkout() {
   const { cart, getCartTotal, clearCart } = useCart();
@@ -42,7 +43,31 @@ export default function Checkout() {
     e.preventDefault();
     setIsProcessing(true);
 
+    const itemCount = cart.length;
+    const totalQuantity = cart.reduce((total, item) => total + item.quantity, 0);
+    const subtotal = getCartTotal();
+    const checkoutLogAttributes = {
+      item_count: itemCount,
+      total_quantity: totalQuantity,
+      subtotal,
+      currency: "USD",
+    };
+
+    void getPostHog().then((posthog) =>
+      posthog?.logger.info("checkout submitted", checkoutLogAttributes)
+    );
+
     setTimeout(() => {
+      void getPostHog().then((posthog) => {
+        posthog?.capture("order_completed", {
+          ...checkoutLogAttributes,
+          order_total: subtotal * 1.1,
+        });
+        posthog?.logger.info("checkout completed", {
+          ...checkoutLogAttributes,
+          order_total: subtotal * 1.1,
+        });
+      });
       clearCart();
       setIsProcessing(false);
       alert("Order placed successfully! Thank you for your purchase.");
