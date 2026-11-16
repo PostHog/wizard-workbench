@@ -1,4 +1,6 @@
 import { createServer } from 'node:http';
+import { logApiOutcome, shutdownPostHogLogs } from './posthog-logs.js';
+import { posthog } from './posthog.js';
 
 const contacts = [];
 const groups = [{ id: 1, name: 'All Contacts' }];
@@ -47,6 +49,14 @@ const server = createServer(async (req, res) => {
 
       const group = { id: nextGroupId++, name: body.name };
       groups.push(group);
+      posthog?.capture({
+        event: 'group_created',
+        properties: { group_id: group.id },
+      });
+      logApiOutcome('INFO', 'group creation completed', {
+        operation: 'group_created',
+        status_code: 201,
+      });
       return json(res, 201, group);
     }
 
@@ -90,6 +100,18 @@ const server = createServer(async (req, res) => {
         created_at: new Date().toISOString(),
       };
       contacts.push(contact);
+      posthog?.capture({
+        event: 'contact_created',
+        properties: {
+          group_id: contact.group_id,
+          has_phone: Boolean(contact.phone),
+          has_company: Boolean(contact.company),
+        },
+      });
+      logApiOutcome('INFO', 'contact creation completed', {
+        operation: 'contact_created',
+        status_code: 201,
+      });
       return json(res, 201, contact);
     }
 
@@ -108,12 +130,27 @@ const server = createServer(async (req, res) => {
       if (!contact) return json(res, 404, { error: 'Contact not found' });
 
       const body = await parseBody(req);
+      const updatedFields = ['name', 'email', 'phone', 'company', 'group_id'].filter(
+        (field) => body[field] !== undefined
+      );
       if (body.name !== undefined) contact.name = body.name;
       if (body.email !== undefined) contact.email = body.email;
       if (body.phone !== undefined) contact.phone = body.phone;
       if (body.company !== undefined) contact.company = body.company;
       if (body.group_id !== undefined) contact.group_id = body.group_id;
 
+      posthog?.capture({
+        event: 'contact_updated',
+        properties: {
+          group_id: contact.group_id,
+          updated_fields: updatedFields,
+        },
+      });
+      logApiOutcome('INFO', 'contact update completed', {
+        operation: 'contact_updated',
+        status_code: 200,
+        updated_field_count: updatedFields.length,
+      });
       return json(res, 200, contact);
     }
 
@@ -123,16 +160,40 @@ const server = createServer(async (req, res) => {
       const index = contacts.findIndex((c) => c.id === parseInt(deleteMatch[1], 10));
       if (index === -1) return json(res, 404, { error: 'Contact not found' });
 
-      contacts.splice(index, 1);
+      const [contact] = contacts.splice(index, 1);
+      posthog?.capture({
+        event: 'contact_deleted',
+        properties: { group_id: contact.group_id },
+      });
+      logApiOutcome('INFO', 'contact deletion completed', {
+        operation: 'contact_deleted',
+        status_code: 204,
+      });
       res.writeHead(204);
       return res.end();
     }
 
     json(res, 404, { error: 'Not found' });
   } catch (err) {
+    posthog?.captureException(err);
+    logApiOutcome('ERROR', 'API request failed', {
+      operation: 'api_request',
+      status_code: 500,
+      error_type: err instanceof Error ? err.name : 'UnknownError',
+    });
     json(res, 500, { error: 'Internal server error' });
   }
 });
+
+server.once('close', () => {
+  void Promise.all([
+    posthog?.shutdown(3000).catch(() => {}),
+    shutdownPostHogLogs(),
+  ]);
+});
+
+process.once('SIGINT', () => server.close());
+process.once('SIGTERM', () => server.close());
 
 const PORT = process.env.PORT || 3004;
 
