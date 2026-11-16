@@ -55,9 +55,9 @@ import Layout from '../layouts/Layout.astro';
   </section>
 </Layout>
 
-<script>
-  const form = document.getElementById('contact-form') as HTMLFormElement;
-  const messageDiv = document.getElementById('form-message') as HTMLDivElement;
+<script is:inline>
+  const form = document.getElementById('contact-form');
+  const messageDiv = document.getElementById('form-message');
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -77,6 +77,9 @@ import Layout from '../layouts/Layout.astro';
       const result = await response.json();
 
       if (response.ok) {
+        window.posthog?.capture('contact_form_submitted', {
+          interest: formData.get('interest'),
+        });
         messageDiv.className = 'form-message success';
         messageDiv.textContent = result.message;
         form.reset();
