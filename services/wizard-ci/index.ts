@@ -82,8 +82,6 @@ interface Options {
   e2e: boolean;
   /** Scoped project id for the personal API key (e2e mode). */
   projectId?: string;
-  /** e2e: keep installed skills instead of deleting them. */
-  keepSkills: boolean;
   record: boolean;
 }
 
@@ -261,7 +259,6 @@ function parseArgs(): Options {
     pushOnly: false,
     evaluate: false,
     e2e: false,
-    keepSkills: false,
     record: false,
   };
 
@@ -269,7 +266,6 @@ function parseArgs(): Options {
     const arg = args[i];
     if (arg === "--e2e") opts.e2e = true;
     else if (arg === "--project-id") opts.projectId = args[++i];
-    else if (arg === "--keep-skills") opts.keepSkills = true;
     else if (arg === "--record") opts.record = true;
     else if (arg === "--app" || arg === "-a") opts.app = args[++i];
     else if (arg === "--command" || arg === "-c") opts.command = args[++i];
@@ -324,10 +320,8 @@ Evaluation:
 
 Control-plane e2e (full interactive flow via the real TUI, structured assertions):
   pnpm wizard-ci <app-path> --e2e    Drive the real wizard TUI through the full flow
-                                     happy path · skip mcp+slack · delete skills
-                                     · continue past health issues
+                                     happy path · skip mcp+slack · continue past health issues
   pnpm wizard-ci ... --e2e --project-id <id>   Scoped-key project (or env POSTHOG_WIZARD_PROJECT_ID)
-  pnpm wizard-ci ... --e2e --keep-skills       Keep installed skills instead of deleting
   pnpm wizard-ci ... --e2e --record            Save a replay (run.cast) next to the snapshots
 `);
       process.exit(0);
@@ -795,7 +789,6 @@ async function startE2e(opts: Options): Promise<number> {
     app: opts.app,
     region: process.env.POSTHOG_REGION,
     projectId: opts.projectId,
-    keepSkills: opts.keepSkills,
     record: opts.record,
     triggerId: opts.triggerId,
     program: command ? commandToProgram(command.id) : undefined,
