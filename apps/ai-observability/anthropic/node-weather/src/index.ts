@@ -1,8 +1,20 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { Anthropic as PostHogAnthropic } from '@posthog/ai/anthropic'
+import { PostHog } from 'posthog-node'
+import { randomUUID } from 'node:crypto'
 
 import { getWeather } from './weather.js'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' })
+const posthog = new PostHog(process.env.POSTHOG_API_KEY!, {
+    host: process.env.POSTHOG_HOST,
+    privacyMode: false,
+    enableExceptionAutocapture: true,
+})
+
+const client = new PostHogAnthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY ?? '',
+    posthog,
+})
 
 const MODEL = 'claude-opus-5'
 
@@ -40,6 +52,9 @@ class Conversation {
 
     /** Answer one question, running the tool if the model asks for it. */
     async ask(question: string): Promise<string> {
+        const traceId = randomUUID()
+        const posthogProperties = { $ai_session_id: this.threadId }
+
         this.messages.push({ role: 'user', content: question })
 
         const response = await client.messages.create({
@@ -48,6 +63,9 @@ class Conversation {
             tools,
             tool_choice: toolChoice,
             messages: this.messages,
+            posthogDistinctId: this.userId,
+            posthogTraceId: traceId,
+            posthogProperties,
         })
 
         const toolUse = response.content.find(
@@ -61,7 +79,22 @@ class Conversation {
         }
 
         const { location } = toolUse.input as { location: string }
+        const startedAt = Date.now()
         const result = getWeather(location)
+
+        posthog.capture({
+            distinctId: this.userId,
+            event: '$ai_span',
+            properties: {
+                $ai_trace_id: traceId,
+                $ai_session_id: this.threadId,
+                $ai_span_id: randomUUID(),
+                $ai_span_name: toolUse.name,
+                $ai_input_state: toolUse.input,
+                $ai_output_state: result,
+                $ai_latency: (Date.now() - startedAt) / 1000,
+            },
+        })
 
         this.messages.push(
             { role: 'assistant', content: response.content },
@@ -77,6 +110,9 @@ class Conversation {
             tools,
             tool_choice: toolChoice,
             messages: this.messages,
+            posthogDistinctId: this.userId,
+            posthogTraceId: traceId,
+            posthogProperties,
         })
 
         const answer = textOf(followup)
@@ -91,7 +127,11 @@ async function main(): Promise<void> {
     console.log(await thread.ask('How about Boston?'))
 }
 
-main().catch((err) => {
-    console.error(`fatal: ${String(err)}`)
-    process.exit(1)
-})
+main()
+    .catch((err) => {
+        console.error(`fatal: ${String(err)}`)
+        process.exitCode = 1
+    })
+    .finally(async () => {
+        await posthog.shutdown(3000).catch(() => {})
+    })
