@@ -11,6 +11,10 @@ import (
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const model = "gpt-5-mini"
@@ -42,17 +46,26 @@ type Conversation struct {
 // Ask answers one question, running the tool if the model asks for it.
 func (c *Conversation) Ask(ctx context.Context, client openai.Client, question string) (string, error) {
 	c.messages = append(c.messages, openai.UserMessage(question))
+	ctx = c.requestContext(ctx)
+	turnAttributes := append(c.observabilityAttributes(), attribute.String("gen_ai.operation.name", "chat"))
+	turnCtx, turnSpan := otel.Tracer("go-weather").Start(ctx, "gen_ai.chat.turn", trace.WithAttributes(turnAttributes...))
+	defer turnSpan.End()
 
-	response, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
+	generationCtx, generationSpan := c.startGeneration(turnCtx)
+	response, err := client.Chat.Completions.New(generationCtx, openai.ChatCompletionNewParams{
 		Model:             model,
 		Messages:          c.messages,
 		Tools:             tools,
 		ParallelToolCalls: openai.Bool(false),
 	})
 	if err != nil {
+		failGeneration(generationSpan, err)
+		turnSpan.RecordError(err)
+		turnSpan.SetStatus(codes.Error, err.Error())
 		return "", err
 	}
 	message := response.Choices[0].Message
+	finishGeneration(generationSpan, message, response.Usage.PromptTokens, response.Usage.CompletionTokens)
 
 	if len(message.ToolCalls) == 0 {
 		c.messages = append(c.messages, openai.AssistantMessage(message.Content))
@@ -64,29 +77,47 @@ func (c *Conversation) Ask(ctx context.Context, client openai.Client, question s
 		Location string `json:"location"`
 	}
 	if err := json.Unmarshal([]byte(call.Function.Arguments), &args); err != nil {
+		turnSpan.RecordError(err)
+		turnSpan.SetStatus(codes.Error, err.Error())
 		return "", err
 	}
-	result := getWeather(args.Location)
+	result := c.runWeatherTool(turnCtx, call.Function.Arguments, args.Location)
 
 	c.messages = append(c.messages, message.ToParam())
 	c.messages = append(c.messages, openai.ToolMessage(result, call.ID))
 
-	followup, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
+	followupCtx, followupSpan := c.startGeneration(turnCtx)
+	followup, err := client.Chat.Completions.New(followupCtx, openai.ChatCompletionNewParams{
 		Model:             model,
 		Messages:          c.messages,
 		Tools:             tools,
 		ParallelToolCalls: openai.Bool(false),
 	})
 	if err != nil {
+		failGeneration(followupSpan, err)
+		turnSpan.RecordError(err)
+		turnSpan.SetStatus(codes.Error, err.Error())
 		return "", err
 	}
 	answer := followup.Choices[0].Message.Content
+	finishGeneration(followupSpan, followup.Choices[0].Message, followup.Usage.PromptTokens, followup.Usage.CompletionTokens)
 	c.messages = append(c.messages, openai.AssistantMessage(answer))
 	return answer, nil
 }
 
 func main() {
 	ctx := context.Background()
+	provider, err := setupTracing(ctx)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "PostHog tracing setup failed:", err)
+	} else if provider != nil {
+		defer func() {
+			if err := provider.Shutdown(context.Background()); err != nil {
+				fmt.Fprintln(os.Stderr, "PostHog tracing shutdown failed:", err)
+			}
+		}()
+	}
+
 	client := openai.NewClient(option.WithAPIKey(os.Getenv("OPENAI_API_KEY")))
 
 	thread := &Conversation{UserID: "user_123", ThreadID: "thread_abc"}
@@ -97,6 +128,11 @@ func main() {
 		answer, err := thread.Ask(ctx, client, question)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
+			if provider != nil {
+				if shutdownErr := provider.Shutdown(context.Background()); shutdownErr != nil {
+					fmt.Fprintln(os.Stderr, "PostHog tracing shutdown failed:", shutdownErr)
+				}
+			}
 			os.Exit(1)
 		}
 		fmt.Println(answer)

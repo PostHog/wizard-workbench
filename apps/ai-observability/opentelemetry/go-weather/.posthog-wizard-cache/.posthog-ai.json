@@ -1,0 +1,5 @@
+{
+  "provider": "openai",
+  "package": "github.com/posthog/posthog-go/otel/v2",
+  "otel_init_file": "tracing.go"
+}
