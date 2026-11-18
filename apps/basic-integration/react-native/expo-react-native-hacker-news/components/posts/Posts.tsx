@@ -7,6 +7,7 @@ import { Spinner } from "@/components/Spinner";
 
 import type { Item } from "@/shared/types";
 import { getItemDetails } from "@/api/endpoints";
+import { posthogLogger } from "@/lib/posthog";
 import { ITEMS_PER_PAGE } from "@/constants/pagination";
 import {
   type StoryType,
@@ -29,11 +30,23 @@ export const Posts = ({ storyType }: { storyType: StoryType }) => {
   const storyListQuery = useQuery({
     queryKey: ["storyIds", storyType],
     queryFn: async () => {
-      const getItemIds = MAP_STORY_TYPE_TO_STORY_ENDPOINTS[storyType];
-      const res = await getItemIds();
-      const topStories = await res.json();
+      try {
+        const getItemIds = MAP_STORY_TYPE_TO_STORY_ENDPOINTS[storyType];
+        const res = await getItemIds();
+        const topStories = await res.json();
 
-      return topStories;
+        posthogLogger.info("story_feed_loaded", {
+          story_type: storyType,
+          story_count: topStories.length,
+        });
+
+        return topStories;
+      } catch (error) {
+        posthogLogger.warn("story_feed_load_failed", {
+          story_type: storyType,
+        });
+        throw error;
+      }
     },
   });
 

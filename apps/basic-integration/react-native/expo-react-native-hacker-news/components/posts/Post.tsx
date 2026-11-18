@@ -11,11 +11,13 @@ import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link2, MessageSquareText } from "lucide-react-native";
+import { usePostHog } from "posthog-react-native";
 
 import type { Item } from "@/shared/types";
 import { getItemDetailsQueryKey, getItemQueryFn } from "@/constants/item";
 
 export const Post = ({ id, title, url, score, text, kids }: Item) => {
+  const posthog = usePostHog();
   const QC = useQueryClient();
 
   const isExternal = useMemo(() => {
@@ -23,6 +25,10 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
   }, [text]);
 
   const navigateToDetails = async () => {
+    posthog.capture("item_opened", {
+      item_id: id,
+      source: "story_list",
+    });
     await QC.prefetchQuery({
       queryKey: getItemDetailsQueryKey(id),
       queryFn: getItemQueryFn,
@@ -30,11 +36,18 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
     router.push({ pathname: `../${id.toString()}` });
   };
 
+  const openExternalArticle = () => {
+    if (!url) return;
+
+    posthog.capture("external_article_opened", { item_id: id });
+    Linking.openURL(url);
+  };
+
   return (
     <View style={{ gap: 12 }}>
       <Pressable
         onPress={async () => {
-          if (isExternal) Linking.openURL(url);
+          if (isExternal) openExternalArticle();
           else await navigateToDetails();
         }}
       >
@@ -85,9 +98,7 @@ export const Post = ({ id, title, url, score, text, kids }: Item) => {
         {url && (
           <Pressable
             style={[styles.baseButton, styles.link]}
-            onPress={() => {
-              Linking.openURL(url);
-            }}
+            onPress={openExternalArticle}
           >
             <Link2 color="black" width={16} />
             <Text
