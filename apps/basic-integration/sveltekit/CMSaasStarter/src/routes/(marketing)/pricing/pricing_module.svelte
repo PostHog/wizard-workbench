@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { posthogLogInfo } from "$lib/posthog-logger"
+  import posthog from "posthog-js"
   import { pricingPlans } from "./pricing_plans"
 
   interface Props {
@@ -57,6 +59,16 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() => {
+                  if (plan.stripe_price_id) {
+                    posthog.capture("plan_checkout_started", {
+                      plan_id: plan.id,
+                    })
+                    posthogLogInfo("plan checkout started", {
+                      plan_id: plan.id,
+                    })
+                  }
+                }}
               >
                 {callToAction}
               </a>
