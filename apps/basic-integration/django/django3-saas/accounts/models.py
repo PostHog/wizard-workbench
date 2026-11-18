@@ -1,6 +1,11 @@
 from hashlib import md5
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
 from django.db import models
+from posthog import identify_context
+
+from config.posthog import posthog_client
 
 
 class User(AbstractUser):
@@ -29,3 +34,22 @@ class User(AbstractUser):
 
     def is_email_verified(self):
         return self.email_verified_at is not None
+
+
+@receiver(user_logged_in, dispatch_uid='accounts.identify_posthog_user')
+def identify_posthog_user(sender, request, user, **kwargs):
+    """Identify the login request after Django has authenticated the user."""
+    distinct_id = str(user.pk)
+    identify_context(distinct_id)
+
+    if posthog_client:
+        posthog_client.set(
+            distinct_id=distinct_id,
+            properties={
+                'email': user.email,
+                'username': user.username,
+                'name': user.get_full_name(),
+                'company_name': user.company_name,
+                'is_staff': user.is_staff,
+            },
+        )
