@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import posthog from 'posthog-js'
+import { posthogLogger } from '../composables/posthogLogger'
 import { searchShows } from '../composables/useTMDB'
 import type { Media } from '../types'
 import MediaCard from '../components/media/MediaCard.vue'
@@ -22,8 +24,16 @@ const search = async () => {
     results.value = response.results.filter((item: Media) => 
       item.media_type === 'movie' || item.media_type === 'tv'
     ) as Media[]
+
+    if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST) {
+      posthog.capture('media_search_completed', {
+        result_count: results.value.length,
+      })
+    }
+    posthogLogger.mediaSearchCompleted(results.value.length)
   } catch (error) {
     console.error('Search error:', error)
+    posthogLogger.mediaSearchFailed()
     results.value = []
   } finally {
     loading.value = false

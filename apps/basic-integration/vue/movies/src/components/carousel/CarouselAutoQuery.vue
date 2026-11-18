@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import type { QueryItem } from '../../types'
+import { posthogLogger } from '../../composables/posthogLogger'
 import { listMedia } from '../../composables/useTMDB'
 import MediaCard from '../media/MediaCard.vue'
 import CarouselBase from './CarouselBase.vue'
@@ -18,6 +19,7 @@ onMounted(async () => {
     items.value = result.results || []
   } catch (error) {
     console.error('Error loading media:', error)
+    posthogLogger.mediaCarouselLoadFailed()
   } finally {
     loading.value = false
   }
