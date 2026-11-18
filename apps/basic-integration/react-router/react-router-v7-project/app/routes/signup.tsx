@@ -3,6 +3,13 @@ import { useNavigate, Link } from 'react-router'
 import { useAuth } from '~/context/AuthContext'
 import type { Route } from './+types/signup'
 
+function isPostHogConfigured() {
+  return Boolean(
+    import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+      import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+  )
+}
+
 export default function Signup() {
   const navigate = useNavigate()
   const { signup } = useAuth()
@@ -24,6 +31,11 @@ export default function Signup() {
         setIsLoading(false)
 
         if (newUser) {
+          if (isPostHogConfigured()) {
+            void import('posthog-js').then(({ default: posthog }) => {
+              posthog.capture('user_signed_up')
+            })
+          }
           navigate('/profile')
         } else {
           setError('Signup failed! (But this is fake, so it should always work)')
