@@ -23,6 +23,12 @@ gem "trilogy", "~> 2.9"
 
 # Features
 gem "bcrypt", "~> 3.1.7"
+
+# PostHog analytics and Rails instrumentation
+gem "posthog-ruby", "~> 3.0", require: "posthog"
+gem "posthog-rails", "~> 3.0"
+gem "opentelemetry-sdk"
+gem "opentelemetry-exporter-otlp"
 gem "geared_pagination", "~> 1.2"
 gem "rqrcode"
 gem "rouge"

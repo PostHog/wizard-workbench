@@ -14,11 +14,13 @@ class CardsController < ApplicationController
     respond_to do |format|
       format.html do
         card = Current.user.draft_new_card_in(@board)
+        capture_card_created(card, creation_format: "html")
         redirect_to card_draft_path(card)
       end
 
       format.json do
         card = @board.cards.create! card_params.merge(creator: Current.user, status: "published")
+        capture_card_created(card, creation_format: "json")
         head :created, location: card_path(card, format: :json)
       end
     end
@@ -49,6 +51,26 @@ class CardsController < ApplicationController
   end
 
   private
+    def capture_card_created(card, creation_format:)
+      PostHog.capture(
+        distinct_id: Current.user.posthog_distinct_id,
+        event: "card_created",
+        properties: {
+          board_id: @board.id,
+          card_id: card.id,
+          creation_format: creation_format,
+          initial_status: card.status
+        }
+      )
+
+      PostHogLogs.info(
+        "card created",
+        event: "card.created",
+        creation_format: creation_format,
+        initial_status: card.status
+      )
+    end
+
     def set_board
       @board = Current.user.boards.find params[:board_id]
     end

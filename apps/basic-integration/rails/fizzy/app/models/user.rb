@@ -36,6 +36,12 @@ class User < ApplicationRecord
     update!(verified_at: Time.current) unless verified?
   end
 
+  # posthog-rails calls this on Current.user when it captures an exception.
+  # Use the authenticated identity's primary key so it matches login identification.
+  def posthog_distinct_id
+    identity&.posthog_distinct_id || id.to_s
+  end
+
   private
     def close_remote_connections
       ActionCable.server.remote_connections.where(current_user: self).disconnect(reconnect: false)

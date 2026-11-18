@@ -10,4 +10,10 @@ class ApplicationController < ActionController::Base
   etag { "v1" }
   stale_when_importmap_changes
   allow_browser versions: :modern
+
+  private
+    # Used by posthog-rails to attach the authenticated person to captured errors.
+    def posthog_current_user
+      Current.user
+    end
 end

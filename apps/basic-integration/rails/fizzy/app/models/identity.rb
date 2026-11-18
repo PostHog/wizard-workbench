@@ -28,6 +28,16 @@ class Identity < ApplicationRecord
     end
   end
 
+  # This primary key identifies a person across their account memberships.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  # Person properties belong on the PostHog person, not on individual events.
+  def posthog_properties
+    { email: email_address }
+  end
+
   private
     def deactivate_users
       users.find_each(&:deactivate)
