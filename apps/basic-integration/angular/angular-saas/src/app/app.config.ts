@@ -10,6 +10,7 @@ import { environment } from '@env/environment';
 import { ApiPrefixInterceptor, ErrorHandlerInterceptor } from '@core/interceptors';
 import { RouteReusableStrategy } from '@core/helpers';
 import { provideSocketIo } from '@core/socket-io';
+import { providePosthogErrorHandler } from './posthog-error-handler';
 
 if (environment.production) {
   enableProdMode();
@@ -57,6 +58,7 @@ export const appConfig: ApplicationConfig = {
     }),
 
     provideHttpClient(withInterceptorsFromDi()),
+    providePosthogErrorHandler(),
     {
       provide: HTTP_INTERCEPTORS,
       useClass: ApiPrefixInterceptor,
