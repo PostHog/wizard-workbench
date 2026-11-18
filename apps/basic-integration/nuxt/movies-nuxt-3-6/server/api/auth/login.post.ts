@@ -1,3 +1,5 @@
+import { getPostHogLogger } from '~/server/utils/posthog-logs'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -5,6 +7,14 @@ export default defineEventHandler(async (event) => {
 
     // Validate input
     if (!username?.trim() || !password?.trim()) {
+      getPostHogLogger()?.emit({
+        severityText: 'WARN',
+        body: 'Demo authentication rejected',
+        attributes: {
+          event_name: 'demo_authentication_rejected',
+          outcome: 'invalid_input',
+        },
+      })
       throw createError({
         statusCode: 400,
         message: 'Username and password are required',
@@ -13,7 +23,7 @@ export default defineEventHandler(async (event) => {
 
     // Demo auth: accepts any username and password
     const sanitizedUsername = username.trim()
-    
+
     setCookie(event, 'auth-user', sanitizedUsername, {
       httpOnly: false, // Allow client-side access for SSR
       secure: process.env.NODE_ENV === 'production',
@@ -21,14 +31,24 @@ export default defineEventHandler(async (event) => {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
+    getPostHogLogger()?.emit({
+      severityText: 'INFO',
+      body: 'Demo authentication completed',
+      attributes: {
+        event_name: 'demo_authentication_completed',
+        outcome: 'success',
+      },
+    })
+
     return {
       success: true,
       user: sanitizedUsername,
     }
-  } catch (error: any) {
-    if (error.statusCode) {
+  }
+  catch (error: any) {
+    if (error.statusCode)
       throw error
-    }
+
     throw createError({
       statusCode: 500,
       message: 'An error occurred during login',
