@@ -130,7 +130,21 @@ export const createInvoiceFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     console.info('Creating invoice...', data)
-    return createInvoice(data)
+    const invoice = createInvoice(data)
+    void import('./posthog-logs')
+      .then(({ getPostHogLogger }) => {
+        getPostHogLogger()?.emit({
+          severityText: 'INFO',
+          body: 'invoice_created',
+          attributes: {
+            event: 'invoice_created',
+            invoice_status: invoice.status,
+            source: 'server_function',
+          },
+        })
+      })
+      .catch(() => {})
+    return invoice
   })
 
 export const markInvoicePaid = createServerFn({ method: 'POST' })
@@ -145,5 +159,18 @@ export const markInvoicePaid = createServerFn({ method: 'POST' })
     if (!invoice) {
       throw new Error('Invoice not found')
     }
+    void import('./posthog-logs')
+      .then(({ getPostHogLogger }) => {
+        getPostHogLogger()?.emit({
+          severityText: 'INFO',
+          body: 'invoice_marked_paid',
+          attributes: {
+            event: 'invoice_marked_paid',
+            invoice_status: invoice.status,
+            source: 'server_function',
+          },
+        })
+      })
+      .catch(() => {})
     return invoice
   })
