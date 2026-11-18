@@ -2,15 +2,27 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import { stripe } from '@/lib/payments/stripe';
+import { loggerProvider, posthogLogger } from '@/instrumentation';
 import Stripe from 'stripe';
+
+function flushPostHogLogs() {
+  after(() => loggerProvider?.forceFlush().catch(() => {}));
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const sessionId = searchParams.get('session_id');
 
   if (!sessionId) {
+    posthogLogger?.emit({
+      body: 'Checkout callback received without a session ID',
+      severityNumber: SeverityNumber.WARN,
+      attributes: { route: '/api/stripe/checkout' },
+    });
+    flushPostHogLogs();
     return NextResponse.redirect(new URL('/pricing', request.url));
   }
 
@@ -89,9 +101,21 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    posthogLogger?.emit({
+      body: 'Checkout subscription activated',
+      severityNumber: SeverityNumber.INFO,
+      attributes: { route: '/api/stripe/checkout' },
+    });
+    flushPostHogLogs();
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
+    posthogLogger?.emit({
+      body: 'Checkout subscription activation failed',
+      severityNumber: SeverityNumber.ERROR,
+      attributes: { route: '/api/stripe/checkout' },
+    });
+    flushPostHogLogs();
     return NextResponse.redirect(new URL('/error', request.url));
   }
 }
