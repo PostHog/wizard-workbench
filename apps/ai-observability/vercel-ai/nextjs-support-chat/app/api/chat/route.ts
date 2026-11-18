@@ -2,7 +2,10 @@ import { openai } from '@ai-sdk/openai'
 import { generateText, stepCountIs, tool } from 'ai'
 import { z } from 'zod'
 
+import { posthogSpanProcessor } from '@/instrumentation'
 import { lookupOrder } from '@/lib/orders'
+
+export const runtime = 'nodejs'
 
 export async function POST(req: Request): Promise<Response> {
     const { question, userId, threadId } = (await req.json()) as {
@@ -23,7 +26,32 @@ export async function POST(req: Request): Promise<Response> {
             }),
         },
         stopWhen: stepCountIs(3),
+        experimental_telemetry: {
+            isEnabled: true,
+            functionId: 'support-chat',
+            metadata: {
+                '$ai_session_id': threadId,
+                'posthog.distinct_id': userId,
+            },
+        },
     })
+
+    let flushTimeout: ReturnType<typeof setTimeout> | undefined
+
+    try {
+        await Promise.race([
+            posthogSpanProcessor?.forceFlush() ?? Promise.resolve(),
+            new Promise<void>((resolve) => {
+                flushTimeout = setTimeout(resolve, 2_000)
+            }),
+        ])
+    } catch {
+        // AI Observability must not affect the chat response.
+    } finally {
+        if (flushTimeout) {
+            clearTimeout(flushTimeout)
+        }
+    }
 
     return Response.json({ answer: text, userId, threadId })
 }
