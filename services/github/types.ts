@@ -11,6 +11,8 @@ export interface PRData {
   headBranch: string;
   diff: string;
   files: PRFile[];
+  /** Local repository root when available, used to inspect unmodified manifests. */
+  repoPath?: string;
 }
 
 export interface PRFile {

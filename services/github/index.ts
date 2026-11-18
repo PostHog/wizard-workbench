@@ -7,6 +7,7 @@ export {
   git,
   gitSafe,
   getRepoRoot,
+  resolveRepoRoot,
   getRemoteUrl,
   hasChanges,
   getChangedFiles,
@@ -44,6 +45,7 @@ export {
   EXCLUDED_PATH_PATTERNS,
   isExcludedPath,
   filterDiff,
+  parsePerFilePatches,
   type CreatePROptions,
 } from "./gh-cli.js";
 

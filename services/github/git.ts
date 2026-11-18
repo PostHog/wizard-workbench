@@ -38,6 +38,15 @@ export function getRepoRoot(cwd: string): string {
   return git("rev-parse --show-toplevel", cwd);
 }
 
+/** Return the enclosing git root for cwd, falling back to cwd outside a git checkout. */
+export function resolveRepoRoot(cwd: string): string {
+  try {
+    return getRepoRoot(cwd);
+  } catch {
+    return cwd;
+  }
+}
+
 export function getRemoteUrl(cwd: string, remote: string = "origin"): string | null {
   return gitSafe(`remote get-url ${remote}`, cwd);
 }

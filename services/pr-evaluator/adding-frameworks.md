@@ -1,6 +1,6 @@
 # Adding a new framework to the evaluator
 
-After you've added your commandments to context-mill, the evaluator picks them up automatically. It fetches the latest commandments from GitHub on every run.
+After you've added your commandments to context-mill, the evaluator picks them up automatically. It loads local overrides from `CONTEXT_MILL_PATH` / `COMMANDMENTS_PATH` when set, and otherwise fetches the latest commandments from GitHub on every run.
 
 The only thing you may need to do here is check framework detection.
 
@@ -40,11 +40,14 @@ If false positives exist, the commandments need to be more specific.
 
 The evaluator fetches commandments at startup in this order:
 
-1. Fetches latest from GitHub - `PostHog/context-mill` main branch, 5s timeout
-2. Falls back to `COMMANDMENTS_PATH` env var if set (local context-mill checkout)
-3. Falls back to vendored copy at `services/pr-evaluator/prompts/commandments.yaml`
-4. Parses the YAML into `tag -> rules[]` map
-5. `detectFramework(prData)` matches PR files against known patterns to find tags
-6. Matching commandments are injected into the system prompt as authoritative SDK rules
+1. Reads from `CONTEXT_MILL_PATH` env var if set (`<CONTEXT_MILL_PATH>/context/commandments.yaml`, aligned with `context/skills/integration/config.yaml`)
+2. Reads from `COMMANDMENTS_PATH` env var if set (standalone local `commandments.yaml` override)
+3. Fetches latest from GitHub - `PostHog/context-mill` main branch, 5s timeout
+4. Falls back to vendored copy at `services/pr-evaluator/prompts/commandments.yaml`
+5. Parses the YAML into `tag -> rules[]` map
+6. `detectFramework(prData)` matches PR files against known patterns to find tags
+7. Matching commandments are injected into the system prompt as authoritative SDK rules
+
+For local doc testing against unmerged `posthog.com` docs, set `POSTHOG_DOCS_BASE_URL` (for example `http://localhost:8000`) to rewrite `https://posthog.com` doc URLs at fetch time.
 
 This means commandments in context-mill are picked up automatically on the next evaluator run - no manual sync needed.
