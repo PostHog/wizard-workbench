@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig};
 use rmcp::schemars::{self, JsonSchema};
@@ -30,6 +32,18 @@ impl ServerHandler for Notes {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    Notes.serve(rmcp::transport::stdio()).await?.waiting().await?;
+    let (Ok(token), Ok(host)) = (
+        std::env::var("POSTHOG_PROJECT_TOKEN"),
+        std::env::var("POSTHOG_HOST"),
+    ) else {
+        eprintln!("PostHog MCP analytics disabled: set POSTHOG_PROJECT_TOKEN and POSTHOG_HOST");
+        Notes.serve(rmcp::transport::stdio()).await?.waiting().await?;
+        return Ok(());
+    };
+    let posthog = Arc::new(posthog::client((token.as_str(), host.as_str())).await);
+    let server = posthog::mcp::instrument(Notes, posthog.clone());
+
+    server.serve(rmcp::transport::stdio()).await?.waiting().await?;
+    posthog.shutdown().await;
     Ok(())
 }
