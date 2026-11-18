@@ -8,6 +8,7 @@
 import Combine
 import Domain
 import Observation
+import PostHog
 import Shared
 import SwiftUI
 import UIKit
@@ -47,6 +48,7 @@ class NavigationStore: NavigationStoreProtocol {
     }
 
     func showPost(_ post: Domain.Post) {
+        PostHogSDK.shared.capture("post_opened")
         embeddedBrowserURL = nil
         detailPath.removeAll()
         selectedPost = post
@@ -59,6 +61,7 @@ class NavigationStore: NavigationStoreProtocol {
     }
 
     func showPost(withId id: Int) {
+        PostHogSDK.shared.capture("post_opened")
         embeddedBrowserURL = nil
         detailPath.removeAll()
         selectedPost = nil
@@ -152,6 +155,7 @@ class NavigationStore: NavigationStoreProtocol {
             if let idString = parameters["id"],
                let id = Int(idString)
             {
+                PostHogSDK.shared.capture("deep_link_opened")
                 navigateToPost(withId: id)
             }
         default:

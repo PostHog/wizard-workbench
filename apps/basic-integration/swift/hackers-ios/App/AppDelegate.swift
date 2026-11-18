@@ -6,6 +6,7 @@
 //
 
 import Data
+import PostHog
 import Shared
 import UIKit
 
@@ -33,6 +34,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
         // init default settings
         UserDefaults.standard.registerDefaults()
+
+        let config = PostHogConfig(
+            projectToken: "phc_nmum54dVqUBEAmNrWgHdnRF8HRSCVQhxL6kRhy4GCV6a",
+            host: "https://us.i.posthog.com"
+        )
+        config.errorTrackingConfig.autoCapture = true
+        config.logs.serviceName = "hackers-ios"
+        PostHogSDK.shared.setup(config)
 
         return true
     }
