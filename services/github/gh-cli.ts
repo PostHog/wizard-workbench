@@ -5,6 +5,7 @@
  * No GITHUB_TOKEN environment variable is needed.
  */
 import { execSync } from "child_process";
+import { resolveRepoRoot } from "./git.js";
 import type { PRData, PRFile } from "./types.js";
 
 // Files to exclude from PR evaluation (skill instructions, lock files - not code changes)
@@ -103,6 +104,65 @@ export function filterDiff(diff: string): string {
   return filteredLines.join("\n");
 }
 
+function unquoteDiffPath(raw: string): string {
+  const trimmed = raw.trim();
+  return trimmed.startsWith('"') && trimmed.endsWith('"') ? trimmed.slice(1, -1) : trimmed;
+}
+
+/**
+ * Split a unified git diff into a map of repo-relative file path -> per-file patch.
+ */
+export function parsePerFilePatches(diff: string): Map<string, string> {
+  const patches = new Map<string, string>();
+  if (!diff) return patches;
+
+  const sections: string[][] = [];
+  let current: string[] | null = null;
+  for (const line of diff.split("\n")) {
+    if (line.startsWith("diff --git ")) {
+      if (current) sections.push(current);
+      current = [line];
+    } else if (current) {
+      current.push(line);
+    }
+  }
+  if (current) sections.push(current);
+
+  for (const lines of sections) {
+    let filename: string | undefined;
+    let deletedPath: string | undefined;
+
+    for (const line of lines.slice(1, 10)) {
+      if (line.startsWith("+++ ")) {
+        const target = unquoteDiffPath(line.slice(4));
+        if (target !== "/dev/null" && target.startsWith("b/")) {
+          filename = target.slice(2);
+          break;
+        }
+      } else if (line.startsWith("--- ")) {
+        const src = unquoteDiffPath(line.slice(4));
+        if (src !== "/dev/null" && src.startsWith("a/")) {
+          deletedPath = src.slice(2);
+        }
+      }
+    }
+
+    if (!filename) {
+      filename = deletedPath;
+    }
+    if (!filename) {
+      const m = lines[0].match(/^diff --git (?:"a\/([^"]+)"|a\/(\S+)) (?:"b\/([^"]+)"|b\/(\S+))/);
+      filename = m ? (m[3] ?? m[4]) : undefined;
+    }
+
+    if (filename) {
+      patches.set(filename, lines.join("\n"));
+    }
+  }
+
+  return patches;
+}
+
 /**
  * Fetch PR data by number using gh CLI.
  * Works without authentication for public repos.
@@ -122,6 +182,10 @@ export function fetchPR(prNumber: number, cwd: string): PRData {
   const filesJson = execSync(`gh pr view ${prNumber} --json files`, { cwd, encoding: "utf-8", stdio: "pipe" });
   const filesData = JSON.parse(filesJson);
 
+  // Filter diff to exclude skill files and parse per-file patches
+  const diff = filterDiff(rawDiff);
+  const patchesByFile = parsePerFilePatches(diff);
+
   // Filter out excluded paths (e.g., .claude/ skill files)
   const files: PRFile[] = (filesData.files || [])
     .filter((f: { path: string }) => !isExcludedPath(f.path))
@@ -130,11 +194,8 @@ export function fetchPR(prNumber: number, cwd: string): PRData {
       status: "modified" as const, // gh CLI doesn't provide status, default to modified
       additions: f.additions,
       deletions: f.deletions,
-      patch: undefined, // Would need separate call per file
+      patch: patchesByFile.get(f.path),
     }));
-
-  // Filter diff to exclude skill files
-  const diff = filterDiff(rawDiff);
 
   return {
     number: pr.number,
@@ -145,6 +206,7 @@ export function fetchPR(prNumber: number, cwd: string): PRData {
     headBranch: pr.headRefName,
     diff,
     files,
+    repoPath: resolveRepoRoot(cwd),
   };
 }
 

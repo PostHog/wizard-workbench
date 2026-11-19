@@ -18,6 +18,7 @@ import {
   getCommitMessages,
   isExcludedPath,
   filterDiff,
+  resolveRepoRoot,
 } from "../github/index.js";
 
 // ── Local branch fetching ───────────────────────────────────────────────────
@@ -30,12 +31,13 @@ export interface LocalBranchOptions {
 
 export async function fetchLocalBranch(options: LocalBranchOptions): Promise<PRData> {
   const { branch, baseBranch = "main", cwd = process.cwd() } = options;
+  const repoRoot = resolveRepoRoot(cwd);
 
   // Get the current branch if "HEAD" is specified
   let actualBranch: string;
   if (branch === "HEAD") {
     try {
-      actualBranch = getCurrentBranch(cwd);
+      actualBranch = getCurrentBranch(repoRoot);
     } catch {
       throw new Error("Not in a git repository or unable to determine current branch");
     }
@@ -44,19 +46,19 @@ export async function fetchLocalBranch(options: LocalBranchOptions): Promise<PRD
   }
 
   // Validate that the branch exists
-  if (!branchExists(cwd, actualBranch)) {
+  if (!branchExists(repoRoot, actualBranch)) {
     throw new Error(`Branch "${actualBranch}" does not exist. Check the branch name and try again.`);
   }
 
   // Validate that the base branch exists
-  if (!branchExists(cwd, baseBranch)) {
+  if (!branchExists(repoRoot, baseBranch)) {
     throw new Error(`Base branch "${baseBranch}" does not exist. Use --base to specify a different base branch.`);
   }
 
   // Get the merge base (common ancestor)
   let mergeBase: string;
   try {
-    mergeBase = getMergeBase(cwd, baseBranch, actualBranch);
+    mergeBase = getMergeBase(repoRoot, baseBranch, actualBranch);
   } catch {
     throw new Error(
       `Cannot find common ancestor between "${baseBranch}" and "${actualBranch}". ` +
@@ -64,32 +66,32 @@ export async function fetchLocalBranch(options: LocalBranchOptions): Promise<PRD
     );
   }
 
-  const rawDiff = getDiff(cwd, mergeBase, actualBranch);
+  const rawDiff = getDiff(repoRoot, mergeBase, actualBranch);
   const diff = filterDiff(rawDiff);
 
   // Get file stats using diff --stat
-  const diffStat = getDiffNumstat(cwd, mergeBase, actualBranch);
+  const diffStat = getDiffNumstat(repoRoot, mergeBase, actualBranch);
 
   // Get file statuses
-  const diffNameStatus = getDiffNameStatus(cwd, mergeBase, actualBranch);
+  const diffNameStatus = getDiffNameStatus(repoRoot, mergeBase, actualBranch);
 
   // Parse file information and filter out excluded paths
-  const allFiles = parseGitFiles(diffStat, diffNameStatus, mergeBase, actualBranch, cwd);
+  const allFiles = parseGitFiles(diffStat, diffNameStatus, mergeBase, actualBranch, repoRoot);
   const files = allFiles.filter((f) => !isExcludedPath(f.filename));
 
   // Try to get author from the most recent commit on the branch
-  const author = getCommitAuthor(cwd, actualBranch) || "local";
+  const author = getCommitAuthor(repoRoot, actualBranch) || "local";
 
   // Try to get a title from the first commit message after the merge base
   let title = `Local branch: ${actualBranch}`;
-  const firstCommitMsg = getFirstCommitMessage(cwd, mergeBase, actualBranch);
+  const firstCommitMsg = getFirstCommitMessage(repoRoot, mergeBase, actualBranch);
   if (firstCommitMsg) {
     title = firstCommitMsg;
   }
 
   // Try to get description from commit messages
   let description = "";
-  const commitMessages = getCommitMessages(cwd, mergeBase, actualBranch);
+  const commitMessages = getCommitMessages(repoRoot, mergeBase, actualBranch);
   if (commitMessages) {
     description = `Commits:\n${commitMessages}`;
   }
@@ -103,6 +105,7 @@ export async function fetchLocalBranch(options: LocalBranchOptions): Promise<PRD
     headBranch: actualBranch,
     diff,
     files,
+    repoPath: repoRoot,
   };
 }
 
