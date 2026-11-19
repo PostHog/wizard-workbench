@@ -17,6 +17,7 @@ import {
   detectSdkMajors,
   parseCommandments,
   parseDocsConfig,
+  parseSdkConfig,
   resetPromptBuilderCaches,
   resolveDocsUrl,
 } from "./prompt-builder.js";
@@ -677,13 +678,52 @@ function detectSdkFromPatch(filename: string, patch: string) {
   return detectSdkMajors(makePRData({ files: [makePRFile(filename, patch)] }));
 }
 
-function makeTempContextMill(commandmentsYaml: string, configYaml: string): string {
+function makeTempContextMill(
+  commandmentsYaml: string,
+  configYaml: string,
+  sdkConfigs: Record<string, string> = {},
+): string {
   const dir = mkdtempSync(join(tmpdir(), "wb-cm-test-"));
   mkdirSync(join(dir, "context/skills/integration"), { recursive: true });
   writeFileSync(join(dir, "context/commandments.yaml"), commandmentsYaml);
   writeFileSync(join(dir, "context/skills/integration/config.yaml"), configYaml);
+  for (const [pkgDir, yaml] of Object.entries(sdkConfigs)) {
+    mkdirSync(join(dir, "context/skills/sdk", pkgDir), { recursive: true });
+    writeFileSync(join(dir, "context/skills/sdk", pkgDir, "config.yaml"), yaml);
+  }
   return dir;
 }
+
+const PY_SDK_CONFIG_LIST = [
+  "variants:",
+  "  - id: v7",
+  "    tags: [sdk-python-7]",
+  '    match: { sdkPython: ["3", "4", "5", "6", "7"] }',
+  "    docs_urls:",
+  "      - https://posthog.com/docs/libraries/python/7.x.x.md",
+  "      - https://posthog.com/docs/libraries/python/migration.md",
+  "  - id: v8",
+  "    default: true",
+  "    tags: [sdk-python-8]",
+  '    match: { sdkPython: ["8"] }',
+  "    docs_urls:",
+  "      - https://posthog.com/docs/libraries/python/8.x.x.md",
+].join("\n");
+
+const NODE_SDK_CONFIG_LIST = [
+  "variants:",
+  "  - id: v5",
+  "    tags: [sdk-node-5]",
+  '    match: { sdkNode: ["4", "5"] }',
+  "    docs_urls:",
+  "      - https://posthog.com/docs/libraries/node/5.x.x.md",
+  "  - id: v6",
+  "    default: true",
+  "    tags: [sdk-node-6]",
+  '    match: { sdkNode: ["6"] }',
+  "    docs_urls:",
+  "      - https://posthog.com/docs/libraries/node/6.x.x.md",
+].join("\n");
 
 async function withMockDocsServer(
   routes: Record<string, string>,
@@ -1155,6 +1195,7 @@ describe("detectSdkMajors & prompt-builder overrides", () => {
         "      - https://posthog.com/docs/libraries/python",
         "      - https://posthog.com/docs/libraries/python/migration.md",
       ].join("\n"),
+      { "posthog-python": PY_SDK_CONFIG_LIST, "posthog-node": NODE_SDK_CONFIG_LIST },
     );
 
     try {
@@ -1218,7 +1259,9 @@ describe("detectSdkMajors & prompt-builder overrides", () => {
               assert.ok(prompt.includes("# Python SDK guide"));
               assert.ok(prompt.includes("# Python 7.x reference"));
               assert.ok(!prompt.includes("TAIL_SHOULD_TRUNCATE"));
-              assert.ok(prompt.includes("# Python 6.x reference"));
+              // Python 6 maps to the v7 variant: no 6.x.x reference is requested.
+              assert.ok(!prompt.includes("# Python 6.x reference"));
+              assert.equal(hits["/docs/libraries/python/6.x.x.md"], undefined);
               assert.ok(prompt.includes("# Python migration guide"));
               assert.ok(prompt.includes("Source: https://posthog.com/docs/libraries/python/7.x.x.md"));
               assert.ok(!prompt.includes(`Source: ${baseUrl}`));
@@ -1249,6 +1292,143 @@ describe("detectSdkMajors & prompt-builder overrides", () => {
         },
         20,
       );
+    } finally {
+      rmSync(cmDir, { recursive: true, force: true });
+    }
+  });
+
+  it("parses sdk config match in both list and single-string form", () => {
+    const list = parseSdkConfig(PY_SDK_CONFIG_LIST);
+    assert.deepEqual(list[0].majors, ["3", "4", "5", "6", "7"]);
+    assert.deepEqual(list[0].tags, ["sdk-python-7"]);
+    assert.equal(list[0].docsUrls.length, 2);
+    assert.deepEqual(list[1].majors, ["8"]);
+
+    const single = parseSdkConfig(
+      [
+        "variants:",
+        "  - id: v7",
+        "    tags: [sdk-python-7]",
+        '    match: { sdkPython: "7" }',
+        "    docs_urls:",
+        "      - https://posthog.com/docs/libraries/python/7.x.x.md",
+        "  - id: v8",
+        "    tags: [sdk-python-8]",
+        "    match: { sdkPython: 8 }",
+      ].join("\n"),
+    );
+    assert.deepEqual(single[0].majors, ["7"]);
+    assert.deepEqual(single[1].majors, ["8"]);
+    assert.deepEqual(parseSdkConfig(""), []);
+  });
+
+  it("maps older installed majors to the context-mill variant that lists them", async () => {
+    const cmDir = makeTempContextMill(
+      [
+        "commandments:",
+        "  sdk-python-7:",
+        "    - PY7_RULE",
+        "  sdk-python-8:",
+        "    - PY8_RULE",
+        "  sdk-node-5:",
+        "    - NODE5_RULE",
+      ].join("\n"),
+      "variants: []\n",
+      { "posthog-python": PY_SDK_CONFIG_LIST, "posthog-node": NODE_SDK_CONFIG_LIST },
+    );
+    const pyPr = (spec: string) =>
+      makePRData({ files: [makePRFile("requirements.txt", `+posthog${spec}\n`)] });
+    try {
+      await withMockDocsServer(
+        {
+          "/docs/libraries/python/7.x.x.md": "# PY7 REF",
+          "/docs/libraries/python/8.x.x.md": "# PY8 REF",
+          "/docs/libraries/python/migration.md": "# PY MIGRATION",
+          "/docs/libraries/node/5.x.x.md": "# NODE5 REF",
+        },
+        async (baseUrl, hits) => {
+          await withEnv(
+            { CONTEXT_MILL_PATH: cmDir, COMMANDMENTS_PATH: undefined, POSTHOG_DOCS_BASE_URL: baseUrl },
+            async () => {
+              // Python 5 -> sdk-python-7 rules and the 7.x.x reference, with the installed-vs-rules line.
+              const py5 = await buildSystemPrompt(pyPr(">=5.0,<6"));
+              assert.ok(py5.includes("[sdk-python-7] PY7_RULE"));
+              assert.ok(!py5.includes("PY8_RULE"));
+              assert.ok(py5.includes("# PY7 REF"));
+              assert.equal(hits["/docs/libraries/python/5.x.x.md"], undefined);
+              assert.ok(
+                py5.includes(
+                  "app is on 5.x; the `sdk-python-7` rules and reference are written for 7.x.x, and signatures on the installed major 5 can differ",
+                ),
+              );
+              assert.ok(py5.includes("do NOT penalize code that is correct for the installed 5.x"));
+              assert.ok(!py5.includes("HARD-PINNED") && py5.includes("range ("));
+
+              // Hard pin wording is kept for an older major.
+              const py5pin = await buildSystemPrompt(pyPr("==5.4.0"));
+              assert.ok(py5pin.includes("HARD-PINNED (posthog==5.4.0)"));
+              assert.ok(py5pin.includes("written for 7.x.x"));
+
+              // Node 4 -> sdk-node-5.
+              const node4 = await buildSystemPrompt(
+                makePRData({
+                  files: [makePRFile("package.json", '+  "posthog-node": "^4.2.0",\n')],
+                }),
+              );
+              assert.ok(node4.includes("[sdk-node-5] NODE5_RULE"));
+              assert.ok(node4.includes("# NODE5 REF"));
+              assert.ok(node4.includes("written for 5.x.x"));
+              assert.ok(node4.includes("app is on 4.x"));
+
+              // Python 8 still maps to sdk-python-8 with no installed-vs-rules line.
+              const py8 = await buildSystemPrompt(pyPr(">=8.0.0"));
+              assert.ok(py8.includes("[sdk-python-8] PY8_RULE"));
+              assert.ok(!py8.includes("PY7_RULE"));
+              assert.ok(!py8.includes("# PY7 REF"));
+              assert.ok(!py8.includes("rules and reference are written for"));
+
+              // A major no variant lists: no SDK rules, a "no version-specific rules" line, no throw.
+              const py9 = await buildSystemPrompt(pyPr(">=9.0.0"));
+              assert.ok(!py9.includes("PY7_RULE") && !py9.includes("PY8_RULE"));
+              assert.ok(py9.includes("no version-specific rules exist for major 9"));
+              assert.ok(!py9.includes("# PY7 REF") && !py9.includes("# PY8 REF"));
+              const py2 = await buildSystemPrompt(pyPr("<3"));
+              assert.ok(py2.includes("no version-specific rules exist for major 2"));
+            },
+          );
+        },
+      );
+    } finally {
+      rmSync(cmDir, { recursive: true, force: true });
+    }
+  });
+
+  it("maps with the single-string match form too", async () => {
+    const cmDir = makeTempContextMill(
+      ["commandments:", "  sdk-python-7:", "    - PY7_RULE"].join("\n"),
+      "variants: []\n",
+      {
+        "posthog-python": [
+          "variants:",
+          "  - id: v7",
+          "    tags: [sdk-python-7]",
+          '    match: { sdkPython: "7" }',
+          "    docs_urls: []",
+        ].join("\n"),
+      },
+    );
+    try {
+      await withEnv({ CONTEXT_MILL_PATH: cmDir, COMMANDMENTS_PATH: undefined }, async () => {
+        const seven = await buildSystemPrompt(
+          makePRData({ files: [makePRFile("requirements.txt", "+posthog>=7.0,<8\n")] }),
+        );
+        assert.ok(seven.includes("[sdk-python-7] PY7_RULE"));
+        const five = await buildSystemPrompt(
+          makePRData({ files: [makePRFile("requirements.txt", "+posthog>=5.0,<6\n")] }),
+        );
+        assert.ok(!five.includes("PY7_RULE"));
+        assert.ok(five.includes("no version-specific rules exist for major 5"));
+      });
     } finally {
       rmSync(cmDir, { recursive: true, force: true });
     }
@@ -1347,6 +1527,13 @@ describe("detectSdkMajors & prompt-builder overrides", () => {
         "    docs_urls:",
         "      - https://posthog.com/docs/libraries/python",
       ].join("\n"),
+      {
+        "posthog-python": PY_SDK_CONFIG_LIST,
+        "posthog-node": NODE_SDK_CONFIG_LIST.replace(
+          "node/5.x.x.md",
+          "node/5.x.x.md\n      - https://posthog.com/docs/libraries/node/migration.md",
+        ),
+      },
     );
 
     try {

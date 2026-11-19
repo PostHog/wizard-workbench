@@ -83,6 +83,7 @@ let _commandmentsCache: string | null = null;
 let _commandmentsMap: Record<string, string[]> | null = null;
 let _docsConfigCache: string | null = null;
 let _docsMap: Record<string, string[]> | null = null;
+let _sdkVariants: Map<string, SdkVariant[]> | null = null;
 
 /** Clear module-level caches (used by tests when overriding env vars). */
 export function resetPromptBuilderCaches(): void {
@@ -90,6 +91,7 @@ export function resetPromptBuilderCaches(): void {
   _commandmentsMap = null;
   _docsConfigCache = null;
   _docsMap = null;
+  _sdkVariants = null;
 }
 
 function resolveEnvPath(rawPath: string): string {
@@ -335,6 +337,110 @@ async function fetchDocContent(url: string): Promise<string | null> {
   return null;
 }
 
+// ── SDK variant mapping (context-mill skills/sdk/posthog-<pkg>/config.yaml) ──
+
+export interface SdkVariant {
+  id: string;
+  tags: string[];
+  /** Majors this variant serves, as written in `match` (list or single string). */
+  majors: string[];
+  docsUrls: string[];
+}
+
+const SDK_PKG_DIRS: Record<"python" | "node" | "go" | "rust", string> = {
+  python: "posthog-python",
+  node: "posthog-node",
+  go: "posthog-go",
+  rust: "posthog-rust",
+};
+
+function parseYamlScalarList(raw: string): string[] {
+  const inner = raw.trim().replace(/^\[/, "").replace(/\]$/, "");
+  return inner
+    .split(",")
+    .map((t) => t.trim().replace(/^["']|["']$/g, ""))
+    .filter(Boolean);
+}
+
+/**
+ * Parse an sdk config.yaml into variants. `match` may be a list
+ * (`{ sdkPython: ["3", "4"] }`) or the older single string (`{ sdkPython: "7" }`).
+ */
+export function parseSdkConfig(raw: string): SdkVariant[] {
+  const variants: SdkVariant[] = [];
+  if (!raw) return variants;
+  for (const block of raw.split(/\n  - id:\s*/).slice(1)) {
+    const id = block.split("\n")[0].trim().replace(/^["']|["']$/g, "");
+    const tagsMatch = block.match(/tags:\s*\[([^\]]*)\]/);
+    const matchLine = block.match(/match:\s*\{\s*\w+\s*:\s*(\[[^\]]*\]|[^,}\s][^,}]*?)\s*[,}]/);
+    if (!tagsMatch || !matchLine) continue;
+    const docsSection = block.match(/docs_urls:\n((?:\s+-\s+.+\n?)*)/);
+    const docsUrls: string[] = [];
+    if (docsSection) {
+      for (const line of docsSection[1].split("\n")) {
+        const urlMatch = line.match(/^\s+-\s+(.+)/);
+        if (urlMatch) docsUrls.push(urlMatch[1].trim());
+      }
+    }
+    variants.push({
+      id,
+      tags: parseYamlScalarList(tagsMatch[1]),
+      majors: parseYamlScalarList(matchLine[1]),
+      docsUrls,
+    });
+  }
+  return variants;
+}
+
+async function fetchSdkConfig(lang: keyof typeof SDK_PKG_DIRS): Promise<string> {
+  const rel = `skills/sdk/${SDK_PKG_DIRS[lang]}/config.yaml`;
+  if (process.env.CONTEXT_MILL_PATH) {
+    const cmRoot = resolveEnvPath(process.env.CONTEXT_MILL_PATH);
+    const local = readFirstExistingLocalFile(
+      [
+        { path: join(cmRoot, "context", rel), source: "CONTEXT_MILL_PATH" },
+        { path: join(cmRoot, "transformation-config", rel), source: "CONTEXT_MILL_PATH" },
+      ],
+      `${lang} sdk config`,
+    );
+    if (local !== null) return local;
+  }
+  const fetched = await fetchFirstOk([
+    `https://raw.githubusercontent.com/PostHog/context-mill/main/context/${rel}`,
+    `https://raw.githubusercontent.com/PostHog/context-mill/main/transformation-config/${rel}`,
+  ]);
+  if (fetched) {
+    console.log(`Loaded ${lang} sdk config from GitHub (latest): ${fetched.url}`);
+    return fetched.body;
+  }
+  console.warn(`Warning: Could not load ${lang} sdk config; no version-specific SDK rules for ${lang}`);
+  return "";
+}
+
+async function getSdkVariants(lang: keyof typeof SDK_PKG_DIRS): Promise<SdkVariant[]> {
+  if (!_sdkVariants) _sdkVariants = new Map();
+  const cached = _sdkVariants.get(lang);
+  if (cached) return cached;
+  const variants = parseSdkConfig(await fetchSdkConfig(lang));
+  _sdkVariants.set(lang, variants);
+  return variants;
+}
+
+/** The context-mill variant that lists this major, or null when none does. */
+async function resolveSdkVariant(sdk: DetectedSdkMajor): Promise<SdkVariant | null> {
+  const variants = await getSdkVariants(sdk.lang);
+  return variants.find((v) => v.majors.includes(String(sdk.major))) ?? null;
+}
+
+/** Major the variant's rules and reference are written for, taken from its `sdk-<lang>-<N>` tag. */
+function variantRuleMajor(sdk: DetectedSdkMajor, variant: SdkVariant): number {
+  for (const tag of variant.tags) {
+    const m = tag.match(new RegExp(`^sdk-${sdk.lang}-(\\d+)$`));
+    if (m) return Number(m[1]);
+  }
+  return sdk.major;
+}
+
 /** Fetch all relevant doc content for detected tags and extra URLs, deduplicating and fetching concurrently. */
 async function fetchDocsForTags(
   tags: string[],
@@ -534,8 +640,6 @@ export interface DetectedSdkMajor {
   pinned: boolean;
   isNonDefault: boolean;
   rawSpec: string;
-  legacyDocUrl: string;
-  migrationDocUrl: string;
 }
 
 const DEFAULT_SDK_MAJORS: Record<DetectedSdkMajor["lang"], number> = {
@@ -627,7 +731,6 @@ function makeSdkMajor(
   rawSpec: string,
 ): DetectedSdkMajor {
   const defaultMajor = DEFAULT_SDK_MAJORS[lang];
-  const docLang = lang === "node" ? "node" : lang;
   const safePkg = sanitizeSdkPkg(lang, pkg);
   const safeSpec = sanitizeSdkRawSpec(rawSpec, major);
   return {
@@ -639,8 +742,6 @@ function makeSdkMajor(
     pinned,
     isNonDefault: major < defaultMajor,
     rawSpec: safeSpec,
-    legacyDocUrl: `https://posthog.com/docs/libraries/${docLang}/${major}.x.x.md`,
-    migrationDocUrl: `https://posthog.com/docs/libraries/${docLang}/migration.md`,
   };
 }
 
@@ -947,15 +1048,20 @@ export async function buildSystemPrompt(
     const manifestCtx = resolvePRManifestContext(prData);
     const tags = detectFrameworkFromContext(prData, manifestCtx);
     const sdkMajors = detectSdkMajorsFromContext(prData, manifestCtx);
-    for (const sdk of sdkMajors) {
-      if (!tags.includes(sdk.tag)) tags.push(sdk.tag);
+    // Map each detected major to the context-mill variant that lists it (like the wizard
+    // picks its skill) and use that variant's tags and docs_urls.
+    const sdkResolved = await Promise.all(
+      sdkMajors.map(async (sdk) => ({ sdk, variant: await resolveSdkVariant(sdk) })),
+    );
+    const extraDocUrls: string[] = [];
+    for (const { sdk, variant } of sdkResolved) {
+      if (!variant) continue;
+      for (const tag of variant.tags) if (!tags.includes(tag)) tags.push(tag);
+      // Default majors keep relying on the model's own knowledge; older majors get the variant's reference docs.
+      if (sdk.isNonDefault) extraDocUrls.push(...variant.docsUrls);
     }
     const archType = detectArchType(tags);
     console.log(`Detected frameworks: [${tags.join(", ")}], arch_type: ${archType}`);
-
-    const extraDocUrls = sdkMajors
-      .filter((sdk) => sdk.isNonDefault)
-      .flatMap((sdk) => [sdk.legacyDocUrl, sdk.migrationDocUrl]);
 
     // Collect matching commandments and docs concurrently
     const [commandments, docs] = await Promise.all([
@@ -982,14 +1088,22 @@ ${rules.join("\n")}`;
     }
 
     if (sdkMajors.length > 0) {
-      const sdkLines = sdkMajors.map((sdk) => {
+      const sdkLines = sdkResolved.map(({ sdk, variant }) => {
         const pinLabel = sdk.pinned
           ? `HARD-PINNED (${sdk.rawSpec}) — pin MUST remain untouched`
           : `range (${sdk.rawSpec || `major ${sdk.major}`}) — must stay within major ${sdk.major}`;
-        const defaultNote = sdk.isNonDefault
-          ? `NON-DEFAULT major ${sdk.major} (latest is ${sdk.defaultMajor}; judge against \`${sdk.tag}\` rules & ${sdk.major}.x.x docs, NOT ${sdk.defaultMajor}.x.x reference signatures)`
-          : `default major ${sdk.major}`;
-        return `- \`${sdk.pkg}\` (\`${sdk.tag}\`): ${pinLabel}; ${defaultNote}`;
+        if (!variant) {
+          return `- \`${sdk.pkg}\`: ${pinLabel}; installed ${sdk.major}.x — no version-specific rules exist for major ${sdk.major}, so no SDK-specific rules or reference are loaded; judge against the SDK's own docs and the framework rules`;
+        }
+        const ruleTag = variant.tags[0] ?? sdk.tag;
+        const ruleMajor = variantRuleMajor(sdk, variant);
+        const versionNote =
+          ruleMajor !== sdk.major
+            ? `app is on ${sdk.major}.x; the \`${ruleTag}\` rules and reference are written for ${ruleMajor}.x.x, and signatures on the installed major ${sdk.major} can differ — do NOT penalize code that is correct for the installed ${sdk.major}.x`
+            : sdk.isNonDefault
+              ? `NON-DEFAULT major ${sdk.major} (latest is ${sdk.defaultMajor}; judge against \`${ruleTag}\` rules & ${ruleMajor}.x.x docs, NOT ${sdk.defaultMajor}.x.x reference signatures)`
+              : `default major ${sdk.major}`;
+        return `- \`${sdk.pkg}\` (\`${ruleTag}\`): ${pinLabel}; ${versionNote}`;
       });
       base.push(`## Brownfield SDK Major & Pin Rules
 
@@ -1000,7 +1114,7 @@ Grading requirements for existing SDKs:
 1. Existing major \`M\` must NEVER be upgraded across a breaking major boundary.
 2. Hard-pinned specs (\`==X.Y.Z\`, \`=X.Y.Z\`, exact version) must NEVER be modified or loosened; if a feature floor is higher than the pin, expect compatible major-\`M\` fallbacks or a clear warning/skip instead of breaking the pin.
 3. Any existing PostHog client initialization must be reused rather than instantiating a duplicate client.
-4. For non-default majors, validate imports, init options, and error-tracking/capture signatures against the \`sdk-<lang>-<M>\` rules and legacy SDK docs rather than latest-major docs.`);
+4. For non-default majors, validate imports, init options, and error-tracking/capture signatures against the listed \`sdk-<lang>-<N>\` rules and reference docs rather than latest-major docs; when the rules are written for a newer major than the installed one, accept signatures that are correct for the installed major.`);
     }
 
     if (docs.length > 0) {
