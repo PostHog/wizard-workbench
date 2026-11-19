@@ -1,6 +1,8 @@
 import Stripe from 'stripe';
 import { redirect } from 'next/navigation';
 import { Team } from '@/lib/db/schema';
+import { captureServerEvent } from '@/lib/posthog-server';
+import { logPostHogInfo } from '@/lib/posthog-log';
 import {
   getTeamByStripeCustomerId,
   getUser,
@@ -56,6 +58,11 @@ export async function createCheckoutSession({
     }
   });
 
+  await captureServerEvent(String(user.id), 'subscription_checkout_started');
+  await logPostHogInfo('subscription checkout session created', {
+    event: 'subscription_checkout_session_created',
+    payment_provider: 'stripe'
+  });
   redirect(session.url!);
 }
 

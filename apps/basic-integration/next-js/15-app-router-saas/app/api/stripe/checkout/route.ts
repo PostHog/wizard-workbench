@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
+import { captureServerEvent } from '@/lib/posthog-server';
+import { logPostHogInfo } from '@/lib/posthog-log';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
@@ -88,6 +90,14 @@ export async function GET(request: NextRequest) {
       })
       .where(eq(teams.id, userTeam[0].teamId));
 
+    await captureServerEvent(String(user[0].id), 'subscription_activated', {
+      subscription_status: subscription.status
+    });
+    await logPostHogInfo('subscription activated', {
+      event: 'subscription_activated',
+      payment_provider: 'stripe',
+      subscription_status: subscription.status
+    });
     await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
