@@ -11,6 +11,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { capturePostHogEvent } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -106,6 +107,12 @@ export default async function handler(
       userWithTeam.teamId,
       user.id,
       ActivityType.INVITE_TEAM_MEMBER
+    );
+    await capturePostHogEvent(
+      String(user.id),
+      'team_invitation_sent',
+      { invited_role: role },
+      req.headers['x-posthog-session-id'] as string | undefined
     );
 
     return res.status(200).json({ success: 'Invitation sent successfully' });

@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCustomerPortalSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { capturePostHogEvent } from '@/lib/posthog-server';
+import { logPostHogInfo } from '@/lib/posthog-logs';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,6 +27,16 @@ export default async function handler(
     }
 
     const portalSession = await createCustomerPortalSession(team);
+    await capturePostHogEvent(
+      String(user.id),
+      'subscription_portal_opened',
+      undefined,
+      req.headers['x-posthog-session-id'] as string | undefined
+    );
+    logPostHogInfo('customer_portal_session_created', {
+      operation: 'customer_portal_session_created',
+      route: '/api/stripe/customer-portal'
+    });
     return res.status(200).json({ url: portalSession.url });
   } catch (error) {
     console.error('Customer portal error:', error);

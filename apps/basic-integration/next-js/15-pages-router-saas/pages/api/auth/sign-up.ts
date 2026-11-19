@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { capturePostHogEvent } from '@/lib/posthog-server';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -166,16 +167,46 @@ export default async function handler(
       setSession(createdUser, res)
     ]);
 
+    await capturePostHogEvent(
+      String(createdUser.id),
+      'user_signed_up',
+      { signup_path: inviteId ? 'invitation' : 'new_team' },
+      req.headers['x-posthog-session-id'] as string | undefined
+    );
+
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({
         team: createdTeam,
         priceId,
         userId: createdUser.id
       });
-      return res.status(200).json(checkoutResult);
+      await capturePostHogEvent(
+        String(createdUser.id),
+        'checkout_started',
+        { price_id: priceId },
+        req.headers['x-posthog-session-id'] as string | undefined
+      );
+      return res.status(200).json({
+        ...checkoutResult,
+        user: {
+          id: createdUser.id,
+          email: createdUser.email,
+          name: createdUser.name,
+          role: createdUser.role
+        }
+      });
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      user: {
+        id: createdUser.id,
+        email: createdUser.email,
+        name: createdUser.name,
+        role: createdUser.role
+      }
+    });
   } catch (error) {
     console.error('Sign up error:', error);
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });
