@@ -1,0 +1,27 @@
+{
+  "id": "cargo-axum",
+  "fixture": "production/cargo-axum",
+  "kind": "production",
+  "toolFamily": "cargo",
+  "notes": "Tokio Axum Rust Cargo [workspace] with frameworkless root and 60+ crates.",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "workspaceTool": "cargo",
+      "runProject": ".",
+      "walkComplete": true,
+      "requiredProjects": [
+        "axum",
+        "axum-core",
+        "axum-extra"
+      ],
+      "planAsks": true,
+      "forbidPlanPicked": [
+        "."
+      ],
+      "maxDurationMs": 10000
+    }
+  ]
+}

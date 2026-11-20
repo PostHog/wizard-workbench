@@ -1,0 +1,38 @@
+{
+  "id": "large-monorepo-caps",
+  "fixture": "custom/large-monorepo-caps",
+  "kind": "custom",
+  "toolFamily": "pnpm",
+  "notes": "Tests 30 sub-packages (exceeding MAX_DETECTED_PROJECTS=25, #1586 #2) and script host detection in apps/web/public/index.html (#1585 #3).",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "workspaceTool": "pnpm",
+      "runProject": ".",
+      "walkComplete": true,
+      "requiredProjects": [
+        "apps/web",
+        "packages/pkg-01",
+        "packages/pkg-30"
+      ],
+      "projectTraits": {
+        "apps/web": {
+          "framework": "nextjs",
+          "frameworkVariant": "app-router"
+        }
+      },
+      "projectTools": {
+        "apps/web": [
+          "Stripe"
+        ]
+      },
+      "planAsks": true,
+      "forbidPlanPicked": [
+        "."
+      ],
+      "maxDurationMs": 8000
+    }
+  ]
+}

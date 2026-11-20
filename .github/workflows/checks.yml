@@ -52,3 +52,6 @@ jobs:
 
       - name: Test the signed-commit helpers
         run: pnpm test:api-commits
+
+      - name: Test the discovery eval checks
+        run: pnpm test:discovery-eval

@@ -1,0 +1,60 @@
+{
+  "id": "uv-fastapi-fullstack",
+  "fixture": "production/uv-fastapi-fullstack",
+  "kind": "production",
+  "toolFamily": "uv",
+  "notes": "Official FastAPI full-stack template: Python backend/pyproject.toml (FastAPI + Postgres) + React/TanStack Router frontend/.",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "runProject": ".",
+      "walkComplete": true,
+      "requiredProjects": [
+        "backend",
+        "frontend",
+        "packages/react-email"
+      ],
+      "projectTraits": {
+        "backend": {
+          "framework": "fastapi"
+        },
+        "frontend": {
+          "framework": "tanstack-router",
+          "frameworkVariant": "file-based"
+        },
+        "packages/react-email": {
+          "projectRole": "library"
+        }
+      },
+      "forbidPlanPicked": [
+        "."
+      ],
+      "forbidPlanOffered": [
+        "packages/react-email"
+      ],
+      "maxDurationMs": 10000
+    },
+    {
+      "name": "from-frontend",
+      "subdir": "frontend",
+      "repoType": "monorepo",
+      "runProject": "frontend",
+      "matchKeys": {
+        "framework": [
+          "tanstack-router"
+        ],
+        "frameworkVariant": [
+          "file-based"
+        ]
+      },
+      "forbidProjectTools": {
+        "frontend": [
+          "Postgres"
+        ]
+      },
+      "maxDurationMs": 10000
+    }
+  ]
+}

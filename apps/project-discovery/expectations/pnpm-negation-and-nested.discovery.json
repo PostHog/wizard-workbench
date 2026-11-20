@@ -1,0 +1,45 @@
+{
+  "id": "pnpm-negation-and-nested",
+  "fixture": "custom/pnpm-negation-and-nested",
+  "kind": "custom",
+  "toolFamily": "pnpm",
+  "notes": "Tests pnpm-workspace.yaml negation exclusion (!apps/legacy/**), tooling/ filtering, MCP server discovery, and nested subdir launch climbing to workspace root.",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "workspaceTool": "pnpm",
+      "runProject": ".",
+      "requiredProjects": [
+        "apps/dashboard",
+        "apps/mcp"
+      ],
+      "forbiddenProjects": [
+        "apps/legacy/old-app"
+      ],
+      "forbidPlanOffered": [
+        "tooling/eslint-config",
+        "packages/shared",
+        "apps/legacy/old-app"
+      ],
+      "planAsks": true,
+      "maxDurationMs": 10000
+    },
+    {
+      "name": "from-apps-dashboard",
+      "subdir": "apps/dashboard",
+      "repoType": "monorepo",
+      "workspaceTool": "pnpm",
+      "runProject": "apps/dashboard",
+      "requiredProjects": [
+        "apps/dashboard",
+        "apps/mcp"
+      ],
+      "forbiddenProjects": [
+        "apps/legacy/old-app"
+      ],
+      "maxDurationMs": 10000
+    }
+  ]
+}

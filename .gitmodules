@@ -19,3 +19,21 @@
 [submodule "apps/basic-integration/flutter/localsend"]
 	path = apps/basic-integration/flutter/localsend
 	url = https://github.com/localsend/localsend.git
+[submodule "apps/project-discovery/production/turbo-next-forge"]
+	path = apps/project-discovery/production/turbo-next-forge
+	url = https://github.com/vercel/next-forge.git
+[submodule "apps/project-discovery/production/nx-analog"]
+	path = apps/project-discovery/production/nx-analog
+	url = https://github.com/analogjs/analog.git
+[submodule "apps/project-discovery/production/bazel-aspect-examples"]
+	path = apps/project-discovery/production/bazel-aspect-examples
+	url = https://github.com/aspect-build/bazel-examples.git
+[submodule "apps/project-discovery/production/uv-fastapi-fullstack"]
+	path = apps/project-discovery/production/uv-fastapi-fullstack
+	url = https://github.com/fastapi/full-stack-fastapi-template.git
+[submodule "apps/project-discovery/production/rush-microsoft-example"]
+	path = apps/project-discovery/production/rush-microsoft-example
+	url = https://github.com/microsoft/rush-example.git
+[submodule "apps/project-discovery/production/cargo-axum"]
+	path = apps/project-discovery/production/cargo-axum
+	url = https://github.com/tokio-rs/axum.git

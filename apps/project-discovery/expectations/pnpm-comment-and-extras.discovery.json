@@ -1,0 +1,73 @@
+{
+  "id": "pnpm-comment-and-extras",
+  "fixture": "custom/pnpm-comment-and-extras",
+  "kind": "custom",
+  "toolFamily": "pnpm",
+  "notes": "Reproduces #1584 (#1 pyproject extras), #1585 (#2 column-0 comment in pnpm-workspace.yaml), #1586 (#1 frameworkVariant matchKey + #5 Postgres tool isolation), and #1588 (#1 frameworkless root).",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "workspaceTool": "pnpm",
+      "runProject": ".",
+      "walkComplete": true,
+      "requiredProjects": [
+        "apps/web",
+        "apps/api",
+        "packages/ui"
+      ],
+      "projectTraits": {
+        "apps/web": {
+          "framework": "nextjs",
+          "frameworkVariant": "pages-router"
+        },
+        "apps/api": {
+          "framework": "fastapi",
+          "posthogInstalled": "yes",
+          "callsLlmApi": "yes"
+        },
+        "packages/ui": {
+          "projectRole": "library"
+        }
+      },
+      "projectTools": {
+        "apps/api": [
+          "Postgres"
+        ]
+      },
+      "forbidProjectTools": {
+        "apps/web": [
+          "Postgres"
+        ]
+      },
+      "planAsks": true,
+      "forbidPlanPicked": [
+        ".",
+        "packages/ui"
+      ],
+      "maxDurationMs": 10000
+    },
+    {
+      "name": "from-apps-web",
+      "subdir": "apps/web",
+      "repoType": "monorepo",
+      "workspaceTool": "pnpm",
+      "runProject": "apps/web",
+      "matchKeys": {
+        "framework": [
+          "nextjs"
+        ],
+        "frameworkVariant": [
+          "pages-router"
+        ]
+      },
+      "forbidProjectTools": {
+        "apps/web": [
+          "Postgres"
+        ]
+      },
+      "maxDurationMs": 10000
+    }
+  ]
+}

@@ -106,6 +106,7 @@ export const WIZARD_FLAG_KEYS: readonly string[] = [
   "wizard-orchestrator-seeded-tasks",
   "wizard-self-driving-use-pi-harness",
   "wizard-basic-integration-agentic-detection",
+  "wizard-project-discovery",
 ];
 
 // Host Claude Code / Anthropic auth vars: when the wizard's agent subprocess is

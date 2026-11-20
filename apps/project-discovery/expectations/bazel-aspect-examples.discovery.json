@@ -1,0 +1,27 @@
+{
+  "id": "bazel-aspect-examples",
+  "fixture": "production/bazel-aspect-examples",
+  "kind": "production",
+  "toolFamily": "bazel",
+  "notes": "Aspect Build Bazel polyglot monorepo (MODULE.bazel + BUILD.bazel + pnpm + Go + Python). Bazel workspaceTool is advisory until MODULE.bazel/WORKSPACE is added to WORKSPACE_MARKERS.",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "workspaceTool": "bazel",
+      "runProject": ".",
+      "walkComplete": true,
+      "requiredProjects": [
+        "angular",
+        "go_workspaces/module1",
+        "nodejs_apps/buf_printer"
+      ],
+      "planAsks": true,
+      "advisory": [
+        "workspaceTool"
+      ],
+      "maxDurationMs": 10000
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "id": "cargo-go-gradle-polyglot",
+  "fixture": "custom/cargo-go-gradle-polyglot",
+  "kind": "custom",
+  "toolFamily": "cargo-go-gradle",
+  "notes": "Frameworkless root with go.work + Cargo.toml [workspace] + settings.gradle.kts + web Next.js App Router (#1585 #7, #1588 #1).",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "workspaceTool": "cargo",
+      "runProject": ".",
+      "walkComplete": true,
+      "requiredProjects": [
+        "services/billing",
+        "crates/worker",
+        "apps/android",
+        "web"
+      ],
+      "forbiddenProjects": [
+        "crates/legacy"
+      ],
+      "projectTraits": {
+        "web": {
+          "framework": "nextjs",
+          "frameworkVariant": "app-router"
+        }
+      },
+      "projectTools": {
+        "services/billing": [
+          "Stripe"
+        ]
+      },
+      "forbidProjectTools": {
+        "web": [
+          "Stripe"
+        ]
+      },
+      "planAsks": true,
+      "forbidPlanPicked": [
+        "."
+      ],
+      "maxDurationMs": 10000
+    }
+  ]
+}

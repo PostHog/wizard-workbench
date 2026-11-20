@@ -1,0 +1,6 @@
+packages:
+  - apps/*
+  - apps/*/*
+  - packages/*
+  - tooling/*
+  - "!apps/legacy/**"
