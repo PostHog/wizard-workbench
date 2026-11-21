@@ -1,6 +1,10 @@
 import Stripe from 'stripe';
 import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
-import { NextRequest, NextResponse } from 'next/server';
+import { after, NextRequest, NextResponse } from 'next/server';
+import {
+  flushPostHogLogs,
+  logSubscriptionChangeProcessed
+} from '@/instrumentation';
 
 // Use a dummy webhook secret for stub mode
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_stub_secret';
@@ -26,6 +30,10 @@ export async function POST(request: NextRequest) {
     case 'customer.subscription.deleted':
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
+      logSubscriptionChangeProcessed();
+      after(async () => {
+        await flushPostHogLogs();
+      });
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);
