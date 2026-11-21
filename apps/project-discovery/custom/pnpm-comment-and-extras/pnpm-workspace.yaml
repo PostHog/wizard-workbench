@@ -1,0 +1,4 @@
+packages:
+# web and api apps
+  - apps/*
+  - packages/*

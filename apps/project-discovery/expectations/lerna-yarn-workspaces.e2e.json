@@ -1,0 +1,36 @@
+{
+  "id": "lerna-yarn-workspaces",
+  "fixture": "custom/lerna-yarn-workspaces",
+  "program": "posthog-integration",
+  "summary": "Launch at Lerna + Yarn workspaces root, pick packages/web (Next.js App Router), and keep edits scoped to packages/web/.",
+  "flags": {
+    "wizard-project-discovery": "one-project"
+  },
+  "launchDir": ".",
+  "profile": {
+    "plan": "packages/web",
+    "setup": "first",
+    "healthCheck": "dismiss",
+    "mcp": "skip",
+    "slack": "skip",
+    "ask": "first",
+    "notice": "decline"
+  },
+  "expectations": {
+    "expectedOutcome": "success",
+    "expectAbort": null,
+    "expectedTargetProject": "packages/web",
+    "expectedFramework": "nextjs",
+    "expectedFrameworkVariant": "app-router",
+    "expectedChangedPrefix": "packages/web/",
+    "forbidChangedPrefixes": [
+      "packages/api/",
+      "packages/shared/"
+    ],
+    "forbidToolsInTarget": [
+      "Stripe",
+      "Postgres"
+    ],
+    "gateOnDeterministic": "expectations/lerna-yarn-workspaces.discovery.json"
+  }
+}

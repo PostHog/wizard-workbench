@@ -1,0 +1,43 @@
+{
+  "id": "nx-analog",
+  "fixture": "production/nx-analog",
+  "kind": "production",
+  "toolFamily": "nx",
+  "notes": "AnalogJS Nx + pnpm monorepo: tests Nx recognition, Astro variant, and filtering -e2e harnesses.",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "workspaceTool": "nx",
+      "runProject": ".",
+      "walkComplete": true,
+      "requiredProjects": [
+        "apps/analog-app",
+        "apps/astro-app",
+        "apps/blog-app"
+      ],
+      "projectTraits": {
+        "apps/astro-app": {
+          "framework": "astro",
+          "frameworkVariant": "static"
+        }
+      },
+      "planAsks": true,
+      "forbidPlanOffered": [
+        "apps/analog-app-e2e",
+        "apps/astro-app-e2e-playwright",
+        "apps/blog-app-e2e"
+      ],
+      "advisory": [
+        "forbidPlanOffered"
+      ],
+      "maxDurationMs": 10000,
+      "requiredPlanOffered": [
+        "apps/analog-app",
+        "apps/astro-app",
+        "apps/blog-app"
+      ]
+    }
+  ]
+}

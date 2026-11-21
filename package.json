@@ -13,6 +13,7 @@
     "wizard-ci-snapshots-review": "tsx services/wizard-ci/snapshots-review.ts",
     "benchmark": "tsx services/wizard-benchmark/index.ts",
     "framework-detect": "tsx services/framework-detect/index.ts",
+    "discovery-eval": "tsx services/discovery-eval/index.ts",
     "yara-scan": "tsx services/yara-scan/index.ts",
     "mcp-stub": "tsx services/mcp-stub/cli.ts",
     "mcp-stub:record": "tsx services/mcp-stub/record.ts",
@@ -21,7 +22,9 @@
     "test:mcp-stub": "tsx --test services/mcp-stub/mcp-stub.test.ts",
     "test:warehouse-checks": "tsx --test services/wizard-ci/warehouse-checks.test.ts",
     "test:feature-flag-checks": "tsx --test services/wizard-ci/feature-flag-checks.test.ts",
-    "test:source-app": "tsx --test services/wizard-ci/source-app.test.ts"
+    "test:source-app": "tsx --test services/wizard-ci/source-app.test.ts",
+    "test:project-discovery-checks": "tsx --test services/wizard-ci/project-discovery-checks.test.ts",
+    "test:discovery-eval": "tsx --test services/discovery-eval/checks.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.2.73",

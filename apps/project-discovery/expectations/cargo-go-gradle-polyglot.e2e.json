@@ -1,0 +1,33 @@
+{
+  "id": "cargo-go-gradle-polyglot",
+  "fixture": "custom/cargo-go-gradle-polyglot",
+  "program": "posthog-integration",
+  "summary": "Launch at frameworkless polyglot root (go.work + Cargo.toml + settings.gradle.kts), pick web/ (Next.js App Router) without aborting on no root framework.",
+  "flags": {
+    "wizard-project-discovery": "one-project"
+  },
+  "launchDir": ".",
+  "profile": {
+    "plan": "web",
+    "setup": "first",
+    "healthCheck": "dismiss",
+    "mcp": "skip",
+    "slack": "skip",
+    "ask": "first",
+    "notice": "decline"
+  },
+  "expectations": {
+    "expectedOutcome": "success",
+    "expectAbort": null,
+    "expectedTargetProject": "web",
+    "expectedFramework": "nextjs",
+    "expectedFrameworkVariant": "app-router",
+    "expectedChangedPrefix": "web/",
+    "forbidChangedPrefixes": [
+      "services/",
+      "crates/",
+      "apps/"
+    ],
+    "gateOnDeterministic": "expectations/cargo-go-gradle-polyglot.discovery.json"
+  }
+}

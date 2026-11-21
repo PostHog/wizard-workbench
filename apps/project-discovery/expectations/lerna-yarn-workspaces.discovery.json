@@ -1,0 +1,48 @@
+{
+  "id": "lerna-yarn-workspaces",
+  "fixture": "custom/lerna-yarn-workspaces",
+  "kind": "custom",
+  "toolFamily": "lerna",
+  "notes": "Tests lerna.json + Yarn package.json workspaces.packages object syntax (#1585 #7) and per-project Stripe/Postgres isolation.",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "workspaceTool": "lerna",
+      "runProject": ".",
+      "requiredProjects": [
+        "packages/web",
+        "packages/api",
+        "packages/shared"
+      ],
+      "projectTraits": {
+        "packages/web": {
+          "framework": "nextjs",
+          "frameworkVariant": "app-router"
+        }
+      },
+      "projectTools": {
+        "packages/api": [
+          "Stripe",
+          "Postgres"
+        ]
+      },
+      "forbidProjectTools": {
+        "packages/web": [
+          "Stripe",
+          "Postgres"
+        ]
+      },
+      "planAsks": true,
+      "maxDurationMs": 10000,
+      "requiredPlanOffered": [
+        "packages/web",
+        "packages/api"
+      ],
+      "forbidPlanOffered": [
+        "packages/shared"
+      ]
+    }
+  ]
+}

@@ -59,6 +59,7 @@ const COMMAND_PROGRAM: Record<string, string> = {
   // The seeded scenario drives the *integration* program: the warehouse step is
   // a task that run offers, not a program of its own.
   "warehouse-seeded": "posthog-integration",
+  "project-discovery": "posthog-integration",
   "upload-sourcemaps": "error-tracking-upload-source-maps",
 };
 

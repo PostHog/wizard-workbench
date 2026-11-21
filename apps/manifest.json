@@ -101,6 +101,14 @@
       "description": "Create an example PostHog feature flag for each side of the app (frontend, backend) and wire one correct evaluation of each; installs the SDKs first if the project doesn't have them",
       "ciCapable": true,
       "e2eOnly": true
+    },
+    {
+      "id": "project-discovery",
+      "dir": "project-discovery",
+      "label": "Project Discovery",
+      "description": "Discover monorepo workspaces, traits, and target projects before running the integration flow",
+      "ciCapable": true,
+      "e2eOnly": true
     }
   ]
 }
