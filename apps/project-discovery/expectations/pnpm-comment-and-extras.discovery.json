@@ -42,11 +42,14 @@
         ]
       },
       "planAsks": true,
-      "forbidPlanPicked": [
-        ".",
-        "packages/ui"
+      "maxDurationMs": 10000,
+      "requiredPlanOffered": [
+        "apps/web"
       ],
-      "maxDurationMs": 10000
+      "forbidPlanOffered": [
+        "packages/ui",
+        "apps/api"
+      ]
     },
     {
       "name": "from-apps-web",

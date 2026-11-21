@@ -21,7 +21,12 @@
       "advisory": [
         "workspaceTool"
       ],
-      "maxDurationMs": 10000
+      "maxDurationMs": 10000,
+      "requiredPlanOffered": [
+        "angular",
+        "go_workspaces/module1",
+        "nodejs_apps/buf_printer"
+      ]
     }
   ]
 }

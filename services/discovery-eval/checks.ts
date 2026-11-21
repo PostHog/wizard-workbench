@@ -83,6 +83,7 @@ export interface DiscoveryScenarioExpect {
   planAsks?: boolean;
   planPicked?: string;
   forbidPlanPicked?: string[];
+  requiredPlanOffered?: string[];
   forbidPlanOffered?: string[];
   maxDurationMs?: number;
   /** Check names downgraded to `advisory` (reported, non-blocking unless `--strict`). */
@@ -287,6 +288,20 @@ export function evaluateDiscoveryReport(
       forbiddenHit
         ? `picked forbidden default ${JSON.stringify(report.plan.picked)}`
         : `picked ${JSON.stringify(report.plan.picked)} (not in forbidden list)`,
+    );
+  }
+
+  if (expect.requiredPlanOffered && expect.requiredPlanOffered.length > 0) {
+    const offeredSet = new Set(
+      report.plan.projects.filter((p) => p.offered).map((p) => p.path),
+    );
+    const missing = expect.requiredPlanOffered.filter((p) => !offeredSet.has(p));
+    record(
+      "requiredPlanOffered",
+      missing.length === 0,
+      missing.length === 0
+        ? `all ${expect.requiredPlanOffered.length} subrepos offered on plan`
+        : `missing from offered plan choices: ${missing.join(", ")}`,
     );
   }
 

@@ -85,6 +85,7 @@ describe("evaluateDiscoveryReport", () => {
         forbidProjectTools: { "apps/web": ["Postgres"] },
         planAsks: true,
         planPicked: "apps/web",
+        requiredPlanOffered: ["apps/web", "apps/api"],
         forbidPlanPicked: ["."],
         maxDurationMs: 5000,
       },

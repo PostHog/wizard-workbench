@@ -38,10 +38,12 @@
         ]
       },
       "planAsks": true,
-      "forbidPlanPicked": [
-        "."
-      ],
-      "maxDurationMs": 10000
+      "maxDurationMs": 10000,
+      "requiredPlanOffered": [
+        "services/billing",
+        "crates/worker",
+        "web"
+      ]
     }
   ]
 }

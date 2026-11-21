@@ -24,9 +24,6 @@
         }
       },
       "planAsks": true,
-      "forbidPlanPicked": [
-        "."
-      ],
       "forbidPlanOffered": [
         "apps/analog-app-e2e",
         "apps/astro-app-e2e-playwright",
@@ -35,7 +32,12 @@
       "advisory": [
         "forbidPlanOffered"
       ],
-      "maxDurationMs": 10000
+      "maxDurationMs": 10000,
+      "requiredPlanOffered": [
+        "apps/analog-app",
+        "apps/astro-app",
+        "apps/blog-app"
+      ]
     }
   ]
 }

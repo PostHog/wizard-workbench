@@ -32,7 +32,10 @@
       "forbidPlanPicked": [
         "."
       ],
-      "maxDurationMs": 8000
+      "maxDurationMs": 8000,
+      "requiredPlanOffered": [
+        "apps/web"
+      ]
     }
   ]
 }

@@ -20,17 +20,16 @@
         }
       },
       "planAsks": true,
-      "forbidPlanPicked": [
-        "."
-      ],
       "advisory": [
         "repoType",
         "workspaceTool",
         "planAsks",
-        "forbidPlanPicked",
         "trait:libraries/my-controls:projectRole"
       ],
-      "maxDurationMs": 10000
+      "maxDurationMs": 10000,
+      "requiredPlanOffered": [
+        "apps/my-app"
+      ]
     }
   ]
 }

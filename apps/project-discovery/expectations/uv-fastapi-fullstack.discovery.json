@@ -28,13 +28,14 @@
           "projectRole": "library"
         }
       },
-      "forbidPlanPicked": [
-        "."
-      ],
       "forbidPlanOffered": [
         "packages/react-email"
       ],
-      "maxDurationMs": 10000
+      "maxDurationMs": 10000,
+      "requiredPlanOffered": [
+        "backend",
+        "frontend"
+      ]
     },
     {
       "name": "from-frontend",

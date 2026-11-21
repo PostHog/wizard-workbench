@@ -35,11 +35,14 @@
         ]
       },
       "planAsks": true,
-      "forbidPlanPicked": [
-        ".",
-        "packages/shared"
+      "maxDurationMs": 10000,
+      "requiredPlanOffered": [
+        "packages/web",
+        "packages/api"
       ],
-      "maxDurationMs": 10000
+      "forbidPlanOffered": [
+        "packages/shared"
+      ]
     }
   ]
 }
