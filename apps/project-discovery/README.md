@@ -1,7 +1,6 @@
 # Project discovery monorepo goalposts
 
-Production and custom monorepos for grading `PostHog/wizard` project discovery
-(`wizard-project-discovery`) and monorepo E2E flows.
+Production and custom monorepos for grading `PostHog/wizard` project discovery (`wizard-project-discovery`) and monorepo E2E flows.
 
 ## Fixtures
 
@@ -26,15 +25,68 @@ Production and custom monorepos for grading `PostHog/wizard` project discovery
 | `lerna-yarn-workspaces` | `lerna.json` + Yarn `workspaces.packages` (`#1585`), per-project Stripe/Postgres isolation |
 | `large-monorepo-caps` | 30 sub-packages (past `MAX_DETECTED_PROJECTS = 25`, `#1586`) + `<script>` host detection in `apps/web/public/index.html` |
 
-## Running the deterministic grader ($0, zero LLM calls)
+## 1. Deterministic grader ($0, zero LLM calls)
+
+Run this first against a local `PostHog/wizard` checkout. Do not spend tokens on E2E legs until the deterministic checks for that fixture pass.
 
 ```bash
 git submodule update --init --recursive apps/project-discovery/production
 pnpm discovery-eval --wizard /path/to/wizard
 ```
 
-Pass `--strict` to fail on advisory checks (such as Bazel and Rush markers not yet implemented in `WORKSPACE_MARKERS`), `--filter <name>` to run a subset, or `--json` for machine output.
+Useful flags:
 
-## E2E expectations
+- `--filter <substring>`: run a subset of fixtures or scenarios
+- `--strict`: fail on advisory checks (such as Bazel and Rush markers not yet in `WORKSPACE_MARKERS`)
+- `--json`: machine-readable report
 
-E2E specs live beside the deterministic specs in `expectations/*.e2e.json` (and `.wizard-ci/e2e.json` on custom fixtures) so `wizard-ci --e2e` can grade full runs once the deterministic baseline is green. Do not burn LLM tokens on E2E legs whose deterministic checks still fail.
+### How deterministic grading works
+
+`services/discovery-eval/index.ts` spawns `node <wizard>/dist/bin.js --test-discovery` (or `tsx src/bin.ts` if unbuilt) in each scenario's `launchDir` with zero network or LLM calls, then grades the JSON output with `services/discovery-eval/checks.ts` against `expectations/*.discovery.json`:
+
+- Workspace detection (`isMonorepo`, `workspaceRoot`, `workspaceTool`)
+- Discovered `memberPaths` and excluded `forbidMemberPaths` (for example `!apps/legacy/**`)
+- Per-project `framework`, `frameworkVariant`, `role`, `requiredTools`, and `forbidTools` (cross-project tool isolation)
+- `PlanScreen` candidate list (`requiredPlanOffered`, `forbidPlanOffered`) and auto-pick (`expectedPlanPicked` for nested single-project launches)
+
+## 2. Full E2E runs (`wizard-ci --e2e`)
+
+Six fixtures also have full E2E specs in `expectations/*.e2e.json`:
+
+- Custom: `pnpm-comment-and-extras`, `cargo-go-gradle-polyglot`, `pnpm-negation-and-nested`, `lerna-yarn-workspaces`
+- Production: `turbo-next-forge`, `uv-fastapi-fullstack`
+
+### Running an E2E leg
+
+Make sure the fixture's deterministic checks pass first, then run `wizard-ci --e2e` with your PostHog CI credentials and a local `WIZARD_PATH` checkout:
+
+```bash
+export WIZARD_PATH=/path/to/wizard
+export POSTHOG_PERSONAL_API_KEY=phx_...
+export POSTHOG_GATEWAY_TOKEN=phs_... # or WIZARD_CI_GATEWAY_TOKEN_FILE=/path/to/token
+
+# Custom fixture (nested launch)
+pnpm wizard-ci project-discovery/custom/pnpm-negation-and-nested --e2e --project-id <id>
+
+# Production submodule fixture (root launch)
+pnpm wizard-ci project-discovery/production/turbo-next-forge --e2e --project-id <id>
+```
+
+### How E2E running and grading works
+
+`services/wizard-ci/e2e.ts` automatically loads `apps/project-discovery/expectations/<id>.e2e.json` (via `services/wizard-ci/project-discovery-checks.ts`) and:
+
+1. Copies the full monorepo into `/tmp/wizard-e2e-<name>` via `rsync` (never mutates the fixture).
+2. Merges `flags` (such as `{"wizard-project-discovery":"one-project"}`) into `WIZARD_CI_FLAG_OVERRIDES`.
+3. Sets `APP_DIR` to `launchDir` inside the `/tmp` copy (for example `/tmp/wizard-e2e-pnpm-negation-and-nested/apps/dashboard`).
+4. Exports `E2E_NOTICE` (`profile.notice`) and `E2E_PLAN_PICK` (`profile.plan`) to the wizard TUI harness.
+5. After the run finishes, diffs the entire `/tmp` copy against the source fixture with `changedFiles()` and grades:
+   - `completed without abort` (or expected `abortReason` when `expectAbort` is set)
+   - `edits inside <expectedChangedPrefix>`
+   - `posthog wired inside <expectedChangedPrefix>` (replaces root-only `package.json` checks because monorepo installs touch the picked subrepo)
+   - `no edits under <prefix>` for every entry in `forbidChangedPrefixes` (root lockfile updates like `pnpm-lock.yaml` or `yarn.lock` are allowed)
+
+### Wizard-side prerequisite for multi-app `PlanScreen` legs
+
+- Single-target nested runs (`pnpm-negation-and-nested`) skip `PlanScreen` once deterministic discovery passes, so they run headlessly right away.
+- Multi-app root runs (the other 5 `.e2e.json` specs) open `PlanScreen` to ask which subrepo to integrate. `PostHog/wizard`'s `e2e-harness/e2e-profile.ts` (`decideE2eAction`) and `scripts/tui-host.no-jest.ts` need a `PlanScreen` handler that reads `process.env.E2E_PLAN_PICK` and selects that subrepo. Until that hook lands in `PostHog/wizard`, multi-app root runs pause on `PlanScreen`.

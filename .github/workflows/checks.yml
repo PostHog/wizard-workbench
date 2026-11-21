@@ -55,3 +55,6 @@ jobs:
 
       - name: Test the discovery eval checks
         run: pnpm test:discovery-eval
+
+      - name: Test the project-discovery E2E checks
+        run: pnpm test:project-discovery-checks

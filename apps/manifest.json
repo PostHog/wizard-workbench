@@ -104,7 +104,7 @@
     },
     {
       "id": "project-discovery",
-      "dir": "project-discovery/custom",
+      "dir": "project-discovery",
       "label": "Project Discovery",
       "description": "Discover monorepo workspaces, traits, and target projects before running the integration flow",
       "ciCapable": true,
