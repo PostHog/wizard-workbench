@@ -18,6 +18,8 @@ you have concrete evidence in the diff/files. Do not praise unnecessarily.
 
 **Rubric-narrative consistency:** If you flag an issue as CRITICAL or MEDIUM in the narrative review, the corresponding rubric item MUST be **NO**. The rubric drives the scores — an issue described in the narrative but marked YES in the rubric will not affect the score. Never mark an item YES while simultaneously describing a CRITICAL or MEDIUM problem with it.
 
+**Package versions:** Packages publish new versions faster than your training data, so never call a version fabricated or nonexistent from memory. Check it with the package manager (`npm view <pkg>@<version> version`, `pip index versions <pkg>`, `composer show -a <pkg>`) or the lockfile in the diff. Flag a version only when that check shows it doesn't exist. The same goes for SDK call signatures: check a required parameter in the installed package's type definitions or the PostHog documentation reference before calling a call invalid.
+
 **Do NOT assign scores.** Only fill out the rubric and write the narrative review.
 Scores are computed server-side from your rubric answers.
 
