@@ -1,0 +1,416 @@
+{
+  "app": "no-posthog-react-router-8-data",
+  "lifecycle": {
+    "install": {
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ]
+    },
+    "build": {
+      "argv": [
+        "npm",
+        "run",
+        "build"
+      ]
+    },
+    "start": {
+      "argv": [
+        "node",
+        "node_modules/vite/bin/vite.js",
+        "preview",
+        "--port",
+        "{port}",
+        "--strictPort"
+      ],
+      "ready": {
+        "path": "/",
+        "timeoutMs": 60000
+      }
+    },
+    "env": {},
+    "flushWaitMs": 8000
+  },
+  "scenarios": [
+    {
+      "id": "client-render-route",
+      "surface": "Render error caught by the layout route's ErrorBoundary (RouterProvider)",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/suppliers?view=map",
+        "waitMs": 2500,
+        "expectText": "Something went wrong"
+      },
+      "throws": {
+        "match": "MP14",
+        "file": "src/components/supplier-map.tsx"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/components/supplier-map.tsx"
+        }
+      }
+    },
+    {
+      "id": "render-on-navigation",
+      "surface": "Render error after a client navigation (reports range)",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/reports",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "a:has-text('Q1')"
+          },
+          {
+            "wait": 500
+          },
+          {
+            "evaluate": "history.pushState({}, '', '/reports?range=q5'); dispatchEvent(new PopStateEvent('popstate'))"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Something went wrong"
+      },
+      "throws": {
+        "match": "RX20",
+        "file": "src/lib/reports.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/reports.ts"
+        }
+      }
+    },
+    {
+      "id": "loader-navigation",
+      "surface": "Loader throws on a client navigation",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "a:has-text('SKU-4471')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Something went wrong"
+      },
+      "throws": {
+        "match": "LB71",
+        "file": "src/lib/inventory.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/inventory.ts"
+        }
+      }
+    },
+    {
+      "id": "loader-initial",
+      "surface": "Loader throws on the initial load of the page",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products/SKU-4480",
+        "waitMs": 2500,
+        "expectText": "Something went wrong"
+      },
+      "throws": {
+        "match": "LB80",
+        "file": "src/lib/inventory.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/inventory.ts"
+        }
+      }
+    },
+    {
+      "id": "action-form",
+      "surface": "Action throws, submitted from a <Form>",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products/SKU-2202",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "evaluate": "document.querySelector('select[name=reason]').value = 'recount'"
+          },
+          {
+            "fill": {
+              "selector": "input[name=quantity]",
+              "value": "3"
+            }
+          },
+          {
+            "click": "button:has-text('Save adjustment')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Something went wrong"
+      },
+      "throws": {
+        "match": "RC02",
+        "file": "src/lib/inventory.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/inventory.ts"
+        }
+      }
+    },
+    {
+      "id": "fetcher-action",
+      "surface": "Action throws, submitted by useFetcher",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "button:has-text('Reorder SKU-3003')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Something went wrong"
+      },
+      "throws": {
+        "match": "RO03",
+        "file": "src/lib/inventory.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/inventory.ts"
+        }
+      }
+    },
+    {
+      "id": "client-onclick",
+      "surface": "Event handler throw",
+      "requirement": "COV-1",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "button:has-text('Export CSV')"
+          },
+          {
+            "wait": 1000
+          }
+        ],
+        "expectPageError": "CE03"
+      },
+      "throws": {
+        "match": "CE03",
+        "file": "src/lib/csv.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/csv.ts"
+        },
+        "handled": false
+      }
+    },
+    {
+      "id": "unhandled-rejection",
+      "surface": "Fire-and-forget promise rejects in the browser",
+      "requirement": "COV-1",
+      "trigger": {
+        "kind": "browser",
+        "page": "/",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "button:has-text('Sync warehouse')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectPageError": "EX77"
+      },
+      "throws": {
+        "match": "EX77",
+        "file": "src/lib/inventory.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/inventory.ts"
+        },
+        "handled": false
+      }
+    },
+    {
+      "id": "not-found-loader",
+      "surface": "Loader throws data(\u2026, { status: 404 })",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products/SKU-9999",
+        "waitMs": 2500,
+        "expectText": "Product not found"
+      },
+      "throws": {
+        "urlMatch": "/products/SKU-9999"
+      },
+      "expect": {
+        "count": 0
+      }
+    },
+    {
+      "id": "unknown-route",
+      "surface": "No route matches (router-internal 404 reaches onError)",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/warehouse/aisle-9",
+        "waitMs": 2500,
+        "expectText": "Not found"
+      },
+      "throws": {
+        "match": "/warehouse/aisle-9",
+        "urlMatch": "/warehouse/aisle-9"
+      },
+      "expect": {
+        "count": 0
+      }
+    },
+    {
+      "id": "action-validation",
+      "surface": "Action throws data(\u2026, { status: 400 }) for invalid input",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products/SKU-1001",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "fill": {
+              "selector": "input[name=quantity]",
+              "value": "-5"
+            }
+          },
+          {
+            "click": "button:has-text('Save adjustment')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Quantity must be a positive whole number"
+      },
+      "throws": {
+        "urlMatch": "/products/SKU-1001"
+      },
+      "expect": {
+        "count": 0
+      }
+    },
+    {
+      "id": "action-redirect",
+      "surface": "Action throws redirect() after a successful adjustment",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products/SKU-1002",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "fill": {
+              "selector": "input[name=quantity]",
+              "value": "4"
+            }
+          },
+          {
+            "click": "button:has-text('Save adjustment')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Stock updated"
+      },
+      "throws": {
+        "urlMatch": "/products/SKU-1002"
+      },
+      "expect": {
+        "count": 0
+      }
+    }
+  ]
+}

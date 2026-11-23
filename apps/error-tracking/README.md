@@ -111,6 +111,15 @@ Each of these apps has a setup that a generic integration gets wrong. As with th
 - `notFound()`, `redirect()` and 404 pages produce no `$exception`
 - source maps uploaded only when the upload credentials are present, so a build without them still passes
 
+**`no-posthog-react-router-8`**, **`no-posthog-react-router-7`**, **`react-router-8`**, **`no-posthog-react-router-8-data`**: one stock-tracking app (Shelfwise) on React Router 8 in framework mode (server-rendered, `react-router-serve`), the same app on React Router 7 (middleware flag off), the React Router 8 app with `posthog-js` initialized in `entry.client.tsx`, a root `ErrorBoundary` that calls `captureException` during render, and `posthog-node` used for a business event, and the app as a data-mode single-page app (`createBrowserRouter`, Vite). Each has a scenario manifest in `.scenarios/`. The framework-mode manifests start the server with `NODE_ENV=production` and load `.env` with `node --env-file-if-exists`, as a host would. Expected:
+
+- `capture_exceptions: true` in the browser init, and an `onError` handler on `<HydratedRouter>` / `<RouterProvider>` that skips `isRouteErrorResponse` errors and the sanitized "Unexpected Server Error" copy of a server error; no capture in an `ErrorBoundary` as well, and no `PostHogErrorBoundary` relied on around the router
+- in framework mode: `handleError` in `entry.server.tsx` that skips aborted requests and `isRouteErrorResponse` errors (React Router passes it its own 404 and 405), capture in the stream `onError` once the shell rendered, and one `posthog-node` client with exception autocapture
+- server exceptions carry the browser's distinct ID and session ID (tracing headers first, the PostHog cookie second) and the request URL, method and path
+- in `react-router-8`, the render-time `captureException` in the root `ErrorBoundary` removed and the existing `posthog-node` major kept (its `captureException` call form used)
+- thrown `data()` 404s and 400s, `redirect()`, unknown URLs and POSTs to routes without an action produce no `$exception`
+- source maps uploaded for the client and the server build only when the upload credentials are present, so a build without them still passes
+
 **`vite-yarn-pnp`**: Vite and React on Yarn 4 Plug'n'Play, with no `node_modules` and a seven-day `npmMinimalAgeGate`. `posthog-js` runs through `PostHogProvider` with `VITE_PH_PROJECT_TOKEN`. The build emits hidden source maps and `.gz` and `.br` copies, and the GitHub Pages workflow publishes all of `dist/`. Expected:
 
 - packages added with `yarn add`, so `.pnp.cjs` and `yarn.lock` change together, never with npm or a switch to `nodeLinker: node-modules`
