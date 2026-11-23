@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PostHogService } from '@core/services';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +20,8 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PostHogService);
 
   /**
    * Authenticates the user.
@@ -41,9 +43,36 @@ export class AuthenticationService {
       firstName,
       lastName,
     });
-    this._credentialsService.setCredentials(credentials, context.remember);
+    this.credentialsService.setCredentials(credentials, context.remember);
+    this.identify(credentials);
+    this.posthogService.posthog.capture('login_succeeded', {
+      remember_session: Boolean(context.remember),
+    });
+    this.posthogService.posthog.logger.info('Authentication completed', {
+      event: 'authentication_completed',
+      remember_session: Boolean(context.remember),
+    });
 
     return of(credentials);
+  }
+
+  /** Identifies the persisted user after the PostHog client initializes. */
+  identifyCurrentUser(): void {
+    const credentials = this.credentialsService.credentials();
+    if (credentials?.id) {
+      this.identify(credentials);
+    }
+  }
+
+  private identify(credentials: Credentials): void {
+    const name = credentials.fullName.trim();
+
+    this.posthogService.posthog.identify(credentials.id, {
+      username: credentials.username,
+      ...(credentials.email ? { email: credentials.email } : {}),
+      ...(name ? { name } : {}),
+      roles: credentials.roles,
+    });
   }
 
   /**
