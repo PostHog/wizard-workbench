@@ -1,3 +1,5 @@
+import { logPostHogError, logPostHogInfo, logPostHogWarn } from '~/server/utils/posthog-logs'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -5,6 +7,10 @@ export default defineEventHandler(async (event) => {
 
     // Validate input
     if (!username?.trim() || !password?.trim()) {
+      logPostHogWarn('Authentication login rejected', {
+        outcome: 'missing_credentials',
+        route: 'api_auth_login',
+      })
       throw createError({
         statusCode: 400,
         message: 'Username and password are required',
@@ -21,6 +27,11 @@ export default defineEventHandler(async (event) => {
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
+    logPostHogInfo('Authentication login succeeded', {
+      outcome: 'success',
+      route: 'api_auth_login',
+    })
+
     return {
       success: true,
       user: sanitizedUsername,
@@ -29,6 +40,10 @@ export default defineEventHandler(async (event) => {
     if (error.statusCode) {
       throw error
     }
+    logPostHogError('Authentication login failed', {
+      outcome: 'error',
+      route: 'api_auth_login',
+    })
     throw createError({
       statusCode: 500,
       message: 'An error occurred during login',
