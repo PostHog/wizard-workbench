@@ -1,3 +1,4 @@
+import atexit
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
@@ -8,6 +9,11 @@ from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_babel import Babel, lazy_gettext as _l
+from posthog import Posthog, identify_context
+from posthog.integrations.flask import PosthogFlaskIntegration
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 try:
     from elasticsearch import Elasticsearch
 except ImportError:
@@ -35,6 +41,24 @@ moment = Moment()
 babel = Babel()
 
 
+def identify_posthog_user(user, set_person_properties=False):
+    """Bind the current request context to an authenticated user."""
+    posthog_client = current_app.extensions.get('posthog')
+    if posthog_client is None:
+        return
+
+    distinct_id = str(user.id)
+    identify_context(distinct_id)
+    if set_person_properties:
+        posthog_client.set(
+            distinct_id=distinct_id,
+            properties={
+                'email': user.email,
+                'username': user.username,
+            },
+        )
+
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -53,6 +77,47 @@ def create_app(config_class=Config):
     else:
         app.redis = None
         app.task_queue = None
+
+    posthog_project_token = app.config['POSTHOG_PROJECT_TOKEN']
+    posthog_host = app.config['POSTHOG_HOST']
+    if posthog_project_token and posthog_host:
+        posthog_client = Posthog(
+            project_api_key=posthog_project_token,
+            host=posthog_host,
+            enable_exception_autocapture=True,
+        )
+        PosthogFlaskIntegration(
+            app,
+            client=posthog_client,
+            capture_exceptions=True,
+        )
+        app.extensions['posthog'] = posthog_client
+        atexit.register(posthog_client.shutdown)
+
+        log_provider = LoggerProvider()
+        log_provider.add_log_record_processor(BatchLogRecordProcessor(
+            OTLPLogExporter(
+                endpoint=posthog_host.rstrip('/') + '/i/v1/logs',
+                headers={'Authorization': 'Bearer ' + posthog_project_token},
+            )))
+        posthog_logger = logging.Logger('posthog.export')
+        posthog_logger.setLevel(logging.INFO)
+        posthog_logger.addHandler(LoggingHandler(logger_provider=log_provider))
+        app.extensions['posthog_logger'] = posthog_logger
+        atexit.register(log_provider.shutdown)
+    elif app.debug:
+        if not posthog_project_token:
+            app.logger.warning(
+                'POSTHOG_PROJECT_TOKEN variable required by PostHog is missing '
+                'or un-configured, this causes events to be silently missed. '
+                'This error stops appearing once POSTHOG_PROJECT_TOKEN is configured'
+            )
+        if not posthog_host:
+            app.logger.warning(
+                'POSTHOG_HOST variable required by PostHog is missing or '
+                'un-configured, this causes events to be silently missed. This '
+                'error stops appearing once POSTHOG_HOST is configured'
+            )
 
     from app.errors import bp as errors_bp
     app.register_blueprint(errors_bp)
