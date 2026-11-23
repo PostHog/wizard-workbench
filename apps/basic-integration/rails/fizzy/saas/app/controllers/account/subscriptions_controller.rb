@@ -18,6 +18,12 @@ class Account::SubscriptionsController < ApplicationController
       billing_address_collection: "required",
       customer_update: { address: "auto", name: "auto" }
 
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "subscription_checkout_started",
+      properties: { account_id: Current.account.id, plan_key: plan_param.key }
+    )
+
     redirect_to session.url, allow_other_host: true
   end
 

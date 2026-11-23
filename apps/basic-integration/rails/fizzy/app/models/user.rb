@@ -36,6 +36,20 @@ class User < ApplicationRecord
     update!(verified_at: Time.current) unless verified?
   end
 
+  # Used by posthog-rails to associate request errors with this account user.
+  # The primary key is stable; email and name belong only on the person profile.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  def posthog_properties
+    {
+      email: identity&.email_address,
+      name: name,
+      account_id: account_id
+    }.compact
+  end
+
   private
     def close_remote_connections
       ActionCable.server.remote_connections.where(current_user: self).disconnect(reconnect: false)

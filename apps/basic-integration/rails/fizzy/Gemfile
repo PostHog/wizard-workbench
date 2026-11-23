@@ -37,6 +37,14 @@ gem "zip_kit"
 gem "mittens"
 gem "useragent", bc: "useragent"
 
+# PostHog
+# The Rails integration supplies automatic exception and ActiveJob instrumentation.
+gem "dotenv-rails", require: "dotenv/load"
+gem "posthog-ruby", "~> 3.0", require: "posthog"
+gem "posthog-rails", "~> 3.0"
+gem "opentelemetry-sdk"
+gem "opentelemetry-exporter-otlp"
+
 # Operations
 gem "autotuner"
 gem "mission_control-jobs"
