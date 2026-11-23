@@ -1,7 +1,9 @@
 <script lang="ts">
   import { page } from "$app/stores"
+  import { env } from "$env/dynamic/public"
   import { getContext } from "svelte"
   import type { Writable } from "svelte/store"
+  import posthog from "posthog-js"
   import SettingsModule from "../settings_module.svelte"
 
   let adminSection: Writable<string> = getContext("adminSection")
@@ -36,6 +38,9 @@
         })
         .then((d) => {
           sentEmail = d.error ? false : true
+          if (!d.error && env.PUBLIC_POSTHOG_PROJECT_TOKEN) {
+            posthog.capture("password_reset_email_requested")
+          }
           sendBtnDisabled = false
           sendBtnText = "Send Forgot Password Email"
         })

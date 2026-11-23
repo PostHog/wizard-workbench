@@ -1,5 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit"
 import { sendAdminEmail, sendUserEmail } from "$lib/mailer"
+import { logProfileSaved } from "$lib/posthog-logs.server"
 import { WebsiteBaseUrl } from "../../../../config"
 
 export const actions = {
@@ -303,6 +304,7 @@ export const actions = {
     // If the profile was just created, send an email to the user and admin
     const newProfile =
       priorProfile?.updated_at === null && priorProfileError === null
+    logProfileSaved()
     if (newProfile) {
       await sendAdminEmail({
         subject: "Profile Created",

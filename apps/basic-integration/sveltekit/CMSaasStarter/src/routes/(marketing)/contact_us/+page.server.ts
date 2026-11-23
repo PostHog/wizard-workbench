@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { logContactRequestStored } from "$lib/posthog-logs.server"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -68,6 +69,8 @@ export const actions = {
       console.error("Error saving contact request", insertError)
       return fail(500, { errors: { _: "Error saving" } })
     }
+
+    logContactRequestStored()
 
     // Send email to admin
     await sendAdminEmail({

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { env } from "$env/dynamic/public"
+  import posthog from "posthog-js"
   import { pricingPlans } from "./pricing_plans"
 
   interface Props {
@@ -15,6 +17,15 @@
     currentPlanId = "",
     center = true,
   }: Props = $props()
+
+  function handlePlanSelection(planId: string, hasPaidCheckout: boolean) {
+    if (hasPaidCheckout && env.PUBLIC_POSTHOG_PROJECT_TOKEN) {
+      posthog.capture("subscription_checkout_started", {
+        plan_id: planId,
+        call_to_action: callToAction,
+      })
+    }
+  }
 </script>
 
 <div
@@ -57,6 +68,8 @@
                 href={"/account/subscribe/" +
                   (plan?.stripe_price_id ?? "free_plan")}
                 class="btn btn-primary w-[80%] mx-auto"
+                onclick={() =>
+                  handlePlanSelection(plan.id, Boolean(plan.stripe_price_id))}
               >
                 {callToAction}
               </a>
