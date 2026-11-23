@@ -1,10 +1,17 @@
+import { capturePostHogLog } from '~/server/utils/posthog-logs'
+
 export default defineEventHandler(async (event) => {
+  const posthogConfig = useRuntimeConfig().public.posthog
+
   try {
     const body = await readBody(event)
     const { username, password } = body
 
     // Validate input
     if (!username?.trim() || !password?.trim()) {
+      await capturePostHogLog(posthogConfig, 'auth login rejected', {
+        reason: 'missing_credentials',
+      })
       throw createError({
         statusCode: 400,
         message: 'Username and password are required',
@@ -19,6 +26,10 @@ export default defineEventHandler(async (event) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
+    })
+
+    await capturePostHogLog(posthogConfig, 'auth login accepted', {
+      authentication_type: 'demo_credentials',
     })
 
     return {
