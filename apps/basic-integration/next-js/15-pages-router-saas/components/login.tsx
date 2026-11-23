@@ -3,10 +3,36 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
+
+type AuthenticatedUser = {
+  id: number;
+  email: string;
+  name: string | null;
+  role: string;
+};
+
+function identifyUser(user: AuthenticatedUser) {
+  const distinctId = String(user.id);
+
+  if (posthog.get_distinct_id() === distinctId) {
+    return;
+  }
+
+  if (posthog.get_property('$user_state') === 'identified') {
+    posthog.reset();
+  }
+
+  posthog.identify(distinctId, {
+    email: user.email,
+    ...(user.name ? { name: user.name } : {}),
+    role: user.role
+  });
+}
 
 export function Login({
   mode = 'signin',
@@ -57,9 +83,22 @@ export function Login({
           return;
         }
 
+        if (result.user) {
+          identifyUser(result.user as AuthenticatedUser);
+        }
+
+        if (mode === 'signin') {
+          posthog.capture('account_signed_in');
+        } else {
+          posthog.capture('account_signed_up');
+        }
+
         if (result.success && result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
+          posthog.capture('checkout_started', {
+            checkout_source: 'signup'
+          });
           // Stripe checkout redirect
           window.location.href = result.url;
         }

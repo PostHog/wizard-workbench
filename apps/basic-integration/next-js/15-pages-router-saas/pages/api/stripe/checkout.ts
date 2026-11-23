@@ -1,10 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { posthogLog } from '@/instrumentation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -94,9 +96,17 @@ export default async function handler(
       })
       .where(eq(teams.id, userTeam[0].teamId));
 
+    await posthogLog('Stripe checkout subscription activated', SeverityNumber.INFO, {
+      route: '/api/stripe/checkout',
+      subscription_status: subscription.status
+    });
+
     await setSession(user[0]);
     return res.redirect('/dashboard');
   } catch (error) {
+    await posthogLog('Stripe checkout completion failed', SeverityNumber.ERROR, {
+      route: '/api/stripe/checkout'
+    });
     console.error('Error handling successful checkout:', error);
     return res.redirect('/error');
   }

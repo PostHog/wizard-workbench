@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
@@ -11,6 +12,7 @@ import {
   ActivityType
 } from '@/lib/db/schema';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { posthogLog } from '@/instrumentation';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -108,8 +110,16 @@ export default async function handler(
       ActivityType.INVITE_TEAM_MEMBER
     );
 
+    await posthogLog('Team invitation created', SeverityNumber.INFO, {
+      route: '/api/team/invite',
+      invited_role: role
+    });
+
     return res.status(200).json({ success: 'Invitation sent successfully' });
   } catch (error) {
+    await posthogLog('Team invitation creation failed', SeverityNumber.ERROR, {
+      route: '/api/team/invite'
+    });
     console.error('Invite team member error:', error);
     return res.status(500).json({ error: 'Failed to invite team member' });
   }
