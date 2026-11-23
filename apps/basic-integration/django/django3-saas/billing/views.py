@@ -55,6 +55,12 @@ def subscribe(request, plan_slug):
                     },
                     allow_promotion_codes=True,
                 )
+                if posthog_client := settings.POSTHOG_MW_CLIENT:
+                    posthog_client.capture('subscription_checkout_started', properties={
+                        'plan_slug': plan.slug,
+                        'plan_interval': plan.interval,
+                        'billing_mode': 'stripe',
+                    })
                 return redirect(checkout_session.url)
             except Exception as e:
                 messages.error(request, f'Payment error: {str(e)}')
@@ -70,6 +76,12 @@ def subscribe(request, plan_slug):
                 current_period_end=now + timedelta(days=30 if plan.interval == 'month' else 365),
                 stripe_subscription_id=f'sub_demo_{uuid.uuid4().hex[:12]}',
             )
+            if posthog_client := settings.POSTHOG_MW_CLIENT:
+                posthog_client.capture('subscription_created', properties={
+                    'plan_slug': plan.slug,
+                    'plan_interval': plan.interval,
+                    'billing_mode': 'demo',
+                })
             messages.success(request, f'Successfully subscribed to {plan.name}! (Demo mode)')
             return redirect('dashboard:index')
 
@@ -130,6 +142,12 @@ def change_plan(request, plan_slug):
                 )
                 subscription.plan = plan
                 subscription.save()
+                if posthog_client := settings.POSTHOG_MW_CLIENT:
+                    posthog_client.capture('subscription_plan_changed', properties={
+                        'plan_slug': plan.slug,
+                        'plan_interval': plan.interval,
+                        'billing_mode': 'stripe',
+                    })
                 messages.success(request, f'Plan changed to {plan.name}.')
             except Exception as e:
                 messages.error(request, f'Error changing plan: {str(e)}')
@@ -137,6 +155,12 @@ def change_plan(request, plan_slug):
             # Demo mode
             subscription.plan = plan
             subscription.save()
+            if posthog_client := settings.POSTHOG_MW_CLIENT:
+                posthog_client.capture('subscription_plan_changed', properties={
+                    'plan_slug': plan.slug,
+                    'plan_interval': plan.interval,
+                    'billing_mode': 'demo',
+                })
             messages.success(request, f'Plan changed to {plan.name}. (Demo mode)')
 
         return redirect('billing:manage')
@@ -171,6 +195,11 @@ def cancel(request):
         subscription.status = 'canceled'
         subscription.canceled_at = timezone.now()
         subscription.save()
+        if posthog_client := settings.POSTHOG_MW_CLIENT:
+            posthog_client.capture('subscription_canceled', properties={
+                'plan_slug': subscription.plan.slug,
+                'billing_mode': 'stripe' if STRIPE_CONFIGURED else 'demo',
+            })
         messages.success(request, 'Subscription canceled. You will have access until the end of your billing period.')
         return redirect('billing:manage')
 
@@ -269,6 +298,16 @@ def _handle_checkout_completed(session):
         stripe_subscription_id=stripe_sub['id'],
         stripe_customer_id=stripe_sub['customer'],
     )
+    if posthog_client := settings.POSTHOG_MW_CLIENT:
+        posthog_client.capture(
+            'subscription_checkout_completed',
+            distinct_id=str(user.pk),
+            properties={
+                'plan_slug': plan.slug,
+                'plan_interval': plan.interval,
+                'billing_mode': 'stripe',
+            },
+        )
 
 
 def _handle_subscription_updated(subscription_data):
@@ -288,6 +327,7 @@ def _handle_subscription_updated(subscription_data):
         'paused': 'paused',
     }
 
+    previous_status = subscription.status
     subscription.status = status_map.get(subscription_data['status'], 'active')
     subscription.current_period_start = timezone.datetime.fromtimestamp(
         subscription_data['current_period_start'], tz=timezone.utc
@@ -296,6 +336,15 @@ def _handle_subscription_updated(subscription_data):
         subscription_data['current_period_end'], tz=timezone.utc
     )
     subscription.save()
+    if posthog_client := settings.POSTHOG_MW_CLIENT:
+        posthog_client.capture(
+            'subscription_status_updated',
+            distinct_id=str(subscription.user_id),
+            properties={
+                'previous_status': previous_status,
+                'status': subscription.status,
+            },
+        )
 
 
 def _handle_subscription_deleted(subscription_data):
@@ -323,5 +372,13 @@ def _handle_payment_failed(invoice):
         )
         subscription.status = 'past_due'
         subscription.save()
+        if posthog_client := settings.POSTHOG_MW_CLIENT:
+            posthog_client.capture(
+                'subscription_payment_failed',
+                distinct_id=str(subscription.user_id),
+                properties={
+                    'plan_slug': subscription.plan.slug,
+                },
+            )
     except Subscription.DoesNotExist:
         pass
