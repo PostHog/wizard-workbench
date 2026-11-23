@@ -4,6 +4,7 @@ namespace App\Actions\Billing;
 
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use PostHog\Laravel\Facades\PostHog;
 
 class RedirectToBillingPortal
 {
@@ -14,6 +15,10 @@ class RedirectToBillingPortal
             return redirect()->route('subscribe')->with('info', 'Billing portal is not available in demo mode (Stripe not configured).');
         }
 
-        return $user->redirectToBillingPortal(route('dashboard'));
+        $redirect = $user->redirectToBillingPortal(route('dashboard'));
+
+        PostHog::capture('billing_portal_opened');
+
+        return $redirect;
     }
 }
