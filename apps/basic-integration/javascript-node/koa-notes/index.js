@@ -1,9 +1,17 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import { posthog } from './posthog.js';
+import { posthogLogger, shutdownPostHogLogs } from './posthog-logs.js';
 
 const app = new Koa();
 const router = new Router();
+
+app.on('error', (err, ctx) => {
+  if (posthog) {
+    posthog.captureException(err, ctx?.get('x-posthog-distinct-id') || 'anonymous');
+  }
+});
 
 app.use(bodyParser());
 
@@ -34,6 +42,13 @@ router.post('/api/folders', (ctx) => {
   folders.push(folder);
   ctx.status = 201;
   ctx.body = folder;
+
+  if (posthog) {
+    posthog.capture({
+      event: 'folder_created',
+      properties: { folder_id: folder.id },
+    });
+  }
 });
 
 router.delete('/api/folders/:id', (ctx) => {
@@ -53,6 +68,8 @@ router.delete('/api/folders/:id', (ctx) => {
     return;
   }
 
+  const movedNoteCount = notes.filter((note) => note.folder_id === folderId).length;
+
   // Move notes from deleted folder to General
   for (const note of notes) {
     if (note.folder_id === folderId) note.folder_id = 1;
@@ -60,6 +77,19 @@ router.delete('/api/folders/:id', (ctx) => {
 
   folders.splice(index, 1);
   ctx.status = 204;
+
+  if (posthog) {
+    posthog.capture({
+      event: 'folder_deleted',
+      properties: { folder_id: folderId, moved_note_count: movedNoteCount },
+    });
+  }
+
+  posthogLogger?.emit({
+    severityText: 'INFO',
+    body: 'folder_deleted',
+    attributes: { folder_id: folderId, moved_note_count: movedNoteCount },
+  });
 });
 
 // --- Notes ---
@@ -107,6 +137,27 @@ router.post('/api/notes', (ctx) => {
   notes.push(note);
   ctx.status = 201;
   ctx.body = note;
+
+  if (posthog) {
+    posthog.capture({
+      event: 'note_created',
+      properties: {
+        note_id: note.id,
+        folder_id: note.folder_id,
+        has_content: Boolean(note.content),
+      },
+    });
+  }
+
+  posthogLogger?.emit({
+    severityText: 'INFO',
+    body: 'note_created',
+    attributes: {
+      note_id: note.id,
+      folder_id: note.folder_id,
+      has_content: Boolean(note.content),
+    },
+  });
 });
 
 router.get('/api/notes/:id', (ctx) => {
@@ -131,8 +182,15 @@ router.patch('/api/notes/:id', (ctx) => {
   }
 
   const { title, content, folder_id } = ctx.request.body;
-  if (title !== undefined) note.title = title;
-  if (content !== undefined) note.content = content;
+  const updatedFields = [];
+  if (title !== undefined) {
+    note.title = title;
+    updatedFields.push('title');
+  }
+  if (content !== undefined) {
+    note.content = content;
+    updatedFields.push('content');
+  }
   if (folder_id !== undefined) {
     if (!folders.find((f) => f.id === folder_id)) {
       ctx.status = 400;
@@ -140,10 +198,22 @@ router.patch('/api/notes/:id', (ctx) => {
       return;
     }
     note.folder_id = folder_id;
+    updatedFields.push('folder_id');
   }
   note.updated_at = new Date().toISOString();
 
   ctx.body = note;
+
+  if (posthog) {
+    posthog.capture({
+      event: 'note_updated',
+      properties: {
+        note_id: note.id,
+        folder_id: note.folder_id,
+        updated_fields: updatedFields,
+      },
+    });
+  }
 });
 
 router.delete('/api/notes/:id', (ctx) => {
@@ -155,8 +225,15 @@ router.delete('/api/notes/:id', (ctx) => {
     return;
   }
 
-  notes.splice(index, 1);
+  const [deletedNote] = notes.splice(index, 1);
   ctx.status = 204;
+
+  if (posthog) {
+    posthog.capture({
+      event: 'note_deleted',
+      properties: { note_id: deletedNote.id, folder_id: deletedNote.folder_id },
+    });
+  }
 });
 
 app.use(router.routes());
@@ -164,6 +241,28 @@ app.use(router.allowedMethods());
 
 const PORT = process.env.PORT || 3003;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Koa notes API running on http://localhost:${PORT}`);
+  posthogLogger?.emit({
+    severityText: 'INFO',
+    body: 'koa_notes_api_started',
+    attributes: { port: Number(PORT) },
+  });
 });
+
+async function shutdown() {
+  const posthogShutdown = posthog
+    ? posthog.shutdown(3000).catch(() => {})
+    : Promise.resolve();
+
+  await Promise.all([posthogShutdown, shutdownPostHogLogs()]);
+  process.exit(0);
+}
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => {
+    server.close(() => {
+      shutdown();
+    });
+  });
+}
