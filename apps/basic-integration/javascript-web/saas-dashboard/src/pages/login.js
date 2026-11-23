@@ -1,5 +1,8 @@
 import { api } from '../api.js';
+import { posthog } from '../posthog.js';
+import { posthogLogger } from '../posthog-logger.js';
 import { router } from '../router.js';
+import { store } from '../store.js';
 
 export function renderLogin() {
   const app = document.getElementById('app');
@@ -39,7 +42,20 @@ export function renderLogin() {
     btn.textContent = 'Signing in...';
 
     try {
-      await api.login(email);
+      const previousUserId = store.state.currentUser?.id;
+      const user = await api.login(email);
+
+      if (previousUserId && previousUserId !== user.id) {
+        posthog?.reset();
+      }
+
+      posthog?.identify(user.id, {
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      });
+      posthog?.capture('user_signed_in');
+      posthogLogger.info('user_authenticated');
       router.navigate('/dashboard');
     } catch (err) {
       errorEl.textContent = err.message;
