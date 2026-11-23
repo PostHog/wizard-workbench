@@ -11,6 +11,12 @@ const imdbType = computed(() => {
 
   return 'title'
 })
+
+const { $posthog } = useNuxtApp()
+
+function followOutboundLink(destination: string) {
+  $posthog?.capture('outbound_link_followed', { destination })
+}
 </script>
 
 <template>
@@ -22,6 +28,7 @@ const imdbType = computed(() => {
       aria-label="Link to Twitter account"
       rel="noopener"
       n-link
+      @click="followOutboundLink('twitter')"
     >
       <span i-simple-icons:twitter aria-hidden="true" />
       <span class="sr-only">Link to Twitter account</span>
@@ -33,6 +40,7 @@ const imdbType = computed(() => {
       aria-label="Link to Facebook account"
       rel="noopener"
       n-link
+      @click="followOutboundLink('facebook')"
     >
       <span i-simple-icons:facebook aria-hidden="true" />
       <span class="sr-only">Link to Facebook account</span>
@@ -44,6 +52,7 @@ const imdbType = computed(() => {
       aria-label="Link to Instagram account"
       rel="noopener"
       n-link
+      @click="followOutboundLink('instagram')"
     >
       <span i-simple-icons:instagram aria-hidden="true" />
       <span class="sr-only">Link to Instagram account</span>
@@ -55,6 +64,7 @@ const imdbType = computed(() => {
       aria-label="Link to IMDb account"
       rel="noopener"
       n-link
+      @click="followOutboundLink('imdb')"
     >
       <span i-cib:imdb aria-hidden="true" />
       <span class="sr-only">Link to IMDb account</span>
@@ -66,6 +76,7 @@ const imdbType = computed(() => {
       aria-label="Link to GitHub account"
       rel="noopener"
       n-link
+      @click="followOutboundLink('github')"
     >
       <span i-simple-icons:github aria-hidden="true" />
       <span class="sr-only">Link to GitHub account</span>
@@ -77,6 +88,7 @@ const imdbType = computed(() => {
       aria-label="Link to LinkedIn account"
       rel="noopener"
       n-link
+      @click="followOutboundLink('linkedin')"
     >
       <span i-simple-icons:linkedin aria-hidden="true" />
       <span class="sr-only">Link to LinkedIn account</span>
@@ -97,6 +109,7 @@ const imdbType = computed(() => {
       aria-label="Link to Homepage"
       rel="noopener" scale-120
       n-link
+      @click="followOutboundLink('homepage')"
     >
       <span i-ph-link-simple aria-hidden="true" />
       <span class="sr-only">Link to Homepage</span>
