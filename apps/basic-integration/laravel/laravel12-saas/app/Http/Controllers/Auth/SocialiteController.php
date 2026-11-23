@@ -7,6 +7,7 @@ use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
+use PostHog\Laravel\Facades\PostHog;
 
 class SocialiteController extends Controller
 {
@@ -28,7 +29,10 @@ class SocialiteController extends Controller
             'provider_id' => $socialUser->getId(),
         ])->first();
 
+        $isNewUser = false;
+
         if (! $user) {
+            $isNewUser = true;
             $user = User::create([
                 'name' => $socialUser->getName(),
                 'email' => $socialUser->getEmail(),
@@ -39,6 +43,21 @@ class SocialiteController extends Controller
         }
 
         Auth::login($user);
+
+        PostHog::identify([
+            'distinctId' => $user->getPostHogDistinctId(),
+            'properties' => $user->getPostHogProperties(),
+        ]);
+
+        if ($isNewUser) {
+            PostHog::capture('user_registered', [
+                'signup_method' => $provider,
+            ]);
+        }
+
+        PostHog::capture('user_logged_in', [
+            'login_method' => $provider,
+        ]);
 
         return redirect('/dashboard');
     }

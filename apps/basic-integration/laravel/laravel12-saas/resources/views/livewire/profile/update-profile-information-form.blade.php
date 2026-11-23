@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
+use PostHog\Laravel\Facades\PostHog;
 
 new class extends Component
 {
@@ -34,11 +35,17 @@ new class extends Component
 
         $user->fill($validated);
 
-        if ($user->isDirty('email')) {
+        $emailChanged = $user->isDirty('email');
+
+        if ($emailChanged) {
             $user->email_verified_at = null;
         }
 
         $user->save();
+
+        PostHog::capture('profile_updated', [
+            'email_changed' => $emailChanged,
+        ]);
 
         $this->dispatch('profile-updated', name: $user->name);
     }

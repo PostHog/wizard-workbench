@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0275185749fcbdf020b24729821224d6",
+    "content-hash": "22735f2bd46a0d134086396b2798017c",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -5061,6 +5061,135 @@
             "time": "2025-12-15T11:51:42+00:00"
         },
         {
+            "name": "posthog/posthog-laravel",
+            "version": "0.4.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PostHog/posthog-laravel.git",
+                "reference": "2b003431ee1e8d8542013fadc3dd10504a7811b3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PostHog/posthog-laravel/zipball/2b003431ee1e8d8542013fadc3dd10504a7811b3",
+                "reference": "2b003431ee1e8d8542013fadc3dd10504a7811b3",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^12.0 || ^13.0",
+                "illuminate/support": "^12.0 || ^13.0",
+                "php": ">=8.2",
+                "posthog/posthog-php": "4.25.1"
+            },
+            "require-dev": {
+                "laravel/octane": "^2.0",
+                "laravel/pennant": "^1.0",
+                "orchestra/testbench": "^10.0 || ^11.0",
+                "phpunit/phpunit": "^11.0 || ^12.0"
+            },
+            "suggest": {
+                "laravel/pennant": "Use PostHog flags through Laravel Pennant (^1.0)."
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "PostHog": "PostHog\\Laravel\\Facades\\PostHog"
+                    },
+                    "providers": [
+                        "PostHog\\Laravel\\PostHogServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "PostHog\\Laravel\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PostHog",
+                    "email": "engineering@posthog.com",
+                    "homepage": "https://posthog.com/"
+                }
+            ],
+            "description": "PostHog for Laravel",
+            "homepage": "https://posthog.com/docs/libraries/laravel",
+            "keywords": [
+                "laravel",
+                "posthog"
+            ],
+            "support": {
+                "docs": "https://posthog.com/docs/libraries/laravel",
+                "issues": "https://github.com/PostHog/posthog-php/issues",
+                "source": "https://github.com/PostHog/posthog-php/tree/main/packages/laravel"
+            },
+            "time": "2026-11-13T13:54:50+00:00",
+            "published-time": "2026-11-13T13:54:57+00:00"
+        },
+        {
+            "name": "posthog/posthog-php",
+            "version": "4.25.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PostHog/posthog-php.git",
+                "reference": "829e5aae3f4122d96e4a76a2f60ca2b11848b227"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PostHog/posthog-php/zipball/829e5aae3f4122d96e4a76a2f60ca2b11848b227",
+                "reference": "829e5aae3f4122d96e4a76a2f60ca2b11848b227",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "php": ">=8.2",
+                "symfony/clock": "^6.2|^7.0|^8.0",
+                "symfony/polyfill-iconv": "^1.31",
+                "symfony/polyfill-mbstring": "^1.31"
+            },
+            "require-dev": {
+                "ext-zlib": "*",
+                "open-telemetry/api": "^1.0",
+                "open-telemetry/sdk": "^1.0",
+                "phpunit/phpunit": "^11.0",
+                "squizlabs/php_codesniffer": "^4.0"
+            },
+            "bin": [
+                "bin/posthog"
+            ],
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "PostHog\\": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PostHog <engineering@posthog.com>",
+                    "homepage": "https://posthog.com/"
+                }
+            ],
+            "description": "PostHog PHP Library",
+            "homepage": "https://github.com/PostHog/posthog-php",
+            "keywords": [
+                "posthog"
+            ],
+            "support": {
+                "issues": "https://github.com/PostHog/posthog-php/issues",
+                "source": "https://github.com/PostHog/posthog-php/tree/4.25.1"
+            },
+            "time": "2026-11-13T13:54:12+00:00",
+            "published-time": "2026-11-13T13:54:18+00:00"
+        },
+        {
             "name": "pragmarx/google2fa",
             "version": "v9.0.0",
             "source": {
@@ -8237,6 +8366,91 @@
                 }
             ],
             "time": "2024-09-09T11:45:10+00:00"
+        },
+        {
+            "name": "symfony/polyfill-iconv",
+            "version": "v1.43.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/polyfill-iconv.git",
+                "reference": "254724d95fe01b679cd97d88786e9623ee00bfb7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/polyfill-iconv/zipball/254724d95fe01b679cd97d88786e9623ee00bfb7",
+                "reference": "254724d95fe01b679cd97d88786e9623ee00bfb7",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.2"
+            },
+            "provide": {
+                "ext-iconv": "*"
+            },
+            "suggest": {
+                "ext-iconv": "For best performance"
+            },
+            "type": "library",
+            "extra": {
+                "thanks": {
+                    "url": "https://github.com/symfony/polyfill",
+                    "name": "symfony/polyfill"
+                }
+            },
+            "autoload": {
+                "files": [
+                    "bootstrap.php"
+                ],
+                "psr-4": {
+                    "Symfony\\Polyfill\\Iconv\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nicolas Grekas",
+                    "email": "p@tchwork.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Symfony polyfill for the Iconv extension",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "compatibility",
+                "iconv",
+                "polyfill",
+                "portable",
+                "shim"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/polyfill-iconv/tree/v1.43.0"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-09-29T06:25:14+00:00",
+            "published-time": "2026-09-30T10:23:39+00:00"
         },
         {
             "name": "symfony/polyfill-intl-grapheme",
@@ -13306,5 +13520,5 @@
         "php": "^8.3 || ^8.5"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.11.0"
 }
