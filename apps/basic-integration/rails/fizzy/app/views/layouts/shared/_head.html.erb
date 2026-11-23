@@ -20,6 +20,36 @@
   <%= stylesheet_link_tag "fizzy/saas", "data-turbo-track": "reload" if Fizzy.saas? %>
   <%= javascript_importmap_tags %>
 
+  <% posthog_token = ENV["POSTHOG_PROJECT_TOKEN"].to_s.strip %>
+  <% posthog_host = ENV["POSTHOG_HOST"].to_s.strip %>
+  <% if posthog_token.present? && posthog_host.present? %>
+    <script nonce="<%= content_security_policy_nonce %>" src="<%= "#{posthog_host.sub(".i.posthog.com", "-assets.i.posthog.com")}/static/array.js" %>"></script>
+    <script nonce="<%= content_security_policy_nonce %>">
+      posthog.init(<%= posthog_token.to_json.html_safe %>, {
+        api_host: <%= posthog_host.to_json.html_safe %>,
+        tracing_headers: [window.location.hostname]
+      })
+
+      <% if flash[:posthog_reset] %>
+      posthog.reset()
+      <% end %>
+
+      <% if Current.identity && (flash[:posthog_identify] || !flash[:posthog_reset]) %>
+      var posthogDistinctId = <%= Current.identity.id.to_json.html_safe %>
+      if (posthog.get_distinct_id() !== posthogDistinctId) {
+        posthog.identify(posthogDistinctId, {
+          email: <%= Current.identity.email_address.to_json.html_safe %>
+        })
+      }
+      <% end %>
+    </script>
+  <% elsif !Rails.env.production? %>
+    <% missing_posthog_variable = posthog_token.present? ? "POSTHOG_HOST" : "POSTHOG_PROJECT_TOKEN" %>
+    <script nonce="<%= content_security_policy_nonce %>">
+      throw new Error(<%= "#{missing_posthog_variable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once #{missing_posthog_variable} is configured".to_json.html_safe %>)
+    </script>
+  <% end %>
+
   <%= tenanted_action_cable_meta_tag %>
   <%= render "layouts/shared/user_css" %>
 

@@ -16,6 +16,12 @@ class User < ApplicationRecord
   has_many :pinned_cards, through: :pins, source: :card
   has_many :data_exports, class_name: "User::DataExport", dependent: :destroy
 
+  # The identity UUID is stable across this person's accounts. posthog-rails uses
+  # this method to associate controller exceptions with the same person as the browser.
+  def posthog_distinct_id
+    identity_id.to_s.presence || id.to_s
+  end
+
   def deactivate
     transaction do
       accesses.destroy_all

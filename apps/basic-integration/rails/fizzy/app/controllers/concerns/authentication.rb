@@ -88,6 +88,14 @@ module Authentication
     def start_new_session_for(identity)
       identity.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
         set_current_session session
+
+        # Establish the person once at the authentication boundary. The browser uses
+        # the same UUID after the redirect, and posthog-rails uses it for errors.
+        PostHog.identify(
+          distinct_id: identity.id,
+          properties: { email: identity.email_address }
+        )
+        flash[:posthog_identify] = true
       end
     end
 
@@ -99,6 +107,7 @@ module Authentication
     def terminate_session
       Current.session.destroy
       cookies.delete(:session_token)
+      flash[:posthog_reset] = true
     end
 
     def session_token

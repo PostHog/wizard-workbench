@@ -33,6 +33,8 @@ gem "platform_agent"
 gem "aws-sdk-s3", require: false
 gem "web-push"
 gem "net-http-persistent"
+gem "posthog-ruby", "~> 3.0", require: "posthog"
+gem "posthog-rails", "~> 3.0"
 gem "zip_kit"
 gem "mittens"
 gem "useragent", bc: "useragent"
@@ -40,6 +42,8 @@ gem "useragent", bc: "useragent"
 # Operations
 gem "autotuner"
 gem "mission_control-jobs"
+gem "opentelemetry-exporter-otlp"
+gem "opentelemetry-sdk"
 gem "stackprof"
 gem "benchmark" # indirect dependency, being removed from Ruby 3.5 stdlib so here to quash warnings
 

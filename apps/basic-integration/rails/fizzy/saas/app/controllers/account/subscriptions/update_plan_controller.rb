@@ -14,6 +14,12 @@ class Account::Subscriptions::UpdatePlanController < ApplicationController
       }
     )
 
+    PostHog.capture(
+      distinct_id: Current.user.posthog_distinct_id,
+      event: "subscription_plan_change_started",
+      properties: { target_plan_key: target_plan.key }
+    )
+
     redirect_to portal_session.url, allow_other_host: true
   end
 
