@@ -3,8 +3,11 @@ import { SITE_URL } from '@/lib/constants'
 import { generateMeta, mergeMeta } from '@/lib/utils/meta'
 import { usePreservedLoaderData } from '@joycostudio/transitions'
 import type { MetaFunction } from 'react-router'
+import { posthogLogsLogger } from '@/lib/posthog-logs.server'
 
 export function loader() {
+  posthogLogsLogger.aboutLoaderServed()
+
   const messageCopy = `Read carefully before proceeding. Using this starter will make you a rebel. Possible symptoms may include:
 
   - Can't stop coding.
