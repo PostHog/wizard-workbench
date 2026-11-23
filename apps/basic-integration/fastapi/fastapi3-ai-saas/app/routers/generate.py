@@ -1,14 +1,16 @@
 """AI generation API routes."""
 
+import logging
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from app.dependencies import DbSession, RequiredUser
+from app.dependencies import DbSession, RequiredUser, capture_event
 from app.models import Generation
 
 router = APIRouter(prefix="/api")
+posthog_log_logger = logging.getLogger("app.posthog_logs")
 
 
 # Credit costs per generation type
@@ -42,6 +44,7 @@ class CreditsResponse(BaseModel):
 @router.post("/generate", response_model=GenerateResponse)
 async def generate_content(
     request: GenerateRequest,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -54,6 +57,25 @@ async def generate_content(
 
     # Check credits
     if current_user.credits < credits_needed:
+        capture_event(
+            http_request,
+            "generation_blocked_insufficient_credits",
+            {
+                "generation_type": request.generation_type,
+                "credits_required": credits_needed,
+                "credits_available": current_user.credits,
+            },
+        )
+        posthog_log_logger.warning(
+            "content generation rejected for insufficient credits",
+            extra={
+                "event": "content_generation_completed",
+                "outcome": "insufficient_credits",
+                "generation_type": request.generation_type,
+                "credits_required": credits_needed,
+                "credits_available": current_user.credits,
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail=f"Insufficient credits. Need {credits_needed}, have {current_user.credits}",
@@ -74,6 +96,25 @@ async def generate_content(
         prompt=request.prompt,
         result=mock_content,
         credits_used=credits_needed,
+    )
+    capture_event(
+        http_request,
+        "content_generated",
+        {
+            "generation_type": request.generation_type,
+            "credits_used": credits_needed,
+            "credits_remaining": current_user.credits,
+        },
+    )
+    posthog_log_logger.info(
+        "content generation completed",
+        extra={
+            "event": "content_generation_completed",
+            "outcome": "success",
+            "generation_type": request.generation_type,
+            "credits_used": credits_needed,
+            "credits_remaining": current_user.credits,
+        },
     )
 
     return GenerateResponse(

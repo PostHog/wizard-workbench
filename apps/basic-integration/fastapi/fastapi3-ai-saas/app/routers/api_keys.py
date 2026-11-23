@@ -2,10 +2,10 @@
 
 from typing import List
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from app.dependencies import DbSession, RequiredUser
+from app.dependencies import DbSession, RequiredUser, capture_event
 from app.models import APIKey
 
 router = APIRouter(prefix="/api/keys", tags=["api-keys"])
@@ -55,6 +55,7 @@ async def list_api_keys(current_user: RequiredUser, db: DbSession):
 @router.post("", response_model=APIKeyCreated, status_code=status.HTTP_201_CREATED)
 async def create_api_key(
     request: APIKeyCreate,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -72,6 +73,11 @@ async def create_api_key(
         )
 
     api_key = APIKey.create(db, user_id=current_user.id, name=request.name)
+    capture_event(
+        http_request,
+        "api_key_created",
+        {"active_api_key_count": active_count + 1},
+    )
 
     return APIKeyCreated(
         id=api_key.id,
@@ -86,6 +92,7 @@ async def create_api_key(
 @router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_api_key(
     key_id: int,
+    http_request: Request,
     current_user: RequiredUser,
     db: DbSession,
 ):
@@ -103,5 +110,6 @@ async def revoke_api_key(
 
     api_key.is_active = False
     db.commit()
+    capture_event(http_request, "api_key_revoked")
 
     return None

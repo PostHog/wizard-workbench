@@ -1,9 +1,11 @@
 """Authentication dependencies for FastAPI."""
 
+import logging
 from typing import Annotated, Optional
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, Request, status
 from itsdangerous import BadSignature, URLSafeSerializer
+from posthog import identify_context
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -12,6 +14,7 @@ from app.models import User
 
 settings = get_settings()
 serializer = URLSafeSerializer(settings.secret_key)
+logger = logging.getLogger(__name__)
 
 
 def get_session_user_id(session_token: Annotated[Optional[str], Cookie()] = None) -> Optional[int]:
@@ -25,14 +28,47 @@ def get_session_user_id(session_token: Annotated[Optional[str], Cookie()] = None
         return None
 
 
+def identify_user(request: Request, user: User) -> None:
+    """Bind the authenticated user to the active request analytics context."""
+    posthog_client = getattr(request.app.state, "posthog_client", None)
+    if posthog_client is None:
+        return
+
+    try:
+        identify_context(str(user.id))
+        posthog_client.set(
+            distinct_id=str(user.id),
+            properties={"email": user.email},
+        )
+    except Exception:
+        logger.warning("PostHog user identification failed", exc_info=True)
+
+
+def capture_event(request: Request, event: str, properties: Optional[dict] = None) -> None:
+    """Capture an event without allowing analytics failures to affect the request."""
+    posthog_client = getattr(request.app.state, "posthog_client", None)
+    if posthog_client is None:
+        return
+
+    try:
+        posthog_client.capture(event, properties=properties)
+    except Exception:
+        logger.warning("PostHog event capture failed", exc_info=True)
+
+
 def get_current_user(
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
     user_id: Annotated[Optional[int], Depends(get_session_user_id)],
 ) -> Optional[User]:
-    """Get the current authenticated user, or None if not authenticated."""
+    """Get and identify the current authenticated user, or return None."""
     if user_id is None:
         return None
-    return User.get_by_id(db, user_id)
+
+    user = User.get_by_id(db, user_id)
+    if user is not None:
+        identify_user(request, user)
+    return user
 
 
 def require_auth(
