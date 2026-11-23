@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Livewire\Volt\Component;
+use PostHog\Laravel\Facades\PostHog;
 
 new class extends Component
 {
@@ -31,6 +32,8 @@ new class extends Component
         Auth::user()->update([
             'password' => Hash::make($validated['password']),
         ]);
+
+        PostHog::capture('password_updated');
 
         $this->reset('current_password', 'password', 'password_confirmation');
 

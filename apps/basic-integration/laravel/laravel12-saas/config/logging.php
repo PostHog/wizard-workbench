@@ -127,6 +127,14 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        // This channel is intentionally separate from the application stack:
+        // only explicit PostHog log lines are exported.
+        'posthog' => [
+            'driver' => 'monolog',
+            'level' => 'info',
+            'handler' => App\Logging\PostHogOtlpHandler::class,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
