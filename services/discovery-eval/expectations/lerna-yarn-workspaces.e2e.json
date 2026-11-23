@@ -1,14 +1,14 @@
 {
-  "id": "turbo-next-forge",
-  "fixture": "production/turbo-next-forge",
+  "id": "lerna-yarn-workspaces",
+  "fixture": "custom/lerna-yarn-workspaces",
   "program": "posthog-integration",
-  "summary": "Production Turborepo (vercel/next-forge): launch at root, pick apps/app, keep edits inside apps/app/ without leaking apps/api Stripe tools.",
+  "summary": "Launch at Lerna + Yarn workspaces root, pick packages/web (Next.js App Router), and keep edits scoped to packages/web/.",
   "flags": {
     "wizard-project-discovery": "one-project"
   },
   "launchDir": ".",
   "profile": {
-    "plan": "apps/app",
+    "plan": "packages/web",
     "setup": "first",
     "healthCheck": "dismiss",
     "mcp": "skip",
@@ -19,17 +19,18 @@
   "expectations": {
     "expectedOutcome": "success",
     "expectAbort": null,
-    "expectedTargetProject": "apps/app",
+    "expectedTargetProject": "packages/web",
     "expectedFramework": "nextjs",
     "expectedFrameworkVariant": "app-router",
-    "expectedChangedPrefix": "apps/app/",
+    "expectedChangedPrefix": "packages/web/",
     "forbidChangedPrefixes": [
-      "apps/api/",
-      "apps/docs/"
+      "packages/api/",
+      "packages/shared/"
     ],
     "forbidToolsInTarget": [
-      "Stripe"
+      "Stripe",
+      "Postgres"
     ],
-    "gateOnDeterministic": "expectations/turbo-next-forge.discovery.json"
+    "gateOnDeterministic": "lerna-yarn-workspaces.discovery.json"
   }
 }

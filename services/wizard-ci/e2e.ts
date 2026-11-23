@@ -379,7 +379,7 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   console.log(`    policy: skip mcp · skip slack · ${opts.keepSkills ? "keep" : "delete"} skills · continue past health issues`);
   if (expect) console.log(`    expectations: apps/${app}/.wizard-ci/expect.json`);
   if (projectDiscoveryExpect) {
-    console.log(`    expectations: apps/${projectDiscoveryExpect.specPath}`);
+    console.log(`    expectations: ${projectDiscoveryExpect.specPath}`);
     if (projectDiscoveryExpect.launchDir !== ".") {
       console.log(`    launchDir   : ${projectDiscoveryExpect.launchDir}`);
     }

@@ -28,6 +28,6 @@
       "crates/",
       "apps/"
     ],
-    "gateOnDeterministic": "expectations/cargo-go-gradle-polyglot.discovery.json"
+    "gateOnDeterministic": "cargo-go-gradle-polyglot.discovery.json"
   }
 }

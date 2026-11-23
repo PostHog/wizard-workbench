@@ -3,7 +3,7 @@
  *
  * Pure module: `services/discovery-eval/index.ts` spawns the wizard and reads
  * the JSON stdout; this module checks each scenario against its expected
- * goalpost in `apps/project-discovery/expectations/<name>.discovery.json`.
+ * goalpost in `services/discovery-eval/expectations/<name>.discovery.json`.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";

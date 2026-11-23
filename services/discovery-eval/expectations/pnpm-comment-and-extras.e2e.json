@@ -30,6 +30,6 @@
     "forbidToolsInTarget": [
       "Postgres"
     ],
-    "gateOnDeterministic": "expectations/pnpm-comment-and-extras.discovery.json"
+    "gateOnDeterministic": "pnpm-comment-and-extras.discovery.json"
   }
 }

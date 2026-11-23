@@ -42,7 +42,7 @@ Useful flags:
 
 ### How deterministic grading works
 
-`services/discovery-eval/index.ts` spawns `node <wizard>/dist/bin.js --test-discovery` (or `tsx src/bin.ts` if unbuilt) in each scenario's `launchDir` with zero network or LLM calls, then grades the JSON output with `services/discovery-eval/checks.ts` against `expectations/*.discovery.json`:
+`services/discovery-eval/index.ts` spawns `node <wizard>/dist/bin.js --test-discovery` (or `tsx src/bin.ts` if unbuilt) in each scenario's `launchDir` with zero network or LLM calls, then grades the JSON output with `services/discovery-eval/checks.ts` against `services/discovery-eval/expectations/*.discovery.json`:
 
 - Workspace detection (`isMonorepo`, `workspaceRoot`, `workspaceTool`)
 - Discovered `memberPaths` and excluded `forbidMemberPaths` (for example `!apps/legacy/**`)
@@ -51,7 +51,7 @@ Useful flags:
 
 ## 2. Full E2E runs (`wizard-ci --e2e`)
 
-Six fixtures also have full E2E specs in `expectations/*.e2e.json`:
+Six fixtures also have full E2E specs in `services/discovery-eval/expectations/*.e2e.json`. The specs live outside `apps/` so Wizard CI's app finder does not mistake the spec folder for an app. The other fixtures are discovery-only, and `wizard-ci --e2e` refuses to run them:
 
 - Custom: `pnpm-comment-and-extras`, `cargo-go-gradle-polyglot`, `pnpm-negation-and-nested`, `lerna-yarn-workspaces`
 - Production: `turbo-next-forge`, `uv-fastapi-fullstack`
@@ -74,7 +74,7 @@ pnpm wizard-ci project-discovery/production/turbo-next-forge --e2e --project-id 
 
 ### How E2E running and grading works
 
-`services/wizard-ci/e2e.ts` automatically loads `apps/project-discovery/expectations/<id>.e2e.json` (via `services/wizard-ci/project-discovery-checks.ts`) and:
+`services/wizard-ci/e2e.ts` automatically loads `services/discovery-eval/expectations/<id>.e2e.json` (via `services/wizard-ci/project-discovery-checks.ts`) and:
 
 1. Copies the full monorepo into `/tmp/wizard-e2e-<name>` via `rsync` (never mutates the fixture).
 2. Merges `flags` (such as `{"wizard-project-discovery":"one-project"}`) into `WIZARD_CI_FLAG_OVERRIDES`.
@@ -90,3 +90,7 @@ pnpm wizard-ci project-discovery/production/turbo-next-forge --e2e --project-id 
 
 - Single-target nested runs (`pnpm-negation-and-nested`) skip `PlanScreen` once deterministic discovery passes, so they run headlessly right away.
 - Multi-app root runs (the other 5 `.e2e.json` specs) open `PlanScreen` to ask which subrepo to integrate. `PostHog/wizard`'s `e2e-harness/e2e-profile.ts` (`decideE2eAction`) and `scripts/tui-host.no-jest.ts` need a `PlanScreen` handler that reads `process.env.E2E_PLAN_PICK` and selects that subrepo. Until that hook lands in `PostHog/wizard`, multi-app root runs pause on `PlanScreen`.
+
+### Not in scheduled Wizard CI yet
+
+`apps/manifest.json` sets `"ciCapable": false` for `project-discovery`, so GitHub Actions Wizard CI runs (`all`, `sample`, and dispatches) do not pick up these fixtures. Local `pnpm wizard-ci project-discovery/... --e2e` runs still work. Flip it to `true` once the `PlanScreen` hook above lands in `PostHog/wizard`.

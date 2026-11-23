@@ -7,6 +7,7 @@ import { commandToProgram, findCommandByAppPath } from "../wizard-commands.js";
 import { APPS_DIR, WIZARD_FLAG_KEYS } from "./e2e.js";
 import {
   loadProjectDiscoveryExpect,
+  PROJECT_DISCOVERY_EXPECTATIONS_DIR,
   projectDiscoveryChecks,
   resolveLaunchDir,
   type ProjectDiscoveryExpect,
@@ -46,7 +47,7 @@ function baseExpect(over: Partial<ProjectDiscoveryExpect> = {}): ProjectDiscover
       expectedChangedPrefix: "packages/web/",
       forbidChangedPrefixes: ["packages/api/", "packages/shared/"],
     },
-    specPath: "project-discovery/expectations/lerna-yarn-workspaces.e2e.json",
+    specPath: "services/discovery-eval/expectations/lerna-yarn-workspaces.e2e.json",
     ...over,
   };
 }
@@ -157,6 +158,13 @@ describe("loadProjectDiscoveryExpect", () => {
     assert.equal(loadProjectDiscoveryExpect(APPS_DIR, "basic-integration/next-js/15-app-router-todo"), null);
   });
 
+  it("refuses a project-discovery fixture that has no E2E spec", () => {
+    assert.throws(
+      () => loadProjectDiscoveryExpect(APPS_DIR, "project-discovery/production/cargo-axum"),
+      /discovery-only fixture/,
+    );
+  });
+
   it("prefers inline .wizard-ci/e2e.json when present", () => {
     const appDir = join(scratchDir, "custom-inline");
     mkdirSync(join(appDir, ".wizard-ci"), { recursive: true });
@@ -172,11 +180,11 @@ describe("loadProjectDiscoveryExpect", () => {
     const loaded = loadProjectDiscoveryExpect(scratchDir, "custom-inline");
     assert.equal(loaded?.id, "custom-inline");
     assert.equal(loaded?.launchDir, "apps/web");
-    assert.equal(loaded?.specPath, "custom-inline/.wizard-ci/e2e.json");
+    assert.equal(loaded?.specPath, "apps/custom-inline/.wizard-ci/e2e.json");
   });
 
   it("loads every checked-in project-discovery E2E spec with valid flags, manifest routing, and deterministic gates", () => {
-    const expectationsDir = join(APPS_DIR, "project-discovery", "expectations");
+    const expectationsDir = PROJECT_DISCOVERY_EXPECTATIONS_DIR;
     const e2eFiles = readdirSync(expectationsDir)
       .filter((f) => f.endsWith(".e2e.json"))
       .sort();
@@ -201,7 +209,7 @@ describe("loadProjectDiscoveryExpect", () => {
 
       if (loaded.expectations.gateOnDeterministic) {
         assert.ok(
-          existsSync(join(APPS_DIR, "project-discovery", loaded.expectations.gateOnDeterministic)),
+          existsSync(join(expectationsDir, loaded.expectations.gateOnDeterministic)),
           `${file} gateOnDeterministic missing: ${loaded.expectations.gateOnDeterministic}`,
         );
       }

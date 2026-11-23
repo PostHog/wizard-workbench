@@ -162,14 +162,7 @@ describe("evaluateDiscoveryReport", () => {
   });
 
   it("loads all checked-in discovery expectations without schema errors", () => {
-    const dir = join(
-      import.meta.dirname,
-      "..",
-      "..",
-      "apps",
-      "project-discovery",
-      "expectations",
-    );
+    const dir = join(import.meta.dirname, "expectations");
     const files = loadDiscoveryExpectations(dir);
     assert.ok(files.length >= 10, `expected >=10 expectation files, got ${files.length}`);
     for (const file of files) {

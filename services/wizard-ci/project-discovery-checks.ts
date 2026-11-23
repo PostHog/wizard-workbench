@@ -1,7 +1,7 @@
 /**
  * Project-discovery monorepo E2E assertions.
  *
- * Loads `apps/<app>/.wizard-ci/e2e.json` (or `apps/project-discovery/expectations/<id>.e2e.json`
+ * Loads `apps/<app>/.wizard-ci/e2e.json` (or `services/discovery-eval/expectations/<id>.e2e.json`
  * for fixtures under `project-discovery/`, including production git submodules),
  * resolves safe launch directories inside the `/tmp` copy, and grades the run's
  * outcome and monorepo diff scope.
@@ -40,7 +40,7 @@ export interface ProjectDiscoveryExpect {
   launchDir: string;
   profile: ProjectDiscoveryE2eProfile;
   expectations: ProjectDiscoveryE2eExpectations;
-  /** Path to the loaded spec file, relative to `apps/`. */
+  /** Path to the loaded spec file, relative to the workbench root. */
   specPath: string;
 }
 
@@ -56,6 +56,18 @@ export interface ProjectDiscoveryEvidence {
 }
 
 const POSTHOG_EVIDENCE_PATTERN = /posthog/i;
+
+/**
+ * Shared specs for `apps/project-discovery/*` fixtures. They live outside `apps/`
+ * so Wizard CI's app finder does not treat the spec folder as an app.
+ */
+export const PROJECT_DISCOVERY_EXPECTATIONS_DIR = resolve(
+  import.meta.dirname,
+  "..",
+  "discovery-eval",
+  "expectations",
+);
+const PROJECT_DISCOVERY_EXPECTATIONS_REL = "services/discovery-eval/expectations";
 
 function normalizeRelPath(p: string): string {
   return p.replace(/\\/g, "/").replace(/^\.\//, "");
@@ -84,19 +96,22 @@ export function resolveLaunchDir(rootDir: string, launchDir: string): string {
   return target;
 }
 
-function findSpecFile(appsDir: string, app: string): { absPath: string; relPath: string } | null {
+function findSpecFile(
+  appsDir: string,
+  app: string,
+  expectationsDir: string,
+): { absPath: string; relPath: string } | null {
   const inlineRel = join(app, ".wizard-ci", "e2e.json");
   const inlineAbs = join(appsDir, inlineRel);
   if (existsSync(inlineAbs)) {
-    return { absPath: inlineAbs, relPath: normalizeRelPath(inlineRel) };
+    return { absPath: inlineAbs, relPath: `apps/${normalizeRelPath(inlineRel)}` };
   }
 
   if (app.startsWith("project-discovery/")) {
-    const id = basename(app);
-    const sharedRel = join("project-discovery", "expectations", `${id}.e2e.json`);
-    const sharedAbs = join(appsDir, sharedRel);
+    const file = `${basename(app)}.e2e.json`;
+    const sharedAbs = join(expectationsDir, file);
     if (existsSync(sharedAbs)) {
-      return { absPath: sharedAbs, relPath: normalizeRelPath(sharedRel) };
+      return { absPath: sharedAbs, relPath: `${PROJECT_DISCOVERY_EXPECTATIONS_REL}/${file}` };
     }
   }
 
@@ -115,37 +130,48 @@ function isStringArray(value: unknown): value is string[] {
 export function loadProjectDiscoveryExpect(
   appsDir: string,
   app: string,
+  expectationsDir: string = PROJECT_DISCOVERY_EXPECTATIONS_DIR,
 ): ProjectDiscoveryExpect | null {
-  const found = findSpecFile(appsDir, app);
-  if (!found) return null;
+  const found = findSpecFile(appsDir, app, expectationsDir);
+  if (!found) {
+    // A project-discovery fixture without an E2E spec is discovery-only. Running
+    // it as a plain integration e2e would grade nothing useful, so refuse.
+    if (app.startsWith("project-discovery/")) {
+      throw new Error(
+        `apps/${app} has no E2E spec (${PROJECT_DISCOVERY_EXPECTATIONS_REL}/${basename(app)}.e2e.json). ` +
+          "It is a discovery-only fixture: grade it with `pnpm discovery-eval`.",
+      );
+    }
+    return null;
+  }
 
   const raw = readFileSync(found.absPath, "utf8");
   const parsed = JSON.parse(raw) as Partial<ProjectDiscoveryExpect>;
 
   if (typeof parsed.id !== "string" || parsed.id.trim() === "") {
-    throw new Error(`apps/${found.relPath} needs a non-empty "id"`);
+    throw new Error(`${found.relPath} needs a non-empty "id"`);
   }
   if (parsed.flags !== undefined && !isStringRecord(parsed.flags)) {
-    throw new Error(`apps/${found.relPath} "flags" must be a string map`);
+    throw new Error(`${found.relPath} "flags" must be a string map`);
   }
   if (parsed.launchDir !== undefined && typeof parsed.launchDir !== "string") {
-    throw new Error(`apps/${found.relPath} "launchDir" must be a string`);
+    throw new Error(`${found.relPath} "launchDir" must be a string`);
   }
   const launchDir = parsed.launchDir ?? ".";
   resolveLaunchDir("/fixture-root", launchDir);
 
   if (!parsed.expectations || typeof parsed.expectations !== "object") {
-    throw new Error(`apps/${found.relPath} needs an "expectations" object`);
+    throw new Error(`${found.relPath} needs an "expectations" object`);
   }
   const exp = parsed.expectations;
   if (exp.forbidChangedPrefixes !== undefined && !isStringArray(exp.forbidChangedPrefixes)) {
-    throw new Error(`apps/${found.relPath} "expectations.forbidChangedPrefixes" must be a string list`);
+    throw new Error(`${found.relPath} "expectations.forbidChangedPrefixes" must be a string list`);
   }
   if (
     exp.expectedChangedPrefix !== undefined &&
     (typeof exp.expectedChangedPrefix !== "string" || exp.expectedChangedPrefix.trim() === "")
   ) {
-    throw new Error(`apps/${found.relPath} "expectations.expectedChangedPrefix" must be a non-empty string`);
+    throw new Error(`${found.relPath} "expectations.expectedChangedPrefix" must be a non-empty string`);
   }
 
   const profile = parsed.profile ?? {};
@@ -154,7 +180,7 @@ export function loadProjectDiscoveryExpect(
     profile.notice !== "keep" &&
     profile.notice !== "decline"
   ) {
-    throw new Error(`apps/${found.relPath} "profile.notice" must be "keep" or "decline"`);
+    throw new Error(`${found.relPath} "profile.notice" must be "keep" or "decline"`);
   }
 
   return {

@@ -26,6 +26,6 @@
       "apps/mcp/",
       "tooling/"
     ],
-    "gateOnDeterministic": "expectations/pnpm-negation-and-nested.discovery.json"
+    "gateOnDeterministic": "pnpm-negation-and-nested.discovery.json"
   }
 }

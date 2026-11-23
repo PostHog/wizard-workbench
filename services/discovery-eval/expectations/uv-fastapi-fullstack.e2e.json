@@ -29,6 +29,6 @@
     "forbidToolsInTarget": [
       "Postgres"
     ],
-    "gateOnDeterministic": "expectations/uv-fastapi-fullstack.discovery.json"
+    "gateOnDeterministic": "uv-fastapi-fullstack.discovery.json"
   }
 }

@@ -4,7 +4,7 @@
  *
  * Runs `wizard --test-discovery=json` (zero login, zero LLM tokens, zero cost)
  * against production and custom monorepo fixtures under `apps/project-discovery/`
- * and grades each report against `apps/project-discovery/expectations/*.discovery.json`.
+ * and grades each report against `services/discovery-eval/expectations/*.discovery.json`.
  *
  * Usage:
  *   pnpm discovery-eval --wizard /path/to/wizard [--filter <name>] [--strict] [--json]
@@ -26,7 +26,7 @@ import {
 
 const WORKBENCH = resolve(import.meta.dirname, "..", "..");
 const DISCOVERY_ROOT = join(WORKBENCH, "apps", "project-discovery");
-const EXPECTATIONS_DIR = join(DISCOVERY_ROOT, "expectations");
+const EXPECTATIONS_DIR = join(import.meta.dirname, "expectations");
 
 interface CliArgs {
   wizardPath: string;
