@@ -1,10 +1,12 @@
 <script lang="ts">
   import { page } from "$app/stores"
   import { browser } from "$app/environment"
+  import { env } from "$env/dynamic/public"
   import { onMount } from "svelte"
   import Fuse from "fuse.js"
   import { goto } from "$app/navigation"
   import { dev } from "$app/environment"
+  import posthog from "posthog-js"
 
   const fuseOptions = {
     keys: [
@@ -65,6 +67,12 @@
   })
 
   let focusItem = $state(0)
+  const openSearchResult = (resultRank: number) => {
+    if (env.PUBLIC_POSTHOG_PROJECT_TOKEN && env.PUBLIC_POSTHOG_HOST) {
+      posthog.capture("search_result_opened", { result_rank: resultRank })
+    }
+  }
+
   function onKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") {
       searchQuery = ""
@@ -139,6 +147,7 @@
         href={result.item.path || "/"}
         id="search-result-{i + 1}"
         class="card my-6 bg-white shadow-xl flex-row overflow-hidden focus:mx-[-10px] focus:my-[-5px] focus:border-4 focus:border-secondary"
+        onclick={() => openSearchResult(i + 1)}
       >
         <div class="flex-none w-6 md:w-32 bg-secondary"></div>
         <div class="py-6 px-6">
