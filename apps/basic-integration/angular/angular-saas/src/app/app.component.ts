@@ -1,12 +1,13 @@
 import { Component, OnInit, inject, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { I18nService } from '@app/i18n';
+import { AuthenticationService } from '@app/auth/services/authentication.service';
 import { Title } from '@angular/platform-browser';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { environment } from '@env/environment';
 import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AppUpdateService, Logger } from '@core/services';
+import { AppUpdateService, Logger, PostHogService } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
 
 @Component({
@@ -23,11 +24,50 @@ export class AppComponent implements OnInit {
   private readonly i18nService = inject(I18nService);
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly authenticationService = inject(AuthenticationService);
   private readonly destroyRef = inject(DestroyRef);
 
   title = 'angular-boilerplate';
 
   ngOnInit() {
+    if (environment.posthogKey && environment.posthogHost) {
+      this.posthogService.init(environment.posthogKey, {
+        api_host: environment.posthogHost,
+        capture_exceptions: {
+          capture_unhandled_errors: true,
+          capture_unhandled_rejections: true,
+          capture_console_errors: false,
+        },
+        logs: {
+          serviceName: 'angular-boilerplate-web',
+          environment: environment.production ? 'production' : 'development',
+          serviceVersion: environment.version,
+        },
+      });
+      this.authenticationService.identifyCurrentUser();
+      this.posthogService.posthog.logger.info('application_initialized', {
+        runtime: 'browser',
+        environment: environment.production ? 'production' : 'development',
+      });
+    } else if (!environment.production) {
+      if (!environment.posthogKey) {
+        console.error(
+          new Error(
+            'NG_APP_POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once NG_APP_POSTHOG_PROJECT_TOKEN is configured',
+          ),
+        );
+      }
+
+      if (!environment.posthogHost) {
+        console.error(
+          new Error(
+            'NG_APP_POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once NG_APP_POSTHOG_HOST is configured',
+          ),
+        );
+      }
+    }
+
     // Setup logger
     if (environment.production) {
       Logger.enableProductionMode();

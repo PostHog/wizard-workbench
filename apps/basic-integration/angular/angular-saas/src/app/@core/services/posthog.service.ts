@@ -1,0 +1,29 @@
+import { isPlatformBrowser } from '@angular/common';
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
+import posthog, { PostHogConfig } from 'posthog-js';
+
+@Injectable({ providedIn: 'root' })
+export class PostHogService {
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly noOpLogger = new Proxy({} as typeof posthog.logger, {
+    get: () => () => undefined,
+  });
+  private initialized = false;
+
+  get posthog(): typeof posthog {
+    if (isPlatformBrowser(this.platformId) && this.initialized) {
+      return posthog;
+    }
+
+    return new Proxy({} as typeof posthog, {
+      get: (_target, property) => (property === 'logger' ? this.noOpLogger : () => undefined),
+    });
+  }
+
+  init(apiKey: string, options: Partial<PostHogConfig>): void {
+    if (isPlatformBrowser(this.platformId) && !this.initialized) {
+      posthog.init(apiKey, options);
+      this.initialized = true;
+    }
+  }
+}

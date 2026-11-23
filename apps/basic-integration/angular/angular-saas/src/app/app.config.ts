@@ -10,6 +10,7 @@ import { environment } from '@env/environment';
 import { ApiPrefixInterceptor, ErrorHandlerInterceptor } from '@core/interceptors';
 import { RouteReusableStrategy } from '@core/helpers';
 import { provideSocketIo } from '@core/socket-io';
+import { providePostHogErrorHandler } from './posthog-error-handler';
 
 if (environment.production) {
   enableProdMode();
@@ -18,6 +19,7 @@ if (environment.production) {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
+    providePostHogErrorHandler(),
 
     importProvidersFrom(TranslateModule.forRoot()),
 
