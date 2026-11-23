@@ -1,15 +1,58 @@
 import { Link } from "react-router";
 import { useCart, type CartItem } from "../context/CartContext";
+import { usePostHog } from "@posthog/react";
 
 export default function Cart() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
+  const posthog = usePostHog();
+
+  const captureCartItemRemoved = (item: CartItem, removalMethod: string) => {
+    if (import.meta.env.VITE_POSTHOG_PROJECT_TOKEN) {
+      posthog.capture("cart_item_removed", {
+        product_id: item.id,
+        category: item.category,
+        unit_price: item.price,
+        quantity: item.quantity,
+        removal_method: removalMethod,
+      });
+    }
+  };
 
   const handleRemoveFromCart = (item: CartItem) => {
+    captureCartItemRemoved(item, "remove_button");
     removeFromCart(item.id);
   };
 
   const handleUpdateQuantity = (item: CartItem, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      captureCartItemRemoved(item, "quantity_decrement");
+    } else if (import.meta.env.VITE_POSTHOG_PROJECT_TOKEN) {
+      posthog.capture("cart_quantity_updated", {
+        product_id: item.id,
+        category: item.category,
+        unit_price: item.price,
+        previous_quantity: item.quantity,
+        new_quantity: newQuantity,
+      });
+    }
+
     updateQuantity(item.id, newQuantity);
+  };
+
+  const handleCheckoutStarted = () => {
+    if (import.meta.env.VITE_POSTHOG_PROJECT_TOKEN) {
+      const itemCount = cart.reduce((count, item) => count + item.quantity, 0);
+      const cartTotal = getCartTotal();
+
+      posthog.capture("checkout_started", {
+        item_count: itemCount,
+        cart_total: cartTotal,
+      });
+      posthog.logger.info("checkout started", {
+        item_count: itemCount,
+        cart_total: cartTotal,
+      });
+    }
   };
 
   if (cart.length === 0) {
@@ -154,6 +197,7 @@ export default function Cart() {
 
             <Link
               to="/checkout"
+              onClick={handleCheckoutStarted}
               className="block w-full bg-indigo-600 text-white py-3 rounded-lg text-center font-semibold hover:bg-indigo-700 transition"
             >
               Proceed to Checkout
