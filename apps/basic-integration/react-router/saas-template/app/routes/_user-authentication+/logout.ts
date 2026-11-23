@@ -10,3 +10,12 @@ export function loader() {
 export async function action({ request }: Route.ActionArgs) {
   return await logout(request);
 }
+
+export async function clientAction({ serverAction }: Route.ClientActionArgs) {
+  const response = await serverAction();
+  const { resetPostHogUser } = await import("~/lib/posthog.client");
+
+  resetPostHogUser();
+
+  return response;
+}

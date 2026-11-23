@@ -10,6 +10,7 @@ import type { EntryContext, RouterContextProvider } from "react-router";
 import { ServerRouter } from "react-router";
 
 import { getInstance } from "./features/localization/i18next-middleware.server";
+import { logPostHog } from "./lib/posthog-logs.server";
 import { getEnv, init } from "./utils/env.server";
 import { NonceProvider } from "./utils/nonce-provider";
 
@@ -21,6 +22,8 @@ export const streamTimeout = 5000;
 const oneSecond = 1000;
 const nonceLength = 16;
 const MODE = process.env.NODE_ENV ?? "development";
+const posthogHost = process.env.VITE_PUBLIC_POSTHOG_HOST;
+const posthogAssetsHost = posthogHost?.replace(".i.", "-assets.i.");
 
 let mockServerInitialized = false;
 
@@ -52,6 +55,9 @@ export default async function handleRequest(
   routerContext: RouterContextProvider,
 ) {
   await initializeMockServer();
+  logPostHog("INFO", "server_render_started", {
+    spa_mode: entryContext.isSpaMode,
+  });
 
   // Generate a cryptographically random nonce for this request
   const nonce = crypto.randomBytes(nonceLength).toString("hex");
@@ -107,6 +113,8 @@ export default async function handleRequest(
                   "connect-src": [
                     MODE === "development" ? "ws:" : undefined,
                     "'self'",
+                    posthogHost,
+                    posthogAssetsHost,
                   ],
                   "font-src": ["'self'"],
                   "frame-src": ["'self'"],
@@ -120,7 +128,9 @@ export default async function handleRequest(
                     "'strict-dynamic'",
                     "'self'",
                     `'nonce-${nonce}'`,
+                    posthogAssetsHost,
                   ],
+                  "worker-src": ["'self'", "blob:"],
                   // Inline event handlers with nonce
                   "script-src-attr": [`'nonce-${nonce}'`],
                 },
@@ -147,6 +157,7 @@ export default async function handleRequest(
           // errors encountered during initial shell rendering since they'll
           // reject and get logged in handleDocumentRequest.
           if (shellRendered) {
+            logPostHog("ERROR", "server_render_failed");
             console.error(error);
           }
         },

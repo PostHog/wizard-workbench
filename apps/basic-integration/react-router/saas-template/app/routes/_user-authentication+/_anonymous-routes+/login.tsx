@@ -83,6 +83,12 @@ export default function LoginRoute({
     navigation.formData?.get("intent") === LOGIN_WITH_GOOGLE_INTENT;
   const isSubmitting = isLoggingInWithEmail || isLoggingInWithGoogle;
 
+  const captureLoginSubmitted = (method: "email" | "google") => {
+    void import("~/lib/posthog.client").then(({ default: posthog }) => {
+      posthog.capture("login_submitted", { method });
+    });
+  };
+
   if (isAwaitingEmailConfirmation) {
     return (
       <LoginVerificationAwaiting
@@ -116,7 +122,14 @@ export default function LoginRoute({
         </div>
 
         {/* Email Login Form */}
-        <Form method="POST" {...form.props}>
+        <Form
+          method="POST"
+          {...form.props}
+          onSubmit={(event) => {
+            form.props.onSubmit?.(event);
+            if (!event.defaultPrevented) captureLoginSubmitted("email");
+          }}
+        >
           <FieldGroup>
             <Field data-invalid={fields.email.ariaInvalid}>
               <FieldLabel htmlFor={fields.email.id}>
@@ -160,7 +173,7 @@ export default function LoginRoute({
         <FieldSeparator>{t("separator")}</FieldSeparator>
 
         {/* Google Login Form */}
-        <Form method="POST">
+        <Form method="POST" onSubmit={() => captureLoginSubmitted("google")}>
           <Field>
             <Button
               name="intent"

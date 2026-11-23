@@ -17,6 +17,7 @@ import {
   handleStripeSubscriptionScheduleExpiringEvent,
   handleStripeSubscriptionScheduleUpdatedEvent,
 } from "~/features/billing/stripe-event-handlers.server";
+import { logPostHog } from "~/lib/posthog-logs.server";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const json = (payload: unknown, init?: ResponseInit) =>
@@ -54,6 +55,9 @@ export async function action({ request }: Route.ActionArgs) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET,
     );
+    logPostHog("INFO", "stripe_webhook_received", {
+      stripe_event_type: event.type,
+    });
 
     switch (event.type) {
       case "charge.dispute.closed": {

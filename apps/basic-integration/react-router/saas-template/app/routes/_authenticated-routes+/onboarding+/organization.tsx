@@ -94,6 +94,14 @@ export default function OrganizationOnboardingRoute({
       encType="multipart/form-data"
       method="POST"
       {...form.props}
+      onSubmit={(event) => {
+        form.props.onSubmit?.(event);
+        if (!event.defaultPrevented) {
+          void import("~/lib/posthog.client").then(({ default: posthog }) => {
+            posthog.capture("onboarding_organization_submitted");
+          });
+        }
+      }}
       aria-describedby={
         form.errors && form.errors.length > 0
           ? `${form.descriptionId} ${form.errorId}`
