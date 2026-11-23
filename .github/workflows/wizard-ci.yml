@@ -544,6 +544,14 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
 
+      # PHP apps lock Symfony 8 packages that need PHP 8.4, newer than the runner's default PHP.
+      - name: Setup PHP
+        if: hashFiles(format('apps/{0}/composer.json', matrix.app)) != ''
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.4'
+          tools: composer
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
