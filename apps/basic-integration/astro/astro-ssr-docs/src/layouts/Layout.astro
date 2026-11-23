@@ -1,5 +1,6 @@
 ---
 import Navigation from '../components/Navigation.astro';
+import PostHog from '../components/posthog.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -18,9 +19,23 @@ const { title, description = 'NeuralFlow Documentation - Learn how to build with
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title} | NeuralFlow Docs</title>
+    <PostHog />
   </head>
   <body>
     <Navigation />
     <slot />
+    <script is:inline>
+      document.addEventListener('copy', () => {
+        const selection = window.getSelection();
+        const anchor = selection?.anchorNode;
+        const selectedElement = anchor instanceof Element ? anchor : anchor?.parentElement;
+
+        if (selectedElement?.closest('pre')) {
+          window.posthog?.capture('docs_code_sample_copied', {
+            documentation_path: window.location.pathname,
+          });
+        }
+      });
+    </script>
   </body>
 </html>
