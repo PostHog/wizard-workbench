@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { getPostHogLogLogger } from '../../lib/posthog-logs';
 
 export const prerender = false;
 
@@ -11,6 +12,8 @@ interface ContactFormData {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  const posthogLogger = getPostHogLogLogger();
+
   try {
     const data: ContactFormData = await request.json();
 
@@ -31,6 +34,10 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    posthogLogger?.info('contact_form_request_accepted', {
+      route: '/api/contact',
+    });
+
     // In a real app, you would:
     // 1. Send to a CRM or email service
     // 2. Store in a database
@@ -45,6 +52,11 @@ export const POST: APIRoute = async ({ request }) => {
       timestamp: new Date().toISOString(),
     });
 
+    posthogLogger?.info('contact_form_response_sent', {
+      route: '/api/contact',
+      status_code: 200,
+    });
+
     return new Response(
       JSON.stringify({
         message: 'Thank you! We\'ll be in touch within 24 hours.',
@@ -53,6 +65,10 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    posthogLogger?.error('contact_form_request_failed', {
+      route: '/api/contact',
+      error_type: error instanceof Error ? error.name : typeof error,
+    });
     console.error('Contact form error:', error);
     return new Response(
       JSON.stringify({ error: 'Server error. Please try again later.' }),
