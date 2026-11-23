@@ -223,5 +223,13 @@ export function ErrorBoundary({ error, ...props }: Route.ErrorBoundaryProps) {
     return <NotFound className="min-h-svh" />;
   }
 
+  if (typeof window !== "undefined" && import.meta.env.VITE_POSTHOG_KEY) {
+    void import("posthog-js")
+      .then(({ default: posthog }) => {
+        posthog.captureException(error);
+      })
+      .catch(() => {});
+  }
+
   return <BaseErrorBoundary error={error} {...props} />;
 }

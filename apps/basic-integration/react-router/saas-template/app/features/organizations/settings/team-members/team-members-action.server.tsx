@@ -35,6 +35,8 @@ import type { Prisma } from "~/generated/client";
 import { OrganizationMembershipRole } from "~/generated/client";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { sendEmail } from "~/utils/email.server";
+import { logServerOperation } from "~/utils/posthog-logs.server";
+import { captureServerEvent } from "~/utils/posthog.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { badRequest, created, forbidden } from "~/utils/http-responses.server";
 import { createToastHeaders } from "~/utils/toast.server";
@@ -107,6 +109,12 @@ export async function teamMembersAction({
           expiresAt,
           organizationId: organization.id,
           token,
+        });
+
+        await captureServerEvent({
+          distinctId: user.id,
+          event: "team_invite_link_created",
+          request,
         });
 
         return created({}, { headers });
@@ -361,6 +369,17 @@ export async function teamMembersAction({
             }),
           });
         }
+
+        logServerOperation("Team invitation delivered", {
+          invited_role: body.role,
+        });
+
+        await captureServerEvent({
+          distinctId: user.id,
+          event: "team_member_invited",
+          properties: { role: body.role },
+          request,
+        });
 
         const toastHeaders = await createToastHeaders({
           title: i18n.t(

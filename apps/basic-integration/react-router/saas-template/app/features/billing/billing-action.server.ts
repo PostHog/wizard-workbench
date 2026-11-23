@@ -44,6 +44,7 @@ import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
 import { badRequest, conflict, forbidden } from "~/utils/http-responses.server";
+import { captureServerEvent } from "~/utils/posthog.server";
 import { createToastHeaders } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -97,6 +98,12 @@ export async function billingAction({
           customerId: organization.stripeCustomerId,
           organizationSlug: params.organizationSlug,
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
+        });
+
+        await captureServerEvent({
+          distinctId: user.id,
+          event: "subscription_cancel_requested",
+          request,
         });
 
         return redirect(cancelSession.url);
@@ -159,6 +166,13 @@ export async function billingAction({
           seatsUsed: organization._count.memberships,
         });
 
+        await captureServerEvent({
+          distinctId: user.id,
+          event: "subscription_checkout_started",
+          properties: { plan_lookup_key: body.lookupKey },
+          request,
+        });
+
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL
         return redirect(checkoutSession.url!);
       }
@@ -187,6 +201,12 @@ export async function billingAction({
             subscription: { cancelAtPeriodEnd: false },
           });
         }
+
+        await captureServerEvent({
+          distinctId: user.id,
+          event: "subscription_resumed",
+          request,
+        });
 
         const toast = await createToastHeaders({
           title: i18n.t(
@@ -233,6 +253,13 @@ export async function billingAction({
             organization.stripeSubscriptions[0].items[0].stripeId,
         });
 
+        await captureServerEvent({
+          distinctId: user.id,
+          event: "subscription_plan_change_requested",
+          properties: { plan_lookup_key: body.lookupKey },
+          request,
+        });
+
         return redirect(portalSession.url);
       }
 
@@ -251,6 +278,12 @@ export async function billingAction({
           await updateOrganizationInDatabaseById({
             id: organization.id,
             organization: { billingEmail: body.billingEmail },
+          });
+
+          await captureServerEvent({
+            distinctId: user.id,
+            event: "billing_email_updated",
+            request,
           });
         }
 

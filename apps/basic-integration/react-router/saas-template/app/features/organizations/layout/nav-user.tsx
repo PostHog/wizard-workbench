@@ -39,6 +39,16 @@ export function NavUser({ user }: NavUserProps) {
   });
   const hydrated = useHydrated();
 
+  const handleLogout = () => {
+    if (!import.meta.env.VITE_POSTHOG_KEY) return;
+
+    void import("posthog-js")
+      .then(({ default: posthog }) => {
+        posthog.reset();
+      })
+      .catch(() => {});
+  };
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -121,6 +131,7 @@ export function NavUser({ user }: NavUserProps) {
                   <button
                     className="w-full"
                     name="intent"
+                    onClick={handleLogout}
                     type="submit"
                     value="logout"
                   />

@@ -24,6 +24,7 @@ import {
 import { supabaseAdminClient } from "~/features/user-authentication/supabase.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { badRequest } from "~/utils/http-responses.server";
+import { captureServerEvent } from "~/utils/posthog.server";
 import { removeImageFromStorage } from "~/utils/storage-helpers.server";
 import { createToastHeaders, redirectWithToast } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
@@ -77,6 +78,13 @@ export async function accountSettingsAction({
         await updateUserAccountInDatabaseById({
           id: user.id,
           user: updates,
+        });
+
+        await captureServerEvent({
+          distinctId: user.id,
+          event: "account_settings_updated",
+          properties: { updated_fields: Object.keys(updates).sort().join(",") },
+          request,
         });
       }
 
@@ -159,6 +167,12 @@ export async function accountSettingsAction({
       // Delete the user account (this will cascade delete their memberships)
       await deleteUserAccountFromDatabaseById(user.id);
       await supabaseAdminClient.auth.admin.deleteUser(user.supabaseUserId);
+
+      await captureServerEvent({
+        distinctId: user.id,
+        event: "account_deleted",
+        request,
+      });
 
       return redirectWithToast(
         "/",

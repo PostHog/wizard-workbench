@@ -23,6 +23,7 @@ import { authContext } from "~/features/user-authentication/user-authentication-
 import { OrganizationMembershipRole } from "~/generated/client";
 import { combineHeaders } from "~/utils/combine-headers.server";
 import { forbidden } from "~/utils/http-responses.server";
+import { captureServerEvent } from "~/utils/posthog.server";
 import { slugify } from "~/utils/slugify.server";
 import { removeImageFromStorage } from "~/utils/storage-helpers.server";
 import { createToastHeaders, redirectWithToast } from "~/utils/toast.server";
@@ -40,7 +41,7 @@ export async function generalOrganizationSettingsAction({
   params,
   context,
 }: Route.ActionArgs) {
-  const { headers, organization, role } = context.get(
+  const { headers, organization, role, user } = context.get(
     organizationMembershipContext,
   );
   const i18n = getInstance(context);
@@ -92,6 +93,13 @@ export async function generalOrganizationSettingsAction({
           slug: params.organizationSlug,
         });
 
+        await captureServerEvent({
+          distinctId: user.id,
+          event: "organization_settings_updated",
+          properties: { updated_fields: Object.keys(updates).sort().join(",") },
+          request,
+        });
+
         if (updates.name && organization.stripeCustomerId) {
           await updateStripeCustomer({
             customerId: organization.stripeCustomerId,
@@ -129,6 +137,13 @@ export async function generalOrganizationSettingsAction({
 
     case DELETE_ORGANIZATION_INTENT: {
       await deleteOrganization(organization.id);
+
+      await captureServerEvent({
+        distinctId: user.id,
+        event: "organization_deleted",
+        request,
+      });
+
       return redirectWithToast(
         href("/organizations"),
         {

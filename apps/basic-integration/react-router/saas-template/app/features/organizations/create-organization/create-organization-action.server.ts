@@ -9,6 +9,8 @@ import { saveOrganizationWithOwnerToDatabase } from "~/features/organizations/or
 import { requireAuthenticatedUserExists } from "~/features/user-accounts/user-accounts-helpers.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
 import { slugify } from "~/utils/slugify.server";
+import { logServerOperation } from "~/utils/posthog-logs.server";
+import { captureServerEvent } from "~/utils/posthog.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
 export async function createOrganizationAction({
@@ -49,6 +51,21 @@ export async function createOrganizationAction({
       slug: slugify(result.data.name),
     },
     userId: user.id,
+  });
+
+  logServerOperation("Organization created from organization setup", {
+    creation_flow: "organizations_page",
+    has_logo: Boolean(result.data.logo),
+  });
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: "organization_created",
+    properties: {
+      creation_flow: "organizations_page",
+      has_logo: Boolean(result.data.logo),
+    },
+    request,
   });
 
   return redirect(`/organizations/${organization.slug}`, { headers });

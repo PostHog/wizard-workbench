@@ -13,6 +13,7 @@ import { uploadUserAvatar } from "~/features/user-accounts/settings/account/acco
 import { updateUserAccountInDatabaseById } from "~/features/user-accounts/user-accounts-model.server";
 import { authContext } from "~/features/user-authentication/user-authentication-middleware.server";
 import { combineHeaders } from "~/utils/combine-headers.server";
+import { captureServerEvent } from "~/utils/posthog.server";
 import { redirectWithToast } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -52,6 +53,16 @@ export async function onboardingUserAccountAction({
 
   const { inviteLinkInfo, headers: inviteLinkHeaders } =
     await getInviteInfoForAuthRoutes(request);
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: "onboarding_profile_completed",
+    properties: {
+      has_avatar: Boolean(result.data.image),
+      joined_via_invite: Boolean(inviteLinkInfo),
+    },
+    request,
+  });
 
   if (user.memberships.length > 0 && inviteLinkInfo) {
     const i18n = getInstance(context);

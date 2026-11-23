@@ -1,10 +1,25 @@
 import i18next from "i18next";
 import I18nextBrowserLanguageDetector from "i18next-browser-languagedetector";
 import Fetch from "i18next-fetch-backend";
+import posthog from "posthog-js";
 import { StrictMode, startTransition } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { I18nextProvider, initReactI18next } from "react-i18next";
 import { HydratedRouter } from "react-router/dom";
+
+const posthogKey = import.meta.env.VITE_POSTHOG_KEY;
+const posthogHost = import.meta.env.VITE_POSTHOG_HOST;
+
+if (posthogKey) {
+  posthog.init(posthogKey, {
+    api_host: posthogHost,
+    tracing_headers: [window.location.hostname],
+  });
+} else if (import.meta.env.DEV) {
+  console.error(
+    "VITE_POSTHOG_KEY variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once VITE_POSTHOG_KEY is configured",
+  );
+}
 
 async function hydrate() {
   await i18next
