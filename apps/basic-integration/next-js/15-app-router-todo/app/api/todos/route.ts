@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { flushPostHogLogs, posthogTodoLogger } from '@/instrumentation';
 import { getTodos, createTodo } from '@/lib/data';
+import { flushPostHog, getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -32,6 +35,31 @@ export async function POST(request: NextRequest) {
       title: validatedData.title,
       description: validatedData.description,
       completed: validatedData.completed,
+    });
+
+    const posthog = getPostHogClient();
+    posthog?.capture({
+      event: 'todo_created',
+      properties: {
+        has_description: Boolean(validatedData.description?.trim()),
+        initially_completed: newTodo.completed,
+        total_todos: getTodos().length,
+      },
+    });
+    await flushPostHog();
+
+    posthogTodoLogger?.emit({
+      body: 'Todo created',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        operation: 'todo_created',
+        has_description: Boolean(validatedData.description?.trim()),
+        initially_completed: newTodo.completed,
+        total_todos: getTodos().length,
+      },
+    });
+    after(async () => {
+      await flushPostHogLogs();
     });
 
     return NextResponse.json(newTodo, { status: 201 });

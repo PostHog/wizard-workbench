@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getTodoById, updateTodo, deleteTodo } from '@/lib/data';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { after, NextRequest, NextResponse } from 'next/server';
+import { flushPostHogLogs, posthogTodoLogger } from '@/instrumentation';
+import { deleteTodo, getTodoById, getTodos, updateTodo } from '@/lib/data';
+import { flushPostHog, getPostHogClient } from '@/lib/posthog-server';
 import { z } from 'zod';
 
 const updateTodoSchema = z.object({
@@ -59,6 +62,29 @@ export async function PATCH(
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
 
+    const posthog = getPostHogClient();
+    posthog?.capture({
+      event: 'todo_updated',
+      properties: {
+        updated_fields: Object.keys(validatedData),
+        completed: updatedTodo.completed,
+      },
+    });
+    await flushPostHog();
+
+    posthogTodoLogger?.emit({
+      body: 'Todo updated',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        operation: 'todo_updated',
+        updated_fields: Object.keys(validatedData),
+        completed: updatedTodo.completed,
+      },
+    });
+    after(async () => {
+      await flushPostHogLogs();
+    });
+
     return NextResponse.json(updatedTodo);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -88,11 +114,33 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid todo ID' }, { status: 400 });
     }
 
+    const todoCountBeforeDeletion = getTodos().length;
     const deleted = deleteTodo(todoId);
 
     if (!deleted) {
       return NextResponse.json({ error: 'Todo not found' }, { status: 404 });
     }
+
+    const posthog = getPostHogClient();
+    posthog?.capture({
+      event: 'todo_deleted',
+      properties: {
+        todo_count_before_deletion: todoCountBeforeDeletion,
+      },
+    });
+    await flushPostHog();
+
+    posthogTodoLogger?.emit({
+      body: 'Todo deleted',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        operation: 'todo_deleted',
+        todo_count_before_deletion: todoCountBeforeDeletion,
+      },
+    });
+    after(async () => {
+      await flushPostHogLogs();
+    });
 
     return NextResponse.json({ message: 'Todo deleted successfully' });
   } catch (error) {
