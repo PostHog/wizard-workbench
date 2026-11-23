@@ -6,6 +6,7 @@
 //
 
 import Data
+import PostHog
 import Shared
 import UIKit
 
@@ -34,6 +35,34 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // init default settings
         UserDefaults.standard.registerDefaults()
 
+        configurePostHog()
+
         return true
+    }
+
+    private func configurePostHog() {
+        let environment = ProcessInfo.processInfo.environment
+
+        guard let projectToken = environment["POSTHOG_PROJECT_TOKEN"], !projectToken.isEmpty else {
+            reportMissingPostHogConfiguration("POSTHOG_PROJECT_TOKEN")
+            return
+        }
+
+        guard let host = environment["POSTHOG_HOST"], !host.isEmpty else {
+            reportMissingPostHogConfiguration("POSTHOG_HOST")
+            return
+        }
+
+        let config = PostHogConfig(projectToken: projectToken, host: host)
+        config.errorTrackingConfig.autoCapture = true
+        config.logs.serviceName = "hackers-ios"
+        PostHogSDK.shared.setup(config)
+        PostHogSDK.shared.logger?.info("app_started", attributes: ["component": "application_lifecycle"])
+    }
+
+    private func reportMissingPostHogConfiguration(_ variable: String) {
+        #if DEBUG
+            assertionFailure("\(variable) variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once \(variable) is configured")
+        #endif
     }
 }
