@@ -1,0 +1,6 @@
+packages:
+# web and api apps
+  - apps/*
+  - packages/*
+
+minimumReleaseAge: 10080

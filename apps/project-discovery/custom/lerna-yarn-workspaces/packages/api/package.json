@@ -1,0 +1,9 @@
+{
+  "name": "@acme/api",
+  "private": true,
+  "dependencies": {
+    "express": "^4.21.0",
+    "stripe": "^17.0.0",
+    "pg": "^8.13.0"
+  }
+}

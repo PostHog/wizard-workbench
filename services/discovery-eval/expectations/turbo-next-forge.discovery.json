@@ -1,0 +1,72 @@
+{
+  "id": "turbo-next-forge",
+  "fixture": "production/turbo-next-forge",
+  "kind": "production",
+  "toolFamily": "turbo",
+  "notes": "Vercel next-forge Turborepo: multi-app Next.js + shared packages/* + Stripe/Knock/Vercel tools.",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "workspaceTool": "turbo",
+      "runProject": ".",
+      "walkComplete": true,
+      "requiredProjects": [
+        "apps/app",
+        "apps/web",
+        "apps/api",
+        "apps/docs"
+      ],
+      "projectTraits": {
+        "apps/app": {
+          "framework": "nextjs",
+          "frameworkVariant": "app-router"
+        },
+        "apps/api": {
+          "framework": "nextjs",
+          "frameworkVariant": "app-router"
+        }
+      },
+      "projectTools": {
+        "apps/api": [
+          "Stripe"
+        ]
+      },
+      "forbidProjectTools": {
+        "apps/app": [
+          "Stripe"
+        ]
+      },
+      "planAsks": true,
+      "maxDurationMs": 10000,
+      "requiredPlanOffered": [
+        "apps/app",
+        "apps/web",
+        "apps/api",
+        "apps/docs"
+      ]
+    },
+    {
+      "name": "from-apps-app",
+      "subdir": "apps/app",
+      "repoType": "monorepo",
+      "workspaceTool": "turbo",
+      "runProject": "apps/app",
+      "matchKeys": {
+        "framework": [
+          "nextjs"
+        ],
+        "frameworkVariant": [
+          "app-router"
+        ]
+      },
+      "forbidProjectTools": {
+        "apps/app": [
+          "Stripe"
+        ]
+      },
+      "maxDurationMs": 10000
+    }
+  ]
+}

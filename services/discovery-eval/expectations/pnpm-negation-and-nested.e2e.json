@@ -1,0 +1,31 @@
+{
+  "id": "pnpm-negation-and-nested",
+  "fixture": "custom/pnpm-negation-and-nested",
+  "program": "posthog-integration",
+  "summary": "Launch inside nested apps/dashboard, confirm workspace root climbs to ., keep apps/dashboard selected, and exclude apps/legacy/old-app.",
+  "flags": {
+    "wizard-project-discovery": "one-project"
+  },
+  "launchDir": "apps/dashboard",
+  "profile": {
+    "plan": "apps/dashboard",
+    "setup": "first",
+    "healthCheck": "dismiss",
+    "mcp": "skip",
+    "slack": "skip",
+    "ask": "first",
+    "notice": "decline"
+  },
+  "expectations": {
+    "expectedOutcome": "success",
+    "expectAbort": null,
+    "expectedTargetProject": "apps/dashboard",
+    "expectedChangedPrefix": "apps/dashboard/",
+    "forbidChangedPrefixes": [
+      "apps/legacy/",
+      "apps/mcp/",
+      "tooling/"
+    ],
+    "gateOnDeterministic": "pnpm-negation-and-nested.discovery.json"
+  }
+}

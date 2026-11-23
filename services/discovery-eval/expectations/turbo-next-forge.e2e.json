@@ -1,0 +1,35 @@
+{
+  "id": "turbo-next-forge",
+  "fixture": "production/turbo-next-forge",
+  "program": "posthog-integration",
+  "summary": "Production Turborepo (vercel/next-forge): launch at root, pick apps/app, keep edits inside apps/app/ without leaking apps/api Stripe tools.",
+  "flags": {
+    "wizard-project-discovery": "one-project"
+  },
+  "launchDir": ".",
+  "profile": {
+    "plan": "apps/app",
+    "setup": "first",
+    "healthCheck": "dismiss",
+    "mcp": "skip",
+    "slack": "skip",
+    "ask": "first",
+    "notice": "decline"
+  },
+  "expectations": {
+    "expectedOutcome": "success",
+    "expectAbort": null,
+    "expectedTargetProject": "apps/app",
+    "expectedFramework": "nextjs",
+    "expectedFrameworkVariant": "app-router",
+    "expectedChangedPrefix": "apps/app/",
+    "forbidChangedPrefixes": [
+      "apps/api/",
+      "apps/docs/"
+    ],
+    "forbidToolsInTarget": [
+      "Stripe"
+    ],
+    "gateOnDeterministic": "turbo-next-forge.discovery.json"
+  }
+}

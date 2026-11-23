@@ -36,6 +36,12 @@ import {
   type FeatureFlagsExpect,
   type RemoteFlag,
 } from "./feature-flag-checks.js";
+import {
+  loadProjectDiscoveryExpect,
+  projectDiscoveryChecks,
+  resolveLaunchDir,
+  type ProjectDiscoveryExpect,
+} from "./project-discovery-checks.js";
 import { runChild } from "./run-child.js";
 import { resolveSourceApp } from "./source-app.js";
 import {
@@ -106,6 +112,7 @@ export const WIZARD_FLAG_KEYS: readonly string[] = [
   "wizard-orchestrator-seeded-tasks",
   "wizard-self-driving-use-pi-harness",
   "wizard-basic-integration-agentic-detection",
+  "wizard-project-discovery",
 ];
 
 // Host Claude Code / Anthropic auth vars: when the wizard's agent subprocess is
@@ -321,9 +328,11 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   const expect = loadExpect(APPS_DIR, app);
   let sourceApp: string;
   let featureFlagsExpect: FeatureFlagsExpect | null;
+  let projectDiscoveryExpect: ProjectDiscoveryExpect | null;
   try {
     sourceApp = resolveSourceApp(APPS_DIR, app, expect?.sourceApp);
     featureFlagsExpect = loadFeatureFlagsExpect(APPS_DIR, app);
+    projectDiscoveryExpect = loadProjectDiscoveryExpect(APPS_DIR, app);
   } catch (error) {
     console.error(`✖ ${(error as Error).message}`);
     return 2;
@@ -351,6 +360,14 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   mkdirSync(snapsDir, { recursive: true });
   rmSync(resultJson, { force: true });
 
+  const launchDir = projectDiscoveryExpect
+    ? resolveLaunchDir(appDir, projectDiscoveryExpect.launchDir)
+    : appDir;
+  if (!existsSync(launchDir)) {
+    console.error(`✖ launchDir not found inside copy: ${projectDiscoveryExpect?.launchDir}`);
+    return 2;
+  }
+
   const repo = wizardRepo();
   const harness = join(repo, "scripts", "tui-snapshots.no-jest.ts");
   if (!existsSync(harness)) {
@@ -361,6 +378,15 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   console.log(`\n=== wizard-ci --e2e: ${app}  (project ${projectId}, ${region}) ===`);
   console.log(`    policy: skip mcp · skip slack · ${opts.keepSkills ? "keep" : "delete"} skills · continue past health issues`);
   if (expect) console.log(`    expectations: apps/${app}/.wizard-ci/expect.json`);
+  if (projectDiscoveryExpect) {
+    console.log(`    expectations: ${projectDiscoveryExpect.specPath}`);
+    if (projectDiscoveryExpect.launchDir !== ".") {
+      console.log(`    launchDir   : ${projectDiscoveryExpect.launchDir}`);
+    }
+    if (projectDiscoveryExpect.profile.plan) {
+      console.log(`    plan pick   : ${projectDiscoveryExpect.profile.plan}`);
+    }
+  }
   if (sourceApp !== app) console.log(`    source: apps/${sourceApp}`);
   console.log("");
 
@@ -369,7 +395,7 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
     if (STRIP_HOST_AUTH.test(k)) delete childEnv[k];
   delete childEnv.POSTHOG_GATEWAY_TOKEN;
   childEnv.POSTHOG_PERSONAL_API_KEY = apiKey;
-  childEnv.APP_DIR = appDir;
+  childEnv.APP_DIR = launchDir;
   childEnv.PROJECT_ID = projectId;
   childEnv.POSTHOG_REGION = region;
   childEnv.SNAP_OUT = snapsDir;
@@ -378,6 +404,21 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   if (opts.record) childEnv.SNAP_RECORD = "1";
   // Which program the real-TUI host drives — defaults to integration.
   if (opts.program) childEnv.PROGRAM = opts.program;
+
+  if (projectDiscoveryExpect) {
+    if (Object.keys(projectDiscoveryExpect.flags).length > 0) {
+      childEnv.WIZARD_CI_FLAG_OVERRIDES = mergeFlagOverrides(
+        childEnv.WIZARD_CI_FLAG_OVERRIDES,
+        projectDiscoveryExpect.flags,
+      );
+    }
+    if (projectDiscoveryExpect.profile.notice && !childEnv.E2E_NOTICE) {
+      childEnv.E2E_NOTICE = projectDiscoveryExpect.profile.notice;
+    }
+    if (projectDiscoveryExpect.profile.plan && !childEnv.E2E_PLAN_PICK) {
+      childEnv.E2E_PLAN_PICK = projectDiscoveryExpect.profile.plan;
+    }
+  }
 
   // ── Warehouse wiring: the stub MCP, the answers, the run variation ────
   let stub: McpStub | null = null;
@@ -458,7 +499,7 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   }
 
   const checks: Array<[string, boolean]> = result
-    ? genericChecks(result, opts, expect)
+    ? genericChecks(result, opts, expect, projectDiscoveryExpect)
     : [["harness produced a structured result", false]];
 
   console.log("\n--- assertions ---");
@@ -492,11 +533,22 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
     });
   }
 
+  let projectDiscovery: Check[] = [];
+  if (projectDiscoveryExpect) {
+    projectDiscovery = projectDiscoveryChecks({
+      expect: projectDiscoveryExpect,
+      result,
+      changedFileContentsByPath: changedFiles(appSrc, appDir),
+    });
+  }
+
+  const expectsAbort = Boolean(expect?.expectAbort || projectDiscoveryExpect?.expectations.expectAbort);
   const passed =
-    (!!expect || run.status === 0) &&
+    (!!expect || expectsAbort || run.status === 0) &&
     checks.every(([, ok]) => ok) &&
     checksPassed(warehouse) &&
-    checksPassed(featureFlags);
+    checksPassed(featureFlags) &&
+    checksPassed(projectDiscovery);
 
   if (result) {
     writeFileSync(resultJson, JSON.stringify({ ...result, app, passed }, null, 2));
@@ -525,6 +577,11 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   if (featureFlagsExpect) {
     console.log("");
     for (const c of featureFlags) console.log(formatCheck(c));
+  }
+
+  if (projectDiscoveryExpect) {
+    console.log("");
+    for (const c of projectDiscovery) console.log(formatCheck(c));
   }
 
   console.log(`\n${passed ? "✓ E2E PASS" : "✗ E2E FAIL"} — ${app}\n`);
@@ -578,8 +635,9 @@ function genericChecks(
   },
   opts: E2eOptions,
   expect: WarehouseExpect | null,
+  projectDiscoveryExpect: ProjectDiscoveryExpect | null = null,
 ): Array<[string, boolean]> {
-  if (expect?.expectAbort) return [];
+  if (expect?.expectAbort || projectDiscoveryExpect?.expectations.expectAbort) return [];
 
   // A program may render its own outro screen (audit-outro,
   // source-maps-outro), so match the suffix rather than the exact id.
@@ -603,9 +661,15 @@ function genericChecks(
       ]
     : [["reached the outro", reachedOutro]];
 
+  // Monorepo root runs install PostHog inside the picked subrepo, not root package.json,
+  // so `projectDiscoveryChecks` grades PostHog wiring inside `expectedChangedPrefix`.
+  const depCheck: Array<[string, boolean]> = projectDiscoveryExpect?.expectations.expectedChangedPrefix
+    ? []
+    : [["posthog dependency added or .env written", !!result.hasPosthogDep || !!result.envFile]];
+
   return [
     ["agent run completed", completed],
-    ["posthog dependency added or .env written", !!result.hasPosthogDep || !!result.envFile],
+    ...depCheck,
     ...programChecks,
   ];
 }

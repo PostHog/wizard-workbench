@@ -1,0 +1,34 @@
+{
+  "id": "uv-fastapi-fullstack",
+  "fixture": "production/uv-fastapi-fullstack",
+  "program": "posthog-integration",
+  "summary": "Production Python/React monorepo (fastapi/full-stack-fastapi-template): launch at root, pick frontend/ (TanStack Router file-based), keep edits inside frontend/.",
+  "flags": {
+    "wizard-project-discovery": "one-project"
+  },
+  "launchDir": ".",
+  "profile": {
+    "plan": "frontend",
+    "setup": "first",
+    "healthCheck": "dismiss",
+    "mcp": "skip",
+    "slack": "skip",
+    "ask": "first",
+    "notice": "decline"
+  },
+  "expectations": {
+    "expectedOutcome": "success",
+    "expectAbort": null,
+    "expectedTargetProject": "frontend",
+    "expectedFramework": "tanstack-router",
+    "expectedFrameworkVariant": "file-based",
+    "expectedChangedPrefix": "frontend/",
+    "forbidChangedPrefixes": [
+      "backend/"
+    ],
+    "forbidToolsInTarget": [
+      "Postgres"
+    ],
+    "gateOnDeterministic": "uv-fastapi-fullstack.discovery.json"
+  }
+}

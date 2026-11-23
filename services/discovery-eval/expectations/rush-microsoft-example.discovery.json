@@ -1,0 +1,35 @@
+{
+  "id": "rush-microsoft-example",
+  "fixture": "production/rush-microsoft-example",
+  "kind": "production",
+  "toolFamily": "rush",
+  "notes": "Microsoft Rush example (rush.json). Advisory until rush.json is added to WORKSPACE_MARKERS.",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "workspaceTool": "rush",
+      "runProject": ".",
+      "requiredProjects": [
+        "apps/my-app"
+      ],
+      "projectTraits": {
+        "libraries/my-controls": {
+          "projectRole": "library"
+        }
+      },
+      "planAsks": true,
+      "advisory": [
+        "repoType",
+        "workspaceTool",
+        "planAsks",
+        "trait:libraries/my-controls:projectRole"
+      ],
+      "maxDurationMs": 10000,
+      "requiredPlanOffered": [
+        "apps/my-app"
+      ]
+    }
+  ]
+}
