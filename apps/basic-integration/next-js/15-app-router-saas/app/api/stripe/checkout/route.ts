@@ -3,6 +3,9 @@ import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { loggerProvider, posthogLogger } from '@/instrumentation';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
 
@@ -89,8 +92,24 @@ export async function GET(request: NextRequest) {
       .where(eq(teams.id, userTeam[0].teamId));
 
     await setSession(user[0]);
+    posthogLogger.emit({
+      body: 'Stripe checkout subscription applied',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        route: '/api/stripe/checkout',
+      },
+    });
+    after(() => loggerProvider.forceFlush().catch(() => {}));
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
+    posthogLogger.emit({
+      body: 'Stripe checkout subscription application failed',
+      severityNumber: SeverityNumber.ERROR,
+      attributes: {
+        route: '/api/stripe/checkout',
+      },
+    });
+    after(() => loggerProvider.forceFlush().catch(() => {}));
     console.error('Error handling successful checkout:', error);
     return NextResponse.redirect(new URL('/error', request.url));
   }

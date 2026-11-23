@@ -1,6 +1,9 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { ArrowRight, CreditCard, Database } from 'lucide-react';
 import { Terminal } from './terminal';
+import posthog from 'posthog-js';
 
 export default function HomePage() {
   return (
@@ -22,6 +25,7 @@ export default function HomePage() {
                 <a
                   href="https://vercel.com/templates/next.js/next-js-saas-starter"
                   target="_blank"
+                  onClick={() => posthog.capture('deployment_template_opened')}
                 >
                   <Button
                     size="lg"
@@ -111,7 +115,11 @@ export default function HomePage() {
               </p>
             </div>
             <div className="mt-8 lg:mt-0 flex justify-center lg:justify-end">
-              <a href="https://github.com/nextjs/saas-starter" target="_blank">
+              <a
+                href="https://github.com/nextjs/saas-starter"
+                target="_blank"
+                onClick={() => posthog.capture('source_repository_opened')}
+              >
                 <Button
                   size="lg"
                   variant="outline"
