@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import toast from '../../../services/toast';
 import api from '../../../services/api';
 import NavigationService from '../../../services/navigation';
+import { posthog, posthogLogger } from '../../../config/posthog';
 import { DEMO_TOKEN, isDemoMode, demoPermissions } from '../../../services/demoData';
 
 import {
@@ -12,6 +13,36 @@ import {
 } from './actions';
 
 import { selectTeam } from '../teams/actions';
+
+function setUserProperties(email) {
+  if (!posthog) {
+    return;
+  }
+
+  try {
+    posthog.setPersonProperties({ email });
+  } catch {}
+}
+
+function captureEvent(event, properties) {
+  if (!posthog) {
+    return;
+  }
+
+  try {
+    posthog.capture(event, properties);
+  } catch {}
+}
+
+function resetPostHog() {
+  if (!posthog) {
+    return;
+  }
+
+  try {
+    posthog.reset();
+  } catch {}
+}
 
 export function* init() {
   const token = yield call([AsyncStorage, 'getItem'], '@Omni:token');
@@ -40,7 +71,12 @@ export function* signIn({ payload }) {
     // Demo mode - login with demo@test.com / demo
     if (email === 'demo@test.com' && password === 'demo') {
       yield call([AsyncStorage, 'setItem'], '@Omni:token', DEMO_TOKEN);
+      setUserProperties(email);
       yield put(signInSuccess(DEMO_TOKEN));
+      captureEvent('user_signed_in', { authentication_method: 'demo' });
+      posthogLogger.info('authentication completed', {
+        authentication_method: 'demo',
+      });
       // Grant all permissions immediately in demo mode
       yield put(getPermissionsSuccess(demoPermissions.roles, demoPermissions.permissions));
       toast.showSuccess('Welcome to demo mode!');
@@ -52,7 +88,12 @@ export function* signIn({ payload }) {
 
     yield call([AsyncStorage, 'setItem'], '@Omni:token', response.data.token);
 
+    setUserProperties(email);
     yield put(signInSuccess(response.data.token));
+    captureEvent('user_signed_in', { authentication_method: 'password' });
+    posthogLogger.info('authentication completed', {
+      authentication_method: 'password',
+    });
     NavigationService.navigate('Main');
   } catch (err) {
     toast.showError('Invalid credentials');
@@ -60,6 +101,10 @@ export function* signIn({ payload }) {
 }
 
 export function* signOut() {
+  captureEvent('user_signed_out');
+  posthogLogger.info('session ended', { logout_method: 'user_initiated' });
+  resetPostHog();
+
   yield call([AsyncStorage, 'clear']);
   NavigationService.reset('SignIn');
 }
