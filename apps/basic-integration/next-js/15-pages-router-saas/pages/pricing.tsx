@@ -5,6 +5,7 @@ import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/router';
+import posthog from 'posthog-js';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
 
@@ -89,6 +90,11 @@ function PricingCard({
         if (result.redirectTo) {
           router.push(result.redirectTo);
         } else if (result.url) {
+          posthog.capture('checkout_started', {
+            plan_name: name,
+            billing_interval: interval,
+            trial_days: trialDays
+          });
           window.location.href = result.url;
         }
       } catch (err) {

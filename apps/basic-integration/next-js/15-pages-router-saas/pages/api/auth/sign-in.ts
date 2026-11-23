@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema';
 import { comparePasswords, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { posthogIntegrationLogger, SeverityNumber } from '@/instrumentation';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -95,16 +96,36 @@ export default async function handler(
       logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
     ]);
 
+    const posthogUser = {
+      id: foundUser.id,
+      email: foundUser.email,
+      name: foundUser.name,
+      role: foundUser.role
+    };
+
+    posthogIntegrationLogger?.emit({
+      body: 'Authentication completed',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        operation: 'sign_in',
+        checkout_requested: redirect === 'checkout'
+      }
+    });
+
     if (redirect === 'checkout' && foundTeam) {
       const checkoutResult = await createCheckoutSession({
         team: foundTeam,
         priceId,
         userId: foundUser.id
       });
-      return res.status(200).json(checkoutResult);
+      return res.status(200).json({ ...checkoutResult, user: posthogUser });
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      user: posthogUser
+    });
   } catch (error) {
     console.error('Sign in error:', error);
     return res.status(500).json({ error: 'Failed to sign in. Please try again.' });

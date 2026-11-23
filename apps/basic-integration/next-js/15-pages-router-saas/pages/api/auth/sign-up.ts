@@ -16,6 +16,7 @@ import {
 } from '@/lib/db/schema';
 import { hashPassword, setSession } from '@/lib/auth/session';
 import { createCheckoutSession } from '@/lib/payments/stripe';
+import { posthogIntegrationLogger, SeverityNumber } from '@/instrumentation';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -166,16 +167,37 @@ export default async function handler(
       setSession(createdUser, res)
     ]);
 
+    const posthogUser = {
+      id: createdUser.id,
+      email: createdUser.email,
+      name: createdUser.name,
+      role: createdUser.role
+    };
+
+    posthogIntegrationLogger?.emit({
+      body: 'Account created',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        operation: 'sign_up',
+        signup_path: inviteId ? 'invitation' : 'new_team',
+        checkout_requested: redirect === 'checkout'
+      }
+    });
+
     if (redirect === 'checkout' && createdTeam) {
       const checkoutResult = await createCheckoutSession({
         team: createdTeam,
         priceId,
         userId: createdUser.id
       });
-      return res.status(200).json(checkoutResult);
+      return res.status(200).json({ ...checkoutResult, user: posthogUser });
     }
 
-    return res.status(200).json({ success: true, redirectTo: '/dashboard' });
+    return res.status(200).json({
+      success: true,
+      redirectTo: '/dashboard',
+      user: posthogUser
+    });
   } catch (error) {
     console.error('Sign up error:', error);
     return res.status(500).json({ error: 'Failed to sign up. Please try again.' });

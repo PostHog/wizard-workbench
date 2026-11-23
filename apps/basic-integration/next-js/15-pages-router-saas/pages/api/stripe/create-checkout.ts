@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { posthogIntegrationLogger, SeverityNumber } from '@/instrumentation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,6 +26,15 @@ export default async function handler(
     }
 
     const result = await createCheckoutSession({ team, priceId, userId: user.id });
+
+    posthogIntegrationLogger?.emit({
+      body: 'Checkout session created',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        operation: 'checkout_session_create'
+      }
+    });
+
     return res.status(200).json(result);
   } catch (error) {
     console.error('Checkout error:', error);
