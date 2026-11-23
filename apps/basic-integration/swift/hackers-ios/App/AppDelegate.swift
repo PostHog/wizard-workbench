@@ -6,13 +6,18 @@
 //
 
 import Data
+import PostHog
 import Shared
 import UIKit
 
 class AppDelegate: NSObject, UIApplicationDelegate {
+    private var logoutObserver: NSObjectProtocol?
+
     func application(_: UIApplication,
                      didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]?) -> Bool
     {
+        setupPostHog()
+
         // Configure a modest shared URL cache to limit on-disk growth from image/HTTP caching
         // This affects system components like AsyncImage that use URLSession.shared
         let memoryCapacity = 64 * 1024 * 1024 // 64 MB
@@ -35,5 +40,43 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         UserDefaults.standard.registerDefaults()
 
         return true
+    }
+
+    private func setupPostHog() {
+        guard let projectToken = Bundle.main.object(forInfoDictionaryKey: "POSTHOG_PROJECT_TOKEN") as? String,
+              !projectToken.isEmpty
+        else {
+            #if DEBUG
+                assertionFailure("POSTHOG_PROJECT_TOKEN variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_PROJECT_TOKEN is configured")
+            #endif
+            return
+        }
+        guard let host = Bundle.main.object(forInfoDictionaryKey: "POSTHOG_HOST") as? String,
+              !host.isEmpty
+        else {
+            #if DEBUG
+                assertionFailure("POSTHOG_HOST variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once POSTHOG_HOST is configured")
+            #endif
+            return
+        }
+
+        let config = PostHogConfig(projectToken: projectToken, host: host)
+        config.errorTrackingConfig.autoCapture = true
+        config.logs.serviceName = "hackers-ios"
+        PostHogSDK.shared.setup(config)
+
+        logoutObserver = NotificationCenter.default.addObserver(
+            forName: .userDidLogout,
+            object: nil,
+            queue: .main
+        ) { _ in
+            PostHogSDK.shared.reset()
+        }
+    }
+
+    deinit {
+        if let logoutObserver {
+            NotificationCenter.default.removeObserver(logoutObserver)
+        }
     }
 }

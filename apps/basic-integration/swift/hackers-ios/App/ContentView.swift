@@ -10,11 +10,12 @@ import Comments
 import DesignSystem
 import Domain
 import Feed
+import Foundation
+import PostHog
 import Settings
 import Shared
 import SwiftUI
 import UIKit
-import Foundation
 
 @MainActor
 struct MainContentView: View {
@@ -80,10 +81,10 @@ struct MainContentView: View {
                                 isAuthenticated: sessionService.authenticationState == .authenticated,
                                 currentUsername: sessionService.username,
                                 onLogin: { username, password in
-                                    _ = try await sessionService.authenticate(username: username, password: password)
+                                    try await authenticate(username: username, password: password)
                                 },
                                 onLogout: {
-                                    sessionService.unauthenticate()
+                                    logout()
                                 },
                                 onShowOnboarding: {
                                     showOnboarding = true
@@ -102,10 +103,10 @@ struct MainContentView: View {
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
+                    try await authenticate(username: username, password: password)
                 },
                 onLogout: {
-                    sessionService.unauthenticate()
+                    logout()
                 },
                 textSize: settingsViewModel.textSize
             )
@@ -118,10 +119,10 @@ struct MainContentView: View {
                 isAuthenticated: sessionService.authenticationState == .authenticated,
                 currentUsername: sessionService.username,
                 onLogin: { username, password in
-                    _ = try await sessionService.authenticate(username: username, password: password)
+                    try await authenticate(username: username, password: password)
                 },
                 onLogout: {
-                    sessionService.unauthenticate()
+                    logout()
                 },
                 onShowOnboarding: {
                     showOnboarding = true
@@ -133,6 +134,11 @@ struct MainContentView: View {
         .sheet(isPresented: $showOnboarding) {
             onboardingCoordinator
                 .makeOnboardingView {
+                    PostHogSDK.shared.capture("onboarding_dismissed")
+                    PostHogSDK.shared.logger?.info(
+                        "onboarding_completed",
+                        attributes: ["outcome": "dismissed"]
+                    )
                     showOnboarding = false
                 }
                 .textScaling(for: settingsViewModel.textSize)
@@ -143,6 +149,33 @@ struct MainContentView: View {
                 showOnboarding = true
             }
         }
+    }
+
+    private func authenticate(username: String, password: String) async throws {
+        _ = try await sessionService.authenticate(username: username, password: password)
+
+        guard let accountName = sessionService.username, !accountName.isEmpty else {
+            return
+        }
+
+        // Hacker News exposes the account resource name as its only canonical user identifier.
+        let accountResource = "hackernews-account/\(accountName)"
+        PostHogSDK.shared.identify(accountResource, userProperties: ["username": accountName])
+        PostHogSDK.shared.capture("user_logged_in")
+        PostHogSDK.shared.logger?.info(
+            "authentication_completed",
+            attributes: ["outcome": "authenticated"]
+        )
+    }
+
+    private func logout() {
+        PostHogSDK.shared.capture("user_logged_out")
+        PostHogSDK.shared.logger?.info(
+            "authentication_completed",
+            attributes: ["outcome": "logged_out"]
+        )
+        PostHogSDK.shared.reset()
+        sessionService.unauthenticate()
     }
 
     private var isPresentingModal: Bool {
