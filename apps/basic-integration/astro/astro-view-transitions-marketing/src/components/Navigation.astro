@@ -12,10 +12,48 @@ const currentPath = Astro.url.pathname;
       <li><a href="/pricing" class:list={["nav-link", { active: currentPath === '/pricing' }]}>Pricing</a></li>
       <li><a href="/about" class:list={["nav-link", { active: currentPath === '/about' }]}>About</a></li>
       <li><a href="/docs" class:list={["nav-link", { active: currentPath === '/docs' }]}>Docs</a></li>
-      <li><a href="#" class="nav-cta">Get Started</a></li>
+      <li>
+        <a
+          href="#"
+          class="nav-cta"
+          data-cta-type="get_started"
+          data-cta-placement="navigation"
+        >Get Started</a>
+      </li>
     </ul>
   </div>
 </nav>
+
+<script>
+  type PostHogWindow = Window & {
+    posthog?: {
+      capture: (event: string, properties: Record<string, string>) => void;
+      logger?: {
+        info: (message: string, attributes: Record<string, string>) => void;
+      };
+    };
+  };
+
+  document.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+
+    const cta = event.target.closest('[data-cta-type][data-cta-placement]');
+    if (!(cta instanceof HTMLElement)) return;
+
+    const { ctaType, ctaPlacement, plan } = cta.dataset;
+    if (!ctaType || !ctaPlacement) return;
+
+    const properties = {
+      cta_type: ctaType,
+      placement: ctaPlacement,
+      ...(plan ? { plan } : {}),
+    };
+    const posthog = (window as PostHogWindow).posthog;
+
+    posthog?.capture('marketing_cta_clicked', properties);
+    posthog?.logger?.info('marketing CTA activated', properties);
+  });
+</script>
 
 <style>
   .nav-link.active {
