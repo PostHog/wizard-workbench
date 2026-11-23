@@ -14,6 +14,19 @@ settings = get_settings()
 serializer = URLSafeSerializer(settings.secret_key)
 
 
+def identify_user(user: User, include_person_properties: bool = False) -> None:
+    """Bind the authenticated user to the active PostHog request context."""
+    from app.main import posthog_client
+
+    if not posthog_client:
+        return
+
+    distinct_id = str(user.id)
+    posthog_client.identify_context(distinct_id)
+    if include_person_properties:
+        posthog_client.set(distinct_id=distinct_id, properties={"email": user.email})
+
+
 def get_session_user_id(session_token: Annotated[Optional[str], Cookie()] = None) -> Optional[int]:
     """Extract user ID from session cookie."""
     if not session_token:
@@ -32,7 +45,11 @@ def get_current_user(
     """Get the current authenticated user, or None if not authenticated."""
     if user_id is None:
         return None
-    return User.get_by_id(db, user_id)
+
+    user = User.get_by_id(db, user_id)
+    if user:
+        identify_user(user)
+    return user
 
 
 def require_auth(
