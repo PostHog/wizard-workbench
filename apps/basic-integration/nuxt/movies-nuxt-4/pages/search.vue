@@ -13,6 +13,7 @@ const count = ref<undefined | number>()
 
 const items = ref<Media[]>([])
 const currentSearch = ref(input.value)
+const { $posthog } = useNuxtApp()
 
 function search() {
   if (currentSearch.value === input.value)
@@ -22,6 +23,9 @@ function search() {
   count.value = undefined
   items.value = []
   router.replace({ query: { s: input.value } })
+  $posthog?.capture('search_submitted', {
+    query_length: currentSearch.value.length,
+  })
 }
 
 async function fetch(page: number) {
