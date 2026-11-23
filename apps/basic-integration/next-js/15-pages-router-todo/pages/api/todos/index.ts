@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTodos, createTodo } from '@/lib/data';
+import { posthogLogsLogger } from '@/instrumentation';
+import { SeverityNumber } from '@opentelemetry/api-logs';
 import { z } from 'zod';
 
 const todoSchema = z.object({
@@ -29,6 +31,15 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         title: validatedData.title,
         description: validatedData.description,
         completed: validatedData.completed,
+      });
+
+      posthogLogsLogger?.emit({
+        body: 'Todo created through API',
+        severityNumber: SeverityNumber.INFO,
+        attributes: {
+          operation: 'create',
+          completed: newTodo.completed,
+        },
       });
 
       return res.status(201).json(newTodo);
