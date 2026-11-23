@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { notFound } from '@tanstack/react-router'
+import { logInvoiceCreated, logInvoiceMarkedPaid } from './posthog-logger'
 
 export type Invoice = {
   id: number
@@ -84,6 +85,7 @@ export function createInvoice(data: {
     createdAt: new Date().toISOString(),
   }
   invoices.set(id, invoice)
+  logInvoiceCreated(invoice.id, invoice.amount)
   return invoice
 }
 
@@ -96,6 +98,9 @@ export function updateInvoice(
 
   const updated = { ...invoice, ...updates }
   invoices.set(id, updated)
+  if (invoice.status !== 'paid' && updated.status === 'paid') {
+    logInvoiceMarkedPaid(updated.id, updated.amount)
+  }
   return updated
 }
 

@@ -7,11 +7,15 @@ import {
   createRootRoute,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from '@posthog/react'
 import * as React from 'react'
 import { DefaultCatchBoundary } from '~/components/DefaultCatchBoundary'
 import { NotFound } from '~/components/NotFound'
 import appCss from '~/styles/app.css?url'
 import { seo } from '~/utils/seo'
+
+const posthogToken = import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN
+const posthogHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST
 
 export const Route = createRootRoute({
   head: () => ({
@@ -64,11 +68,40 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <PostHogRoot>{children}</PostHogRoot>
         <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
       </body>
     </html>
+  )
+}
+
+function PostHogRoot({ children }: { children: React.ReactNode }) {
+  if (!posthogToken || !posthogHost) {
+    if (import.meta.env.DEV && typeof window !== 'undefined') {
+      const missingVariable = posthogToken
+        ? 'VITE_PUBLIC_POSTHOG_HOST'
+        : 'VITE_PUBLIC_POSTHOG_PROJECT_TOKEN'
+
+      throw new Error(
+        `${missingVariable} variable required by PostHog is missing or un-configured, this causes events to be silently missed. This error stops appearing once ${missingVariable} is configured`,
+      )
+    }
+
+    return <>{children}</>
+  }
+
+  return (
+    <PostHogProvider
+      apiKey={posthogToken}
+      options={{
+        api_host: posthogHost,
+        capture_exceptions: true,
+        debug: import.meta.env.DEV,
+      }}
+    >
+      {children}
+    </PostHogProvider>
   )
 }
 
