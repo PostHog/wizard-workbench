@@ -19,3 +19,19 @@ const currentPath = Astro.url.pathname;
     </main>
   </div>
 </Layout>
+
+<script is:inline>
+  document.addEventListener('copy', () => {
+    const selection = window.getSelection();
+    const anchorNode = selection?.anchorNode;
+    const selectedElement = anchorNode instanceof Element
+      ? anchorNode
+      : anchorNode?.parentElement;
+
+    if (selectedElement?.closest('pre code') || selectedElement?.querySelector('pre code')) {
+      window.posthog?.capture('code_sample_copied', {
+        documentation_path: window.location.pathname,
+      });
+    }
+  });
+</script>
