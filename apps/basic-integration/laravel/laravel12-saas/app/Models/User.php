@@ -65,4 +65,27 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     {
         return str_ends_with($this->email, '@mvpable.com');
     }
+
+    /**
+     * Stable PostHog distinct ID. The primary key remains stable if a user
+     * changes their email address or name.
+     */
+    public function getPostHogDistinctId(): string
+    {
+        return (string) $this->getKey();
+    }
+
+    /**
+     * PostHog person properties for this user.
+     *
+     * @return array<string, mixed>
+     */
+    public function getPostHogProperties(): array
+    {
+        return [
+            'email' => $this->email,
+            'name' => $this->name,
+            'email_verified' => $this->hasVerifiedEmail(),
+        ];
+    }
 }
