@@ -7,6 +7,13 @@
     "env": {},
     "flushWaitMs": 15000
   },
+  "knownNoise": [
+    {
+      "match": "Minified React error #441",
+      "lib": "web",
+      "reason": "Next.js re-raises a server render error in the browser in redacted form (React #441); the server event is complete (standard.md PRE-1, tolerated duplicate)"
+    }
+  ],
   "scenarios": [
     {
       "id": "client-render-segment",
