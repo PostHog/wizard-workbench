@@ -23,6 +23,7 @@ export function Reports() {
             {option.toUpperCase()}
           </Link>
         ))}
+        <Link to="?range=ly" style={{ marginRight: "1rem" }}>Last year</Link>
       </nav>
       <StockTurnover range={range} />
     </main>

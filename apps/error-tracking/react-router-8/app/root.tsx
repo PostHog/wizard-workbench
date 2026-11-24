@@ -28,6 +28,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <NavLink to="/products">Products</NavLink>
           <NavLink to="/reports">Reports</NavLink>
           <NavLink to="/suppliers">Suppliers</NavLink>
+          <NavLink to="/deliveries">Deliveries</NavLink>
         </header>
         {children}
         <ScrollRestoration />

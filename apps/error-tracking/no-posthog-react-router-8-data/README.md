@@ -13,5 +13,6 @@ npm run build && npm run preview    # http://localhost:4173
 
 - `src/router.tsx` — the route table, loaders and actions
 - `src/routes/` — dashboard (warehouse sync), products (CSV export, reorders),
-  product pages with stock adjustments, reports and suppliers
+  product pages with stock adjustments, reports, suppliers, inbound deliveries
+  and the warehouse sync status
 - `src/lib/` — inventory data and business rules

@@ -28,6 +28,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </li>
         ))}
       </ul>
+      <p><Link to="/warehouse-sync">Warehouse sync status</Link></p>
       <h2>Recent orders</h2>
       <ul>
         <li><Link to="/orders/ORD-7730">ORD-7730</Link> — Riverside Joinery</li>

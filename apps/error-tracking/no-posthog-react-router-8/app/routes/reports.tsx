@@ -28,6 +28,7 @@ export default function Reports() {
             {option.toUpperCase()}
           </Link>
         ))}
+        <Link to="?range=ly" style={{ marginRight: "1rem" }}>Last year</Link>
         <Link to="/reports/forecast?region=eu-1">Demand forecast</Link>
       </nav>
       <StockTurnover range={range} />

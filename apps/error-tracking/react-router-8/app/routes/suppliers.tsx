@@ -39,3 +39,12 @@ export default function Suppliers() {
     </main>
   );
 }
+
+export function ErrorBoundary() {
+  return (
+    <main>
+      <h1>Suppliers</h1>
+      <p className="error">The supplier map could not be shown.</p>
+    </main>
+  );
+}

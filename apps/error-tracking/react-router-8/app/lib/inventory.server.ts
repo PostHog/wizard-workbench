@@ -29,6 +29,15 @@ export class SyncBatchError extends Error {
 export class ForecastModelError extends Error {
   name = "ForecastModelError";
 }
+export class ReservationConflictError extends Error {
+  name = "ReservationConflictError";
+}
+export class SupplierTermsError extends Error {
+  name = "SupplierTermsError";
+}
+export class TenantSuspendedError extends Error {
+  name = "TenantSuspendedError";
+}
 
 const products: Product[] = [
   { sku: "SKU-1001", name: "Oak shelf bracket", onHand: 240, reorderPoint: 60, supplier: "Harbor Hardware" },
@@ -37,12 +46,25 @@ const products: Product[] = [
   { sku: "SKU-3003", name: "Walnut veneer sheet", onHand: 12, reorderPoint: 20, supplier: "Northwind Timber" },
   { sku: "SKU-4471", name: "Pine dowel 8mm", onHand: 0, reorderPoint: 150, supplier: "Northwind Timber" },
   { sku: "SKU-4480", name: "Birch plywood 12mm", onHand: 0, reorderPoint: 25, supplier: "Northwind Timber" },
+  { sku: "SKU-4490", name: "Maple edge banding", onHand: 300, reorderPoint: 80, supplier: "Cedar & Co" },
   { sku: "SKU-5150", name: "Cabinet handle set", onHand: 64, reorderPoint: 30, supplier: "Lumen Fittings" },
 ];
 
 const ledgerEntries: Record<string, number[]> = {
   "SKU-4471": [120, -30, -95],
-  "SKU-4480": [40, -12, -41],
+  "SKU-4480": [40, -12, -28],
+};
+
+const reservations: Record<string, number> = {
+  "SKU-4480": 6,
+  "SKU-1001": 20,
+};
+
+const supplierTermsEnd: Record<string, string> = {
+  "Harbor Hardware": "2031-06-30",
+  "Lumen Fittings": "2031-03-31",
+  "Northwind Timber": "2031-01-31",
+  "Cedar & Co": "2026-09-30",
 };
 
 const openCycleCounts = new Set(["SKU-2202"]);
@@ -54,7 +76,10 @@ const labelTemplates: Record<string, string[]> = {
 const tenants: Tenant[] = [
   { slug: "riverside", name: "Riverside Joinery", region: "eu-1" },
   { slug: "northgate", name: "Northgate Cabinets", region: "us-1" },
+  { slug: "eastfield", name: "Eastfield Interiors", region: "eu-1" },
 ];
+
+const suspendedTenants = new Set(["eastfield"]);
 
 const codeFor = (prefix: string, value: string) => `${prefix}${value.replace(/\D/g, "").slice(-2)}`;
 
@@ -75,6 +100,26 @@ export function stockLedger(product: Product): number[] {
     );
   }
   return entries;
+}
+
+export function openReservations(product: Product): number {
+  const reserved = reservations[product.sku] ?? 0;
+  if (reserved > product.onHand) {
+    throw new ReservationConflictError(
+      `Open reservations exceed stock for ${product.sku}: ${reserved} reserved, ${product.onHand} on hand (${codeFor("RV", product.sku)})`,
+    );
+  }
+  return reserved;
+}
+
+export function supplierTerms(product: Product, today = new Date()): string {
+  const end = supplierTermsEnd[product.supplier];
+  if (!end || new Date(end) < today) {
+    throw new SupplierTermsError(
+      `Supplier terms for ${product.supplier} expired on ${end} (${codeFor("ST", product.sku)})`,
+    );
+  }
+  return `Net 30 until ${end}`;
 }
 
 export function recordAdjustment(product: Product, quantity: number, reason: string): void {
@@ -111,6 +156,34 @@ export function resolveTenant(slug: string): Tenant {
     throw new TenantLookupError(`Tenant lookup failed for "${slug}" (TN09)`);
   }
   return tenant;
+}
+
+export function assertTenantActive(tenant: Tenant): Tenant {
+  if (suspendedTenants.has(tenant.slug)) {
+    throw new TenantSuspendedError(`Store front ${tenant.slug} is suspended pending a billing review (TS44)`);
+  }
+  return tenant;
+}
+
+export type SyncStatus = { lastRun: string; pending: number };
+
+export async function warehouseSyncStatus(): Promise<SyncStatus> {
+  // The warehouse system answers slowly while it reconciles.
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+  return { lastRun: "2026-11-20 06:00", pending: 14 };
+}
+
+export type Delivery = { carrier: string; eta: string };
+
+export function carrierFeedAvailable(): boolean {
+  return false;
+}
+
+export function inboundDeliveries(): Delivery[] {
+  return [
+    { carrier: "Nordic Freight", eta: "Tue" },
+    { carrier: "Harbor Logistics", eta: "Thu" },
+  ];
 }
 
 export async function syncInventoryBatch(batch: string): Promise<void> {

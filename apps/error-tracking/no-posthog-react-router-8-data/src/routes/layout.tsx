@@ -8,6 +8,7 @@ function Header() {
       <NavLink to="/products">Products</NavLink>
       <NavLink to="/reports">Reports</NavLink>
       <NavLink to="/suppliers">Suppliers</NavLink>
+      <NavLink to="/deliveries">Deliveries</NavLink>
     </header>
   );
 }

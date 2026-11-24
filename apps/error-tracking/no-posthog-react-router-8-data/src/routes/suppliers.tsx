@@ -34,3 +34,12 @@ export function Suppliers() {
     </main>
   );
 }
+
+export function SuppliersErrorBoundary() {
+  return (
+    <main>
+      <h1>Suppliers</h1>
+      <p className="error">The supplier map could not be shown.</p>
+    </main>
+  );
+}

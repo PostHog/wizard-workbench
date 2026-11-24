@@ -1,7 +1,13 @@
-import { data, Form, redirect, useSearchParams } from "react-router";
+import { data, Form, isRouteErrorResponse, Link, redirect, useSearchParams } from "react-router";
 
 import type { Route } from "./+types/product";
-import { getProduct, recordAdjustment, stockLedger } from "../lib/inventory.server";
+import {
+  getProduct,
+  openReservations,
+  recordAdjustment,
+  stockLedger,
+  supplierTerms,
+} from "../lib/inventory.server";
 
 export function meta({ params }: Route.MetaArgs) {
   return [{ title: `${params.sku} · Shelfwise` }];
@@ -12,7 +18,12 @@ export function loader({ params }: Route.LoaderArgs) {
   if (!product) {
     throw data("Product not found", { status: 404 });
   }
-  return { product, ledger: stockLedger(product) };
+  return {
+    product,
+    ledger: stockLedger(product),
+    reserved: openReservations(product),
+    terms: supplierTerms(product),
+  };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -31,14 +42,14 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 export default function ProductPage({ loaderData }: Route.ComponentProps) {
-  const { product, ledger } = loaderData;
+  const { product, ledger, reserved, terms } = loaderData;
   const [searchParams] = useSearchParams();
   const adjusted = searchParams.get("adjusted");
 
   return (
     <main>
       <h1>{product.name}</h1>
-      <p>{product.sku} · {product.onHand} on hand · supplier {product.supplier}</p>
+      <p>{product.sku} · {product.onHand} on hand · {reserved} reserved · supplier {product.supplier} ({terms})</p>
       {adjusted && <p>Stock updated: +{adjusted}</p>}
       <h2>Ledger</h2>
       <ul>
@@ -61,6 +72,19 @@ export default function ProductPage({ loaderData }: Route.ComponentProps) {
         </label>{" "}
         <button type="submit">Save adjustment</button>
       </Form>
+    </main>
+  );
+}
+
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const response = isRouteErrorResponse(error) ? error : null;
+  const title = !response ? "This product could not be loaded" : response.status === 404 ? "Product not found" : "Request rejected";
+  const details = response && typeof response.data === "string" ? response.data : null;
+  return (
+    <main>
+      <h1>{title}</h1>
+      {details && <p className="error">{details}</p>}
+      <p><Link to="/products">Back to products</Link></p>
     </main>
   );
 }

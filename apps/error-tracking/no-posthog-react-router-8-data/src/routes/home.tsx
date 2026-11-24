@@ -29,6 +29,7 @@ export function Home() {
           {syncing ? "Sync started" : "Sync warehouse"}
         </button>
       </p>
+      <p><Link to="/warehouse-sync">Warehouse sync status</Link></p>
       <h2>Below reorder point</h2>
       <ul>
         {lowStock.map((product) => (

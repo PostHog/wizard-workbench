@@ -1,8 +1,8 @@
 import type { Route } from "./+types/store";
-import { resolveTenant } from "../lib/inventory.server";
+import { assertTenantActive, resolveTenant } from "../lib/inventory.server";
 
 export function loader({ params }: Route.LoaderArgs) {
-  return { tenant: resolveTenant(params.tenant) };
+  return { tenant: assertTenantActive(resolveTenant(params.tenant)) };
 }
 
 export default function Store({ loaderData }: Route.ComponentProps) {

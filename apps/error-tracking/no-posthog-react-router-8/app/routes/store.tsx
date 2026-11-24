@@ -1,13 +1,13 @@
 import { createContext } from "react-router";
 
 import type { Route } from "./+types/store";
-import { resolveTenant, type Tenant } from "../lib/inventory.server";
+import { assertTenantActive, resolveTenant, type Tenant } from "../lib/inventory.server";
 
 const tenantContext = createContext<Tenant>();
 
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ params, context }, next) => {
-    context.set(tenantContext, resolveTenant(params.tenant));
+    context.set(tenantContext, assertTenantActive(resolveTenant(params.tenant)));
     return next();
   },
 ];

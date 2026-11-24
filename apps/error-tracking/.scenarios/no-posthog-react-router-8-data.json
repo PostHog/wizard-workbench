@@ -16,7 +16,30 @@
         "build"
       ]
     },
+    "checks": [
+      {
+        "name": "build-without-env",
+        "argv": [
+          "npm",
+          "run",
+          "build"
+        ],
+        "withoutEnvFiles": true
+      },
+      {
+        "name": "no-public-maps",
+        "assertAbsent": [
+          "dist/**/*.map"
+        ]
+      }
+    ],
     "start": {
+      "script": "preview",
+      "scriptArgs": [
+        "--port",
+        "{port}",
+        "--strictPort"
+      ],
       "argv": [
         "node",
         "node_modules/vite/bin/vite.js",
@@ -33,16 +56,23 @@
     "env": {},
     "flushWaitMs": 8000
   },
+  "knownNoise": [
+    {
+      "match": "AbortError",
+      "lib": "web",
+      "reason": "posthog-js exception autocapture reports fetch AbortError rejections from aborted requests (standard.md Known gaps; an SDK filter was declined in posthog-js #3922)"
+    }
+  ],
   "scenarios": [
     {
       "id": "client-render-route",
-      "surface": "Render error caught by the layout route's ErrorBoundary (RouterProvider)",
+      "surface": "Render error caught by the suppliers route's own ErrorBoundary, not the layout's (RouterProvider)",
       "requirement": "COV-2",
       "trigger": {
         "kind": "browser",
         "page": "/suppliers?view=map",
         "waitMs": 2500,
-        "expectText": "Something went wrong"
+        "expectText": "The supplier map could not be shown"
       },
       "throws": {
         "match": "MP14",
@@ -61,7 +91,7 @@
     },
     {
       "id": "render-on-navigation",
-      "surface": "Render error after a client navigation (reports range)",
+      "surface": "Render error after a client navigation: the reports page links a range it cannot show",
       "requirement": "COV-2",
       "trigger": {
         "kind": "browser",
@@ -71,13 +101,7 @@
             "wait": 1500
           },
           {
-            "click": "a:has-text('Q1')"
-          },
-          {
-            "wait": 500
-          },
-          {
-            "evaluate": "history.pushState({}, '', '/reports?range=q5'); dispatchEvent(new PopStateEvent('popstate'))"
+            "click": "a:has-text('Last year')"
           },
           {
             "wait": 1500
@@ -102,7 +126,7 @@
     },
     {
       "id": "loader-navigation",
-      "surface": "Loader throws on a client navigation",
+      "surface": "Loader throws on a client navigation; the product route's ErrorBoundary catches it",
       "requirement": "COV-2",
       "trigger": {
         "kind": "browser",
@@ -118,7 +142,7 @@
             "wait": 1500
           }
         ],
-        "expectText": "Something went wrong"
+        "expectText": "This product could not be loaded"
       },
       "throws": {
         "match": "LB71",
@@ -137,16 +161,16 @@
     },
     {
       "id": "loader-initial",
-      "surface": "Loader throws on the initial load of the page",
+      "surface": "Loader throws on the initial load of the page; the product route's ErrorBoundary catches it",
       "requirement": "COV-2",
       "trigger": {
         "kind": "browser",
         "page": "/products/SKU-4480",
         "waitMs": 2500,
-        "expectText": "Something went wrong"
+        "expectText": "This product could not be loaded"
       },
       "throws": {
-        "match": "LB80",
+        "match": "RV80",
         "file": "src/lib/inventory.ts"
       },
       "expect": {
@@ -187,7 +211,7 @@
             "wait": 1500
           }
         ],
-        "expectText": "Something went wrong"
+        "expectText": "This product could not be loaded"
       },
       "throws": {
         "match": "RC02",
@@ -293,7 +317,7 @@
             "wait": 1500
           }
         ],
-        "expectPageError": "EX77"
+        "expectText": "Sync started"
       },
       "throws": {
         "match": "EX77",
@@ -313,7 +337,7 @@
     },
     {
       "id": "not-found-loader",
-      "surface": "Loader throws data(\u2026, { status: 404 })",
+      "surface": "Loader throws data(…, { status: 404 }); the product route's ErrorBoundary shows it",
       "requirement": "PRE-2",
       "trigger": {
         "kind": "browser",
@@ -348,7 +372,7 @@
     },
     {
       "id": "action-validation",
-      "surface": "Action throws data(\u2026, { status: 400 }) for invalid input",
+      "surface": "Action throws data(…, { status: 400 }) for invalid input",
       "requirement": "PRE-2",
       "trigger": {
         "kind": "browser",
@@ -407,6 +431,67 @@
       },
       "throws": {
         "urlMatch": "/products/SKU-1002"
+      },
+      "expect": {
+        "count": 0
+      }
+    },
+    {
+      "id": "thrown-503",
+      "surface": "Loader throws data(…, { status: 503 }) on a client navigation: a response the app chose",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "header a:has-text('Deliveries')"
+          },
+          {
+            "wait": 2000
+          }
+        ],
+        "expectText": "Carrier tracking is temporarily unavailable"
+      },
+      "throws": {
+        "match": "Carrier tracking",
+        "urlMatch": "/deliveries"
+      },
+      "expect": {
+        "count": 0
+      }
+    },
+    {
+      "id": "aborted-navigation",
+      "surface": "Visitor navigates away while a slow loader runs: React Router aborts the loader",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "a:has-text('Warehouse sync status')"
+          },
+          {
+            "wait": 400
+          },
+          {
+            "click": "header a:has-text('Products')"
+          },
+          {
+            "wait": 4500
+          }
+        ],
+        "expectText": "Oak shelf bracket"
+      },
+      "throws": {
+        "urlMatch": "/warehouse-sync"
       },
       "expect": {
         "count": 0

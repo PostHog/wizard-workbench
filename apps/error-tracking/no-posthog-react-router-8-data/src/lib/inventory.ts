@@ -19,6 +19,9 @@ export class ReorderRejectedError extends Error {
 export class SyncBatchError extends Error {
   name = "SyncBatchError";
 }
+export class ReservationConflictError extends Error {
+  name = "ReservationConflictError";
+}
 
 const products: Product[] = [
   { sku: "SKU-1001", name: "Oak shelf bracket", onHand: 240, reorderPoint: 60, supplier: "Harbor Hardware" },
@@ -32,7 +35,12 @@ const products: Product[] = [
 
 const ledgerEntries: Record<string, number[]> = {
   "SKU-4471": [120, -30, -95],
-  "SKU-4480": [40, -12, -41],
+  "SKU-4480": [40, -12, -28],
+};
+
+const reservations: Record<string, number> = {
+  "SKU-4480": 6,
+  "SKU-1001": 20,
 };
 
 const openCycleCounts = new Set(["SKU-2202"]);
@@ -63,6 +71,16 @@ export function stockLedger(product: Product): number[] {
   return entries;
 }
 
+export function openReservations(product: Product): number {
+  const reserved = reservations[product.sku] ?? 0;
+  if (reserved > product.onHand) {
+    throw new ReservationConflictError(
+      `Open reservations exceed stock for ${product.sku}: ${reserved} reserved, ${product.onHand} on hand (${codeFor("RV", product.sku)})`,
+    );
+  }
+  return reserved;
+}
+
 export function recordAdjustment(product: Product, quantity: number, reason: string): void {
   if (reason === "recount" && openCycleCounts.has(product.sku)) {
     throw new RecountRejectedError(
@@ -79,6 +97,28 @@ export function requestReorder(product: Product): { orderId: string } {
     );
   }
   return { orderId: `PO-${product.sku.slice(-4)}` };
+}
+
+export type SyncStatus = { lastRun: string; pending: number };
+
+export async function warehouseSyncStatus(): Promise<SyncStatus> {
+  // The warehouse system answers slowly while it reconciles.
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+  return { lastRun: "2026-11-20 06:00", pending: 14 };
+}
+
+export type Delivery = { carrier: string; eta: string };
+
+export async function carrierFeedAvailable(): Promise<boolean> {
+  await latency();
+  return false;
+}
+
+export function inboundDeliveries(): Delivery[] {
+  return [
+    { carrier: "Nordic Freight", eta: "Tue" },
+    { carrier: "Harbor Logistics", eta: "Thu" },
+  ];
 }
 
 export async function syncInventoryBatch(batch: string): Promise<void> {
