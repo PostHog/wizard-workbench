@@ -4,7 +4,7 @@
  *
  * The wizard repo's `scripts/tui-snapshots.no-jest.ts` runs the real `startTUI`
  * in a PTY and drives it through the fixed happy path (skip MCP, skip Slack,
- * delete skills, continue past health issues) by store state manipulation — auth
+ * continue past health issues) by store state manipulation — auth
  * via the phx key, no browser. It captures every key-moment screen as real-TUI
  * text and writes a structured result JSON; this is the orchestration + assertion
  * layer over it.
@@ -126,8 +126,6 @@ export interface E2eOptions {
   app?: string;
   region?: string;
   projectId?: string;
-  /** true → keep installed skills; default deletes them. */
-  keepSkills?: boolean;
   record?: boolean;
   /** Wizard program id to drive (e.g. 'self-driving'); default integration. */
   program?: string;
@@ -376,7 +374,7 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   }
 
   console.log(`\n=== wizard-ci --e2e: ${app}  (project ${projectId}, ${region}) ===`);
-  console.log(`    policy: skip mcp · skip slack · ${opts.keepSkills ? "keep" : "delete"} skills · continue past health issues`);
+  console.log("    policy: skip mcp · skip slack · continue past health issues");
   if (expect) console.log(`    expectations: apps/${app}/.wizard-ci/expect.json`);
   if (projectDiscoveryExpect) {
     console.log(`    expectations: ${projectDiscoveryExpect.specPath}`);
@@ -400,7 +398,6 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
   childEnv.POSTHOG_REGION = region;
   childEnv.SNAP_OUT = snapsDir;
   childEnv.E2E_RESULT_JSON = resultJson;
-  childEnv.E2E_KEEP_SKILLS = opts.keepSkills ? "true" : "false";
   if (opts.record) childEnv.SNAP_RECORD = "1";
   // Which program the real-TUI host drives — defaults to integration.
   if (opts.program) childEnv.PROGRAM = opts.program;
@@ -488,7 +485,7 @@ export async function runE2e(opts: E2eOptions): Promise<number> {
     | (E2eResult & {
         hasPosthogDep?: boolean;
         envFile?: string | null;
-        skillsComplete?: boolean;
+        flowComplete?: boolean;
         newDeps?: string[];
       })
     | null = null;
@@ -619,19 +616,19 @@ async function gradeFeatureFlags(args: {
 /**
  * The run-shape checks that apply to every program, before the warehouse block.
  *
- * A plain integration run ends at keep-skills with PostHog installed. A
- * warehouse run installs nothing — it creates PostHog resources and writes a
- * report — so the dependency check would fail it for doing its job correctly.
- * A run that is *meant* to abort has no end screen at all, and the warehouse
- * `abort` check grades it instead.
+ * A plain integration run reaches its outro, steps past MCP, and finishes the
+ * flow (flowComplete) with PostHog installed. A warehouse run installs nothing
+ * — it creates PostHog resources and writes a report — so the dependency check
+ * would fail it for doing its job correctly. A run that is *meant* to abort
+ * has no end screen at all, and the warehouse `abort` check grades it instead.
  */
-function genericChecks(
+export function genericChecks(
   result: {
     runPhase?: string;
     hasPosthogDep?: boolean;
     envFile?: string | null;
     screenPath?: string[];
-    skillsComplete?: boolean;
+    flowComplete?: boolean;
   },
   opts: E2eOptions,
   expect: WarehouseExpect | null,
@@ -651,13 +648,14 @@ function genericChecks(
     ];
   }
 
-  // The integration flow ends at keep-skills/skillsComplete; other programs
-  // (e.g. self-driving) end at their own outro, so assert against that instead.
+  // Integration still steps through MCP after outro before reaching Exit
+  // (flowComplete). Other programs (e.g. self-driving) may exit directly after
+  // outro, so assert reachedOutro alone there.
   const isIntegration = !opts.program || opts.program === "posthog-integration";
   const programChecks: Array<[string, boolean]> = isIntegration
     ? [
-        ["full interactive flow reached keep-skills", !!result.screenPath?.includes("keep-skills")],
-        ["skillsComplete", result.skillsComplete === true],
+        ["reached the outro", reachedOutro],
+        ["flowComplete", result.flowComplete === true],
       ]
     : [["reached the outro", reachedOutro]];
 

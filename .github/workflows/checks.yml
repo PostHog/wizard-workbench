@@ -44,6 +44,9 @@ jobs:
       - name: Test the MCP stub
         run: pnpm test:mcp-stub
 
+      - name: Test the e2e run-shape checks
+        run: pnpm test:e2e
+
       - name: Test the warehouse checks
         run: pnpm test:warehouse-checks
 
