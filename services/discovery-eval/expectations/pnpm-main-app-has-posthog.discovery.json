@@ -1,0 +1,53 @@
+{
+  "id": "pnpm-main-app-has-posthog",
+  "fixture": "custom/pnpm-main-app-has-posthog",
+  "kind": "custom",
+  "toolFamily": "pnpm",
+  "notes": "A pnpm monorepo where one of two Next.js apps already has PostHog. The plan lists that app with its reason and takes the other without asking.",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "monorepo",
+      "workspaceTool": "pnpm",
+      "runProject": ".",
+      "walkComplete": true,
+      "requiredProjects": [
+        "apps/web",
+        "apps/admin",
+        "packages/ui"
+      ],
+      "projectTraits": {
+        "apps/web": {
+          "framework": "nextjs",
+          "posthogInstalled": "yes"
+        },
+        "apps/admin": {
+          "framework": "nextjs",
+          "posthogInstalled": "no"
+        },
+        "packages/ui": {
+          "projectRole": "library"
+        }
+      },
+      "planAsks": false,
+      "planPicked": "apps/admin",
+      "requiredPlanOffered": [
+        "apps/admin"
+      ],
+      "forbidPlanOffered": [
+        "apps/web",
+        "packages/ui"
+      ],
+      "maxDurationMs": 8000
+    },
+    {
+      "name": "from-apps-web",
+      "subdir": "apps/web",
+      "repoType": "monorepo",
+      "workspaceTool": "pnpm",
+      "runProject": "apps/web",
+      "planPicked": "apps/web"
+    }
+  ]
+}

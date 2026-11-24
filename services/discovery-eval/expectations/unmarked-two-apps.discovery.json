@@ -1,0 +1,54 @@
+{
+  "id": "unmarked-two-apps",
+  "fixture": "custom/unmarked-two-apps",
+  "kind": "custom",
+  "toolFamily": "none",
+  "notes": "Two apps side by side with no workspace marker and no root manifest. Static discovery lists both and reads the repo as single, so the plan asks nothing until a model source names a main app.",
+  "scenarios": [
+    {
+      "name": "from-root",
+      "subdir": ".",
+      "repoType": "single",
+      "workspaceTool": null,
+      "runProject": ".",
+      "walkComplete": true,
+      "requiredProjects": [
+        "frontend",
+        "backend"
+      ],
+      "projectTraits": {
+        "frontend": {
+          "framework": "nextjs",
+          "frameworkVariant": "app-router",
+          "posthogInstalled": "no"
+        },
+        "backend": {
+          "framework": "django",
+          "posthogInstalled": "no"
+        }
+      },
+      "planAsks": false,
+      "planPicked": ".",
+      "maxDurationMs": 8000
+    },
+    {
+      "name": "from-frontend",
+      "subdir": "frontend",
+      "repoType": "single",
+      "runProject": ".",
+      "matchKeys": {
+        "framework": [
+          "nextjs"
+        ],
+        "frameworkVariant": [
+          "app-router"
+        ]
+      },
+      "forbiddenProjects": [
+        "backend"
+      ],
+      "planAsks": false,
+      "planPicked": "."
+    }
+  ]
+}

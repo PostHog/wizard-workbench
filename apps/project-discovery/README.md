@@ -24,6 +24,8 @@ Production and custom monorepos for grading `PostHog/wizard` project discovery (
 | `pnpm-negation-and-nested` | `!apps/legacy/**` exclusion globs (`#1585`), `tooling/eslint-config` filtering, nested launch from `apps/dashboard` |
 | `lerna-yarn-workspaces` | `lerna.json` + Yarn `workspaces.packages` (`#1585`), per-project Stripe/Postgres isolation |
 | `large-monorepo-caps` | 30 sub-packages (past `MAX_DETECTED_PROJECTS = 25`, `#1586`) + `<script>` host detection in `apps/web/public/index.html` |
+| `unmarked-two-apps` | Two apps side by side with no workspace marker and no root manifest: static discovery reads the repo as `single` and the plan asks nothing |
+| `pnpm-main-app-has-posthog` | One of two apps already has PostHog: the plan lists it with its reason and takes the other without asking |
 
 ## 1. Deterministic grader ($0, zero LLM calls)
 
