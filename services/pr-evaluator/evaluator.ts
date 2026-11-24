@@ -77,7 +77,18 @@ export function computeScoresFromRubric(
   const posthog_implementation = computeScoreFromRubric(rubric.posthog_implementation);
   const event_quality = computeScoreFromRubric(rubric.event_quality);
   const avg = (file_analysis + app_sanity + posthog_implementation + event_quality) / 4;
-  const confidence = Math.min(app_sanity, Math.round(avg));
+  let confidence = Math.min(app_sanity, Math.round(avg));
+  const criticalAiMiss = [
+    rubric.posthog_implementation.ph_generations_captured,
+    rubric.event_quality.eq_events_would_render_as_tree,
+    rubric.event_quality.eq_output_choices_have_role,
+    rubric.event_quality.eq_stream_terminal_parsed,
+  ].some((value) => value === "no");
+  if (criticalAiMiss) {
+    confidence = Math.min(confidence, 3);
+  } else if (rubric.app_sanity.as_manual_capture_ledger_delivered === "no") {
+    confidence = Math.min(confidence, 4);
+  }
 
   return {
     file_analysis,
