@@ -9,7 +9,7 @@ Production and custom monorepos for grading `PostHog/wizard` project discovery (
 | Fixture | Repo | Tool | What it tests |
 |---|---|---|---|
 | `turbo-next-forge` | `vercel/next-forge` | Turborepo | Multi-app Next.js (`apps/app`, `apps/web`, `apps/api`, `apps/docs`), shared `packages/*`, per-project tools, variant `matchKeys` |
-| `nx-analog` | `analogjs/analog` | Nx + pnpm | Nx workspace, Astro/Angular apps, filtering `-e2e` test harnesses out of `PlanScreen` |
+| `nx-analog` | `analogjs/analog` | Nx + pnpm | Nx workspace, Astro/Angular apps, filtering `-e2e` test harnesses out of `ProjectPickerScreen` |
 | `bazel-aspect-examples` | `aspect-build/bazel-examples` | Bazel | `MODULE.bazel` + `BUILD.bazel` polyglot workspace (JS, Go, Python, Ruby, Swift) |
 | `uv-fastapi-fullstack` | `fastapi/full-stack-fastapi-template` | Python / uv + Vite | Polyglot FastAPI (`backend/pyproject.toml`) + React/TanStack Router (`frontend/`), Postgres scoping, `frameworkVariant` |
 | `rush-microsoft-example` | `microsoft/rush-example` | Rush | `rush.json` workspace recognition, `libraries/` vs `apps/` role classification |
@@ -49,7 +49,7 @@ Useful flags:
 - Workspace detection (`isMonorepo`, `workspaceRoot`, `workspaceTool`)
 - Discovered `memberPaths` and excluded `forbidMemberPaths` (for example `!apps/legacy/**`)
 - Per-project `framework`, `frameworkVariant`, `role`, `requiredTools`, and `forbidTools` (cross-project tool isolation)
-- `PlanScreen` candidate list (`requiredPlanOffered`, `forbidPlanOffered`), the reason a listed project is not offered (`planReasons`), and auto-pick (`expectedPlanPicked` for nested single-project launches)
+- `ProjectPickerScreen` candidate list (`requiredPlanOffered`, `forbidPlanOffered`), the reason a listed project is not offered (`planReasons`), and auto-pick (`expectedPlanPicked` for nested single-project launches)
 
 ## 2. Full E2E runs (`wizard-ci --e2e`)
 
@@ -88,11 +88,11 @@ pnpm wizard-ci project-discovery/production/turbo-next-forge --e2e --project-id 
    - `posthog wired inside <expectedChangedPrefix>` (replaces root-only `package.json` checks because monorepo installs touch the picked subrepo)
    - `no edits under <prefix>` for every entry in `forbidChangedPrefixes` (root lockfile updates like `pnpm-lock.yaml` or `yarn.lock` are allowed)
 
-### Wizard-side prerequisite for multi-app `PlanScreen` legs
+### Wizard-side prerequisite for multi-app `ProjectPickerScreen` legs
 
-- Single-target nested runs (`pnpm-negation-and-nested`) skip `PlanScreen` once deterministic discovery passes, so they run headlessly right away.
-- Multi-app root runs (the other 5 `.e2e.json` specs) open `PlanScreen` to ask which subrepo to integrate. `PostHog/wizard`'s `e2e-harness/e2e-profile.ts` (`decideE2eAction`) and `scripts/tui-host.no-jest.ts` need a `PlanScreen` handler that reads `process.env.E2E_PLAN_PICK` and selects that subrepo. Until that hook lands in `PostHog/wizard`, multi-app root runs pause on `PlanScreen`.
+- Single-target nested runs (`pnpm-negation-and-nested`) skip `ProjectPickerScreen` once deterministic discovery passes, so they run headlessly right away.
+- Multi-app root runs (the other 5 `.e2e.json` specs) open `ProjectPickerScreen` to ask which subrepo to integrate. `PostHog/wizard`'s `e2e-harness/e2e-profile.ts` (`decideE2eAction`) and `scripts/tui-host.no-jest.ts` need a `ProjectPickerScreen` handler that reads `process.env.E2E_PLAN_PICK` and selects that subrepo. Until that hook lands in `PostHog/wizard`, multi-app root runs pause on `ProjectPickerScreen`.
 
 ### Not in scheduled Wizard CI yet
 
-`apps/manifest.json` sets `"ciCapable": false` for `project-discovery`, so GitHub Actions Wizard CI runs (`all`, `sample`, and dispatches) do not pick up these fixtures. Local `pnpm wizard-ci project-discovery/... --e2e` runs still work. Flip it to `true` once the `PlanScreen` hook above lands in `PostHog/wizard`.
+`apps/manifest.json` sets `"ciCapable": false` for `project-discovery`, so GitHub Actions Wizard CI runs (`all`, `sample`, and dispatches) do not pick up these fixtures. Local `pnpm wizard-ci project-discovery/... --e2e` runs still work. Flip it to `true` once the `ProjectPickerScreen` hook above lands in `PostHog/wizard`.

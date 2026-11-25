@@ -5,6 +5,7 @@ import {
   evaluateDiscoveryReport,
   hasBlockingFailure,
   loadDiscoveryExpectations,
+  readDiscoveryReport,
   type DiscoveryTestReport,
 } from "./checks.js";
 
@@ -49,7 +50,7 @@ function sampleReport(
       },
     ],
     toolsMatched: true,
-    plan: {
+    projectSelection: {
       asks: true,
       picked: "apps/web",
       projects: [
@@ -113,7 +114,7 @@ describe("evaluateDiscoveryReport", () => {
           tools: [],
         },
       ],
-      plan: {
+      projectSelection: {
         asks: true,
         picked: ".",
         projects: [
@@ -163,7 +164,7 @@ describe("evaluateDiscoveryReport", () => {
 
   it("fails a plan reason when the row is missing, offered, or has another reason", () => {
     const report = sampleReport({
-      plan: {
+      projectSelection: {
         asks: false,
         picked: "apps/admin",
         projects: [
@@ -193,6 +194,15 @@ describe("evaluateDiscoveryReport", () => {
     assert.equal(byName.get("planReason:packages/ui"), "fail");
     assert.equal(byName.get("planReason:apps/admin"), "fail");
     assert.equal(byName.get("planReason:apps/docs"), "fail");
+  });
+
+  it("reads the selection from a report that still calls it plan", () => {
+    const { projectSelection, ...rest } = sampleReport();
+    const older = readDiscoveryReport({ ...rest, plan: projectSelection });
+    assert.deepEqual(older.projectSelection, projectSelection);
+    assert.equal("plan" in older, false);
+    assert.deepEqual(readDiscoveryReport(sampleReport()).projectSelection, projectSelection);
+    assert.throws(() => readDiscoveryReport(rest), /no `projectSelection`/);
   });
 
   it("loads all checked-in discovery expectations without schema errors", () => {

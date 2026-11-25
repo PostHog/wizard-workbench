@@ -43,7 +43,7 @@ export interface DiscoveryTestReport {
   };
   projects: DiscoveryTestProject[];
   toolsMatched: boolean;
-  plan: {
+  projectSelection: {
     asks: boolean;
     picked: string;
     projects: Array<{
@@ -55,6 +55,18 @@ export interface DiscoveryTestReport {
     }>;
   };
   matchKeys: Record<string, string[] | undefined>;
+}
+
+/** A report as the wizard printed it. A wizard before the rename calls `projectSelection` `plan`. */
+export function readDiscoveryReport(raw: unknown): DiscoveryTestReport {
+  const { plan, ...report } = raw as DiscoveryTestReport & {
+    plan?: DiscoveryTestReport["projectSelection"];
+  };
+  const projectSelection = report.projectSelection ?? plan;
+  if (!projectSelection) {
+    throw new Error("The report has no `projectSelection` and no `plan`.");
+  }
+  return { ...report, projectSelection };
 }
 
 export interface DiscoveryScenarioExpect {
@@ -85,7 +97,7 @@ export interface DiscoveryScenarioExpect {
   forbidPlanPicked?: string[];
   requiredPlanOffered?: string[];
   forbidPlanOffered?: string[];
-  /** `{ "<projectPath>": "has-posthog" }` — the plan lists that project, does not offer it, and gives this reason. */
+  /** `{ "<projectPath>": "has-posthog" }` — the project selection lists that project, does not offer it, and gives this reason. */
   planReasons?: Record<string, string>;
   maxDurationMs?: number;
   /** Check names downgraded to `advisory` (reported, non-blocking unless `--strict`). */
@@ -269,65 +281,65 @@ export function evaluateDiscoveryReport(
   if (expect.planAsks !== undefined) {
     record(
       "planAsks",
-      report.plan.asks === expect.planAsks,
-      `got asks=${String(report.plan.asks)}, expected ${String(expect.planAsks)}`,
+      report.projectSelection.asks === expect.planAsks,
+      `got asks=${String(report.projectSelection.asks)}, expected ${String(expect.planAsks)}`,
     );
   }
 
   if (expect.planPicked !== undefined) {
     record(
       "planPicked",
-      report.plan.picked === expect.planPicked,
-      `got picked=${JSON.stringify(report.plan.picked)}, expected ${JSON.stringify(expect.planPicked)}`,
+      report.projectSelection.picked === expect.planPicked,
+      `got picked=${JSON.stringify(report.projectSelection.picked)}, expected ${JSON.stringify(expect.planPicked)}`,
     );
   }
 
   if (expect.forbidPlanPicked && expect.forbidPlanPicked.length > 0) {
-    const forbiddenHit = expect.forbidPlanPicked.includes(report.plan.picked);
+    const forbiddenHit = expect.forbidPlanPicked.includes(report.projectSelection.picked);
     record(
       "forbidPlanPicked",
       !forbiddenHit,
       forbiddenHit
-        ? `picked forbidden default ${JSON.stringify(report.plan.picked)}`
-        : `picked ${JSON.stringify(report.plan.picked)} (not in forbidden list)`,
+        ? `picked forbidden default ${JSON.stringify(report.projectSelection.picked)}`
+        : `picked ${JSON.stringify(report.projectSelection.picked)} (not in forbidden list)`,
     );
   }
 
   if (expect.requiredPlanOffered && expect.requiredPlanOffered.length > 0) {
     const offeredSet = new Set(
-      report.plan.projects.filter((p) => p.offered).map((p) => p.path),
+      report.projectSelection.projects.filter((p) => p.offered).map((p) => p.path),
     );
     const missing = expect.requiredPlanOffered.filter((p) => !offeredSet.has(p));
     record(
       "requiredPlanOffered",
       missing.length === 0,
       missing.length === 0
-        ? `all ${expect.requiredPlanOffered.length} subrepos offered on plan`
-        : `missing from offered plan choices: ${missing.join(", ")}`,
+        ? `all ${expect.requiredPlanOffered.length} subrepos offered`
+        : `missing from the offered projects: ${missing.join(", ")}`,
     );
   }
 
   if (expect.forbidPlanOffered && expect.forbidPlanOffered.length > 0) {
     const offeredSet = new Set(
-      report.plan.projects.filter((p) => p.offered).map((p) => p.path),
+      report.projectSelection.projects.filter((p) => p.offered).map((p) => p.path),
     );
     const bad = expect.forbidPlanOffered.filter((p) => offeredSet.has(p));
     record(
       "forbidPlanOffered",
       bad.length === 0,
       bad.length === 0
-        ? "no forbidden projects offered in plan"
+        ? "no forbidden projects offered"
         : `offered non-app projects: ${bad.join(", ")}`,
     );
   }
 
   if (expect.planReasons) {
-    const planByPath = new Map(report.plan.projects.map((p) => [p.path, p]));
+    const optionByPath = new Map(report.projectSelection.projects.map((p) => [p.path, p]));
     for (const [projPath, expectedReason] of Object.entries(expect.planReasons)) {
-      const row = planByPath.get(projPath);
+      const row = optionByPath.get(projPath);
       const checkName = `planReason:${projPath}`;
       if (!row) {
-        record(checkName, false, `project ${projPath} not on the plan`);
+        record(checkName, false, `project ${projPath} not in the project selection`);
         continue;
       }
       record(
