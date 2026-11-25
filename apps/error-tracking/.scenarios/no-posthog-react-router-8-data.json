@@ -1,0 +1,501 @@
+{
+  "app": "no-posthog-react-router-8-data",
+  "lifecycle": {
+    "install": {
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ]
+    },
+    "build": {
+      "argv": [
+        "npm",
+        "run",
+        "build"
+      ]
+    },
+    "checks": [
+      {
+        "name": "build-without-env",
+        "argv": [
+          "npm",
+          "run",
+          "build"
+        ],
+        "withoutEnvFiles": true
+      },
+      {
+        "name": "no-public-maps",
+        "assertAbsent": [
+          "dist/**/*.map"
+        ]
+      }
+    ],
+    "start": {
+      "script": "preview",
+      "scriptArgs": [
+        "--port",
+        "{port}",
+        "--strictPort"
+      ],
+      "argv": [
+        "node",
+        "node_modules/vite/bin/vite.js",
+        "preview",
+        "--port",
+        "{port}",
+        "--strictPort"
+      ],
+      "ready": {
+        "path": "/",
+        "timeoutMs": 60000
+      }
+    },
+    "env": {},
+    "flushWaitMs": 8000
+  },
+  "knownNoise": [
+    {
+      "match": "AbortError",
+      "lib": "web",
+      "reason": "posthog-js exception autocapture reports fetch AbortError rejections from aborted requests (standard.md Known gaps; an SDK filter was declined in posthog-js #3922)"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "client-render-route",
+      "surface": "Render error caught by the suppliers route's own ErrorBoundary, not the layout's (RouterProvider)",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/suppliers?view=map",
+        "waitMs": 2500,
+        "expectText": "The supplier map could not be shown"
+      },
+      "throws": {
+        "match": "MP14",
+        "file": "src/components/supplier-map.tsx"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/components/supplier-map.tsx"
+        }
+      }
+    },
+    {
+      "id": "render-on-navigation",
+      "surface": "Render error after a client navigation: the reports page links a range it cannot show",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/reports",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "a:has-text('Last year')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Something went wrong"
+      },
+      "throws": {
+        "match": "RX20",
+        "file": "src/lib/reports.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/reports.ts"
+        }
+      }
+    },
+    {
+      "id": "loader-navigation",
+      "surface": "Loader throws on a client navigation; the product route's ErrorBoundary catches it",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "a:has-text('SKU-4471')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "This product could not be loaded"
+      },
+      "throws": {
+        "match": "LB71",
+        "file": "src/lib/inventory.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/inventory.ts"
+        }
+      }
+    },
+    {
+      "id": "loader-initial",
+      "surface": "Loader throws on the initial load of the page; the product route's ErrorBoundary catches it",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products/SKU-4480",
+        "waitMs": 2500,
+        "expectText": "This product could not be loaded"
+      },
+      "throws": {
+        "match": "RV80",
+        "file": "src/lib/inventory.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/inventory.ts"
+        }
+      }
+    },
+    {
+      "id": "action-form",
+      "surface": "Action throws, submitted from a <Form>",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products/SKU-2202",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "evaluate": "document.querySelector('select[name=reason]').value = 'recount'"
+          },
+          {
+            "fill": {
+              "selector": "input[name=quantity]",
+              "value": "3"
+            }
+          },
+          {
+            "click": "button:has-text('Save adjustment')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "This product could not be loaded"
+      },
+      "throws": {
+        "match": "RC02",
+        "file": "src/lib/inventory.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/inventory.ts"
+        }
+      }
+    },
+    {
+      "id": "fetcher-action",
+      "surface": "Action throws, submitted by useFetcher",
+      "requirement": "COV-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "button:has-text('Reorder SKU-3003')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Something went wrong"
+      },
+      "throws": {
+        "match": "RO03",
+        "file": "src/lib/inventory.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/inventory.ts"
+        }
+      }
+    },
+    {
+      "id": "client-onclick",
+      "surface": "Event handler throw",
+      "requirement": "COV-1",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "button:has-text('Export CSV')"
+          },
+          {
+            "wait": 1000
+          }
+        ],
+        "expectPageError": "CE03"
+      },
+      "throws": {
+        "match": "CE03",
+        "file": "src/lib/csv.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/csv.ts"
+        },
+        "handled": false
+      }
+    },
+    {
+      "id": "unhandled-rejection",
+      "surface": "Fire-and-forget promise rejects in the browser",
+      "requirement": "COV-1",
+      "trigger": {
+        "kind": "browser",
+        "page": "/",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "button:has-text('Sync warehouse')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Sync started"
+      },
+      "throws": {
+        "match": "EX77",
+        "file": "src/lib/inventory.ts"
+      },
+      "expect": {
+        "count": 1,
+        "lib": "web",
+        "linked": true,
+        "release": true,
+        "topFrame": {
+          "resolved": true,
+          "sourceEndsWith": "src/lib/inventory.ts"
+        },
+        "handled": false
+      }
+    },
+    {
+      "id": "not-found-loader",
+      "surface": "Loader throws data(…, { status: 404 }); the product route's ErrorBoundary shows it",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products/SKU-9999",
+        "waitMs": 2500,
+        "expectText": "Product not found"
+      },
+      "throws": {
+        "urlMatch": "/products/SKU-9999"
+      },
+      "expect": {
+        "count": 0
+      }
+    },
+    {
+      "id": "unknown-route",
+      "surface": "No route matches (router-internal 404 reaches onError)",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/warehouse/aisle-9",
+        "waitMs": 2500,
+        "expectText": "Not found"
+      },
+      "throws": {
+        "match": "/warehouse/aisle-9",
+        "urlMatch": "/warehouse/aisle-9"
+      },
+      "expect": {
+        "count": 0
+      }
+    },
+    {
+      "id": "action-validation",
+      "surface": "Action throws data(…, { status: 400 }) for invalid input",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products/SKU-1001",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "fill": {
+              "selector": "input[name=quantity]",
+              "value": "-5"
+            }
+          },
+          {
+            "click": "button:has-text('Save adjustment')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Quantity must be a positive whole number"
+      },
+      "throws": {
+        "urlMatch": "/products/SKU-1001"
+      },
+      "expect": {
+        "count": 0
+      }
+    },
+    {
+      "id": "action-redirect",
+      "surface": "Action throws redirect() after a successful adjustment",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/products/SKU-1002",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "fill": {
+              "selector": "input[name=quantity]",
+              "value": "4"
+            }
+          },
+          {
+            "click": "button:has-text('Save adjustment')"
+          },
+          {
+            "wait": 1500
+          }
+        ],
+        "expectText": "Stock updated"
+      },
+      "throws": {
+        "urlMatch": "/products/SKU-1002"
+      },
+      "expect": {
+        "count": 0
+      }
+    },
+    {
+      "id": "thrown-503",
+      "surface": "Loader throws data(…, { status: 503 }) on a client navigation: a response the app chose",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "header a:has-text('Deliveries')"
+          },
+          {
+            "wait": 2000
+          }
+        ],
+        "expectText": "Carrier tracking is temporarily unavailable"
+      },
+      "throws": {
+        "match": "Carrier tracking",
+        "urlMatch": "/deliveries"
+      },
+      "expect": {
+        "count": 0
+      }
+    },
+    {
+      "id": "aborted-navigation",
+      "surface": "Visitor navigates away while a slow loader runs: React Router aborts the loader",
+      "requirement": "PRE-2",
+      "trigger": {
+        "kind": "browser",
+        "page": "/",
+        "actions": [
+          {
+            "wait": 1500
+          },
+          {
+            "click": "a:has-text('Warehouse sync status')"
+          },
+          {
+            "wait": 400
+          },
+          {
+            "click": "header a:has-text('Products')"
+          },
+          {
+            "wait": 4500
+          }
+        ],
+        "expectText": "Oak shelf bracket"
+      },
+      "throws": {
+        "urlMatch": "/warehouse-sync"
+      },
+      "expect": {
+        "count": 0
+      }
+    }
+  ]
+}

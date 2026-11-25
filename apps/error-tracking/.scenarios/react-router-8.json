@@ -1,0 +1,4 @@
+{
+  "app": "react-router-8",
+  "extends": "_react-router-framework.json"
+}

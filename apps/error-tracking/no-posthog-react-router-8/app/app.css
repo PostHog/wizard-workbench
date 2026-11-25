@@ -1,0 +1,9 @@
+body { font-family: system-ui, sans-serif; margin: 0; color: #1f2933; background: #f7f7f5; }
+header { display: flex; gap: 1.5rem; align-items: center; padding: 0.75rem 2rem; background: #23395b; }
+header a { color: #fff; text-decoration: none; }
+header strong { color: #fff; margin-right: 1rem; }
+main { padding: 1.5rem 2rem; max-width: 960px; }
+table { border-collapse: collapse; width: 100%; background: #fff; }
+th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #e4e7eb; }
+button { padding: 0.35rem 0.8rem; border: 1px solid #23395b; background: #fff; border-radius: 4px; cursor: pointer; }
+.error { color: #b42318; }
