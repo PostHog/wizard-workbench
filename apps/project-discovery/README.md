@@ -49,7 +49,7 @@ Useful flags:
 - Workspace detection (`isMonorepo`, `workspaceRoot`, `workspaceTool`)
 - Discovered `memberPaths` and excluded `forbidMemberPaths` (for example `!apps/legacy/**`)
 - Per-project `framework`, `frameworkVariant`, `role`, `requiredTools`, and `forbidTools` (cross-project tool isolation)
-- `PlanScreen` candidate list (`requiredPlanOffered`, `forbidPlanOffered`) and auto-pick (`expectedPlanPicked` for nested single-project launches)
+- `PlanScreen` candidate list (`requiredPlanOffered`, `forbidPlanOffered`), the reason a listed project is not offered (`planReasons`), and auto-pick (`expectedPlanPicked` for nested single-project launches)
 
 ## 2. Full E2E runs (`wizard-ci --e2e`)
 

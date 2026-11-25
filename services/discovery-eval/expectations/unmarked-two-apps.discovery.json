@@ -29,6 +29,10 @@
       },
       "planAsks": false,
       "planPicked": ".",
+      "requiredPlanOffered": [
+        "frontend",
+        "backend"
+      ],
       "maxDurationMs": 8000
     },
     {

@@ -161,6 +161,40 @@ describe("evaluateDiscoveryReport", () => {
     assert.ok(strict.every((c) => c.status === "fail"));
   });
 
+  it("fails a plan reason when the row is missing, offered, or has another reason", () => {
+    const report = sampleReport({
+      plan: {
+        asks: false,
+        picked: "apps/admin",
+        projects: [
+          { path: "apps/admin", offered: true },
+          { path: "apps/web", offered: false, reason: "has-posthog" },
+          { path: "packages/ui", offered: false, reason: "unsupported-framework" },
+        ],
+      },
+    });
+
+    const checks = evaluateDiscoveryReport(
+      report,
+      {
+        name: "reasons",
+        planReasons: {
+          "apps/web": "has-posthog",
+          "packages/ui": "library",
+          "apps/admin": "has-posthog",
+          "apps/docs": "library",
+        },
+      },
+      200,
+    );
+
+    const byName = new Map(checks.map((c) => [c.name, c.status]));
+    assert.equal(byName.get("planReason:apps/web"), "pass");
+    assert.equal(byName.get("planReason:packages/ui"), "fail");
+    assert.equal(byName.get("planReason:apps/admin"), "fail");
+    assert.equal(byName.get("planReason:apps/docs"), "fail");
+  });
+
   it("loads all checked-in discovery expectations without schema errors", () => {
     const dir = join(import.meta.dirname, "expectations");
     const files = loadDiscoveryExpectations(dir);

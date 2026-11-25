@@ -39,6 +39,10 @@
         "apps/web",
         "packages/ui"
       ],
+      "planReasons": {
+        "apps/web": "has-posthog",
+        "packages/ui": "library"
+      },
       "maxDurationMs": 8000
     },
     {
