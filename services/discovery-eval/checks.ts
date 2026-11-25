@@ -85,6 +85,8 @@ export interface DiscoveryScenarioExpect {
   forbidPlanPicked?: string[];
   requiredPlanOffered?: string[];
   forbidPlanOffered?: string[];
+  /** `{ "<projectPath>": "has-posthog" }` — the plan lists that project, does not offer it, and gives this reason. */
+  planReasons?: Record<string, string>;
   maxDurationMs?: number;
   /** Check names downgraded to `advisory` (reported, non-blocking unless `--strict`). */
   advisory?: string[];
@@ -317,6 +319,23 @@ export function evaluateDiscoveryReport(
         ? "no forbidden projects offered in plan"
         : `offered non-app projects: ${bad.join(", ")}`,
     );
+  }
+
+  if (expect.planReasons) {
+    const planByPath = new Map(report.plan.projects.map((p) => [p.path, p]));
+    for (const [projPath, expectedReason] of Object.entries(expect.planReasons)) {
+      const row = planByPath.get(projPath);
+      const checkName = `planReason:${projPath}`;
+      if (!row) {
+        record(checkName, false, `project ${projPath} not on the plan`);
+        continue;
+      }
+      record(
+        checkName,
+        !row.offered && row.reason === expectedReason,
+        `got offered=${String(row.offered)} reason=${JSON.stringify(row.reason)}, expected reason ${JSON.stringify(expectedReason)}`,
+      );
+    }
   }
 
   if (expect.maxDurationMs !== undefined) {

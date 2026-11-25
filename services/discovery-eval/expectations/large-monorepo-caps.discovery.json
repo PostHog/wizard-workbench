@@ -28,14 +28,15 @@
           "Stripe"
         ]
       },
-      "planAsks": true,
+      "planAsks": false,
       "forbidPlanPicked": [
         "."
       ],
       "maxDurationMs": 8000,
       "requiredPlanOffered": [
         "apps/web"
-      ]
+      ],
+      "planPicked": "apps/web"
     }
   ]
 }

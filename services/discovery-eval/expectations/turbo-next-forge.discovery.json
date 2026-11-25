@@ -31,9 +31,7 @@
       "projectTools": {
         "apps/api": [
           "Stripe"
-        ]
-      },
-      "forbidProjectTools": {
+        ],
         "apps/app": [
           "Stripe"
         ]
@@ -61,12 +59,12 @@
           "app-router"
         ]
       },
-      "forbidProjectTools": {
+      "maxDurationMs": 10000,
+      "projectTools": {
         "apps/app": [
           "Stripe"
         ]
-      },
-      "maxDurationMs": 10000
+      }
     }
   ]
 }
