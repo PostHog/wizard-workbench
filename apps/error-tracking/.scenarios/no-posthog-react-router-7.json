@@ -1,6 +1,15 @@
 {
   "app": "no-posthog-react-router-7",
   "extends": "_react-router-framework.json",
+  "lifecycle": {
+    "start": {
+      "argv": [
+        "node",
+        "node_modules/@react-router/serve/bin.js",
+        "./build/server/index.js"
+      ]
+    }
+  },
   "overrides": {
     "middleware-cookie": {
       "surface": "Server loader throws (this app has no middleware), page request carrying only the PostHog cookie of an anonymous visitor (their anonymous distinct ID)"
