@@ -6,7 +6,6 @@ export type Product = {
   supplier: string;
 };
 
-
 export class StockLedgerError extends Error {
   name = "StockLedgerError";
 }

@@ -118,7 +118,7 @@ Each of these apps has a setup that a generic integration gets wrong. As with th
 - server exceptions carry the page's URL, method and path, never the `.data` endpoint of a client navigation or fetcher; the visitor's distinct ID and session ID from the tracing headers first and the project's own PostHog cookie second (selected by the project token, anonymous visitors included); no visitor identity, session or user agent when the posthog-js consent cookie opts out; and never the `X-Forwarded-For` address as `$ip`
 - in `react-router-8`, the render-time `captureException` in the root `ErrorBoundary` removed, and `posthog-node` upgraded from 5 to 6.1.0 or later for the handler
 - responses the app throws (`data()` 404, 400 and 503), `redirect()`, unknown URLs, POSTs to routes without an action and requests the client aborted produce no `$exception`; the posthog-js `AbortError` gap is reported as known noise
-- the app still typechecks, a build without `.env` passes, and no source map is left in `build/client`; maps uploaded for the client and the server build only when the upload credentials are present
+- the app still typechecks, a build without `.env` passes, and no source map is left in `build/client` (`dist` in data mode); maps uploaded for the client build, and in framework mode the server build, only when the upload credentials are present
 
 **`vite-yarn-pnp`**: Vite and React on Yarn 4 Plug'n'Play, with no `node_modules` and a seven-day `npmMinimalAgeGate`. `posthog-js` runs through `PostHogProvider` with `VITE_PH_PROJECT_TOKEN`. The build emits hidden source maps and `.gz` and `.br` copies, and the GitHub Pages workflow publishes all of `dist/`. Expected:
 

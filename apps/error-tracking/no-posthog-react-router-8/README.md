@@ -11,8 +11,9 @@ npm run dev                      # http://localhost:5173
 npm run build && npm start       # http://localhost:3000
 ```
 
-- `app/routes/products*.tsx` — product list (CSV export, reorders) and product
-  pages with the stock ledger and stock adjustments
+- `app/routes/products.tsx`, `product.tsx`, `product-reorder.ts` — product
+  list (CSV export), product pages with the stock ledger and stock
+  adjustments, and supplier reorders
 - `app/routes/reports.tsx`, `forecast.tsx` — stock turnover by range and a
   streamed demand forecast
 - `app/routes/suppliers.tsx` — suppliers and their delivery-zone map
