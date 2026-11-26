@@ -1,4 +1,7 @@
 const express = require('express');
+const { setupExpressErrorHandler } = require('posthog-node');
+const { posthog } = require('./posthog');
+const { todoLogger } = require('./posthog-logs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +24,22 @@ app.post('/api/todos', (req, res) => {
 
   const todo = { id: nextId++, title, completed: false };
   todos.push(todo);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'todo_created',
+      properties: {},
+    });
+  }
+
+  if (todoLogger) {
+    todoLogger.emit({
+      severityText: 'INFO',
+      body: 'todo created',
+      attributes: { event: 'todo.created', outcome: 'success' },
+    });
+  }
+
   res.status(201).json(todo);
 });
 
@@ -31,8 +50,36 @@ app.patch('/api/todos/:id', (req, res) => {
     return res.status(404).json({ error: 'Not found' });
   }
 
-  if (req.body.title !== undefined) todo.title = req.body.title;
-  if (req.body.completed !== undefined) todo.completed = req.body.completed;
+  const updatedFields = [];
+
+  if (req.body.title !== undefined) {
+    todo.title = req.body.title;
+    updatedFields.push('title');
+  }
+  if (req.body.completed !== undefined) {
+    todo.completed = req.body.completed;
+    updatedFields.push('completed');
+  }
+
+  if (posthog) {
+    posthog.capture({
+      event: 'todo_updated',
+      properties: { updated_fields: updatedFields },
+    });
+  }
+
+  if (todoLogger) {
+    todoLogger.emit({
+      severityText: 'INFO',
+      body: 'todo updated',
+      attributes: {
+        event: 'todo.updated',
+        outcome: 'success',
+        updated_title: updatedFields.includes('title'),
+        updated_completed: updatedFields.includes('completed'),
+      },
+    });
+  }
 
   res.json(todo);
 });
@@ -45,8 +92,28 @@ app.delete('/api/todos/:id', (req, res) => {
   }
 
   todos.splice(index, 1);
+
+  if (posthog) {
+    posthog.capture({
+      event: 'todo_deleted',
+      properties: {},
+    });
+  }
+
+  if (todoLogger) {
+    todoLogger.emit({
+      severityText: 'INFO',
+      body: 'todo deleted',
+      attributes: { event: 'todo.deleted', outcome: 'success' },
+    });
+  }
+
   res.status(204).send();
 });
+
+if (posthog) {
+  setupExpressErrorHandler(posthog, app);
+}
 
 app.listen(PORT, () => {
   console.log(`Express todo API running on http://localhost:${PORT}`);
