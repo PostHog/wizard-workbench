@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit"
 import { sendAdminEmail } from "$lib/mailer.js"
+import { flushPostHogLogs, getPostHogLogger } from "$lib/posthog-logs.server"
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -64,10 +65,24 @@ export const actions = {
         updated_at: new Date(),
       })
 
+    const posthogLogger = getPostHogLogger()
     if (insertError) {
+      posthogLogger?.emit({
+        severityText: "ERROR",
+        body: "contact_request_database_insert_failed",
+        attributes: { workflow: "contact_request" },
+      })
+      await flushPostHogLogs()
       console.error("Error saving contact request", insertError)
       return fail(500, { errors: { _: "Error saving" } })
     }
+
+    posthogLogger?.emit({
+      severityText: "INFO",
+      body: "contact_request_stored",
+      attributes: { workflow: "contact_request" },
+    })
+    await flushPostHogLogs()
 
     // Send email to admin
     await sendAdminEmail({

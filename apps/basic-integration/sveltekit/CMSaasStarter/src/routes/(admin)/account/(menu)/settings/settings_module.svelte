@@ -2,6 +2,7 @@
   import { enhance, applyAction } from "$app/forms"
   import { page } from "$app/stores"
   import type { SubmitFunction } from "@sveltejs/kit"
+  import posthog from "posthog-js"
 
   const fieldError = (liveForm: FormAccountUpdateResult, name: string) => {
     let errors = liveForm?.errorFields ?? []
@@ -57,6 +58,7 @@
       await applyAction(result)
       loading = false
       if (result.type === "success") {
+        posthog.capture("account_settings_updated", { settings_section: title })
         showSuccess = true
       }
     }

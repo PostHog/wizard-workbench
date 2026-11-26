@@ -5,6 +5,7 @@
   import Fuse from "fuse.js"
   import { goto } from "$app/navigation"
   import { dev } from "$app/environment"
+  import posthog from "posthog-js"
 
   const fuseOptions = {
     keys: [
@@ -138,6 +139,8 @@
       <a
         href={result.item.path || "/"}
         id="search-result-{i + 1}"
+        onclick={() =>
+          posthog.capture("search_result_opened", { result_rank: i + 1 })}
         class="card my-6 bg-white shadow-xl flex-row overflow-hidden focus:mx-[-10px] focus:my-[-5px] focus:border-4 focus:border-secondary"
       >
         <div class="flex-none w-6 md:w-32 bg-secondary"></div>
