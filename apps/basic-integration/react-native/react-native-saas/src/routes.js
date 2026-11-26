@@ -1,23 +1,62 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { PostHogProvider } from 'posthog-react-native';
 
 import Main from './pages/Main';
 import SignIn from './pages/SignIn';
+import { posthog } from './config/posthog';
 import NavigationService from './services/navigation';
 
 const Stack = createNativeStackNavigator();
 
 export default function Routes({ initialRouteName }) {
+  const routeNameRef = React.useRef();
+  const navigator = (
+    <Stack.Navigator
+      initialRouteName={initialRouteName}
+      screenOptions={{ headerShown: false }}
+    >
+      <Stack.Screen name="SignIn" component={SignIn} />
+      <Stack.Screen name="Main" component={Main} />
+    </Stack.Navigator>
+  );
+
   return (
-    <NavigationContainer ref={NavigationService.navigationRef}>
-      <Stack.Navigator
-        initialRouteName={initialRouteName}
-        screenOptions={{ headerShown: false }}
-      >
-        <Stack.Screen name="SignIn" component={SignIn} />
-        <Stack.Screen name="Main" component={Main} />
-      </Stack.Navigator>
+    <NavigationContainer
+      ref={NavigationService.navigationRef}
+      onReady={() => {
+        routeNameRef.current =
+          NavigationService.navigationRef.getCurrentRoute()?.name;
+      }}
+      onStateChange={() => {
+        const previousRouteName = routeNameRef.current;
+        const currentRouteName =
+          NavigationService.navigationRef.getCurrentRoute()?.name;
+
+        if (
+          posthog &&
+          currentRouteName &&
+          currentRouteName !== previousRouteName
+        ) {
+          posthog.screen(currentRouteName, {
+            previous_screen: previousRouteName,
+          });
+        }
+
+        routeNameRef.current = currentRouteName;
+      }}
+    >
+      {posthog ? (
+        <PostHogProvider
+          client={posthog}
+          autocapture={{ captureScreens: false }}
+        >
+          {navigator}
+        </PostHogProvider>
+      ) : (
+        navigator
+      )}
     </NavigationContainer>
   );
 }
