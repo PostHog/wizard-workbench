@@ -14,8 +14,8 @@ import Layout from '../layouts/Layout.astro';
         and automated insights. Built for teams that move fast.
       </p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Start Free Trial</a>
-        <a href="/docs" class="btn btn-secondary">Read the Docs</a>
+        <a href="#" class="btn btn-primary" data-posthog-cta="start_free_trial">Start Free Trial</a>
+        <a href="/docs" class="btn btn-secondary" data-posthog-docs="documentation_home">Read the Docs</a>
       </div>
     </div>
   </section>
@@ -61,3 +61,27 @@ import Layout from '../layouts/Layout.astro';
     </div>
   </section>
 </Layout>
+
+<script is:inline>
+  document.querySelector('[data-posthog-cta="start_free_trial"]')?.addEventListener('click', () => {
+    window.posthog?.capture('marketing_cta_clicked', {
+      cta_location: 'hero',
+      cta_label: 'start_free_trial',
+    });
+    window.posthog?.logger?.info('marketing CTA selected', {
+      cta_location: 'hero',
+      cta_label: 'start_free_trial',
+    });
+  });
+
+  document.querySelector('[data-posthog-docs="documentation_home"]')?.addEventListener('click', () => {
+    window.posthog?.capture('documentation_link_clicked', {
+      documentation_topic: 'documentation_home',
+      link_location: 'hero',
+    });
+    window.posthog?.logger?.info('documentation entry selected', {
+      documentation_topic: 'documentation_home',
+      link_location: 'hero',
+    });
+  });
+</script>
