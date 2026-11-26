@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Copy, Check } from 'lucide-react';
+import posthog from 'posthog-js';
 
 export function Terminal() {
   const [terminalStep, setTerminalStep] = useState(0);
@@ -27,6 +28,9 @@ export function Terminal() {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(terminalSteps.join('\n'));
+    posthog.capture('code_sample_copied', {
+      sample: 'setup_commands'
+    });
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

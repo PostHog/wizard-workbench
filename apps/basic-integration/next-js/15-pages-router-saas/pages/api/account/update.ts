@@ -8,6 +8,8 @@ import {
   type NewActivityLog,
   ActivityType
 } from '@/lib/db/schema';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { flushPostHogLogs, posthogLogger } from '@/instrumentation';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
 
 async function logActivity(
@@ -64,8 +66,30 @@ export default async function handler(
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
 
+    posthogLogger?.emit({
+      body: 'account update completed',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        event: 'account_update',
+        endpoint: '/api/account/update',
+        outcome: 'success'
+      }
+    });
+    await flushPostHogLogs();
+
     return res.status(200).json({ name, success: 'Account updated successfully.' });
   } catch (error) {
+    posthogLogger?.emit({
+      body: 'account update completed',
+      severityNumber: SeverityNumber.ERROR,
+      attributes: {
+        event: 'account_update',
+        endpoint: '/api/account/update',
+        outcome: 'failure',
+        error_type: error instanceof Error ? error.name : 'unknown_error'
+      }
+    });
+    await flushPostHogLogs();
     console.error('Update account error:', error);
     return res.status(500).json({ error: 'Failed to update account' });
   }

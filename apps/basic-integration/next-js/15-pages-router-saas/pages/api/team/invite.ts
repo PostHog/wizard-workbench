@@ -10,6 +10,8 @@ import {
   type NewActivityLog,
   ActivityType
 } from '@/lib/db/schema';
+import { SeverityNumber } from '@opentelemetry/api-logs';
+import { flushPostHogLogs, posthogLogger } from '@/instrumentation';
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
 
 async function logActivity(
@@ -108,8 +110,31 @@ export default async function handler(
       ActivityType.INVITE_TEAM_MEMBER
     );
 
+    posthogLogger?.emit({
+      body: 'team invitation completed',
+      severityNumber: SeverityNumber.INFO,
+      attributes: {
+        event: 'team_invitation',
+        endpoint: '/api/team/invite',
+        invitation_role: role,
+        outcome: 'success'
+      }
+    });
+    await flushPostHogLogs();
+
     return res.status(200).json({ success: 'Invitation sent successfully' });
   } catch (error) {
+    posthogLogger?.emit({
+      body: 'team invitation completed',
+      severityNumber: SeverityNumber.ERROR,
+      attributes: {
+        event: 'team_invitation',
+        endpoint: '/api/team/invite',
+        outcome: 'failure',
+        error_type: error instanceof Error ? error.name : 'unknown_error'
+      }
+    });
+    await flushPostHogLogs();
     console.error('Invite team member error:', error);
     return res.status(500).json({ error: 'Failed to invite team member' });
   }

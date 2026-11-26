@@ -5,6 +5,7 @@ import { Header } from '@/components/header';
 import { GetServerSideProps } from 'next';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { User, TeamDataWithMembers } from '@/lib/db/schema';
+import posthog from 'posthog-js';
 
 interface HomePageProps {
   fallback: {
@@ -35,6 +36,11 @@ export default function HomePage({ fallback }: HomePageProps) {
                   <a
                     href="https://vercel.com/templates/next.js/next-js-saas-starter"
                     target="_blank"
+                    onClick={() =>
+                      posthog.capture('outbound_link_clicked', {
+                        destination: 'vercel_template'
+                      })
+                    }
                   >
                     <Button
                       size="lg"
@@ -124,7 +130,15 @@ export default function HomePage({ fallback }: HomePageProps) {
                 </p>
               </div>
               <div className="mt-8 lg:mt-0 flex justify-center lg:justify-end">
-                <a href="https://github.com/nextjs/saas-starter" target="_blank">
+                <a
+                  href="https://github.com/nextjs/saas-starter"
+                  target="_blank"
+                  onClick={() =>
+                    posthog.capture('outbound_link_clicked', {
+                      destination: 'github_repository'
+                    })
+                  }
+                >
                   <Button
                     size="lg"
                     variant="outline"
