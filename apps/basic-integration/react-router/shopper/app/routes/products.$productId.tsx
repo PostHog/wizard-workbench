@@ -21,9 +21,7 @@ export default function ProductDetail({ loaderData }: Route.ComponentProps) {
   const [quantity, setQuantity] = useState(1);
 
   const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      addToCart(product);
-    }
+    addToCart(product, quantity);
   };
 
   return (
