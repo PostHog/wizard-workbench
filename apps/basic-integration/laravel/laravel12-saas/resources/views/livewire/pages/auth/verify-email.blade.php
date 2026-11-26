@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
+use PostHog\Laravel\Facades\PostHog;
 
 new #[Layout('layouts.guest')] class extends Component
 {
@@ -20,6 +21,8 @@ new #[Layout('layouts.guest')] class extends Component
         }
 
         Auth::user()->sendEmailVerificationNotification();
+
+        PostHog::capture('email_verification_sent');
 
         Session::flash('status', 'verification-link-sent');
     }

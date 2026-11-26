@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Password;
 use Livewire\Attributes\Layout;
+use PostHog\Laravel\Facades\PostHog;
 use Livewire\Volt\Component;
 
 new #[Layout('layouts.guest')] class extends Component
@@ -31,6 +32,8 @@ new #[Layout('layouts.guest')] class extends Component
         }
 
         $this->reset('email');
+
+        PostHog::capture('password_reset_requested');
 
         session()->flash('status', __($status));
     }

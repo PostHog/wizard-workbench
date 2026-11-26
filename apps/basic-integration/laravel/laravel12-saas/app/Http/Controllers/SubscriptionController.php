@@ -9,6 +9,7 @@ use App\Actions\Billing\SwapPlan;
 use App\Domains\Billing\PlanCatalog;
 use Exception;
 use Illuminate\Http\Request;
+use PostHog\Laravel\Facades\PostHog;
 
 class SubscriptionController extends Controller
 {
@@ -35,6 +36,11 @@ class SubscriptionController extends Controller
 
         $checkoutSession = $checkoutPlan($user, $plan);
 
+        PostHog::capture('subscription_checkout_started', [
+            'plan_id' => $plan->getKey(),
+            'checkout_mode' => 'stripe',
+        ]);
+
         return redirect($checkoutSession->url);
     }
 
@@ -58,6 +64,11 @@ class SubscriptionController extends Controller
             'amount' => $plan->price ?? 0,
         ]);
 
+        PostHog::capture('subscription_checkout_started', [
+            'plan_id' => $plan->getKey(),
+            'checkout_mode' => 'demo',
+        ]);
+
         return redirect()->route('dashboard')->with('success', 'Demo subscription created for ' . $plan->name . '. (Stripe not configured)');
     }
 
@@ -70,6 +81,10 @@ class SubscriptionController extends Controller
             try {
                 $swapPlan($user, $plan);
 
+                PostHog::capture('subscription_plan_changed', [
+                    'plan_id' => $plan->getKey(),
+                ]);
+
                 return redirect()->route('subscribe')->with('success', 'Your subscription has been updated to '.$plan->name.'.');
             } catch (Exception $e) {
                 return redirect()->route('subscribe')->with('error', 'There was an error updating your subscription: '.$e->getMessage());
@@ -81,6 +96,10 @@ class SubscriptionController extends Controller
 
     public function redirectToBillingPortal(Request $request, RedirectToBillingPortal $billingPortal)
     {
+        if (CheckoutPlan::isStripeConfigured()) {
+            PostHog::capture('billing_portal_opened');
+        }
+
         return $billingPortal($request->user());
     }
 }
