@@ -1,5 +1,8 @@
 import { api } from '../api.js';
+import posthog from '../posthog.js';
+import { posthogLogger } from '../posthog-logger.js';
 import { router } from '../router.js';
+import { store } from '../store.js';
 
 export function renderLogin() {
   const app = document.getElementById('app');
@@ -34,12 +37,23 @@ export function renderLogin() {
     errorEl.hidden = true;
 
     const email = document.getElementById('email').value.trim();
+    const previousUser = store.state.currentUser;
     const btn = form.querySelector('button');
     btn.disabled = true;
     btn.textContent = 'Signing in...';
 
     try {
-      await api.login(email);
+      const user = await api.login(email);
+      if (previousUser && previousUser.id !== user.id) {
+        posthog?.reset();
+      }
+      posthog?.identify(user.id, {
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      });
+      posthog?.capture('sign_in_succeeded');
+      posthogLogger.info('authentication_succeeded', { authentication_method: 'demo_credentials' });
       router.navigate('/dashboard');
     } catch (err) {
       errorEl.textContent = err.message;
