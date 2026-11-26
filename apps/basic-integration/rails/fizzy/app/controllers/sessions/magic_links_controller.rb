@@ -44,6 +44,13 @@ class Sessions::MagicLinksController < ApplicationController
       clear_pending_authentication_token
       start_new_session_for magic_link.identity
 
+      # Associate future server-side activity with the account-independent
+      # identity. Email remains a person property, never an event identifier.
+      PostHog.identify(
+        distinct_id: magic_link.identity.posthog_distinct_id,
+        properties: magic_link.identity.posthog_properties
+      )
+
       respond_to do |format|
         format.html { redirect_to after_sign_in_url(magic_link) }
         format.json { render json: { session_token: session_token, requires_signup_completion: requires_signup_completion?(magic_link) } }

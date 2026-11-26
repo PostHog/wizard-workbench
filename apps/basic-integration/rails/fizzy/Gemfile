@@ -37,6 +37,11 @@ gem "zip_kit"
 gem "mittens"
 gem "useragent", bc: "useragent"
 
+# PostHog
+# `posthog-rails` provides Rails instrumentation; `posthog-ruby` is its core client.
+gem "posthog-ruby", "~> 3.0", require: "posthog"
+gem "posthog-rails", "~> 3.0"
+
 # Operations
 gem "autotuner"
 gem "mission_control-jobs"

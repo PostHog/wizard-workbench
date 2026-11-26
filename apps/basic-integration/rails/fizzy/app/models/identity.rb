@@ -28,6 +28,16 @@ class Identity < ApplicationRecord
     end
   end
 
+  # An Identity spans accounts and is the authenticated person's stable primary
+  # key. Keep the email on the person profile rather than using it as the ID.
+  def posthog_distinct_id
+    id.to_s
+  end
+
+  def posthog_properties
+    { email: email_address }
+  end
+
   private
     def deactivate_users
       users.find_each(&:deactivate)
