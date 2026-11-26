@@ -11,9 +11,15 @@ import {
   storyTypes,
 } from "@/constants/stories";
 import { Colors } from "@/constants/Colors";
+import { posthog } from "@/lib/posthog";
 
 export default function HomeScreen() {
   const [storyType, setStoryType] = useState<StoryType>("topstories");
+
+  const handleStoryTypeChange = (newStoryType: StoryType) => {
+    posthog?.capture("feed_type_changed", { feed_type: newStoryType });
+    setStoryType(newStoryType);
+  };
 
   const storyOptions: Option[] = useMemo(() => {
     return storyTypes.map(({ label, type }) => ({
@@ -41,7 +47,7 @@ export default function HomeScreen() {
       <Posts storyType={storyType} />
       <StoriesSelect
         value={storyType}
-        onChange={setStoryType}
+        onChange={handleStoryTypeChange}
         options={storyOptions}
       />
     </>
