@@ -10,6 +10,30 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-pro
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
+POSTHOG_PROJECT_TOKEN = os.environ.get('POSTHOG_PROJECT_TOKEN', '')
+POSTHOG_HOST = os.environ.get('POSTHOG_HOST', '')
+POSTHOG_MW_CLIENT = None
+
+if POSTHOG_PROJECT_TOKEN and POSTHOG_HOST:
+    from config.posthog import posthog_client
+    from config.posthog_logs import configure_posthog_log_export
+
+    POSTHOG_MW_CLIENT = posthog_client
+    configure_posthog_log_export(POSTHOG_PROJECT_TOKEN, POSTHOG_HOST)
+elif DEBUG:
+    import logging
+
+    missing_posthog_variable = (
+        'POSTHOG_PROJECT_TOKEN' if not POSTHOG_PROJECT_TOKEN else 'POSTHOG_HOST'
+    )
+    logging.getLogger(__name__).warning(
+        '%s variable required by PostHog is missing or un-configured, this '
+        'causes events to be silently missed. This error stops appearing once '
+        '%s is configured',
+        missing_posthog_variable,
+        missing_posthog_variable,
+    )
+
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')]
 
 INSTALLED_APPS = [
@@ -35,6 +59,12 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if POSTHOG_MW_CLIENT:
+    MIDDLEWARE.insert(
+        MIDDLEWARE.index('django.contrib.auth.middleware.AuthenticationMiddleware') + 1,
+        'posthog.integrations.django.PosthogContextMiddleware',
+    )
 
 ROOT_URLCONF = 'config.urls'
 

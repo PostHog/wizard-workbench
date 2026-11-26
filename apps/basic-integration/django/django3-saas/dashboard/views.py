@@ -1,8 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
+
+from config.posthog_logs import posthog_log
 from .models import Project, ActivityLog
 from .forms import ProjectForm
 
@@ -60,6 +63,22 @@ def create_project(request):
                 description=f'Created project: {project.name}'
             )
 
+            if settings.POSTHOG_MW_CLIENT:
+                settings.POSTHOG_MW_CLIENT.capture(
+                    'project_created',
+                    properties={
+                        'has_description': bool(project.description),
+                        'is_active': project.is_active,
+                    },
+                )
+            posthog_log.info(
+                'project created',
+                extra={
+                    'event': 'project_created',
+                    'has_description': bool(project.description),
+                    'is_active': project.is_active,
+                },
+            )
             messages.success(request, 'Project created.')
             return redirect('dashboard:projects')
     else:
@@ -83,6 +102,14 @@ def edit_project(request, pk):
                 description=f'Updated project: {project.name}'
             )
 
+            if settings.POSTHOG_MW_CLIENT:
+                settings.POSTHOG_MW_CLIENT.capture(
+                    'project_updated',
+                    properties={
+                        'has_description': bool(project.description),
+                        'is_active': project.is_active,
+                    },
+                )
             messages.success(request, 'Project updated.')
             return redirect('dashboard:projects')
     else:
@@ -105,6 +132,8 @@ def delete_project(request, pk):
             description=f'Deleted project: {name}'
         )
 
+        if settings.POSTHOG_MW_CLIENT:
+            settings.POSTHOG_MW_CLIENT.capture('project_deleted')
         messages.success(request, 'Project deleted.')
         return redirect('dashboard:projects')
 
