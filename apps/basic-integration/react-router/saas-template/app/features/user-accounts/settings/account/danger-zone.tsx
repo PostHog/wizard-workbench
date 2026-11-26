@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { Trans, useTranslation } from "react-i18next";
 import { Form } from "react-router";
 
@@ -54,6 +55,7 @@ function DeleteAccountDialogComponent({
   isDeletingAccount: boolean;
   isDeleteBlocked: boolean;
 }) {
+  const posthog = usePostHog();
   const { t } = useTranslation("settings", {
     keyPrefix: "userAccount.dangerZone",
   });
@@ -109,6 +111,9 @@ function DeleteAccountDialogComponent({
             <Button
               disabled={isDeletingAccount}
               name="intent"
+              onClick={() =>
+                posthog?.capture("user_account_deletion_submitted")
+              }
               type="submit"
               value={DELETE_USER_ACCOUNT_INTENT}
               variant="destructive"

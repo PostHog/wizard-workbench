@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import {
   IconLogout,
   IconRosetteDiscountCheck,
@@ -34,6 +35,7 @@ export type NavUserProps = {
 
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar();
+  const posthog = usePostHog();
   const { t } = useTranslation("organizations", {
     keyPrefix: "layout.navUser",
   });
@@ -121,6 +123,9 @@ export function NavUser({ user }: NavUserProps) {
                   <button
                     className="w-full"
                     name="intent"
+                    onClick={() => {
+                      if (import.meta.env.VITE_POSTHOG_KEY) posthog?.reset();
+                    }}
                     type="submit"
                     value="logout"
                   />

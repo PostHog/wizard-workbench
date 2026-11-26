@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import {
   IconAlertTriangle,
   IconClipboardCheck,
@@ -34,6 +35,7 @@ export function InviteLinkCard({
   inviteLink,
   organizationIsFull = false,
 }: InviteLinkCardProps) {
+  const posthog = usePostHog();
   const { t, i18n } = useTranslation("organizations", {
     keyPrefix: "settings.teamMembers.inviteLink",
   });
@@ -112,6 +114,7 @@ export function InviteLinkCard({
                 )}
                 onClick={() => {
                   copyToClipboard(inviteLink.href);
+                  posthog?.capture("organization_invite_link_copied");
                   setLinkCopied(true);
                 }}
                 size="icon"
@@ -160,7 +163,16 @@ export function InviteLinkCard({
 
           <CardFooter className="flex-col items-stretch">
             <div className="flex items-center gap-2">
-              <Form className="grow" method="POST" replace>
+              <Form
+                className="grow"
+                method="POST"
+                onSubmit={() =>
+                  posthog?.capture(
+                    "organization_invite_link_regeneration_submitted",
+                  )
+                }
+                replace
+              >
                 <Button
                   aria-describedby="link-regenerate-warning"
                   className="w-full"
@@ -180,7 +192,15 @@ export function InviteLinkCard({
                 </Button>
               </Form>
 
-              <Form method="POST" replace>
+              <Form
+                method="POST"
+                onSubmit={() =>
+                  posthog?.capture(
+                    "organization_invite_link_deactivation_submitted",
+                  )
+                }
+                replace
+              >
                 <Button
                   disabled={isDeactivatingLink}
                   name="intent"
@@ -215,7 +235,16 @@ export function InviteLinkCard({
         </>
       ) : (
         <CardFooter>
-          <Form className="w-full" method="POST" replace>
+          <Form
+            className="w-full"
+            method="POST"
+            onSubmit={() =>
+              posthog?.capture(
+                "organization_invite_link_regeneration_submitted",
+              )
+            }
+            replace
+          >
             <Button
               className="w-full"
               disabled={disabled}

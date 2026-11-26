@@ -44,6 +44,7 @@ import { combineHeaders } from "~/utils/combine-headers.server";
 import { getIsDataWithResponseInit } from "~/utils/get-is-data-with-response-init.server";
 import { requestToUrl } from "~/utils/get-search-parameter-from-request.server";
 import { badRequest, conflict, forbidden } from "~/utils/http-responses.server";
+import { logPostHogInfo } from "~/utils/posthog-logs.server";
 import { createToastHeaders } from "~/utils/toast.server";
 import { validateFormData } from "~/utils/validate-form-data.server";
 
@@ -97,6 +98,10 @@ export async function billingAction({
           customerId: organization.stripeCustomerId,
           organizationSlug: params.organizationSlug,
           subscriptionId: organization.stripeSubscriptions[0].stripeId,
+        });
+
+        logPostHogInfo("subscription_cancellation_started", {
+          "app.operation": "subscription_cancel",
         });
 
         return redirect(cancelSession.url);
@@ -157,6 +162,10 @@ export async function billingAction({
           priceId: price.stripeId,
           purchasedById: user.id,
           seatsUsed: organization._count.memberships,
+        });
+
+        logPostHogInfo("subscription_checkout_session_created", {
+          "app.operation": "subscription_checkout",
         });
 
         // biome-ignore lint/style/noNonNullAssertion: Checkout sessions always have a URL

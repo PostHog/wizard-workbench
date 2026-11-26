@@ -1,4 +1,6 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Checks ensure for null values */
+
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
@@ -42,6 +44,7 @@ export function CreateSubscriptionModalContent({
   currentSeats,
   planLimits,
 }: CreateSubscriptionModalContentProps) {
+  const posthog = usePostHog();
   const { t } = useTranslation("billing", { keyPrefix: "pricing" });
   const { t: tModal } = useTranslation("billing", {
     keyPrefix: "noCurrentPlanModal",
@@ -97,6 +100,11 @@ export function CreateSubscriptionModalContent({
       ),
       disabled: isSubscribing || planLimits[tier] < currentSeats,
       name: "lookupKey",
+      onClick: () =>
+        posthog?.capture("subscription_checkout_started", {
+          billing_interval: interval,
+          plan_tier: tier,
+        }),
       value: priceLookupKeysByTierAndInterval[tier][interval],
     };
   };

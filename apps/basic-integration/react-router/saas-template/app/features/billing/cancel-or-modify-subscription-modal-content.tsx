@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { IconCheck } from "@tabler/icons-react";
 import type { ComponentProps, MouseEventHandler } from "react";
 import { useState } from "react";
@@ -49,6 +50,7 @@ export function CancelOrModifySubscriptionModalContent({
   isSwitchingToMid = false,
   onCancelSubscriptionClick,
 }: CancelOrModifySubscriptionModalContentProps) {
+  const posthog = usePostHog();
   const { t } = useTranslation("billing", { keyPrefix: "pricing" });
   const { t: tModal } = useTranslation("billing", {
     keyPrefix: "billingPage.pricingModal",
@@ -119,7 +121,16 @@ export function CancelOrModifySubscriptionModalContent({
 
   return (
     <>
-      <Form method="post" replace>
+      <Form
+        method="post"
+        onSubmit={() =>
+          posthog?.capture("subscription_plan_change_submitted", {
+            current_billing_interval: currentTierInterval,
+            current_plan_tier: currentTier,
+          })
+        }
+        replace
+      >
         <fieldset disabled={isSubmitting}>
           <input
             name="intent"

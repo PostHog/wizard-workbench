@@ -1,6 +1,7 @@
 import "./app.css";
 
 import { FormOptionsProvider } from "@conform-to/react/future";
+import { usePostHog } from "@posthog/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
@@ -219,6 +220,12 @@ function BaseErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 }
 
 export function ErrorBoundary({ error, ...props }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog();
+
+  if (!isRouteErrorResponse(error)) {
+    posthog.captureException(error);
+  }
+
   if (isRouteErrorResponse(error) && error.status === 404) {
     return <NotFound className="min-h-svh" />;
   }
