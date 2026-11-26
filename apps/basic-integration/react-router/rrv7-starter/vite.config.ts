@@ -36,7 +36,7 @@ export default defineConfig(({ command }) => ({
 
       https://vite.dev/config/ssr-options#ssr-noexternal
     */
-    noExternal: command === 'build' ? true : ['gsap'],
+    noExternal: command === 'build' ? true : ['gsap', 'posthog-js', '@posthog/react'],
   },
   plugins: [
     reactRouter(),

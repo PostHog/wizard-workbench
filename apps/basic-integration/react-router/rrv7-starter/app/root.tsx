@@ -1,3 +1,4 @@
+import { usePostHog } from '@posthog/react'
 import {
   isRouteErrorResponse,
   Links,
@@ -20,6 +21,7 @@ import Footer from '@/components/footer'
 import { SITE_URL, WATERMARK } from '@/lib/constants'
 import { generateMeta } from '@/lib/utils/meta'
 import { generateLinks } from '@/lib/utils/links'
+import { logRootLoaderServed } from '@/lib/posthog-logs.server'
 
 export const links: Route.LinksFunction = () =>
   generateLinks({
@@ -44,7 +46,8 @@ export const links: Route.LinksFunction = () =>
     ],
   })
 
-export const loader = () => {
+export const loader = async ({ request }: Route.LoaderArgs) => {
+  await logRootLoaderServed(request.method)
   return {}
 }
 
@@ -135,6 +138,9 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = 'Oops!'
   let details = 'An unexpected error occurred.'
   let stack: string | undefined
+
+  const posthog = usePostHog()
+  posthog.captureException(error)
 
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? '404' : 'Error'
