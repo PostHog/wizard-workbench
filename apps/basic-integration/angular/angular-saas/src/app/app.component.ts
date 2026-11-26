@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { AuthenticationService, CredentialsService } from '@app/auth';
 import { I18nService } from '@app/i18n';
 import { Title } from '@angular/platform-browser';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -8,6 +9,8 @@ import { filter, merge } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AppUpdateService, Logger } from '@core/services';
 import { SocketIoService } from '@core/socket-io';
+import { PostHogService } from '@core/services/posthog.service';
+import { PostHogLoggerService } from '@core/services/posthog-logger.service';
 
 @Component({
   selector: 'app-root',
@@ -24,10 +27,25 @@ export class AppComponent implements OnInit {
   private readonly socketService = inject(SocketIoService);
   private readonly updateService = inject(AppUpdateService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly posthogService = inject(PostHogService);
+  private readonly posthogLogger = inject(PostHogLoggerService);
+  private readonly authenticationService = inject(AuthenticationService);
+  private readonly credentialsService = inject(CredentialsService);
 
   title = 'angular-boilerplate';
 
   ngOnInit() {
+    this.posthogService.init(environment.posthogKey, environment.posthogHost, environment.production);
+
+    const credentials = this.credentialsService.credentials();
+    if (credentials) {
+      this.authenticationService.identify(credentials);
+    }
+    this.posthogLogger.info('application initialized', {
+      runtime: 'browser',
+      authenticated_session: Boolean(credentials),
+    });
+
     // Setup logger
     if (environment.production) {
       Logger.enableProductionMode();

@@ -1,8 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 
 import { CredentialsService } from '@app/auth';
 import { Credentials } from '@core/entities';
+import { PostHogService } from '@core/services/posthog.service';
+import { PostHogLoggerService } from '@core/services/posthog-logger.service';
 
 export interface LoginContext {
   username: string;
@@ -19,7 +21,9 @@ export interface LoginContext {
   providedIn: 'root',
 })
 export class AuthenticationService {
-  constructor(private readonly _credentialsService: CredentialsService) {}
+  private readonly credentialsService = inject(CredentialsService);
+  private readonly posthogService = inject(PostHogService);
+  private readonly posthogLogger = inject(PostHogLoggerService);
 
   /**
    * Authenticates the user.
@@ -41,7 +45,16 @@ export class AuthenticationService {
       firstName,
       lastName,
     });
-    this._credentialsService.setCredentials(credentials, context.remember);
+    this.credentialsService.setCredentials(credentials, context.remember);
+    this.identify(credentials);
+    this.posthogService.posthog.capture('user_logged_in', {
+      login_method: 'password',
+      remember_session: Boolean(context.remember),
+    });
+    this.posthogLogger.info('user authentication succeeded', {
+      login_method: 'password',
+      remember_session: Boolean(context.remember),
+    });
 
     return of(credentials);
   }
@@ -50,6 +63,18 @@ export class AuthenticationService {
    * Parse username to extract first and last name.
    * Handles formats like: "johnsmith", "john.smith", "john_smith", "JohnSmith"
    */
+  identify(credentials: Credentials): void {
+    const properties = {
+      ...(credentials.email ? { $email: credentials.email } : {}),
+      ...(credentials.firstName || credentials.lastName
+        ? { $name: [credentials.firstName, credentials.lastName].filter(Boolean).join(' ') }
+        : {}),
+      ...(credentials.roles[0] ? { role: credentials.roles[0] } : {}),
+    };
+
+    this.posthogService.posthog.identify(credentials.id, properties);
+  }
+
   private parseUsername(username: string): { firstName: string; lastName: string } {
     // Check for separators (. or _)
     if (username.includes('.') || username.includes('_')) {
@@ -86,6 +111,9 @@ export class AuthenticationService {
    * @return True if the user was logged out successfully.
    */
   logout(): Observable<any> {
+    this.posthogService.posthog.capture('user_logged_out');
+    this.posthogLogger.info('user session ended', { trigger: 'user_logout' });
+    this.posthogService.posthog.reset();
     return of(true);
   }
 }
