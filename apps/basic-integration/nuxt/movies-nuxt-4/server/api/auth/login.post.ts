@@ -1,3 +1,5 @@
+import { logAuthenticationInputRejected, logAuthenticationSucceeded } from '~/server/utils/posthog-logs'
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -5,6 +7,7 @@ export default defineEventHandler(async (event) => {
 
     // Validate input
     if (!username?.trim() || !password?.trim()) {
+      logAuthenticationInputRejected()
       throw createError({
         statusCode: 400,
         message: 'Username and password are required',
@@ -20,6 +23,8 @@ export default defineEventHandler(async (event) => {
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
+
+    logAuthenticationSucceeded()
 
     return {
       success: true,
