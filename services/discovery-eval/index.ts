@@ -18,6 +18,7 @@ import {
   evaluateDiscoveryReport,
   hasBlockingFailure,
   loadDiscoveryExpectations,
+  readDiscoveryReport,
   type DiscoveryExpectFile,
   type DiscoveryScenarioExpect,
   type DiscoveryTestReport,
@@ -116,7 +117,7 @@ function runTestDiscovery(
   if (jsonStart === -1) {
     throw new Error(`No JSON object found in stdout:\n${stdout.slice(0, 400)}`);
   }
-  const report = JSON.parse(stdout.slice(jsonStart)) as DiscoveryTestReport;
+  const report = readDiscoveryReport(JSON.parse(stdout.slice(jsonStart)));
   return { report, durationMs };
 }
 

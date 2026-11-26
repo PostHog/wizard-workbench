@@ -5,6 +5,7 @@ import {
   evaluateDiscoveryReport,
   hasBlockingFailure,
   loadDiscoveryExpectations,
+  readDiscoveryReport,
   type DiscoveryTestReport,
 } from "./checks.js";
 
@@ -49,12 +50,12 @@ function sampleReport(
       },
     ],
     toolsMatched: true,
-    plan: {
+    projectSelection: {
       asks: true,
-      picked: "apps/web",
+      selectedProjectPath: "apps/web",
       projects: [
-        { path: "apps/web", offered: true, frameworkName: "Next.js", mainApp: true },
-        { path: "apps/api", offered: true, frameworkName: "FastAPI" },
+        { path: "apps/web", eligible: true, frameworkName: "Next.js", isMainApp: true },
+        { path: "apps/api", eligible: true, frameworkName: "FastAPI" },
       ],
     },
     matchKeys: {
@@ -113,12 +114,12 @@ describe("evaluateDiscoveryReport", () => {
           tools: [],
         },
       ],
-      plan: {
+      projectSelection: {
         asks: true,
-        picked: ".",
+        selectedProjectPath: ".",
         projects: [
-          { path: ".", offered: true },
-          { path: "apps/web", offered: true },
+          { path: ".", eligible: true },
+          { path: "apps/web", eligible: true },
         ],
       },
     });
@@ -161,15 +162,15 @@ describe("evaluateDiscoveryReport", () => {
     assert.ok(strict.every((c) => c.status === "fail"));
   });
 
-  it("fails a plan reason when the row is missing, offered, or has another reason", () => {
+  it("fails a plan reason when the row is missing, eligible, or has another reason", () => {
     const report = sampleReport({
-      plan: {
+      projectSelection: {
         asks: false,
-        picked: "apps/admin",
+        selectedProjectPath: "apps/admin",
         projects: [
-          { path: "apps/admin", offered: true },
-          { path: "apps/web", offered: false, reason: "has-posthog" },
-          { path: "packages/ui", offered: false, reason: "unsupported-framework" },
+          { path: "apps/admin", eligible: true },
+          { path: "apps/web", eligible: false, exclusionReason: "has-posthog" },
+          { path: "packages/ui", eligible: false, exclusionReason: "unsupported-framework" },
         ],
       },
     });
@@ -193,6 +194,32 @@ describe("evaluateDiscoveryReport", () => {
     assert.equal(byName.get("planReason:packages/ui"), "fail");
     assert.equal(byName.get("planReason:apps/admin"), "fail");
     assert.equal(byName.get("planReason:apps/docs"), "fail");
+  });
+
+  it("reads the selection from a report that uses the older names", () => {
+    const { projectSelection, ...rest } = sampleReport();
+    const older = readDiscoveryReport({
+      ...rest,
+      plan: {
+        asks: projectSelection.asks,
+        picked: projectSelection.selectedProjectPath,
+        projects: [
+          { path: "apps/web", offered: true, frameworkName: "Next.js", mainApp: true },
+          { path: "apps/api", offered: false, reason: "has-posthog" },
+        ],
+      },
+    });
+    assert.equal("plan" in older, false);
+    assert.deepEqual(older.projectSelection, {
+      asks: projectSelection.asks,
+      selectedProjectPath: projectSelection.selectedProjectPath,
+      projects: [
+        { path: "apps/web", frameworkName: "Next.js", eligible: true, isMainApp: true },
+        { path: "apps/api", eligible: false, exclusionReason: "has-posthog" },
+      ],
+    });
+    assert.deepEqual(readDiscoveryReport(sampleReport()).projectSelection, projectSelection);
+    assert.throws(() => readDiscoveryReport(rest), /no `projectSelection`/);
   });
 
   it("loads all checked-in discovery expectations without schema errors", () => {
